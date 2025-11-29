@@ -1,104 +1,128 @@
-'use client'
-
-import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
 import { PortfolioSummaryCard } from '@/components/dashboard/portfolio-summary-card'
 import { ProfitChart } from '@/components/dashboard/profit-chart'
 import { HoldingsTable } from '@/components/dashboard/holdings-table'
-import { snapshotsApi } from '@/lib/api/client'
+import { SubscriptionStatusCard } from '@/components/dashboard/subscription-status-card'
+import { UserSwitcher } from '@/components/dashboard/user-switcher'
 import { formatDate } from '@/lib/utils/formatters'
+import { prisma } from '@/lib/prisma'
+import { SUBSCRIPTION_LIMITS } from '@/lib/config/subscription'
+import { User, SecuritiesAccount, PortfolioSnapshot, StockHolding, Stock } from '@prisma/client'
+import { toggleAutoSnapshot } from '@/app/actions'
 
-// 테스트용 계좌 ID (Phase 1)
-const TEST_ACCOUNT_ID = 'test-account-1'
+// Server Component
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: { userId?: string }
+}) {
+  const userId = searchParams.userId || 'test-user-free'
 
-interface Snapshot {
-  id: string
-  snapshotDate: string
-  totalValue: string | number
-  totalCost: string | number
-  totalProfit: string | number
-  profitRate: string | number
-  cashBalance: string | number
-  holdings: Array<{
-    id: string
-    stock: {
-      stockCode: string
-      stockName: string
-    }
-    quantity: number
-    averagePrice: string | number
-    currentPrice: string | number
-    totalCost: string | number
-    currentValue: string | number
-    profit: string | number
-    profitRate: string | number
-  }>
-}
+  // 1. Fetch User & Account Data
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: {
+      accounts: true,
+    },
+  })
 
-export default function DashboardPage() {
-  const [snapshots, setSnapshots] = useState<Snapshot[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  // Handle case where user doesn't exist (e.g. invalid ID in URL)
+  if (!user) {
+    return (
+      <div className="p-8 text-center">
+        <h1 className="text-2xl font-bold mb-4">User Not Found</h1>
+        <p className="mb-4">The requested user ID does not exist.</p>
+        <UserSwitcher />
+      </div>
+    )
+  }
 
-  useEffect(() => {
-    async function fetchSnapshots() {
-      try {
-        const response = await snapshotsApi.getList(TEST_ACCOUNT_ID)
-        if (response.success && response.data) {
-          setSnapshots(response.data)
-        } else {
-          setError(response.error?.message || '스냅샷을 불러오는데 실패했습니다.')
-        }
-      } catch (err) {
-        setError('네트워크 오류가 발생했습니다.')
-      } finally {
-        setLoading(false)
-      }
-    }
+  const account = user.accounts[0]
+  const plan = user.plan
+  // Fix: Cast plan to keyof typeof SUBSCRIPTION_LIMITS
+  const limit = SUBSCRIPTION_LIMITS[plan as keyof typeof SUBSCRIPTION_LIMITS]
 
-    fetchSnapshots()
-  }, [])
+  // 2. Fetch Snapshots (if account exists)
+  let snapshots: (PortfolioSnapshot & { holdings: (StockHolding & { stock: Stock })[] })[] = []
+  let snapshotCount = 0
+
+  if (account) {
+    // Parallel fetch for performance
+    const [fetchedSnapshots, count] = await Promise.all([
+      prisma.portfolioSnapshot.findMany({
+        where: { accountId: account.id },
+        orderBy: { snapshotDate: 'desc' },
+        include: {
+          holdings: {
+            include: {
+              stock: true,
+            },
+          },
+        },
+      }),
+      prisma.portfolioSnapshot.count({
+        where: { accountId: account.id },
+      }),
+    ])
+    snapshots = fetchedSnapshots
+    snapshotCount = count
+  }
 
   const latestSnapshot = snapshots[0]
 
-  // 차트 데이터 변환 (최신 순 -> 오래된 순)
+  // Chart Data
   const chartData = [...snapshots]
     .reverse()
     .map((s) => ({
-      date: s.snapshotDate,
+      date: s.snapshotDate.toISOString(), // Serialize date for client component
       profitRate: Number(s.profitRate),
       totalValue: Number(s.totalValue),
     }))
 
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-48" />
-        <Skeleton className="h-80" />
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-red-500 mb-4">{error}</p>
-        <Button onClick={() => window.location.reload()}>다시 시도</Button>
-      </div>
-    )
-  }
+  // Helper to serialize Decimal/Date for client components
+  // (Prisma returns Decimal/Date objects which can't be passed directly to Client Components in some cases,
+  // but here we are passing primitives mostly. Be careful with Date/Decimal.)
+  // Actually, for the components we have, we need to convert Decimal to number.
 
   return (
     <div className="space-y-6">
-      {/* 페이지 헤더 */}
+      {/* Header */}
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">대시보드</h1>
-        <Link href="/dashboard/snapshots/new">
-          <Button>새 스냅샷 생성</Button>
-        </Link>
+        <div className="flex gap-2 items-center">
+          <UserSwitcher />
+          <Link href="/dashboard/snapshots/new">
+            <Button>새 스냅샷 생성</Button>
+          </Link>
+        </div>
+      </div>
+
+      {/* Subscription Status */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <SubscriptionStatusCard
+          plan={plan}
+          snapshotCount={snapshotCount}
+          limit={limit}
+          isAutoSnapshotEnabled={account?.isAutoSnapshotEnabled || false}
+          // We can't pass a server action or handler easily here without 'use server' or client component wrapper.
+          // For now, let's make SubscriptionStatusCard handle the API call internally?
+          // Wait, SubscriptionStatusCard is a client component ('use client' at top).
+          // So passing a function prop is fine if it's a Server Action, OR we can just let it handle the fetch internally?
+          // The previous implementation passed `handleToggleAutoSnapshot`.
+          // Since we are in a Server Component, we can't pass a client-side event handler directly unless it's a Server Action.
+          // BUT, SubscriptionStatusCard is a Client Component.
+          // We can pass the userId to it, and let IT handle the API call.
+          // Let's modify SubscriptionStatusCard to take userId and handle the toggle internally.
+          // For now, I will pass a dummy function or modify the component.
+          // Actually, better to modify SubscriptionStatusCard to accept userId and do the fetch itself.
+          onToggleAutoSnapshot={async (enabled) => {
+            'use server'
+            if (account) {
+              await toggleAutoSnapshot(account.id, enabled)
+            }
+          }}
+        />
       </div>
 
       {snapshots.length === 0 ? (
@@ -110,7 +134,7 @@ export default function DashboardPage() {
         </div>
       ) : (
         <>
-          {/* 포트폴리오 요약 */}
+          {/* Portfolio Summary */}
           {latestSnapshot && (
             <PortfolioSummaryCard
               totalValue={Number(latestSnapshot.totalValue)}
@@ -123,14 +147,18 @@ export default function DashboardPage() {
             />
           )}
 
-          {/* 수익률 차트 */}
+          {/* Profit Chart */}
           <ProfitChart data={chartData} />
 
-          {/* 보유 종목 */}
+          {/* Holdings Table */}
           {latestSnapshot && (
             <HoldingsTable
               holdings={latestSnapshot.holdings.map((h) => ({
-                ...h,
+                id: h.id,
+                stock: {
+                  stockCode: h.stock.stockCode,
+                  stockName: h.stock.stockName,
+                },
                 quantity: Number(h.quantity),
                 averagePrice: Number(h.averagePrice),
                 currentPrice: Number(h.currentPrice),
@@ -142,7 +170,7 @@ export default function DashboardPage() {
             />
           )}
 
-          {/* 최근 스냅샷 목록으로 이동 */}
+          {/* View All Link */}
           <div className="text-center">
             <Link href="/dashboard/snapshots">
               <Button variant="outline">전체 스냅샷 보기</Button>

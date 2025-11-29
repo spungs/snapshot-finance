@@ -211,7 +211,7 @@ export default function NewSnapshotPage() {
                     </SelectTrigger>
                     <SelectContent>
                       {stocksLoading ? (
-                        <SelectItem value="" disabled>
+                        <SelectItem value="loading" disabled>
                           로딩중...
                         </SelectItem>
                       ) : (
@@ -327,9 +327,8 @@ export default function NewSnapshotPage() {
               <div>
                 <p className="text-sm text-gray-500">평가손익</p>
                 <p
-                  className={`text-lg font-semibold ${
-                    isProfit ? 'text-red-600' : 'text-blue-600'
-                  }`}
+                  className={`text-lg font-semibold ${isProfit ? 'text-red-600' : 'text-blue-600'
+                    }`}
                 >
                   {isProfit ? '+' : ''}
                   {formatCurrency(totals.profit)}
@@ -338,9 +337,8 @@ export default function NewSnapshotPage() {
               <div>
                 <p className="text-sm text-gray-500">수익률</p>
                 <p
-                  className={`text-lg font-semibold ${
-                    isProfit ? 'text-red-600' : 'text-blue-600'
-                  }`}
+                  className={`text-lg font-semibold ${isProfit ? 'text-red-600' : 'text-blue-600'
+                    }`}
                 >
                   {isProfit ? '+' : ''}
                   {totals.profitRate.toFixed(2)}%
