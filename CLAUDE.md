@@ -26,9 +26,9 @@
 
 ## 개발 단계
 
-**Phase 1 (MVP - 3주):** 개인용, 단일 계좌, 수동/자동 스냅샷
-**Phase 2 (2주):** 시뮬레이션 기능, cron을 통한 일일 자동 스냅샷
-**Phase 3 (4-6주):** 다중 사용자 서비스, 마이데이터 API 연동, 인증
+**Phase 1 (MVP - 3주):** 개인용, 단일 계좌, 수동 스냅샷 생성
+**Phase 2 (2주):** 구독 모델(Free/Pro/Max), 스냅샷 수량 제한, 유료 유저용 자동 스냅샷
+**Phase 3 (4-6주):** 다중 사용자 서비스, 마이데이터 API 연동, 결제 연동
 
 ## 데이터베이스 아키텍처
 
@@ -50,6 +50,8 @@ User (Phase 3)
 2. **Decimal 정밀도** - 모든 금융 계산은 반올림 오류를 피하기 위해 `Decimal` 타입 사용 (float 사용 금지)
 3. **이력 보존을 위한 비정규화** - `StockHolding.currentPrice`는 스냅샷 시점의 가격을 저장 (정규화하지 않음)하여 과거 데이터 보존
 4. **연쇄 삭제** - 스냅샷 삭제 시 관련된 보유 종목도 자동 삭제
+5. **스냅샷 수량 제한** - 플랜별 최대 저장 개수 제한 (Free: 30, Pro: 125, Max: 250)
+6. **자동화 제한** - 자동 스냅샷 기능은 유료 플랜 전용
 
 ### 중요 스키마 세부사항
 
@@ -215,6 +217,9 @@ feat: implement REST API endpoints
 - GET/POST /api/snapshots - list and create snapshots
 - GET/DELETE /api/snapshots/[id] - get detail and delete snapshot
 ```
+
+### 🚫 금지 사항
+- 커밋 메시지에 `Generated with Claude Code` 또는 `Co-Authored-By: Claude` 같은 자동 생성 문구 절대 포함 금지
 
 ## 참고 문서
 

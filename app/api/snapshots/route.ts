@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { calculateProfitRate, calculateProfit, calculateCurrentValue, calculateTotalCost } from '@/lib/utils/calculations'
+import { SUBSCRIPTION_LIMITS } from '@/lib/config/subscription'
 import Decimal from 'decimal.js'
 
 // POST /api/snapshots - 스냅샷 생성
@@ -19,6 +20,42 @@ export async function POST(request: NextRequest) {
           },
         },
         { status: 400 }
+      )
+    }
+
+    // 1. 계좌 및 사용자 플랜 조회
+    const account = await prisma.securitiesAccount.findUnique({
+      where: { id: accountId },
+      include: { user: true },
+    })
+
+    if (!account) {
+      return NextResponse.json(
+        { success: false, error: { code: 'ACCOUNT_NOT_FOUND', message: '계좌를 찾을 수 없습니다.' } },
+        { status: 404 }
+      )
+    }
+
+    // 2. 현재 스냅샷 개수 조회
+    const snapshotCount = await prisma.portfolioSnapshot.count({
+      where: { accountId },
+    })
+
+    // 3. 플랜별 한도 체크
+    const userPlan = account.user.plan as keyof typeof SUBSCRIPTION_LIMITS
+    const limit = SUBSCRIPTION_LIMITS[userPlan]
+
+    if (snapshotCount >= limit) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: 'SNAPSHOT_LIMIT_EXCEEDED',
+            message: `스냅샷 저장 한도를 초과했습니다. (${userPlan} 플랜: 최대 ${limit}개)`,
+            details: { currentCount: snapshotCount, limit, plan: userPlan },
+          },
+        },
+        { status: 403 }
       )
     }
 

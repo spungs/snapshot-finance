@@ -5,12 +5,21 @@ generator client {
 datasource db {
     provider = "postgresql"
 	url		 = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum SubscriptionPlan {
+  FREE
+  PRO
+  MAX
 }
 
 model User {
     id        String   @id @default(cuid())
     email     String   @unique
     name      String?
+    plan               SubscriptionPlan @default(FREE)
+    subscriptionStatus String?          @default("active") // active, canceled, past_due
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
@@ -28,6 +37,7 @@ model SecuritiesAccount {
     brokerName    String
     apiType       String
     isActive      Boolean  @default(true)
+    isAutoSnapshotEnabled Boolean @default(false)
     createdAt     DateTime @default(now())
     updatedAt     DateTime @updatedAt
 
