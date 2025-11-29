@@ -6,6 +6,13 @@ const prisma = new PrismaClient()
 async function main() {
   console.log('Seeding database...')
 
+  // Clean up existing test data
+  await prisma.stockHolding.deleteMany({})
+  await prisma.portfolioSnapshot.deleteMany({})
+  await prisma.securitiesAccount.deleteMany({ where: { id: 'test-account-1' } })
+  await prisma.user.deleteMany({ where: { email: { in: ['test@example.com', 'free@example.com', 'pro@example.com', 'max@example.com'] } } })
+
+
   // 주요 종목 마스터 데이터
   const stocks = [
     { stockCode: '005930', stockName: '삼성전자', market: 'KOSPI', sector: '전기전자' },
@@ -29,30 +36,57 @@ async function main() {
   }
   console.log(`Created ${stocks.length} stocks`)
 
-  // 테스트용 사용자 생성
-  const user = await prisma.user.upsert({
-    where: { email: 'test@example.com' },
-    update: {},
+  // 테스트용 사용자 생성 (Free Plan)
+  const freeUser = await prisma.user.upsert({
+    where: { email: 'free@example.com' },
+    update: { plan: 'FREE' },
     create: {
-      id: 'test-user-1',
-      email: 'test@example.com',
-      name: '테스트 사용자',
+      id: 'test-user-free',
+      email: 'free@example.com',
+      name: 'Free User',
+      plan: 'FREE',
     },
   })
-  console.log(`Created user: ${user.email}`)
+  console.log(`Created user: ${freeUser.email} (${freeUser.plan})`)
+
+  // 테스트용 사용자 생성 (Pro Plan)
+  const proUser = await prisma.user.upsert({
+    where: { email: 'pro@example.com' },
+    update: { plan: 'PRO' },
+    create: {
+      id: 'test-user-pro',
+      email: 'pro@example.com',
+      name: 'Pro User',
+      plan: 'PRO',
+    },
+  })
+  console.log(`Created user: ${proUser.email} (${proUser.plan})`)
+
+  // 테스트용 사용자 생성 (Max Plan)
+  const maxUser = await prisma.user.upsert({
+    where: { email: 'max@example.com' },
+    update: { plan: 'MAX' },
+    create: {
+      id: 'test-user-max',
+      email: 'max@example.com',
+      name: 'Max User',
+      plan: 'MAX',
+    },
+  })
+  console.log(`Created user: ${maxUser.email} (${maxUser.plan})`)
 
   // 테스트용 계좌 생성
   const account = await prisma.securitiesAccount.upsert({
     where: {
       userId_accountNumber: {
-        userId: user.id,
+        userId: freeUser.id,
         accountNumber: '1234567890'
       }
     },
     update: {},
     create: {
       id: 'test-account-1',
-      userId: user.id,
+      userId: freeUser.id,
       accountNumber: '1234567890',
       accountName: 'NH투자증권 위탁계좌',
       brokerName: 'NH투자증권',
@@ -61,6 +95,48 @@ async function main() {
     },
   })
   console.log(`Created account: ${account.accountName}`)
+
+  // Pro User Account
+  const proAccount = await prisma.securitiesAccount.upsert({
+    where: {
+      userId_accountNumber: {
+        userId: proUser.id,
+        accountNumber: '1234567891'
+      }
+    },
+    update: {},
+    create: {
+      id: 'test-account-pro',
+      userId: proUser.id,
+      accountNumber: '1234567891',
+      accountName: 'Pro Account',
+      brokerName: 'NH투자증권',
+      apiType: 'NH',
+      isActive: true,
+    },
+  })
+  console.log(`Created account: ${proAccount.accountName}`)
+
+  // Max User Account
+  const maxAccount = await prisma.securitiesAccount.upsert({
+    where: {
+      userId_accountNumber: {
+        userId: maxUser.id,
+        accountNumber: '1234567892'
+      }
+    },
+    update: {},
+    create: {
+      id: 'test-account-max',
+      userId: maxUser.id,
+      accountNumber: '1234567892',
+      accountName: 'Max Account',
+      brokerName: 'NH투자증권',
+      apiType: 'NH',
+      isActive: true,
+    },
+  })
+  console.log(`Created account: ${maxAccount.accountName}`)
 
   console.log('Seeding completed!')
 }
