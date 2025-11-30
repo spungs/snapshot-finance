@@ -16,6 +16,8 @@ interface SubscriptionStatusCardProps {
     loading?: boolean
 }
 
+import { useLanguage } from '@/lib/i18n/context'
+
 export function SubscriptionStatusCard({
     plan,
     snapshotCount,
@@ -24,6 +26,7 @@ export function SubscriptionStatusCard({
     onToggleAutoSnapshot,
     loading = false,
 }: SubscriptionStatusCardProps) {
+    const { t } = useLanguage()
     const usagePercent = Math.min((snapshotCount / limit) * 100, 100)
     const canAuto = canUseAutoSnapshot(plan)
 
@@ -41,7 +44,7 @@ export function SubscriptionStatusCard({
     return (
         <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">내 구독 정보</CardTitle>
+                <CardTitle className="text-sm font-medium">{t('mySubscription')}</CardTitle>
                 <Badge className={getPlanColor(plan)}>{plan}</Badge>
             </CardHeader>
             <CardContent>
@@ -49,7 +52,7 @@ export function SubscriptionStatusCard({
                     {/* Snapshot Usage */}
                     <div className="space-y-2">
                         <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">스냅샷 사용량</span>
+                            <span className="text-muted-foreground">{t('snapshotUsage')}</span>
                             <span className="font-medium">
                                 {snapshotCount} / {limit}
                             </span>
@@ -61,11 +64,11 @@ export function SubscriptionStatusCard({
                     <div className="flex items-center justify-between space-x-2 pt-2">
                         <div className="flex flex-col space-y-1">
                             <Label htmlFor="auto-snapshot" className="text-sm font-medium">
-                                자동 스냅샷
+                                {t('autoSnapshot')}
                             </Label>
                             <span className="text-xs text-muted-foreground">
-                                매일 자정에 자동으로 기록합니다.
-                                {!canAuto && ' (Pro 이상)'}
+                                {t('autoSnapshotDesc')}
+                                {!canAuto && ` ${t('proOrAbove')}`}
                             </span>
                         </div>
                         <Switch

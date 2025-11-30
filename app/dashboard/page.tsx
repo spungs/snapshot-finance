@@ -5,6 +5,9 @@ import { ProfitChart } from '@/components/dashboard/profit-chart'
 import { HoldingsTable } from '@/components/dashboard/holdings-table'
 import { SubscriptionStatusCard } from '@/components/dashboard/subscription-status-card'
 import { UserSwitcher } from '@/components/dashboard/user-switcher'
+import { DashboardHeader } from '@/components/dashboard/dashboard-header'
+import { EmptySnapshotState } from '@/components/dashboard/empty-snapshot-state'
+import { ViewAllSnapshotsLink } from '@/components/dashboard/view-all-snapshots-link'
 import { formatDate } from '@/lib/utils/formatters'
 import { prisma } from '@/lib/prisma'
 import { SUBSCRIPTION_LIMITS } from '@/lib/config/subscription'
@@ -15,9 +18,10 @@ import { toggleAutoSnapshot } from '@/app/actions'
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: { userId?: string }
+  searchParams: Promise<{ userId?: string }>
 }) {
-  const userId = searchParams.userId || 'test-user-free'
+  const params = await searchParams
+  const userId = params.userId || 'test-user-free'
 
   // 1. Fetch User & Account Data
   const user = await prisma.user.findUnique({
@@ -88,15 +92,7 @@ export default async function DashboardPage({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">대시보드</h1>
-        <div className="flex gap-2 items-center">
-          <UserSwitcher />
-          <Link href="/dashboard/snapshots/new">
-            <Button>새 스냅샷 생성</Button>
-          </Link>
-        </div>
-      </div>
+      <DashboardHeader />
 
       {/* Subscription Status */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -105,17 +101,6 @@ export default async function DashboardPage({
           snapshotCount={snapshotCount}
           limit={limit}
           isAutoSnapshotEnabled={account?.isAutoSnapshotEnabled || false}
-          // We can't pass a server action or handler easily here without 'use server' or client component wrapper.
-          // For now, let's make SubscriptionStatusCard handle the API call internally?
-          // Wait, SubscriptionStatusCard is a client component ('use client' at top).
-          // So passing a function prop is fine if it's a Server Action, OR we can just let it handle the fetch internally?
-          // The previous implementation passed `handleToggleAutoSnapshot`.
-          // Since we are in a Server Component, we can't pass a client-side event handler directly unless it's a Server Action.
-          // BUT, SubscriptionStatusCard is a Client Component.
-          // We can pass the userId to it, and let IT handle the API call.
-          // Let's modify SubscriptionStatusCard to take userId and handle the toggle internally.
-          // For now, I will pass a dummy function or modify the component.
-          // Actually, better to modify SubscriptionStatusCard to accept userId and do the fetch itself.
           onToggleAutoSnapshot={async (enabled) => {
             'use server'
             if (account) {
@@ -126,12 +111,7 @@ export default async function DashboardPage({
       </div>
 
       {snapshots.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-lg border">
-          <p className="text-gray-500 mb-4">아직 저장된 스냅샷이 없습니다.</p>
-          <Link href="/dashboard/snapshots/new">
-            <Button>첫 스냅샷 생성하기</Button>
-          </Link>
-        </div>
+        <EmptySnapshotState />
       ) : (
         <>
           {/* Portfolio Summary */}
@@ -171,11 +151,7 @@ export default async function DashboardPage({
           )}
 
           {/* View All Link */}
-          <div className="text-center">
-            <Link href="/dashboard/snapshots">
-              <Button variant="outline">전체 스냅샷 보기</Button>
-            </Link>
-          </div>
+          <ViewAllSnapshotsLink />
         </>
       )}
     </div>

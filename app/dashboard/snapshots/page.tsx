@@ -34,7 +34,10 @@ interface Snapshot {
   note?: string
 }
 
+import { useLanguage } from '@/lib/i18n/context'
+
 export default function SnapshotsPage() {
+  const { t } = useLanguage()
   const [snapshots, setSnapshots] = useState<Snapshot[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -47,10 +50,10 @@ export default function SnapshotsPage() {
       if (response.success && response.data) {
         setSnapshots(response.data)
       } else {
-        setError(response.error?.message || '스냅샷을 불러오는데 실패했습니다.')
+        setError(response.error?.message || t('loadFailed'))
       }
     } catch (err) {
-      setError('네트워크 오류가 발생했습니다.')
+      setError(t('networkError'))
     } finally {
       setLoading(false)
     }
@@ -61,7 +64,7 @@ export default function SnapshotsPage() {
   }, [])
 
   async function handleDelete(id: string) {
-    if (!confirm('이 스냅샷을 삭제하시겠습니까?')) return
+    if (!confirm(t('confirmDelete'))) return
 
     setDeleting(id)
     try {
@@ -69,10 +72,10 @@ export default function SnapshotsPage() {
       if (response.success) {
         setSnapshots((prev) => prev.filter((s) => s.id !== id))
       } else {
-        alert(response.error?.message || '삭제에 실패했습니다.')
+        alert(response.error?.message || t('deleteFailed'))
       }
     } catch (err) {
-      alert('네트워크 오류가 발생했습니다.')
+      alert(t('networkError'))
     } finally {
       setDeleting(null)
     }
@@ -91,7 +94,7 @@ export default function SnapshotsPage() {
     return (
       <div className="text-center py-12">
         <p className="text-red-500 mb-4">{error}</p>
-        <Button onClick={() => fetchSnapshots()}>다시 시도</Button>
+        <Button onClick={() => fetchSnapshots()}>{t('retry')}</Button>
       </div>
     )
   }
@@ -100,18 +103,18 @@ export default function SnapshotsPage() {
     <div className="space-y-6">
       {/* 페이지 헤더 */}
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">스냅샷 목록</h1>
+        <h1 className="text-2xl font-bold">{t('snapshotList')}</h1>
         <Link href="/dashboard/snapshots/new">
-          <Button>새 스냅샷 생성</Button>
+          <Button>{t('newSnapshot')}</Button>
         </Link>
       </div>
 
       {snapshots.length === 0 ? (
         <Card>
           <CardContent className="text-center py-12">
-            <p className="text-gray-500 mb-4">아직 저장된 스냅샷이 없습니다.</p>
+            <p className="text-gray-500 mb-4">{t('noSnapshots')}</p>
             <Link href="/dashboard/snapshots/new">
-              <Button>첫 스냅샷 생성하기</Button>
+              <Button>{t('createFirstSnapshot')}</Button>
             </Link>
           </CardContent>
         </Card>
@@ -122,13 +125,13 @@ export default function SnapshotsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>날짜</TableHead>
-                    <TableHead className="text-right">평가금액</TableHead>
-                    <TableHead className="text-right">손익</TableHead>
-                    <TableHead className="text-right">수익률</TableHead>
-                    <TableHead className="text-right">종목수</TableHead>
-                    <TableHead>메모</TableHead>
-                    <TableHead className="text-right">작업</TableHead>
+                    <TableHead>{t('date')}</TableHead>
+                    <TableHead className="text-right">{t('totalValue')}</TableHead>
+                    <TableHead className="text-right">{t('pl')}</TableHead>
+                    <TableHead className="text-right">{t('returnRate')}</TableHead>
+                    <TableHead className="text-right">{t('holdingsCount')}</TableHead>
+                    <TableHead>{t('memo')}</TableHead>
+                    <TableHead className="text-right">{t('actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -167,7 +170,7 @@ export default function SnapshotsPage() {
                           {formatProfitRate(Number(snapshot.profitRate))}
                         </TableCell>
                         <TableCell className="text-right">
-                          {snapshot.holdings.length}개
+                          {snapshot.holdings.length}{t('countUnit')}
                         </TableCell>
                         <TableCell className="text-gray-500 max-w-[200px] truncate">
                           {snapshot.note || '-'}
@@ -176,7 +179,7 @@ export default function SnapshotsPage() {
                           <div className="flex justify-end gap-2">
                             <Link href={`/dashboard/snapshots/${snapshot.id}`}>
                               <Button variant="outline" size="sm">
-                                상세
+                                {t('details')}
                               </Button>
                             </Link>
                             <Button
@@ -185,7 +188,7 @@ export default function SnapshotsPage() {
                               onClick={() => handleDelete(snapshot.id)}
                               disabled={deleting === snapshot.id}
                             >
-                              {deleting === snapshot.id ? '삭제중...' : '삭제'}
+                              {deleting === snapshot.id ? t('deleting') : t('delete')}
                             </Button>
                           </div>
                         </TableCell>

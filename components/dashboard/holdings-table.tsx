@@ -25,40 +25,46 @@ interface Holding {
   currentValue: number
   profit: number
   profitRate: number
+  currency?: string
 }
 
 interface HoldingsTableProps {
   holdings: Holding[]
 }
 
+import { useLanguage } from '@/lib/i18n/context'
+
 export function HoldingsTable({ holdings }: HoldingsTableProps) {
+  const { t } = useLanguage()
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>보유 종목</CardTitle>
+        <CardTitle>{t('holdings')}</CardTitle>
       </CardHeader>
       <CardContent>
         {holdings.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
-            보유 종목이 없습니다.
+            {t('holdingsEmpty')}
           </div>
         ) : (
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>종목명</TableHead>
-                  <TableHead className="text-right">수량</TableHead>
-                  <TableHead className="text-right">평균단가</TableHead>
-                  <TableHead className="text-right">현재가</TableHead>
-                  <TableHead className="text-right">평가금액</TableHead>
-                  <TableHead className="text-right">손익</TableHead>
-                  <TableHead className="text-right">수익률</TableHead>
+                  <TableHead>{t('stockName')}</TableHead>
+                  <TableHead className="text-right">{t('quantity')}</TableHead>
+                  <TableHead className="text-right">{t('avgPrice')}</TableHead>
+                  <TableHead className="text-right">{t('currentPrice')}</TableHead>
+                  <TableHead className="text-right">{t('evaluatedValue')}</TableHead>
+                  <TableHead className="text-right">{t('pl')}</TableHead>
+                  <TableHead className="text-right">{t('returnRate')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {holdings.map((holding) => {
                   const isProfit = Number(holding.profit) >= 0
+                  const currency = holding.currency || 'KRW'
                   return (
                     <TableRow key={holding.id}>
                       <TableCell>
@@ -70,16 +76,16 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
-                        {formatNumber(holding.quantity)}주
+                        {formatNumber(holding.quantity)}{t('countUnit')}
                       </TableCell>
                       <TableCell className="text-right">
-                        {formatCurrency(Number(holding.averagePrice))}
+                        {formatCurrency(Number(holding.averagePrice), currency)}
                       </TableCell>
                       <TableCell className="text-right">
-                        {formatCurrency(Number(holding.currentPrice))}
+                        {formatCurrency(Number(holding.currentPrice), currency)}
                       </TableCell>
                       <TableCell className="text-right font-medium">
-                        {formatCurrency(Number(holding.currentValue))}
+                        {formatCurrency(Number(holding.currentValue), currency)}
                       </TableCell>
                       <TableCell
                         className={cn(
@@ -88,7 +94,7 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
                         )}
                       >
                         {isProfit ? '+' : ''}
-                        {formatCurrency(Number(holding.profit))}
+                        {formatCurrency(Number(holding.profit), currency)}
                       </TableCell>
                       <TableCell
                         className={cn(
