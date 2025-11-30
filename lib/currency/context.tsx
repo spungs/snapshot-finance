@@ -1,0 +1,45 @@
+'use client'
+
+import React, { createContext, useContext, useEffect, useState } from 'react'
+
+export type Currency = 'KRW' | 'USD'
+
+interface CurrencyContextType {
+    baseCurrency: Currency
+    setBaseCurrency: (currency: Currency) => void
+    exchangeRate: number
+    setExchangeRate: (rate: number) => void
+}
+
+const CurrencyContext = createContext<CurrencyContextType | undefined>(undefined)
+
+export function CurrencyProvider({ children }: { children: React.ReactNode }) {
+    const [baseCurrency, setBaseCurrencyState] = useState<Currency>('KRW')
+    const [exchangeRate, setExchangeRate] = useState<number>(1435) // Default fallback
+
+    useEffect(() => {
+        const savedCurrency = localStorage.getItem('baseCurrency') as Currency
+        if (savedCurrency) {
+            setBaseCurrencyState(savedCurrency)
+        }
+    }, [])
+
+    const setBaseCurrency = (currency: Currency) => {
+        setBaseCurrencyState(currency)
+        localStorage.setItem('baseCurrency', currency)
+    }
+
+    return (
+        <CurrencyContext.Provider value={{ baseCurrency, setBaseCurrency, exchangeRate, setExchangeRate }}>
+            {children}
+        </CurrencyContext.Provider>
+    )
+}
+
+export function useCurrency() {
+    const context = useContext(CurrencyContext)
+    if (context === undefined) {
+        throw new Error('useCurrency must be used within a CurrencyProvider')
+    }
+    return context
+}
