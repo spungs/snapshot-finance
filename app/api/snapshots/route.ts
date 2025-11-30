@@ -81,6 +81,8 @@ export async function POST(request: NextRequest) {
         currentValue: value,
         profit: profit,
         profitRate: profitRate,
+        currency: h.currency || 'KRW',
+        purchaseRate: new Decimal(h.purchaseRate || 1),
       }
     })
 

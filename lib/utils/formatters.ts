@@ -4,10 +4,10 @@ import { ko } from 'date-fns/locale'
 /**
  * 금액 포맷팅 (예: ₩12,345,678)
  */
-export function formatCurrency(value: number | string): string {
+export function formatCurrency(value: number | string, currency: string = 'KRW'): string {
   return new Intl.NumberFormat('ko-KR', {
     style: 'currency',
-    currency: 'KRW',
+    currency: currency,
   }).format(Number(value))
 }
 
@@ -15,7 +15,10 @@ export function formatCurrency(value: number | string): string {
  * 숫자 포맷팅 (예: 12,345,678)
  */
 export function formatNumber(value: number | string): string {
-  return new Intl.NumberFormat('ko-KR').format(Number(value))
+  if (!value && value !== 0) return ''
+  return new Intl.NumberFormat('ko-KR', {
+    maximumFractionDigits: 6,
+  }).format(Number(value))
 }
 
 /**

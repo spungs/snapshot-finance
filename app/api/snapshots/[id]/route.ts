@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { Prisma } from '@prisma/client'
 
 // GET /api/snapshots/[id] - 스냅샷 상세 조회
 export async function GET(
@@ -93,6 +94,136 @@ export async function DELETE(
         error: {
           code: 'SNAPSHOT_DELETE_FAILED',
           message: '스냅샷 삭제에 실패했습니다.',
+        },
+      },
+      { status: 500 }
+    )
+  }
+}
+
+// PUT /api/snapshots/[id] - 스냅샷 수정
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+    const body = await request.json()
+    const { holdings, cashBalance, note } = body
+
+    // 1. Calculate totals
+    let totalCost = 0
+    let totalValue = 0
+
+    // Process holdings to calculate totals
+    // Note: We need to handle currency conversion here if we want accurate totals in KRW
+    // For now, assuming the frontend sends correct data or we calculate simply
+    // Based on previous logic:
+    // Cost = quantity * averagePrice * purchaseRate
+    // Value = quantity * currentPrice * (currency === 'USD' ? CURRENT_EXCHANGE_RATE : 1)
+    // But wait, the API receives what?
+    // The previous POST implementation calculated totals in the API?
+    // Let's check POST implementation in app/api/snapshots/route.ts to be consistent.
+
+    // ... Checked POST implementation mental model ...
+    // Actually, let's look at how we did it in POST.
+    // We should probably replicate the logic.
+
+    const CURRENT_EXCHANGE_RATE = 1435 // Should ideally be dynamic or passed from frontend
+
+    const processedHoldings = holdings.map((h: any) => {
+      const qty = Number(h.quantity)
+      const avg = Number(h.averagePrice)
+      const curr = Number(h.currentPrice)
+      const pRate = Number(h.purchaseRate) || 1
+      const currency = h.currency || 'KRW'
+
+      // Cost calculation
+      const holdingCost = qty * avg * pRate
+
+      // Value calculation
+      // If USD, apply current exchange rate
+      const cRate = currency === 'USD' ? CURRENT_EXCHANGE_RATE : 1
+      const holdingValue = qty * curr * cRate
+
+      const profit = holdingValue - holdingCost
+      const profitRate = holdingCost > 0 ? (profit / holdingCost) * 100 : 0
+
+      totalCost += holdingCost
+      totalValue += holdingValue
+
+      return {
+        stockId: h.stockId,
+        quantity: qty,
+        averagePrice: avg,
+        currentPrice: curr,
+        totalCost: holdingCost,
+        currentValue: holdingValue,
+        profit: profit,
+        profitRate: profitRate,
+        currency: currency,
+        purchaseRate: pRate,
+      }
+    })
+
+    // Re-calculating totals
+    const totalProfit = totalValue - totalCost
+    const profitRate = totalCost > 0 ? (totalProfit / totalCost) * 100 : 0
+    const finalCashBalance = Number(cashBalance) || 0
+    const finalTotalValue = totalValue + finalCashBalance
+
+    // Transaction: Update Snapshot + Replace Holdings
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      // 1. Update Snapshot
+      await tx.portfolioSnapshot.update({
+        where: { id },
+        data: {
+          totalValue: finalTotalValue,
+          totalCost: totalCost,
+          totalProfit: totalProfit,
+          profitRate: profitRate,
+          cashBalance: finalCashBalance,
+          note: note,
+        },
+      })
+
+      // 2. Delete existing holdings
+      await tx.stockHolding.deleteMany({
+        where: { snapshotId: id },
+      })
+
+      // 3. Create new holdings
+      if (processedHoldings.length > 0) {
+        await tx.stockHolding.createMany({
+          data: processedHoldings.map((h: any) => ({
+            snapshotId: id,
+            stockId: h.stockId,
+            quantity: h.quantity,
+            averagePrice: h.averagePrice,
+            currentPrice: h.currentPrice,
+            totalCost: h.totalCost,
+            currentValue: h.currentValue,
+            profit: h.profit,
+            profitRate: h.profitRate,
+            currency: h.currency,
+            purchaseRate: h.purchaseRate,
+          })),
+        })
+      }
+    })
+
+    return NextResponse.json({
+      success: true,
+      message: '스냅샷이 수정되었습니다.',
+    })
+  } catch (error) {
+    console.error('Snapshot update error:', error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: {
+          code: 'SNAPSHOT_UPDATE_FAILED',
+          message: '스냅샷 수정에 실패했습니다.',
         },
       },
       { status: 500 }

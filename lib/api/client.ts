@@ -55,6 +55,22 @@ export const snapshotsApi = {
       body: JSON.stringify(data),
     }),
 
+  update: (id: string, data: {
+    accountId?: string
+    holdings?: Array<{
+      stockId: string
+      quantity: number
+      averagePrice: number
+      currentPrice: number
+    }>
+    cashBalance?: number
+    note?: string
+  }) =>
+    fetchApi<any>(`/snapshots/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
   delete: (id: string) =>
     fetchApi<void>(`/snapshots/${id}`, {
       method: 'DELETE',
