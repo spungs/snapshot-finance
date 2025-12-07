@@ -52,8 +52,9 @@ export function StockSearchCombobox({
     const [query, setQuery] = React.useState('')
     const [results, setResults] = React.useState<SearchResult[]>([])
     const [loading, setLoading] = React.useState(false)
+    const [selectingLoading, setSelectingLoading] = React.useState(false)
     const [error, setError] = React.useState<string | null>(null)
-    // const debouncedQuery = useDebounce(query, 300) // Removed auto-search
+    const [hasSearched, setHasSearched] = React.useState(false)
 
     async function searchStocks() {
         if (!query) {
@@ -64,12 +65,14 @@ export function StockSearchCombobox({
 
         setLoading(true)
         setError(null)
+        setResults([]) // Clear previous results when starting new search
         try {
             const res = await fetch(`/api/stocks/search?query=${encodeURIComponent(query)}`)
             const data = await res.json()
             if (data.success) {
                 setResults(data.data)
                 setError(null)
+                setHasSearched(true)
             } else {
                 setResults([])
                 setError(data.error || t('searchError'))
@@ -83,7 +86,7 @@ export function StockSearchCombobox({
     }
 
     const handleSelect = async (result: SearchResult) => {
-        setLoading(true)
+        setSelectingLoading(true)
         try {
             // Create or get stock from DB
             const res = await fetch('/api/stocks', {
@@ -102,11 +105,13 @@ export function StockSearchCombobox({
                 onSelect(data.data)
                 setOpen(false)
                 setQuery('')
+                setHasSearched(false)
+                setResults([])
             }
         } catch (error) {
             console.error('Failed to select stock:', error)
         } finally {
-            setLoading(false)
+            setSelectingLoading(false)
         }
     }
 
@@ -162,7 +167,7 @@ export function StockSearchCombobox({
                                 {error}
                             </div>
                         )}
-                        {!loading && !error && results.length === 0 && query && (
+                        {!loading && !error && results.length === 0 && hasSearched && (
                             <CommandEmpty>{t('searchEmpty')}</CommandEmpty>
                         )}
                         <CommandGroup>

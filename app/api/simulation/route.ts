@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { kisClient } from '@/lib/api/kis-client'
+import { getUsdExchangeRate } from '@/lib/api/exchange-rate'
 
 export async function POST(request: NextRequest) {
     try {
@@ -33,38 +34,74 @@ export async function POST(request: NextRequest) {
             )
         }
 
+        // Fetch custom exchange rate (Real-time)
+        const currentExchangeRateData = await getUsdExchangeRate()
+        const currentExchangeRate = currentExchangeRateData
+
+        const snapshotExchangeRate = Number((snapshot as any).exchangeRate) || 1
+
         // 2. Fetch current prices for all holdings in parallel
         const simulationResults = await Promise.all(
             snapshot.holdings.map(async (holding: any) => {
                 try {
-                    // Determine market. If not in DB, infer from code.
-                    // Ideally we should store market in Stock table.
-                    // For now, use the same heuristic: numeric = KOSPI/KOSDAQ (default KOSPI), alpha = US
+                    // Determine market and currency
                     const market = holding.stock.market === 'KOSPI' || holding.stock.market === 'KOSDAQ'
                         ? holding.stock.market
                         : (isNaN(Number(holding.stock.stockCode)) ? 'US' : 'KOSPI')
 
+                    const isUsd = holding.currency === 'USD' || market === 'US'
+                    const appliedRate = isUsd ? currentExchangeRate : 1
+
                     const priceData = await kisClient.getCurrentPrice(holding.stock.stockCode, market as any)
 
-                    const currentPrice = priceData.price
+                    const currentPriceNative = priceData.price
+                    const snapshotPriceNative = Number(holding.averagePrice) // Use Average Price (Cost)
+
+                    const purchaseRate = Number(holding.purchaseRate) || 1
+
+                    // Determine Cost Basis Rate
+                    // User Request: Use Snapshot Time Exchange Rate.
+                    // We interpret this as forcing the calculation to use the exchange rate stored in the snapshot.
+                    let costBasisRate = 1
+                    if (isUsd) {
+                        costBasisRate = snapshotExchangeRate
+                    }
+
                     const quantity = Number(holding.quantity)
-                    const simulatedValue = currentPrice * quantity
-                    const originalValue = Number(holding.totalValue) // Value at snapshot time
+
+                    // Native calculations for display
+                    const simulatedValueNative = currentPriceNative * quantity
+                    const originalValueNative = snapshotPriceNative * quantity
+
+                    // KRW calculations for total summary
+                    // Simulated (Current) Value using Current Exchange Rate
+                    const simulatedValueKRW = simulatedValueNative * appliedRate
+
+                    // Original (Cost) Value using Purchase Rate (or Snapshot Rate fallback)
+                    const originalValueKRW = originalValueNative * costBasisRate
+
+                    const gainKRW = simulatedValueKRW - originalValueKRW
+                    const gainRateKRW = originalValueKRW > 0 ? ((simulatedValueKRW - originalValueKRW) / originalValueKRW) * 100 : 0
 
                     return {
                         stockName: holding.stock.stockName,
                         stockCode: holding.stock.stockCode,
                         quantity: quantity,
-                        originalPrice: Number(holding.averagePrice), // Or currentPrice at snapshot time? averagePrice is cost basis.
-                        // Actually, for "if I held on", we compare "Value at Snapshot" vs "Value Now".
-                        // But usually users want to know "If I held on from my original purchase".
-                        // Let's compare against the Snapshot's value.
-                        snapshotPrice: Number(holding.currentPrice), // Price AT THE TIME of snapshot
-                        currentPrice: currentPrice,
-                        originalValue: Number(holding.currentPrice) * quantity, // Value at snapshot time
-                        simulatedValue: simulatedValue,
-                        gain: simulatedValue - (Number(holding.currentPrice) * quantity),
-                        gainRate: ((simulatedValue - (Number(holding.currentPrice) * quantity)) / (Number(holding.currentPrice) * quantity)) * 100,
+                        currency: isUsd ? 'USD' : 'KRW',
+
+                        // Detail View: Native Currency
+                        snapshotPrice: snapshotPriceNative, // Average Price
+                        currentPrice: currentPriceNative,
+                        originalValue: originalValueNative,
+                        simulatedValue: simulatedValueNative,
+                        gain: simulatedValueNative - originalValueNative,
+                        gainRate: originalValueNative > 0 ? ((simulatedValueNative - originalValueNative) / originalValueNative) * 100 : 0,
+
+                        // Fields for aggregation
+                        originalValueKRW,
+                        simulatedValueKRW,
+                        gainKRW,
+                        gainRateKRW
                     }
                 } catch (error) {
                     console.error(`Failed to simulate ${holding.stock.stockName}:`, error)
@@ -73,19 +110,23 @@ export async function POST(request: NextRequest) {
                         stockCode: holding.stock.stockCode,
                         quantity: Number(holding.quantity),
                         error: 'Failed to fetch price',
+                        currency: 'KRW',
                         currentPrice: 0,
+                        snapshotPrice: 0,
                         simulatedValue: 0,
                         originalValue: 0,
                         gain: 0,
                         gainRate: 0,
+                        originalValueKRW: 0,
+                        simulatedValueKRW: 0
                     }
                 }
             })
         )
 
-        // 3. Aggregate results
-        const totalOriginalValue = simulationResults.reduce((sum, item) => sum + (item.originalValue || 0), 0)
-        const totalSimulatedValue = simulationResults.reduce((sum, item) => sum + (item.simulatedValue || 0), 0)
+        // 3. Aggregate results (using KRW values for total)
+        const totalOriginalValue = simulationResults.reduce((sum, item) => sum + (item.originalValueKRW || 0), 0)
+        const totalSimulatedValue = simulationResults.reduce((sum, item) => sum + (item.simulatedValueKRW || 0), 0)
         const totalGain = totalSimulatedValue - totalOriginalValue
         const totalGainRate = totalOriginalValue > 0 ? (totalGain / totalOriginalValue) * 100 : 0
 
@@ -97,7 +138,9 @@ export async function POST(request: NextRequest) {
                 totalSimulatedValue,
                 totalGain,
                 totalGainRate,
-                holdings: simulationResults,
+                holdings: simulationResults, // Items contain native values + hidden KRW values
+                exchangeRate: currentExchangeRate,
+                snapshotExchangeRate,
             },
         })
 

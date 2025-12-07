@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
@@ -18,7 +19,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table'
-import { formatCurrency, formatProfitRate, formatDate } from '@/lib/utils/formatters'
+import { formatCurrency, formatProfitRate, formatDate, formatNumber } from '@/lib/utils/formatters'
 import { Loader2, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 
@@ -38,6 +39,9 @@ interface SimulationResult {
         simulatedValue: number
         gain: number
         gainRate: number
+        gainKRW?: number
+        gainRateKRW?: number
+        currency: string
         error?: string
     }[]
 }
@@ -50,14 +54,21 @@ import { useLanguage } from '@/lib/i18n/context'
 
 export default function SimulationClient({ initialSnapshots }: SimulationClientProps) {
     const { t } = useLanguage()
+    const searchParams = useSearchParams()
     const [selectedSnapshotId, setSelectedSnapshotId] = useState<string>('')
     const [result, setResult] = useState<SimulationResult | null>(null)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
-    const runSimulation = async () => {
-        if (!selectedSnapshotId) return
+    useEffect(() => {
+        const id = searchParams.get('snapshotId')
+        if (id) {
+            setSelectedSnapshotId(id)
+            executeSimulation(id)
+        }
+    }, [searchParams])
 
+    const executeSimulation = async (id: string) => {
         setLoading(true)
         setError(null)
         setResult(null)
@@ -66,7 +77,7 @@ export default function SimulationClient({ initialSnapshots }: SimulationClientP
             const res = await fetch('/api/simulation', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ snapshotId: selectedSnapshotId }),
+                body: JSON.stringify({ snapshotId: id }),
             })
             const data = await res.json()
 
@@ -80,6 +91,11 @@ export default function SimulationClient({ initialSnapshots }: SimulationClientP
         } finally {
             setLoading(false)
         }
+    }
+
+    const runSimulation = () => {
+        if (!selectedSnapshotId) return
+        executeSimulation(selectedSnapshotId)
     }
 
     return (
@@ -139,7 +155,7 @@ export default function SimulationClient({ initialSnapshots }: SimulationClientP
                     <div className="grid gap-4 md:grid-cols-3">
                         <Card>
                             <CardHeader className="pb-2">
-                                <CardTitle className="text-sm font-medium">{t('pastValue')}</CardTitle>
+                                <CardTitle className="text-sm font-medium">{t('totalInvested')}</CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <div className="text-2xl font-bold">{formatCurrency(result.totalOriginalValue)}</div>
@@ -155,16 +171,16 @@ export default function SimulationClient({ initialSnapshots }: SimulationClientP
                                 <p className="text-xs text-muted-foreground">{t('basedOnRealtime')}</p>
                             </CardContent>
                         </Card>
-                        <Card className={result.totalGain >= 0 ? "border-green-200 bg-green-50 dark:bg-green-900/20" : "border-red-200 bg-red-50 dark:bg-red-900/20"}>
+                        <Card className={result.totalGain >= 0 ? "border-red-200 bg-red-50 dark:bg-red-900/20" : "border-blue-200 bg-blue-50 dark:bg-blue-900/20"}>
                             <CardHeader className="pb-2">
                                 <CardTitle className="text-sm font-medium">{t('virtualProfit')}</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <div className={`text-2xl font-bold flex items-center ${result.totalGain >= 0 ? "text-green-600" : "text-red-600"}`}>
+                                <div className={`text-2xl font-bold flex items-center ${result.totalGain >= 0 ? "text-red-600" : "text-blue-600"}`}>
                                     {result.totalGain >= 0 ? <TrendingUp className="mr-2 h-6 w-6" /> : <TrendingDown className="mr-2 h-6 w-6" />}
-                                    {formatCurrency(result.totalGain)}
+                                    {formatCurrency(Math.abs(result.totalGain))}
                                 </div>
-                                <p className={`text-xs font-medium ${result.totalGain >= 0 ? "text-green-600" : "text-red-600"}`}>
+                                <p className={`text-xs font-medium ${result.totalGain >= 0 ? "text-red-600" : "text-blue-600"}`}>
                                     {formatProfitRate(result.totalGainRate)}
                                 </p>
                             </CardContent>
@@ -181,33 +197,47 @@ export default function SimulationClient({ initialSnapshots }: SimulationClientP
                                     <TableRow>
                                         <TableHead>{t('stockName')}</TableHead>
                                         <TableHead className="text-right">{t('quantity')}</TableHead>
-                                        <TableHead className="text-right">{t('pastPrice')}</TableHead>
+                                        <TableHead className="text-right">{t('avgPrice')}</TableHead>
                                         <TableHead className="text-right">{t('currentPrice')}</TableHead>
                                         <TableHead className="text-right">{t('pl')}</TableHead>
                                         <TableHead className="text-right">{t('returnRate')}</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {result.holdings.map((item) => (
-                                        <TableRow key={item.stockCode}>
+                                    {result.holdings.map((item, index) => (
+                                        <TableRow key={`${item.stockCode}-${index}`}>
                                             <TableCell>
                                                 <div className="font-medium">{item.stockName}</div>
                                                 <div className="text-xs text-muted-foreground">{item.stockCode}</div>
                                             </TableCell>
-                                            <TableCell className="text-right">{item.quantity}{t('countUnit')}</TableCell>
-                                            <TableCell className="text-right">{formatCurrency(item.snapshotPrice)}</TableCell>
+                                            <TableCell className="text-right">{formatNumber(item.quantity)}{t('countUnit')}</TableCell>
+                                            <TableCell className="text-right">{formatCurrency(item.snapshotPrice, item.currency)}</TableCell>
                                             <TableCell className="text-right">
                                                 {item.error ? (
                                                     <span className="text-red-500 text-xs">{t('fetchFailed')}</span>
                                                 ) : (
-                                                    formatCurrency(item.currentPrice)
+                                                    formatCurrency(item.currentPrice, item.currency)
                                                 )}
                                             </TableCell>
-                                            <TableCell className={`text-right font-medium ${item.gain >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                                {formatCurrency(item.gain)}
+                                            <TableCell className="text-right">
+                                                <div className={`font-medium ${item.gain >= 0 ? 'text-red-600' : 'text-blue-600'}`}>
+                                                    {formatCurrency(Math.abs(item.gain), item.currency)}
+                                                </div>
+                                                {item.currency === 'USD' && (
+                                                    <div className={`text-xs ${item.gainKRW! >= 0 ? 'text-red-600/70' : 'text-blue-600/70'}`}>
+                                                        ({formatCurrency(Math.abs(item.gainKRW || 0), 'KRW')})
+                                                    </div>
+                                                )}
                                             </TableCell>
-                                            <TableCell className={`text-right ${item.gainRate >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                                {formatProfitRate(item.gainRate)}
+                                            <TableCell className="text-right">
+                                                <div className={`${item.gainRate >= 0 ? 'text-red-600' : 'text-blue-600'}`}>
+                                                    {formatProfitRate(item.gainRate)}
+                                                </div>
+                                                {item.currency === 'USD' && (
+                                                    <div className={`text-xs ${item.gainRateKRW! >= 0 ? 'text-red-600/70' : 'text-blue-600/70'}`}>
+                                                        ({formatProfitRate(item.gainRateKRW || 0)})
+                                                    </div>
+                                                )}
                                             </TableCell>
                                         </TableRow>
                                     ))}

@@ -42,10 +42,16 @@ export default async function SimulationPage({
         totalProfit: Number(snap.totalProfit),
         profitRate: Number(snap.profitRate),
         cashBalance: Number(snap.cashBalance),
+        exchangeRate: snap.exchangeRate ? Number(snap.exchangeRate) : 1435,
         snapshotDate: snap.snapshotDate.toISOString(),
         createdAt: snap.createdAt.toISOString(),
-        holdings: snap.holdings.map(h => ({
-            ...h,
+        holdings: snap.holdings.map((h) => ({
+            id: h.id,
+            snapshotId: h.snapshotId,
+            stockId: h.stockId,
+            stock: h.stock,
+            createdAt: h.createdAt,
+            currency: h.currency,
             quantity: Number(h.quantity),
             averagePrice: Number(h.averagePrice),
             currentPrice: Number(h.currentPrice),
@@ -53,6 +59,7 @@ export default async function SimulationPage({
             currentValue: Number(h.currentValue),
             profit: Number(h.profit),
             profitRate: Number(h.profitRate),
+            purchaseRate: h.purchaseRate ? Number(h.purchaseRate) : 1,
         }))
     }))
 

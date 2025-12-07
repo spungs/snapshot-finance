@@ -26,8 +26,7 @@ export function formatNumber(value: number | string): string {
  */
 export function formatProfitRate(value: number | string): string {
   const rate = Number(value)
-  const sign = rate >= 0 ? '+' : ''
-  return `${sign}${rate.toFixed(2)}%`
+  return `${Math.abs(rate).toFixed(2)}%`
 }
 
 /**

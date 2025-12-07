@@ -35,6 +35,8 @@ interface HoldingInput {
 export default function NewSnapshotPage() {
   const router = useRouter()
   const { t } = useLanguage()
+  const today = new Date().toISOString().split('T')[0]
+  const [snapshotDate, setSnapshotDate] = useState(today)
   const [holdings, setHoldings] = useState<HoldingInput[]>([
     { stockId: '', stockName: '', stockCode: '', quantity: '', averagePrice: '', currentPrice: '', currency: 'KRW', purchaseRate: '1' },
   ])
@@ -43,9 +45,75 @@ export default function NewSnapshotPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [summaryDisplayCurrency, setSummaryDisplayCurrency] = useState<'KRW' | 'USD'>('KRW')
+  const [exchangeRate, setExchangeRate] = useState<number>(1435)
+  const [updatingPrices, setUpdatingPrices] = useState(false)
 
-  // Global current exchange rate for valuation (hardcoded for now as per user request to remove summary toggle)
-  const CURRENT_EXCHANGE_RATE = 1435
+  // Fetch Exchange Rate AND Stock Prices when date changes
+  useEffect(() => {
+    async function updateData() {
+      setUpdatingPrices(true)
+      try {
+        // 1. Update Exchange Rate
+        let currentRate = 1435
+        if (snapshotDate === today) {
+          setExchangeRate(1435)
+        } else {
+          console.log('Fetching historical exchange rate for:', snapshotDate)
+          try {
+            const res = await fetch(`/api/stocks/history?symbol=KRW=X&market=FX&date=${snapshotDate}`)
+            const data = await res.json()
+            if (data.success && data.data) {
+              currentRate = data.data.close || 1435
+              setExchangeRate(currentRate)
+            } else {
+              console.warn('Failed to fetch historical exchange rate, using default 1435.')
+              setExchangeRate(1435)
+            }
+          } catch (e) {
+            console.error('Failed to fetch historical exchange rate', e)
+            setExchangeRate(1435)
+          }
+        }
+
+        // 2. Update Stock Prices for existing holdings
+        if (holdings.length > 0 && !(holdings.length === 1 && !holdings[0].stockId)) {
+          const updatedHoldings = await Promise.all(holdings.map(async (h) => {
+            if (!h.stockCode) return h
+
+            const market = isNaN(Number(h.stockCode)) ? 'US' : 'KOSPI'
+            let price = h.currentPrice
+
+            try {
+              if (snapshotDate === today) {
+                const res = await fetch(`/api/kis/price?symbol=${h.stockCode}&market=${market}`)
+                const data = await res.json()
+                if (data.success && data.data && data.data.price) {
+                  price = data.data.price.toString()
+                }
+              } else {
+                const res = await fetch(`/api/stocks/history?symbol=${h.stockCode}&market=${market}&date=${snapshotDate}`)
+                const data = await res.json()
+                if (data.success && data.data && data.data.close) {
+                  price = data.data.close.toString()
+                }
+              }
+            } catch (e) {
+              console.error(`Failed to update price for ${h.stockCode}`, e)
+            }
+
+            return { ...h, currentPrice: price }
+          }))
+
+          setHoldings(updatedHoldings)
+        }
+      } finally {
+        setUpdatingPrices(false)
+      }
+    }
+
+    updateData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [snapshotDate, today]) // Intentionally omit holdings to rely on closure value at time of date change, and avoid loop
 
   function addHolding() {
     setHoldings([
@@ -88,37 +156,46 @@ export default function NewSnapshotPage() {
     }
     setHoldings(updated)
 
-    // Fetch real-time price
+    // Fetch price (Current or Historical)
     try {
-      const market = stock.market || (isNaN(Number(stock.stockCode)) ? 'US' : 'KOSPI') // Simple inference
+      const market = stock.market || (isNaN(Number(stock.stockCode)) ? 'US' : 'KOSPI')
+      const isToday = snapshotDate === today
 
       // Auto-set currency based on market
       const newCurrency = market === 'US' ? 'USD' : 'KRW'
-      const newPurchaseRate = market === 'US' ? '1430' : '1'
+      // For USD stocks, default purchase rate is the current exchange rate (or historical if selected)
+      const newPurchaseRate = market === 'US' ? exchangeRate.toString() : '1'
 
-      const res = await fetch(`/api/kis/price?symbol=${stock.stockCode}&market=${market}`)
-      const data = await res.json()
+      let price = ''
+      let res, data;
 
-      if (data.success && data.data && data.data.price !== undefined && data.data.price !== null) {
-        // Update current price
-        const newHoldings = [...updated]
-        newHoldings[index] = {
-          ...newHoldings[index],
-          currentPrice: data.data.price.toString(),
-          currency: newCurrency,
-          purchaseRate: newPurchaseRate
+      if (isToday) {
+        res = await fetch(`/api/kis/price?symbol=${stock.stockCode}&market=${market}`)
+        data = await res.json()
+        if (data.success && data.data && data.data.price !== undefined && data.data.price !== null) {
+          price = data.data.price.toString()
         }
-        setHoldings(newHoldings)
       } else {
-        // Update currency even if price fetch fails
-        const newHoldings = [...updated]
-        newHoldings[index] = {
-          ...newHoldings[index],
+        res = await fetch(`/api/stocks/history?symbol=${stock.stockCode}&market=${market}&date=${snapshotDate}`)
+        data = await res.json()
+        if (data.success && data.data && data.data.close !== undefined && data.data.close !== null) {
+          price = data.data.close.toString()
+        }
+      }
+
+      setHoldings((prev) => {
+        const current = [...prev]
+        if (!current[index] || current[index].stockId !== stock.id) return prev
+
+        current[index] = {
+          ...current[index],
+          currentPrice: price !== '' ? price : current[index].currentPrice,
           currency: newCurrency,
           purchaseRate: newPurchaseRate
         }
-        setHoldings(newHoldings)
-      }
+        return current
+      })
+
     } catch (error) {
       console.error('Failed to fetch price:', error)
       // Don't block UI, just don't fill price
@@ -142,15 +219,15 @@ export default function NewSnapshotPage() {
           totalValue += qty * curr
         } else {
           // KRW -> USD 변환
-          totalCost += (qty * avg) / CURRENT_EXCHANGE_RATE
-          totalValue += (qty * curr) / CURRENT_EXCHANGE_RATE
+          totalCost += (qty * avg) / exchangeRate
+          totalValue += (qty * curr) / exchangeRate
         }
       } else {
         // KRW로 표시할 경우
         if (h.currency === 'USD') {
           // USD -> KRW 변환 (매입가는 purchaseRate 사용, 현재가는 현재환율 사용)
           totalCost += qty * avg * pRate
-          totalValue += qty * curr * CURRENT_EXCHANGE_RATE
+          totalValue += qty * curr * exchangeRate
         } else {
           totalCost += qty * avg
           totalValue += qty * curr
@@ -187,6 +264,7 @@ export default function NewSnapshotPage() {
     try {
       const response = await snapshotsApi.create({
         accountId: TEST_ACCOUNT_ID,
+        snapshotDate: snapshotDate, // Pass the selected date
         holdings: validHoldings.map((h) => ({
           stockId: h.stockId,
           quantity: parseInt(h.quantity),
@@ -200,13 +278,13 @@ export default function NewSnapshotPage() {
       })
 
       if (response.success) {
-        router.push('/dashboard')
+        router.push('/dashboard/snapshots')
       } else {
         setError(response.error?.message || t('searchError'))
+        setLoading(false)
       }
     } catch (err) {
       setError(t('networkError'))
-    } finally {
       setLoading(false)
     }
   }
@@ -230,6 +308,34 @@ export default function NewSnapshotPage() {
         </p>
       </div>
 
+      {/* 날짜 선택 */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('snapshotDate') || 'Snapshot Date'}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="snapshotDate">{t('date') || 'Date'}</Label>
+            <Input
+              id="snapshotDate"
+              type="date"
+              max={today}
+              value={snapshotDate}
+              onChange={(e) => setSnapshotDate(e.target.value)}
+              className="w-full md:w-1/3"
+            />
+            {snapshotDate !== today && (
+              <p className="text-sm text-blue-600">
+                {t('historicalMode') || '* Past date selected. Stock prices and exchange rates will be automatically fetched for this date.'}
+              </p>
+            )}
+            <p className="text-sm text-gray-500">
+              {t('exchangeRate')}: {formatCurrency(exchangeRate, 'KRW')} / USD
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* 보유 종목 입력 */}
         <Card>
@@ -245,9 +351,9 @@ export default function NewSnapshotPage() {
             {holdings.map((holding, index) => (
               <div
                 key={index}
-                className="grid grid-cols-1 md:grid-cols-6 gap-4 p-4 border rounded-lg"
+                className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 border rounded-lg"
               >
-                <div className="md:col-span-6 flex justify-between items-center">
+                <div className="md:col-span-4 flex justify-between items-center">
                   <span className="font-medium">{t('stock')} {index + 1}</span>
                   {holdings.length > 1 && (
                     <Button
@@ -268,6 +374,11 @@ export default function NewSnapshotPage() {
                     value={holding.stockName ? `${holding.stockName} (${holding.stockCode})` : ''}
                     onSelect={(stock) => handleStockSelect(index, stock)}
                   />
+                  {holding.stockCode && (
+                    <p className="text-xs text-stone-500 mt-1">
+                      {snapshotDate === today ? t('currentPrice') : `${snapshotDate} ${t('closingPrice')}`}: {formatCurrency(parseFloat(holding.currentPrice) || 0, holding.currency)}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -275,7 +386,7 @@ export default function NewSnapshotPage() {
                   <FormattedNumberInput
                     id={`quantity-${index}`}
                     min="1"
-                    placeholder="100"
+                    placeholder={t('quantity')}
                     value={holding.quantity}
                     onChange={(val) =>
                       updateHolding(index, 'quantity', val)
@@ -291,38 +402,11 @@ export default function NewSnapshotPage() {
                     id={`avgPrice-${index}`}
                     min="0"
                     step="0.0001"
-                    placeholder={holding.currency === 'USD' ? '10.00' : '1,000'}
+                    placeholder={t('avgPrice')}
                     value={holding.averagePrice}
                     onChange={(val) =>
                       updateHolding(index, 'averagePrice', val)
                     }
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor={`currPrice-${index}`}>
-                    {t('currentPrice')} ({holding.currency === 'USD' ? '$' : '₩'})
-                  </Label>
-                  <FormattedNumberInput
-                    id={`currPrice-${index}`}
-                    min="0"
-                    step="0.0001"
-                    placeholder={holding.currency === 'USD' ? '20.00' : '2,000'}
-                    value={holding.currentPrice}
-                    onChange={(val) =>
-                      updateHolding(index, 'currentPrice', val)
-                    }
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor={`pRate-${index}`}>{t('exchangeRate')}</Label>
-                  <FormattedNumberInput
-                    id={`pRate-${index}`}
-                    min="0"
-                    placeholder="1"
-                    value={holding.purchaseRate}
-                    onChange={(val) => updateHolding(index, 'purchaseRate', val)}
                   />
                 </div>
               </div>
@@ -336,27 +420,15 @@ export default function NewSnapshotPage() {
             <CardTitle>{t('additionalInfo')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="cashBalance">{t('cash')}</Label>
-                <FormattedNumberInput
-                  id="cashBalance"
-                  min="0"
-                  placeholder="0"
-                  value={cashBalance}
-                  onChange={(val) => setCashBalance(val)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="note">{t('memo')}</Label>
-                <Input
-                  id="note"
-                  type="text"
-                  placeholder={t('memoPlaceholder')}
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                />
-              </div>
+            <div>
+              <Label htmlFor="note">{t('memo')}</Label>
+              <Input
+                id="note"
+                type="text"
+                placeholder={t('memoPlaceholder')}
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+              />
             </div>
           </CardContent>
         </Card>
@@ -408,8 +480,7 @@ export default function NewSnapshotPage() {
                   className={`text-lg font-semibold ${isProfit ? 'text-red-600' : 'text-blue-600'
                     }`}
                 >
-                  {isProfit ? '+' : ''}
-                  {formatCurrency(totals.profit, totals.currency)}
+                  {formatCurrency(Math.abs(totals.profit), totals.currency)}
                 </p>
               </div>
               <div>
@@ -418,8 +489,7 @@ export default function NewSnapshotPage() {
                   className={`text-lg font-semibold ${isProfit ? 'text-red-600' : 'text-blue-600'
                     }`}
                 >
-                  {isProfit ? '+' : ''}
-                  {totals.profitRate.toFixed(2)}%
+                  {(totals.profitRate > 0 ? '+' : '') + totals.profitRate.toFixed(2)}%
                 </p>
               </div>
             </div>
@@ -435,8 +505,8 @@ export default function NewSnapshotPage() {
 
         {/* 제출 버튼 */}
         <div className="flex gap-4">
-          <Button type="submit" disabled={loading} className="flex-1">
-            {loading ? '...' : t('save')}
+          <Button type="submit" disabled={loading || updatingPrices} className="flex-1">
+            {loading ? '...' : (updatingPrices ? t('calculating') || 'Calculating...' : t('save'))}
           </Button>
           <Link href="/dashboard" className="flex-1">
             <Button type="button" variant="outline" className="w-full">

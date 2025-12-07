@@ -1,6 +1,6 @@
 
 import { NextRequest, NextResponse } from 'next/server'
-import yahooFinance from 'yahoo-finance2'
+import YahooFinance from 'yahoo-finance2'
 import { prisma } from '@/lib/prisma'
 
 export async function GET(request: NextRequest) {
@@ -48,9 +48,8 @@ export async function GET(request: NextRequest) {
         }
 
         // 2. English Search - Use Yahoo Finance
-        // @ts-ignore
-        const yf = new yahooFinance()
-        const results: any = await yf.search(query)
+        const yf = new YahooFinance()
+        const results = await yf.search(query)
 
         const formattedResults = results.quotes
             .filter((quote: any) => quote.quoteType === 'EQUITY' || quote.quoteType === 'ETF')

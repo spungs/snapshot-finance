@@ -1,4 +1,7 @@
 import { prisma } from '@/lib/prisma'
+import YahooFinance from 'yahoo-finance2'
+
+const yahooFinance = new YahooFinance()
 
 const KIS_BASE_URL = {
     REAL: 'https://openapi.koreainvestment.com:9443',
@@ -122,51 +125,18 @@ export class KisClient {
 
         // Overseas Stock (US)
         else {
-            // Note: US stock price API requires different endpoint and logic
-            // For MVP, we might need to stick with Yahoo for US or implement US specific endpoint
-            // Let's implement US price check
-            const path = '/uapi/overseas-price/v1/quotations/price'
-            const tr_id = 'HHDFS00000300' // US Stock Price
-
-            // Exchange code mapping
-            // NAS: Nasdaq, NYS: NYSE, AMS: AMEX
-            // We need to know the exchange code. For now, default to NAS or try to infer?
-            // KIS requires exchange code (NAS, NYS, AMS)
-            // This is a limitation. We might need to store exchange code in our DB.
-
-            // For now, let's assume NAS for simplicity or try to handle it
-            const exchange = 'NAS' // Default to Nasdaq for now
-
-            const params = new URLSearchParams({
-                AUTH: '',
-                EXCD: exchange,
-                SYMB: symbol,
-            })
-
-            const response = await fetch(`${BASE_URL}${path}?${params}`, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    authorization: `Bearer ${token}`,
-                    appkey: APP_KEY!,
-                    appsecret: APP_SECRET!,
-                    tr_id: tr_id,
-                },
-            })
-
-            if (!response.ok) {
-                // Try NYSE if NAS fails? Or just throw
-                throw new Error(`KIS US API Error: ${response.status}`)
-            }
-
-            const data = await response.json()
-            if (data.rt_cd !== '0') {
-                throw new Error(`KIS US API Error: ${data.msg1}`)
-            }
-
-            return {
-                price: parseFloat(data.output.last), // US stocks have decimals
-                change: parseFloat(data.output.diff),
-                changeRate: parseFloat(data.output.rate),
+            try {
+                // Use Yahoo Finance for US stocks to avoid exchange code issues (NAS/NYS/AMS)
+                const quote = await yahooFinance.quote(symbol)
+                return {
+                    price: quote.regularMarketPrice || 0,
+                    change: quote.regularMarketChange || 0,
+                    changeRate: quote.regularMarketChangePercent || 0,
+                }
+            } catch (error) {
+                console.error(`Yahoo Finance Error for ${symbol}:`, error)
+                // Fallback or rethrow
+                throw error
             }
         }
     }
@@ -226,61 +196,42 @@ export class KisClient {
 
         // Overseas Stock (US)
         else {
-            const path = '/uapi/overseas-price/v1/quotations/dailyprice'
-            const tr_id = 'HHDFS76240000'
-            const exchange = 'NAS' // Default to NAS, should be dynamic ideally
+            try {
+                // Fetch historical data from Yahoo Finance
+                // period1: start date, period2: end date (exclusive)
+                // We add a small buffer to ensure we cover the target date in different timezones
+                const startDate = new Date(date)
+                const endDate = new Date(startDate.getTime() + 86400000 * 2) // +2 days
 
-            const params = new URLSearchParams({
-                AUTH: '',
-                EXCD: exchange,
-                SYMB: symbol,
-                GUBN: '0', // Daily
-                BYMD: date.replace(/-/g, ''), // Base date
-                MODP: '1', // Adjusted price
-            })
+                const result = await yahooFinance.historical(symbol, {
+                    period1: date,
+                    period2: endDate.toISOString().split('T')[0],
+                    interval: '1d',
+                })
 
-            const response = await fetch(`${BASE_URL}${path}?${params}`, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    authorization: `Bearer ${token}`,
-                    appkey: APP_KEY!,
-                    appsecret: APP_SECRET!,
-                    tr_id: tr_id,
-                },
-            })
+                // Find the specific date
+                // Yahoo Finance returns dates as Date objects with time set to 00:00:00 UTC (usually)
+                // We compare YYYY-MM-DD string
+                const quote = result.find((item) => {
+                    const itemDate = item.date.toISOString().split('T')[0]
+                    return itemDate === date
+                })
 
-            if (!response.ok) {
-                throw new Error(`KIS US API Error: ${response.status}`)
-            }
-
-            const data = await response.json()
-            if (data.rt_cd !== '0') {
-                // Try NYSE if NAS fails (simple fallback)
-                if (exchange === 'NAS') {
-                    // Recursive call with NYSE? Or just fail for now.
-                    // For MVP, let's just log and throw.
+                if (!quote) {
+                    return null
                 }
-                throw new Error(`KIS US API Error: ${data.msg1}`)
-            }
 
-            // API returns list of daily prices. We need to find the specific date or the first one if BYMD works as start date.
-            // KIS Overseas daily price API usually returns data *ending* at BYMD or *around* BYMD depending on endpoint.
-            // HHDFS76240000 returns 100 days based on BYMD (usually up to BYMD).
-
-            const targetDate = date.replace(/-/g, '')
-            const output = data.output2.find((item: any) => item.xymd === targetDate)
-
-            if (!output) {
+                return {
+                    date: date,
+                    close: quote.adjClose || quote.close,
+                    open: quote.open,
+                    high: quote.high,
+                    low: quote.low,
+                    volume: quote.volume,
+                }
+            } catch (error) {
+                console.error(`Yahoo Finance Daily Price Error for ${symbol}:`, error)
                 return null
-            }
-
-            return {
-                date: date,
-                close: parseFloat(output.clos),
-                open: parseFloat(output.open),
-                high: parseFloat(output.high),
-                low: parseFloat(output.low),
-                volume: parseInt(output.tvol),
             }
         }
     }
