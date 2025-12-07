@@ -18,7 +18,6 @@ interface SnapshotDetailClientProps {
 
 export default function SnapshotDetailClient({ snapshot }: SnapshotDetailClientProps) {
     const { t } = useLanguage()
-    const { baseCurrency, exchangeRate } = useCurrency()
     const router = useRouter()
     const [isDeleting, setIsDeleting] = useState(false)
     const [error, setError] = useState<string | null>(null)
@@ -52,8 +51,11 @@ export default function SnapshotDetailClient({ snapshot }: SnapshotDetailClientP
                         ← {t('snapshotList')}
                     </Link>
                     <h1 className="text-2xl font-bold">
-                        {t('snapshotDetail')} - {formatDate(snapshot.snapshotDate)}
+                        {t('snapshotDetail')}
                     </h1>
+                    <p className="text-muted-foreground">
+                        {t('snapshotDate')}: {formatDate(snapshot.snapshotDate)}
+                    </p>
                 </div>
                 <div className="flex gap-2">
                     <Link href={`/dashboard/snapshots/${snapshot.id}/edit`}>
@@ -80,13 +82,12 @@ export default function SnapshotDetailClient({ snapshot }: SnapshotDetailClientP
                 totalCost={snapshot.totalCost}
                 totalProfit={snapshot.totalProfit}
                 profitRate={snapshot.profitRate}
-                cashBalance={snapshot.cashBalance}
                 holdingsCount={snapshot.holdings.length}
-                baseCurrency={baseCurrency}
-                exchangeRate={exchangeRate}
+                baseCurrency="KRW"
+                exchangeRate={snapshot.exchangeRate}
             />
 
-            <HoldingsTable holdings={snapshot.holdings} />
+            <HoldingsTable holdings={snapshot.holdings} exchangeRate={snapshot.exchangeRate} />
         </div>
     )
 }

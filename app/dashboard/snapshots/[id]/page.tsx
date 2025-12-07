@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
 import SnapshotDetailClient from './snapshot-detail-client'
 import { notFound } from 'next/navigation'
+import { snapshotService } from '@/lib/services/snapshot-service'
 
 export default async function SnapshotDetailPage({
   params,
@@ -12,16 +13,7 @@ export default async function SnapshotDetailPage({
   const user = await auth()
   if (!user) return null
 
-  const snapshot = await prisma.portfolioSnapshot.findUnique({
-    where: { id },
-    include: {
-      holdings: {
-        include: {
-          stock: true,
-        },
-      },
-    },
-  })
+  const snapshot = await snapshotService.getDetail(id)
 
   if (!snapshot) {
     notFound()
@@ -44,15 +36,23 @@ export default async function SnapshotDetailPage({
     totalProfit: snapshot.totalProfit.toNumber(),
     profitRate: snapshot.profitRate.toNumber(),
     cashBalance: snapshot.cashBalance.toNumber(),
-    holdings: snapshot.holdings.map(holding => ({
-      ...holding,
+    exchangeRate: snapshot.exchangeRate ? snapshot.exchangeRate.toNumber() : 1435,
+    holdings: snapshot.holdings.map((holding) => ({
+      id: holding.id,
+      snapshotId: holding.snapshotId,
+      stockId: holding.stockId,
+      quantity: holding.quantity,
+      createdAt: holding.createdAt,
+      currency: holding.currency,
+      stock: holding.stock,
+      // Decimals converted to numbers
       averagePrice: holding.averagePrice.toNumber(),
       currentPrice: holding.currentPrice.toNumber(),
       totalCost: holding.totalCost.toNumber(),
       currentValue: holding.currentValue.toNumber(),
       profit: holding.profit.toNumber(),
       profitRate: holding.profitRate.toNumber(),
-      purchaseRate: holding.purchaseRate ? holding.purchaseRate.toNumber() : null,
+      purchaseRate: holding.purchaseRate ? holding.purchaseRate.toNumber() : 1,
     })),
   }
 

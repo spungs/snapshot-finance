@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -11,7 +11,7 @@ import { StockSearchCombobox } from '@/components/dashboard/stock-search-combobo
 import { FormattedNumberInput } from '@/components/ui/formatted-number-input'
 import { snapshotsApi } from '@/lib/api/client'
 import { formatCurrency } from '@/lib/utils/formatters'
-import { Skeleton } from '@/components/ui/skeleton'
+import { useLanguage } from '@/lib/i18n/context'
 
 interface HoldingInput {
     stockId: string
@@ -24,8 +24,6 @@ interface HoldingInput {
     purchaseRate: string
 }
 
-import { useLanguage } from '@/lib/i18n/context'
-
 export default function EditSnapshotPage() {
     const { t } = useLanguage()
     const router = useRouter()
@@ -35,11 +33,15 @@ export default function EditSnapshotPage() {
     const [note, setNote] = useState('')
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
+    const [updatingPrices, setUpdatingPrices] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [summaryDisplayCurrency, setSummaryDisplayCurrency] = useState<'KRW' | 'USD'>('KRW')
+    const [exchangeRate, setExchangeRate] = useState<number>(1435)
 
-    // Global current exchange rate for valuation
-    const CURRENT_EXCHANGE_RATE = 1435
+    // Date & History Logic
+    const today = new Date().toISOString().split('T')[0]
+    const [snapshotDate, setSnapshotDate] = useState<string>(today)
+    const loadedDateRef = useRef<string | null>(null)
 
     useEffect(() => {
         async function fetchSnapshot() {
@@ -49,17 +51,32 @@ export default function EditSnapshotPage() {
                     const snapshot = response.data
                     setCashBalance(snapshot.cashBalance.toString())
                     setNote(snapshot.note || '')
+                    setExchangeRate(Number(snapshot.exchangeRate) || 1435)
 
-                    const mappedHoldings = snapshot.holdings.map((h: any) => ({
-                        stockId: h.stockId,
-                        stockName: h.stock.stockName,
-                        stockCode: h.stock.stockCode,
-                        quantity: h.quantity.toString(),
-                        averagePrice: h.averagePrice.toString(),
-                        currentPrice: h.currentPrice.toString(),
-                        currency: h.currency || 'KRW',
-                        purchaseRate: h.purchaseRate ? h.purchaseRate.toString() : '1'
-                    }))
+                    const dateStr = snapshot.snapshotDate ? new Date(snapshot.snapshotDate).toISOString().split('T')[0] : today
+                    loadedDateRef.current = dateStr
+                    setSnapshotDate(dateStr)
+
+                    const mappedHoldings = snapshot.holdings.map((h: any) => {
+                        const currency = h.currency || 'KRW'
+                        let purchaseRate = h.purchaseRate ? h.purchaseRate.toString() : '1'
+
+                        // USD인데 환율이 1인 경우(데이터 오류), 기본값 1435로 설정하여 계산 오류 방지
+                        if (currency === 'USD' && purchaseRate === '1') {
+                            purchaseRate = '1435'
+                        }
+
+                        return {
+                            stockId: h.stockId,
+                            stockName: h.stock.stockName,
+                            stockCode: h.stock.stockCode,
+                            quantity: h.quantity.toString(),
+                            averagePrice: h.averagePrice.toString(),
+                            currentPrice: h.currentPrice.toString(),
+                            currency,
+                            purchaseRate,
+                        }
+                    })
 
                     setHoldings(mappedHoldings)
                 } else {
@@ -75,7 +92,73 @@ export default function EditSnapshotPage() {
         if (params.id) {
             fetchSnapshot()
         }
-    }, [params.id])
+    }, [params.id, today, t])
+
+    // Fetch Exchange Rate AND Stock Prices when date changes
+    useEffect(() => {
+        if (snapshotDate === loadedDateRef.current) return
+
+        async function updateData() {
+            setUpdatingPrices(true)
+            try {
+                // 1. Update Exchange Rate
+                let currentRate = 1435
+                if (snapshotDate === today) {
+                    setExchangeRate(1435)
+                } else {
+                    try {
+                        const res = await fetch(`/api/stocks/history?symbol=KRW=X&market=FX&date=${snapshotDate}`)
+                        const data = await res.json()
+                        if (data.success && data.data) {
+                            currentRate = data.data.close || 1435
+                            setExchangeRate(currentRate)
+                        } else {
+                            setExchangeRate(1435)
+                        }
+                    } catch (e) {
+                        setExchangeRate(1435)
+                    }
+                }
+
+                // 2. Update Stock Prices for existing holdings
+                if (holdings.length > 0 && !(holdings.length === 1 && !holdings[0].stockId)) {
+                    const updatedHoldings = await Promise.all(holdings.map(async (h) => {
+                        if (!h.stockCode) return h
+
+                        const market = isNaN(Number(h.stockCode)) ? 'US' : 'KOSPI'
+                        let price = h.currentPrice
+
+                        try {
+                            if (snapshotDate === today) {
+                                const res = await fetch(`/api/kis/price?symbol=${h.stockCode}&market=${market}`)
+                                const data = await res.json()
+                                if (data.success && data.data && data.data.price) {
+                                    price = data.data.price.toString()
+                                }
+                            } else {
+                                const res = await fetch(`/api/stocks/history?symbol=${h.stockCode}&market=${market}&date=${snapshotDate}`)
+                                const data = await res.json()
+                                if (data.success && data.data && data.data.close) {
+                                    price = data.data.close.toString()
+                                }
+                            }
+                        } catch (e) {
+                            console.error(`Failed to update price for ${h.stockCode}`, e)
+                        }
+
+                        return { ...h, currentPrice: price }
+                    }))
+
+                    setHoldings(updatedHoldings)
+                }
+            } finally {
+                setUpdatingPrices(false)
+            }
+        }
+
+        updateData()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [snapshotDate]) // Only depend on snapshotDate
 
     function addHolding() {
         setHoldings([
@@ -118,40 +201,42 @@ export default function EditSnapshotPage() {
         }
         setHoldings(updated)
 
-        // Fetch real-time price
+        // Fetch price logic (Context-aware)
         try {
             const market = stock.market || (isNaN(Number(stock.stockCode)) ? 'US' : 'KOSPI')
 
             const newCurrency = market === 'US' ? 'USD' : 'KRW'
-            const newPurchaseRate = market === 'US' ? '1430' : '1'
+            const newPurchaseRate = market === 'US' ? exchangeRate.toString() : '1'
 
-            const res = await fetch(`/api/kis/price?symbol=${stock.stockCode}&market=${market}`)
-            const data = await res.json()
+            let price = '0'
 
-            if (data.success && data.data && data.data.price !== undefined && data.data.price !== null) {
-                const newHoldings = [...updated]
-                newHoldings[index] = {
-                    ...newHoldings[index],
-                    stockId: stock.id,
-                    stockName: stock.stockName,
-                    stockCode: stock.stockCode,
-                    currentPrice: data.data.price.toString(),
-                    currency: newCurrency,
-                    purchaseRate: newPurchaseRate
+            if (snapshotDate === today) {
+                const res = await fetch(`/api/kis/price?symbol=${stock.stockCode}&market=${market}`)
+                const data = await res.json()
+                if (data.success && data.data?.price) {
+                    price = data.data.price.toString()
                 }
-                setHoldings(newHoldings)
             } else {
-                const newHoldings = [...updated]
-                newHoldings[index] = {
-                    ...newHoldings[index],
-                    stockId: stock.id,
-                    stockName: stock.stockName,
-                    stockCode: stock.stockCode,
+                const res = await fetch(`/api/stocks/history?symbol=${stock.stockCode}&market=${market}&date=${snapshotDate}`)
+                const data = await res.json()
+                if (data.success && data.data?.close) {
+                    price = data.data.close.toString()
+                }
+            }
+
+            setHoldings((prev) => {
+                const current = [...prev]
+                if (!current[index] || current[index].stockId !== stock.id) return prev
+
+                current[index] = {
+                    ...current[index],
+                    currentPrice: price === '0' ? current[index].currentPrice : price,
                     currency: newCurrency,
                     purchaseRate: newPurchaseRate
                 }
-                setHoldings(newHoldings)
-            }
+                return current
+            })
+
         } catch (error) {
             console.error('Failed to fetch price:', error)
         }
@@ -168,21 +253,17 @@ export default function EditSnapshotPage() {
             const pRate = parseFloat(h.purchaseRate) || 1
 
             if (displayCurrency === 'USD') {
-                // USD로 표시할 경우
                 if (h.currency === 'USD') {
                     totalCost += qty * avg
                     totalValue += qty * curr
                 } else {
-                    // KRW -> USD 변환
-                    totalCost += (qty * avg) / CURRENT_EXCHANGE_RATE
-                    totalValue += (qty * curr) / CURRENT_EXCHANGE_RATE
+                    totalCost += (qty * avg) / exchangeRate
+                    totalValue += (qty * curr) / exchangeRate
                 }
             } else {
-                // KRW로 표시할 경우
                 if (h.currency === 'USD') {
-                    // USD -> KRW 변환 (매입가는 purchaseRate 사용, 현재가는 현재환율 사용)
                     totalCost += qty * avg * pRate
-                    totalValue += qty * curr * CURRENT_EXCHANGE_RATE
+                    totalValue += qty * curr * exchangeRate
                 } else {
                     totalCost += qty * avg
                     totalValue += qty * curr
@@ -217,6 +298,8 @@ export default function EditSnapshotPage() {
 
         try {
             const response = await snapshotsApi.update(params.id as string, {
+                snapshotDate,
+                exchangeRate,
                 holdings: validHoldings.map((h) => ({
                     stockId: h.stockId,
                     quantity: parseInt(h.quantity),
@@ -233,19 +316,22 @@ export default function EditSnapshotPage() {
                 router.push(`/dashboard/snapshots/${params.id}`)
             } else {
                 setError(response.error?.message || t('updateFailed'))
+                setSaving(false)
             }
         } catch (err) {
             setError(t('networkError'))
-        } finally {
             setSaving(false)
         }
     }
 
     if (loading) {
         return (
-            <div className="space-y-6">
-                <Skeleton className="h-8 w-48" />
-                <Skeleton className="h-96" />
+            <div className="flex h-[calc(100vh-4rem)] w-full flex-col items-center justify-center gap-4">
+                <div className="w-64 max-w-full space-y-2">
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
+                        <div className="h-full bg-primary animate-indeterminate rounded-full" />
+                    </div>
+                </div>
             </div>
         )
     }
@@ -277,6 +363,34 @@ export default function EditSnapshotPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Date Picker */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle>{t('snapshotDate')}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-2">
+                            <Label htmlFor="snapshotDate">{t('date')}</Label>
+                            <Input
+                                id="snapshotDate"
+                                type="date"
+                                max={today}
+                                value={snapshotDate}
+                                onChange={(e) => {
+                                    loadedDateRef.current = null // Enable fetching on change
+                                    setSnapshotDate(e.target.value)
+                                }}
+                            />
+                            <p className="text-xs text-muted-foreground">
+                                {t('historicalMode')}
+                            </p>
+                            <p className="text-sm text-stone-500">
+                                {t('exchangeRate')}: ₩{exchangeRate.toLocaleString()} / USD
+                            </p>
+                        </div>
+                    </CardContent>
+                </Card>
+
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex justify-between items-center">
@@ -290,9 +404,9 @@ export default function EditSnapshotPage() {
                         {holdings.map((holding, index) => (
                             <div
                                 key={index}
-                                className="grid grid-cols-1 md:grid-cols-6 gap-4 p-4 border rounded-lg"
+                                className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 border rounded-lg"
                             >
-                                <div className="md:col-span-6 flex justify-between items-center">
+                                <div className="md:col-span-4 flex justify-between items-center">
                                     <span className="font-medium">{t('stockIndex')} {index + 1}</span>
                                     {holdings.length > 1 && (
                                         <Button
@@ -313,6 +427,11 @@ export default function EditSnapshotPage() {
                                         value={holding.stockName ? `${holding.stockName} (${holding.stockCode})` : ''}
                                         onSelect={(stock) => handleStockSelect(index, stock)}
                                     />
+                                    {holding.stockCode && (
+                                        <p className="text-xs text-stone-500 mt-1">
+                                            {snapshotDate === today ? t('currentPrice') : `${snapshotDate} ${t('closingPrice')}`}: {formatCurrency(parseFloat(holding.currentPrice) || 0, holding.currency)}
+                                        </p>
+                                    )}
                                 </div>
 
                                 <div>
@@ -343,33 +462,6 @@ export default function EditSnapshotPage() {
                                         }
                                     />
                                 </div>
-
-                                <div>
-                                    <Label htmlFor={`currPrice-${index}`}>
-                                        {t('currentPrice')} ({holding.currency === 'USD' ? '$' : '₩'})
-                                    </Label>
-                                    <FormattedNumberInput
-                                        id={`currPrice-${index}`}
-                                        min="0"
-                                        step="0.0001"
-                                        placeholder={holding.currency === 'USD' ? '20.00' : '2,000'}
-                                        value={holding.currentPrice}
-                                        onChange={(val) =>
-                                            updateHolding(index, 'currentPrice', val)
-                                        }
-                                    />
-                                </div>
-
-                                <div>
-                                    <Label htmlFor={`pRate-${index}`}>{t('exchangeRate')}</Label>
-                                    <FormattedNumberInput
-                                        id={`pRate-${index}`}
-                                        min="0"
-                                        placeholder="1"
-                                        value={holding.purchaseRate}
-                                        onChange={(val) => updateHolding(index, 'purchaseRate', val)}
-                                    />
-                                </div>
                             </div>
                         ))}
                     </CardContent>
@@ -380,27 +472,15 @@ export default function EditSnapshotPage() {
                         <CardTitle>{t('additionalInfo')}</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <Label htmlFor="cashBalance">{t('cash')}</Label>
-                                <FormattedNumberInput
-                                    id="cashBalance"
-                                    min="0"
-                                    placeholder="0"
-                                    value={cashBalance}
-                                    onChange={(val) => setCashBalance(val)}
-                                />
-                            </div>
-                            <div>
-                                <Label htmlFor="note">{t('memo')}</Label>
-                                <Input
-                                    id="note"
-                                    type="text"
-                                    placeholder={t('memoPlaceholder')}
-                                    value={note}
-                                    onChange={(e) => setNote(e.target.value)}
-                                />
-                            </div>
+                        <div>
+                            <Label htmlFor="note">{t('memo')}</Label>
+                            <Input
+                                id="note"
+                                type="text"
+                                placeholder={t('memoPlaceholder')}
+                                value={note}
+                                onChange={(e) => setNote(e.target.value)}
+                            />
                         </div>
                     </CardContent>
                 </Card>
@@ -451,8 +531,7 @@ export default function EditSnapshotPage() {
                                     className={`text-lg font-semibold ${isProfit ? 'text-red-600' : 'text-blue-600'
                                         }`}
                                 >
-                                    {isProfit ? '+' : ''}
-                                    {formatCurrency(totals.profit, totals.currency)}
+                                    {formatCurrency(Math.abs(totals.profit), totals.currency)}
                                 </p>
                             </div>
                             <div>
@@ -461,8 +540,7 @@ export default function EditSnapshotPage() {
                                     className={`text-lg font-semibold ${isProfit ? 'text-red-600' : 'text-blue-600'
                                         }`}
                                 >
-                                    {isProfit ? '+' : ''}
-                                    {totals.profitRate.toFixed(2)}%
+                                    {Math.abs(totals.profitRate).toFixed(2)}%
                                 </p>
                             </div>
                         </div>
@@ -476,8 +554,8 @@ export default function EditSnapshotPage() {
                 )}
 
                 <div className="flex gap-4">
-                    <Button type="submit" disabled={saving} className="flex-1">
-                        {saving ? t('saving') : t('saveChanges')}
+                    <Button type="submit" disabled={saving || updatingPrices} className="flex-1">
+                        {saving ? t('saving') : (updatingPrices ? t('calculating') : t('saveChanges'))}
                     </Button>
                     <Link href={`/dashboard/snapshots/${params.id}`} className="flex-1">
                         <Button type="button" variant="outline" className="w-full">
