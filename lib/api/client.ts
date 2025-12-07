@@ -41,6 +41,7 @@ export const snapshotsApi = {
 
   create: (data: {
     accountId: string
+    snapshotDate?: string
     holdings: Array<{
       stockId: string
       quantity: number
@@ -57,11 +58,15 @@ export const snapshotsApi = {
 
   update: (id: string, data: {
     accountId?: string
+    snapshotDate?: string
+    exchangeRate?: number
     holdings?: Array<{
       stockId: string
       quantity: number
       averagePrice: number
       currentPrice: number
+      currency?: string
+      purchaseRate?: number
     }>
     cashBalance?: number
     note?: string
@@ -80,4 +85,38 @@ export const snapshotsApi = {
 // 종목 API
 export const stocksApi = {
   getList: () => fetchApi<any[]>('/stocks'),
+}
+
+// 잔고 API
+export const holdingsApi = {
+  getList: () => fetchApi<{ holdings: any[]; summary: any }>('/holdings'),
+
+  create: (data: {
+    stockId: string
+    quantity: number
+    averagePrice: number
+    currency?: string
+    purchaseRate?: number
+    mode?: 'merge' | 'overwrite'
+  }) =>
+    fetchApi<any>('/holdings', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  update: (id: string, data: {
+    quantity?: number
+    averagePrice?: number
+    currency?: string
+    purchaseRate?: number
+  }) =>
+    fetchApi<any>(`/holdings/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  delete: (id: string) =>
+    fetchApi<void>(`/holdings/${id}`, {
+      method: 'DELETE',
+    }),
 }

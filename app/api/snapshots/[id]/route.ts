@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
+import Decimal from 'decimal.js'
 
 // GET /api/snapshots/[id] - 스냅샷 상세 조회
 export async function GET(
@@ -109,42 +110,28 @@ export async function PUT(
   try {
     const { id } = await params
     const body = await request.json()
-    const { holdings, cashBalance, note } = body
+    const { holdings, cashBalance, note, snapshotDate, exchangeRate } = body
 
     // 1. Calculate totals
     let totalCost = 0
     let totalValue = 0
 
-    // Process holdings to calculate totals
-    // Note: We need to handle currency conversion here if we want accurate totals in KRW
-    // For now, assuming the frontend sends correct data or we calculate simply
-    // Based on previous logic:
-    // Cost = quantity * averagePrice * purchaseRate
-    // Value = quantity * currentPrice * (currency === 'USD' ? CURRENT_EXCHANGE_RATE : 1)
-    // But wait, the API receives what?
-    // The previous POST implementation calculated totals in the API?
-    // Let's check POST implementation in app/api/snapshots/route.ts to be consistent.
-
-    // ... Checked POST implementation mental model ...
-    // Actually, let's look at how we did it in POST.
-    // We should probably replicate the logic.
-
-    const CURRENT_EXCHANGE_RATE = 1435 // Should ideally be dynamic or passed from frontend
+    const effectiveExchangeRate = exchangeRate ? Number(exchangeRate) : 1435
 
     const processedHoldings = holdings.map((h: any) => {
       const qty = Number(h.quantity)
-      const avg = Number(h.averagePrice)
-      const curr = Number(h.currentPrice)
+      const averagePrice = Number(h.averagePrice)
+      const currentPrice = Number(h.currentPrice)
       const pRate = Number(h.purchaseRate) || 1
       const currency = h.currency || 'KRW'
 
       // Cost calculation
-      const holdingCost = qty * avg * pRate
+      const holdingCost = qty * averagePrice * pRate
 
       // Value calculation
-      // If USD, apply current exchange rate
-      const cRate = currency === 'USD' ? CURRENT_EXCHANGE_RATE : 1
-      const holdingValue = qty * curr * cRate
+      // If USD, apply effective exchange rate
+      const cRate = currency === 'USD' ? effectiveExchangeRate : 1
+      const holdingValue = qty * currentPrice * cRate
 
       const profit = holdingValue - holdingCost
       const profitRate = holdingCost > 0 ? (profit / holdingCost) * 100 : 0
@@ -155,8 +142,8 @@ export async function PUT(
       return {
         stockId: h.stockId,
         quantity: qty,
-        averagePrice: avg,
-        currentPrice: curr,
+        averagePrice: averagePrice,
+        currentPrice: currentPrice,
         totalCost: holdingCost,
         currentValue: holdingValue,
         profit: profit,
@@ -178,6 +165,8 @@ export async function PUT(
       await tx.portfolioSnapshot.update({
         where: { id },
         data: {
+          snapshotDate: snapshotDate ? new Date(snapshotDate) : undefined,
+          exchangeRate: new Decimal(effectiveExchangeRate),
           totalValue: finalTotalValue,
           totalCost: totalCost,
           totalProfit: totalProfit,
