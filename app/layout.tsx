@@ -21,6 +21,8 @@ import { LanguageProvider } from '@/lib/i18n/context'
 import { LanguageSwitcher } from '@/components/ui/language-switcher'
 import { CurrencyProvider } from '@/lib/currency/context'
 
+
+
 export default function RootLayout({
   children,
 }: Readonly<{
