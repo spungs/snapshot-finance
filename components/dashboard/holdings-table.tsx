@@ -30,11 +30,12 @@ interface Holding {
 
 interface HoldingsTableProps {
   holdings: Holding[]
+  exchangeRate?: number
 }
 
 import { useLanguage } from '@/lib/i18n/context'
 
-export function HoldingsTable({ holdings }: HoldingsTableProps) {
+export function HoldingsTable({ holdings, exchangeRate }: HoldingsTableProps) {
   const { t } = useLanguage()
 
   return (
@@ -56,6 +57,7 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
                   <TableHead className="text-right">{t('quantity')}</TableHead>
                   <TableHead className="text-right">{t('avgPrice')}</TableHead>
                   <TableHead className="text-right">{t('currentPrice')}</TableHead>
+                  <TableHead className="text-right">{t('totalCost')}</TableHead>
                   <TableHead className="text-right">{t('evaluatedValue')}</TableHead>
                   <TableHead className="text-right">{t('pl')}</TableHead>
                   <TableHead className="text-right">{t('returnRate')}</TableHead>
@@ -85,7 +87,24 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
                         {formatCurrency(Number(holding.currentPrice), currency)}
                       </TableCell>
                       <TableCell className="text-right font-medium">
-                        {formatCurrency(Number(holding.currentValue), currency)}
+                        <div className="flex flex-col items-end">
+                          <span>{formatCurrency(Number(holding.totalCost), currency)}</span>
+                          {currency === 'USD' && exchangeRate && (
+                            <span className="text-xs text-muted-foreground">
+                              {formatCurrency(Number(holding.totalCost) * exchangeRate, 'KRW')}
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right font-medium">
+                        <div className="flex flex-col items-end">
+                          <span>{formatCurrency(Number(holding.currentValue), currency)}</span>
+                          {currency === 'USD' && exchangeRate && (
+                            <span className="text-xs text-muted-foreground">
+                              {formatCurrency(Number(holding.currentValue) * exchangeRate, 'KRW')}
+                            </span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell
                         className={cn(
@@ -93,8 +112,14 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
                           isProfit ? 'text-red-600' : 'text-blue-600'
                         )}
                       >
-                        {isProfit ? '+' : ''}
-                        {formatCurrency(Number(holding.profit), currency)}
+                        <div className="flex flex-col items-end">
+                          <span>{formatCurrency(Math.abs(Number(holding.profit)), currency)}</span>
+                          {currency === 'USD' && exchangeRate && (
+                            <span className="text-xs opacity-80">
+                              {formatCurrency(Math.abs(Number(holding.profit) * exchangeRate), 'KRW')}
+                            </span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell
                         className={cn(

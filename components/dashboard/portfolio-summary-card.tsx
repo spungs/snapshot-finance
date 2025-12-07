@@ -4,16 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatCurrency, formatProfitRate } from '@/lib/utils/formatters'
 import { cn } from '@/lib/utils'
 
-interface PortfolioSummaryCardProps {
-  totalValue: number
-  totalCost: number
-  totalProfit: number
-  profitRate: number
-  cashBalance: number
-  holdingsCount: number
-  snapshotDate?: string
-}
-
 import { useLanguage } from '@/lib/i18n/context'
 import { Currency } from '@/lib/currency/context'
 
@@ -22,7 +12,6 @@ interface PortfolioSummaryCardProps {
   totalCost: number
   totalProfit: number
   profitRate: number
-  cashBalance: number
   holdingsCount: number
   snapshotDate?: string
   baseCurrency?: Currency
@@ -34,7 +23,6 @@ export function PortfolioSummaryCard({
   totalCost,
   totalProfit,
   profitRate,
-  cashBalance,
   holdingsCount,
   snapshotDate,
   baseCurrency = 'KRW',
@@ -55,7 +43,6 @@ export function PortfolioSummaryCard({
   const displayValue = convert(totalValue)
   const displayCost = convert(totalCost)
   const displayProfit = convert(totalProfit)
-  const displayCash = convert(cashBalance)
 
   const isProfit = totalProfit >= 0
 
@@ -96,8 +83,7 @@ export function PortfolioSummaryCard({
                 isProfit ? 'text-red-600' : 'text-blue-600'
               )}
             >
-              {isProfit ? '+' : ''}
-              {formatCurrency(displayProfit, baseCurrency)}
+              {formatCurrency(Math.abs(displayProfit), baseCurrency)}
             </p>
           </div>
 
@@ -114,14 +100,6 @@ export function PortfolioSummaryCard({
             </p>
           </div>
 
-          {/* 예수금 */}
-          <div>
-            <p className="text-sm text-gray-500 mb-1">{t('cash')}</p>
-            <p className="text-xl font-semibold text-gray-700">
-              {formatCurrency(displayCash, baseCurrency)}
-            </p>
-          </div>
-
           {/* 보유 종목 수 */}
           <div>
             <p className="text-sm text-gray-500 mb-1">{t('holdings')}</p>
@@ -130,6 +108,13 @@ export function PortfolioSummaryCard({
             </p>
           </div>
         </div>
+
+        {/* 환율 표시 (KRW일 때) */}
+        {baseCurrency === 'KRW' && exchangeRate && (
+          <div className="mt-4 pt-4 border-t text-sm text-right text-muted-foreground">
+            적용 환율: 1 USD = {formatCurrency(exchangeRate, 'KRW')}
+          </div>
+        )}
       </CardContent>
     </Card>
   )
