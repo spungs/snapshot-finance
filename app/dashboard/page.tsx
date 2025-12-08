@@ -9,6 +9,8 @@ import { DashboardHeader } from '@/components/dashboard/dashboard-header'
 import { ViewAllSnapshotsLink } from '@/components/dashboard/view-all-snapshots-link'
 import { Skeleton } from '@/components/ui/skeleton'
 
+export const dynamic = 'force-dynamic'
+
 export default async function DashboardPage() {
   const session = await auth()
   if (!session) {
