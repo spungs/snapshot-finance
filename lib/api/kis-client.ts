@@ -26,62 +26,81 @@ interface AccessToken {
 let cachedToken: AccessToken | null = null
 
 export class KisClient {
-    private async getAccessToken(): Promise<string> {
-        const now = new Date()
+    private tokenPromise: Promise<string> | null = null
 
-        // 1. Check DB for valid token
-        const dbToken = await prisma.apiToken.findUnique({
-            where: { provider: 'KIS' },
-        })
-
-        if (dbToken && dbToken.expiresAt > now) {
-            return dbToken.token
-        }
-
-        console.log('Fetching new KIS Access Token...')
-
+    public async ensureConnection() {
         try {
-            const response = await fetch(`${BASE_URL}/oauth2/tokenP`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    grant_type: 'client_credentials',
-                    appkey: APP_KEY,
-                    appsecret: APP_SECRET,
-                }),
-            })
-
-            if (!response.ok) {
-                const errorText = await response.text()
-                throw new Error(`Failed to get token: ${response.status} ${errorText}`)
-            }
-
-            const data = await response.json()
-
-            // Calculate expiration (give 1 minute buffer)
-            const expiresAt = new Date(now.getTime() + (data.expires_in - 60) * 1000)
-
-            // 2. Save to DB
-            await prisma.apiToken.upsert({
-                where: { provider: 'KIS' },
-                update: {
-                    token: data.access_token,
-                    expiresAt: expiresAt,
-                },
-                create: {
-                    provider: 'KIS',
-                    token: data.access_token,
-                    expiresAt: expiresAt,
-                },
-            })
-
-            return data.access_token
+            await this.getAccessToken()
         } catch (error) {
-            console.error('KIS Token Error:', error)
-            throw error
+            console.error('Failed to ensure KIS connection:', error)
         }
+    }
+
+    private async getAccessToken(): Promise<string> {
+        // If a request is already in progress, return that promise
+        if (this.tokenPromise) {
+            return this.tokenPromise
+        }
+
+        this.tokenPromise = (async () => {
+            try {
+                const now = new Date()
+
+                // 1. Check DB for valid token
+                const dbToken = await prisma.apiToken.findUnique({
+                    where: { provider: 'KIS' },
+                })
+
+                if (dbToken && dbToken.expiresAt > now) {
+                    return dbToken.token
+                }
+
+                console.log('Fetching new KIS Access Token...')
+
+                const response = await fetch(`${BASE_URL}/oauth2/tokenP`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        grant_type: 'client_credentials',
+                        appkey: APP_KEY,
+                        appsecret: APP_SECRET,
+                    }),
+                })
+
+                if (!response.ok) {
+                    const errorText = await response.text()
+                    throw new Error(`Failed to get token: ${response.status} ${errorText}`)
+                }
+
+                const data = await response.json()
+
+                // Calculate expiration (give 1 minute buffer)
+                const expiresAt = new Date(now.getTime() + (data.expires_in - 60) * 1000)
+
+                // 2. Save to DB
+                await prisma.apiToken.upsert({
+                    where: { provider: 'KIS' },
+                    update: {
+                        token: data.access_token,
+                        expiresAt: expiresAt,
+                    },
+                    create: {
+                        provider: 'KIS',
+                        token: data.access_token,
+                        expiresAt: expiresAt,
+                    },
+                })
+
+                return data.access_token
+            } finally {
+                // Reset the promise so subsequent calls can retry if failed, or check expiry again
+                this.tokenPromise = null
+            }
+        })()
+
+        return this.tokenPromise
     }
 
     async getCurrentPrice(symbol: string, market: 'KOSPI' | 'KOSDAQ' | 'US' = 'KOSPI') {

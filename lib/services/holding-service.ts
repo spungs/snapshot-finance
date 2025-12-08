@@ -40,6 +40,9 @@ export const holdingService = {
             // Fetch Exchange Rate
             const exchangeRate = await getUsdExchangeRate()
 
+            // Ensure KIS Token is valid before starting parallel requests
+            await kisClient.ensureConnection()
+
             // Fetch Real-time Prices and Calculate Summary
             const holdingsWithPrice = await Promise.all(holdings.map(async (holding) => {
                 let currentPrice = 0
@@ -126,7 +129,14 @@ export const holdingService = {
             }
         } catch (error) {
             console.error('Holdings service error:', error)
-            return { success: false, error: { code: 'FETCH_FAILED', message: '잔고 조회에 실패했습니다.' } }
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+            return {
+                success: false,
+                error: {
+                    code: 'FETCH_FAILED',
+                    message: `잔고 조회 실패: ${errorMessage}`
+                }
+            }
         }
     }
 }
