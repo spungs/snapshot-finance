@@ -88,3 +88,5 @@ next-env.d.ts
 /lib/generated/prisma
 
 /tmp
+
+.cursorrules
