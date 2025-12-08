@@ -4,7 +4,6 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Play } from 'lucide-react'
 import {
     Table,
     TableBody,
@@ -69,9 +68,6 @@ export function SnapshotsClient({ initialSnapshots }: SnapshotsClientProps) {
                     <Link href="/dashboard/snapshots/new" className="flex-1 sm:flex-none">
                         <Button className="w-full sm:w-auto">{t('newSnapshot')}</Button>
                     </Link>
-                    <Link href="/dashboard/simulation" className="flex-1 sm:flex-none">
-                        <Button variant="outline" className="w-full sm:w-auto">{t('simulationTitle')}</Button>
-                    </Link>
                 </div>
             </div>
 
@@ -100,7 +96,6 @@ export function SnapshotsClient({ initialSnapshots }: SnapshotsClientProps) {
                                                 <TableHead className="text-right">{t('holdingsCount')}</TableHead>
                                                 <TableHead>{t('memo')}</TableHead>
                                                 <TableHead className="text-right">{t('actions')}</TableHead>
-                                                <TableHead className="text-center">{t('simulation')}</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
@@ -115,7 +110,7 @@ export function SnapshotsClient({ initialSnapshots }: SnapshotsClientProps) {
                                                                 href={`/dashboard/snapshots/${snapshot.id}`}
                                                                 className="text-blue-600 hover:underline"
                                                             >
-                                                                {formatDate(snapshot.snapshotDate)}
+                                                                <span suppressHydrationWarning>{formatDate(snapshot.snapshotDate)}</span>
                                                             </Link>
                                                         </TableCell>
                                                         <TableCell className="text-right font-medium">
@@ -159,13 +154,6 @@ export function SnapshotsClient({ initialSnapshots }: SnapshotsClientProps) {
                                                                     {deleting === snapshot.id ? t('deleting') : t('delete')}
                                                                 </Button>
                                                             </div>
-                                                        </TableCell>
-                                                        <TableCell className="text-center">
-                                                            <Link href={`/dashboard/simulation?snapshotId=${snapshot.id}`}>
-                                                                <Button variant="secondary" size="sm">
-                                                                    <Play className="h-4 w-4 min-w-4" />
-                                                                </Button>
-                                                            </Link>
                                                         </TableCell>
                                                     </TableRow>
                                                 )

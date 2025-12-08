@@ -51,13 +51,13 @@ export default function SnapshotDetailClient({ snapshot }: SnapshotDetailClientP
                         ← {t('snapshotList')}
                     </Link>
                     <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2 flex-wrap">
-                        {formatDate(snapshot.snapshotDate)} {t('snapshotDetail')}
+                        <span suppressHydrationWarning>{formatDate(snapshot.snapshotDate)}</span> {t('snapshotDetail')}
                         <Badge variant="secondary" className="text-xs sm:text-sm">
                             {snapshot.note || '메모 없음'}
                         </Badge>
                     </h1>
                     <p className="text-sm text-muted-foreground mt-1">
-                        {t('snapshotDate')}: {formatDate(snapshot.snapshotDate)}
+                        {t('snapshotDate')}: <span suppressHydrationWarning>{formatDate(snapshot.snapshotDate)}</span>
                     </p>
                 </div>
                 <div className="flex gap-2 w-full sm:w-auto">
