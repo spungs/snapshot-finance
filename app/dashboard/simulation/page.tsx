@@ -5,12 +5,13 @@ import SimulationError from './simulation-error'
 export default async function SimulationPage({
     searchParams,
 }: {
-    searchParams: { userId?: string }
+    searchParams: Promise<{ userId?: string }>
 }) {
-    const userId = searchParams.userId || 'test-user-free'
+    const { userId } = await searchParams
+    const targetUserId = userId || 'test-user-free'
 
     const user = await prisma.user.findUnique({
-        where: { id: userId },
+        where: { id: targetUserId },
         include: {
             accounts: true,
         },
