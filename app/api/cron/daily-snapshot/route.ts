@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
                         cashBalance: latestSnapshot.cashBalance,
                         note: 'Auto-generated via Cron',
                         holdings: {
-                            create: latestSnapshot.holdings.map((h) => ({
+                            create: latestSnapshot.holdings.map((h: any) => ({
                                 stockId: h.stockId,
                                 quantity: h.quantity,
                                 averagePrice: h.averagePrice,
