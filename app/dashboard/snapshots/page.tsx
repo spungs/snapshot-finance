@@ -1,6 +1,8 @@
 import { snapshotService } from '@/lib/services/snapshot-service'
 import { SnapshotsClient } from './snapshots-client'
 
+export const dynamic = 'force-dynamic'
+
 const TEST_ACCOUNT_ID = 'test-account-1'
 
 export default async function SnapshotsPage() {
@@ -20,7 +22,7 @@ export default async function SnapshotsPage() {
     note: snapshot.note || null,
     holdings: snapshot.holdings.map((h) => ({
       id: h.id,
-      stock: h.stock,
+      stock: { stockName: h.stock.stockName },
     })),
   })) || []
 

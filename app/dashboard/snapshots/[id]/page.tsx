@@ -31,6 +31,8 @@ export default async function SnapshotDetailPage({
   // Convert Decimal objects to numbers for client component serialization
   const serializedSnapshot = {
     ...snapshot,
+    snapshotDate: snapshot.snapshotDate.toISOString(),
+    createdAt: snapshot.createdAt.toISOString(),
     totalValue: snapshot.totalValue.toNumber(),
     totalCost: snapshot.totalCost.toNumber(),
     totalProfit: snapshot.totalProfit.toNumber(),
@@ -42,9 +44,12 @@ export default async function SnapshotDetailPage({
       snapshotId: holding.snapshotId,
       stockId: holding.stockId,
       quantity: holding.quantity,
-      createdAt: holding.createdAt,
+      createdAt: holding.createdAt.toISOString(),
       currency: holding.currency,
-      stock: holding.stock,
+      stock: {
+        stockCode: holding.stock.stockCode,
+        stockName: holding.stock.stockName,
+      },
       // Decimals converted to numbers
       averagePrice: holding.averagePrice.toNumber(),
       currentPrice: holding.currentPrice.toNumber(),
