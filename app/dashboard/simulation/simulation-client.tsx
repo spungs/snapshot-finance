@@ -209,7 +209,7 @@ export default function SimulationClient({ initialSnapshots }: SimulationClientP
                                         <span className={profitDiff >= 0 ? "text-red-600" : "text-blue-600"}>
                                             {profitDiff > 0 ? '+' : ''}{formatCurrency(profitDiff)}
                                             <span className="text-xs ml-1 text-muted-foreground font-normal">
-                                                ({profitDiff >= 0 ? '🤑' : '😢'})
+                                                ({profitDiff >= 0 ? '🎉' : '👿'})
                                             </span>
                                         </span>
                                     </div>
