@@ -16,21 +16,23 @@ export function NavLinks() {
     ]
 
     return (
-        <nav className="flex space-x-4">
-            {links.map((link) => (
-                <Link
-                    key={link.href}
-                    href={link.href}
-                    className={cn(
-                        "px-3 py-2 rounded-md text-sm font-medium transition-colors",
-                        pathname === link.href
-                            ? "bg-gray-100 text-gray-900"
-                            : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                    )}
-                >
-                    {link.label}
-                </Link>
-            ))}
+        <nav className="flex space-x-1 sm:space-x-4 overflow-x-auto max-w-full pb-1 sm:pb-0 scrollbar-hide">
+            {links.map((link) => {
+                return (
+                    <Link
+                        key={link.href}
+                        href={link.href}
+                        className={cn(
+                            'px-2 sm:px-3 py-2 rounded-md text-xs sm:text-sm font-medium whitespace-nowrap',
+                            pathname === link.href
+                                ? 'bg-gray-900 text-white'
+                                : 'text-gray-900 hover:bg-gray-100'
+                        )}
+                    >
+                        {link.label}
+                    </Link>
+                )
+            })}
         </nav>
     )
 }
