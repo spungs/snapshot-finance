@@ -59,27 +59,27 @@ export function PortfolioSummaryCard({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
           {/* 총 평가금액 */}
           <div>
-            <p className="text-sm text-gray-500 mb-1">{t('totalValue')}</p>
-            <p className="text-2xl font-bold">{formatCurrency(displayValue, baseCurrency)}</p>
+            <p className="text-xs sm:text-sm text-gray-500 mb-1">{t('totalValue')}</p>
+            <p className="text-xl sm:text-2xl font-bold">{formatCurrency(displayValue, baseCurrency)}</p>
           </div>
 
           {/* 총 매입금액 */}
           <div>
-            <p className="text-sm text-gray-500 mb-1">{t('totalInvested')}</p>
-            <p className="text-xl font-semibold text-gray-700">
+            <p className="text-xs sm:text-sm text-gray-500 mb-1">{t('totalInvested')}</p>
+            <p className="text-lg sm:text-xl font-semibold text-gray-700">
               {formatCurrency(displayCost, baseCurrency)}
             </p>
           </div>
 
           {/* 평가손익 */}
           <div>
-            <p className="text-sm text-gray-500 mb-1">{t('pl')}</p>
+            <p className="text-xs sm:text-sm text-gray-500 mb-1">{t('pl')}</p>
             <p
               className={cn(
-                'text-xl font-bold',
+                'text-lg sm:text-xl font-bold',
                 isProfit ? 'text-red-600' : 'text-blue-600'
               )}
             >
@@ -89,10 +89,10 @@ export function PortfolioSummaryCard({
 
           {/* 수익률 */}
           <div>
-            <p className="text-sm text-gray-500 mb-1">{t('returnRate')}</p>
+            <p className="text-xs sm:text-sm text-gray-500 mb-1">{t('returnRate')}</p>
             <p
               className={cn(
-                'text-xl font-bold',
+                'text-lg sm:text-xl font-bold',
                 isProfit ? 'text-red-600' : 'text-blue-600'
               )}
             >
@@ -102,8 +102,8 @@ export function PortfolioSummaryCard({
 
           {/* 보유 종목 수 */}
           <div>
-            <p className="text-sm text-gray-500 mb-1">{t('holdings')}</p>
-            <p className="text-xl font-semibold text-gray-700">
+            <p className="text-xs sm:text-sm text-gray-500 mb-1">{t('holdings')}</p>
+            <p className="text-lg sm:text-xl font-semibold text-gray-700">
               {holdingsCount}{t('countUnit')}
             </p>
           </div>
