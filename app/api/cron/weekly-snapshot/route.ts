@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
                     cashBalance: 0,
                     note: `주간 자동 스냅샷 - ${new Date().toLocaleDateString('ko-KR')}`,
                     holdings: {
-                        create: holdingsWithPrice.map((h) => ({
+                        create: holdingsWithPrice.map((h: any) => ({
                             stockId: h.stockId,
                             quantity: h.quantity,
                             averagePrice: h.averagePrice,
