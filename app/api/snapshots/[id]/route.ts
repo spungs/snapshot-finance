@@ -176,13 +176,13 @@ export async function PUT(
       })
 
       // 2. Delete existing holdings
-      await tx.stockHolding.deleteMany({
+      await tx.snapshotHolding.deleteMany({
         where: { snapshotId: id },
       })
 
       // 3. Create new holdings
       if (processedHoldings.length > 0) {
-        await tx.stockHolding.createMany({
+        await tx.snapshotHolding.createMany({
           data: processedHoldings.map((h: any) => ({
             snapshotId: id,
             stockId: h.stockId,

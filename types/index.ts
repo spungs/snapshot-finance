@@ -9,10 +9,10 @@ export interface SnapshotResponse {
   profitRate: Decimal
   cashBalance: Decimal
   note?: string | null
-  holdings: StockHoldingResponse[]
+  holdings: SnapshotHoldingResponse[]
 }
 
-export interface StockHoldingResponse {
+export interface SnapshotHoldingResponse {
   id: string
   stockCode: string
   stockName: string

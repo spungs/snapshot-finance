@@ -8,7 +8,7 @@ async function main() {
 
   // Clean up existing test data
   try {
-    await prisma.stockHolding.deleteMany({})
+    await prisma.snapshotHolding.deleteMany({})
     await prisma.portfolioSnapshot.deleteMany({})
     await prisma.holding.deleteMany({})
     // await prisma.securitiesAccount.deleteMany({}) // Removed

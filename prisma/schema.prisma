@@ -80,14 +80,14 @@ model PortfolioSnapshot {
   note         String?
   createdAt    DateTime          @default(now())
   user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  holdings     StockHolding[]
+  holdings     SnapshotHolding[]
 
   @@index([userId, snapshotDate(sort: Desc)])
   @@index([snapshotDate(sort: Desc)])
   @@map("portfolio_snapshots")
 }
 
-model StockHolding {
+model SnapshotHolding {
   id           String            @id @default(cuid())
   snapshotId   String
   stockId      String
@@ -106,19 +106,18 @@ model StockHolding {
 
   @@index([snapshotId])
   @@index([stockId])
-  @@map("stock_holdings")
+  @@map("snapshot_holdings")
 }
 
 model Stock {
-  id           String         @id @default(cuid())
-  stockCode    String         @unique
+  id           String            @id @default(cuid())
+  stockCode    String            @unique
   stockName    String
   market       String
   sector       String?
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  histories    StockHistory[]
-  holdings     StockHolding[]
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  holdings     SnapshotHolding[]
   liveHoldings Holding[]
 
   @@index([stockCode])
@@ -145,24 +144,6 @@ model Holding {
   @@index([userId])
   @@index([stockId])
   @@map("holdings")
-}
-
-model StockHistory {
-  id         String   @id @default(cuid())
-  stockId    String
-  date       DateTime @db.Date
-  closePrice Decimal  @db.Decimal(15, 4)
-  openPrice  Decimal? @db.Decimal(15, 4)
-  highPrice  Decimal? @db.Decimal(15, 4)
-  lowPrice   Decimal? @db.Decimal(15, 4)
-  volume     BigInt?
-  currency   String   @default("KRW")
-  createdAt  DateTime @default(now())
-  stock      Stock    @relation(fields: [stockId], references: [id], onDelete: Cascade)
-
-  @@unique([stockId, date])
-  @@index([date])
-  @@map("stock_histories")
 }
 
 model ApiToken {
