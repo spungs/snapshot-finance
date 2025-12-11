@@ -30,9 +30,18 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6002876774605337" crossOrigin="anonymous"></script>
+        <script src="https://accounts.google.com/gsi/client" async defer></script>
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <div id="g_id_onload"
+          data-client_id={process.env.AUTH_GOOGLE_ID}
+          data-login_uri={`${process.env.NEXT_PUBLIC_APP_URL || ''}/api/auth/callback/google`}
+          data-auto_prompt="false">
+        </div>
         <LanguageProvider>
           <CurrencyProvider>
             {children}

@@ -13,11 +13,11 @@ export const dynamic = 'force-dynamic'
 
 export default async function DashboardPage() {
   const session = await auth()
-  if (!session) {
+  if (!session?.user?.id) {
     redirect('/auth/signin')
   }
 
-  const { data } = await holdingService.getList(session.id)
+  const { data } = await holdingService.getList(session.user.id)
 
   // Serialize for client component
   const initialData = data ? {

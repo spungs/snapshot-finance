@@ -1,13 +1,23 @@
-/**
- * Mock authentication helper
- * Returns a hardcoded user for development
- */
-export async function auth() {
-    // In production, this would verify session/token and return real user
-    // For now, return the demo user
-    return {
-        id: 'test-user-free',
-        email: 'test@example.com',
-        name: 'Test User',
-    }
-}
+
+import NextAuth from "next-auth"
+import { PrismaAdapter } from "@auth/prisma-adapter"
+import { prisma } from "@/lib/prisma"
+import { authConfig } from "./auth.config"
+
+export const { handlers, auth, signIn, signOut } = NextAuth({
+    adapter: PrismaAdapter(prisma),
+    session: { strategy: "jwt" },
+    ...authConfig,
+    providers: [
+        ...authConfig.providers,
+    ],
+    callbacks: {
+        ...authConfig.callbacks,
+        async session({ session, token }) {
+            if (token.sub && session.user) {
+                session.user.id = token.sub
+            }
+            return session
+        },
+    },
+})
