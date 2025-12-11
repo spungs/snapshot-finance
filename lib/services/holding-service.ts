@@ -26,7 +26,7 @@ export const holdingService = {
             const holdings = await prisma.holding.findMany({
                 where: { userId },
                 include: { stock: true },
-                orderBy: { createdAt: 'desc' },
+                orderBy: { displayOrder: 'asc' },
             })
 
             // Fetch Exchange Rate

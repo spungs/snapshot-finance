@@ -136,6 +136,13 @@ export async function POST(request: NextRequest) {
             }
         }
 
+        // Calculate next display order for new holding
+        const maxOrderResult = await prisma.holding.aggregate({
+            where: { userId },
+            _max: { displayOrder: true },
+        })
+        const nextOrder = (maxOrderResult._max.displayOrder ?? -1) + 1
+
         // holding이 처리되지 않았으면(덮어쓰기 모드이거나, 물타기 모드인데 신규 종목인 경우) upsert 수행
         if (!holding) {
             holding = await prisma.holding.upsert({
@@ -162,6 +169,7 @@ export async function POST(request: NextRequest) {
                     currency,
                     purchaseRate,
                     priceUpdatedAt: new Date(),
+                    displayOrder: nextOrder,
                 },
                 include: { stock: true },
             })
