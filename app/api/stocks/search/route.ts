@@ -27,24 +27,27 @@ export async function GET(request: NextRequest) {
                 take: 10,
             })
 
-            const formattedResults = stocks.map(stock => ({
-                symbol: `${stock.stockCode}.KS`, // Default to .KS, logic needed for KOSDAQ (.KQ)
-                // Actually, KIS master has market.
-                // KOSPI -> .KS, KOSDAQ -> .KQ for Yahoo compatibility if we mix?
-                // Or just return code and let frontend/backend handle it.
-                // Our system uses Yahoo symbols usually.
-                // Let's map market to Yahoo suffix.
-                name: stock.stockName,
-                exchange: stock.market === 'KOSPI' ? 'KSC' : 'KOE', // Yahoo codes
-                market: stock.market,
-                type: 'EQUITY',
-                isDbResult: true
-            })).map(s => ({
-                ...s,
-                symbol: s.market === 'KOSPI' ? `${s.symbol.split('.')[0]}.KS` : `${s.symbol.split('.')[0]}.KQ`
-            }))
+            if (stocks.length > 0) {
+                const formattedResults = stocks.map(stock => ({
+                    symbol: `${stock.stockCode}.KS`, // Default to .KS, logic needed for KOSDAQ (.KQ)
+                    // Actually, KIS master has market.
+                    // KOSPI -> .KS, KOSDAQ -> .KQ for Yahoo compatibility if we mix?
+                    // Or just return code and let frontend/backend handle it.
+                    // Our system uses Yahoo symbols usually.
+                    // Let's map market to Yahoo suffix.
+                    name: stock.stockName,
+                    exchange: stock.market === 'KOSPI' ? 'KSC' : 'KOE', // Yahoo codes
+                    market: stock.market,
+                    type: 'EQUITY',
+                    isDbResult: true
+                })).map(s => ({
+                    ...s,
+                    symbol: s.market === 'KOSPI' ? `${s.symbol.split('.')[0]}.KS` : `${s.symbol.split('.')[0]}.KQ`
+                }))
 
-            return NextResponse.json({ success: true, data: formattedResults })
+                return NextResponse.json({ success: true, data: formattedResults })
+            }
+            // If no results in DB, fall back to Yahoo Finance
         }
 
         // 2. English Search - Use Yahoo Finance
