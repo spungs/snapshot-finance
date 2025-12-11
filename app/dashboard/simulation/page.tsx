@@ -1,30 +1,27 @@
 import { prisma } from '@/lib/prisma'
+import { auth } from '@/lib/auth'
 import SimulationClient from './simulation-client'
 import SimulationError from './simulation-error'
 
-export default async function SimulationPage({
-    searchParams,
-}: {
-    searchParams: Promise<{ userId?: string }>
-}) {
-    const { userId } = await searchParams
-    const targetUserId = userId || 'test-user-free'
+export default async function SimulationPage() {
+    const session = await auth()
 
-    const user = await prisma.user.findUnique({
-        where: { id: targetUserId },
-        include: {
-            accounts: true,
-        },
-    })
-
-    if (!user || user.accounts.length === 0) {
+    if (!session?.user?.id) {
         return <SimulationError />
     }
 
-    const accountId = user.accounts[0].id
+    const userId = session.user.id
+
+    const user = await prisma.user.findUnique({
+        where: { id: userId },
+    })
+
+    if (!user) {
+        return <SimulationError />
+    }
 
     const snapshots = await prisma.portfolioSnapshot.findMany({
-        where: { accountId },
+        where: { userId },
         orderBy: { snapshotDate: 'desc' },
         include: {
             holdings: {

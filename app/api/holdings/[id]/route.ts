@@ -23,10 +23,9 @@ export async function PATCH(
         // 소유권 확인
         const holding = await prisma.holding.findUnique({
             where: { id },
-            include: { account: true },
         })
 
-        if (!holding || holding.account.userId !== session.user.id) {
+        if (!holding || holding.userId !== session.user.id) {
             return NextResponse.json(
                 { success: false, error: { code: 'NOT_FOUND', message: '보유 종목을 찾을 수 없습니다.' } },
                 { status: 404 }
@@ -73,10 +72,9 @@ export async function DELETE(
         // 소유권 확인
         const holding = await prisma.holding.findUnique({
             where: { id },
-            include: { account: true },
         })
 
-        if (!holding || holding.account.userId !== session.user.id) {
+        if (!holding || holding.userId !== session.user.id) {
             return NextResponse.json(
                 { success: false, error: { code: 'NOT_FOUND', message: '보유 종목을 찾을 수 없습니다.' } },
                 { status: 404 }

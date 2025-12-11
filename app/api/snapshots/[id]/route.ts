@@ -19,7 +19,6 @@ export async function GET(
             stock: true,
           },
         },
-        account: true,
       },
     })
 
