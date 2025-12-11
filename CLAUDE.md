@@ -9,76 +9,56 @@
 **Snapshot Finance**는 주식 포트폴리오 스냅샷 관리 시스템으로 투자자가 다음을 수행할 수 있습니다:
 - 특정 시점의 포트폴리오 스냅샷 저장
 - 과거 수익률 및 성과 추적
-- "만약에" 시뮬레이션 실행 (예: "팔지 않았다면?")
-- 증권사 API를 통한 스냅샷 자동 생성
+- "만약에" 시뮬레이션 실행 (구현 완료)
+- 주식 현재가 조회 및 자산 평가
 
 이 시스템은 수동 구글 스프레드시트 기록을 자동화된 데이터베이스 기반 솔루션으로 대체합니다.
 
 ## 기술 스택
 
-- **프론트엔드:** Next.js 14 (App Router) + TypeScript + Tailwind CSS
+- **프론트엔드:** Next.js 16 (App Router) + TypeScript + Tailwind CSS
 - **UI 컴포넌트:** shadcn/ui, Recharts (차트), TanStack Table (데이터 테이블)
-- **백엔드:** Next.js API Routes
-- **데이터베이스:** PostgreSQL + Prisma ORM
-- **증권사 API:**
-  - Phase 1: NH투자증권 QV Open API
-  - Phase 2: 한국투자증권 Open API
-  - Phase 3: 마이데이터 API (사업자 등록 필요)
+- **백엔드:** Next.js API Routes (Server Actions 포함)
+- **인증:** NextAuth.js v5 (Google 로그인)
+- **데이터베이스:** PostgreSQL + Prisma ORM (Supabase)
+- **증권사 API:** KIS (한국투자증권) Open API (시세 조회용)
 - **배포:** Vercel (호스팅) + Supabase (PostgreSQL)
 
 ## 개발 단계
 
-**Phase 1 (MVP - 3주):** 개인용, 단일 계좌, 수동 스냅샷 생성
-**Phase 2 (2주):** 구독 모델(Free/Pro/Max), 스냅샷 수량 제한, 유료 유저용 자동 스냅샷
-**Phase 3 (4-6주):** 다중 사용자 서비스, 마이데이터 API 연동, 결제 연동
+**Phase 1 (MVP - 완료):** 개인용 잔고 관리, 스냅샷 CRUD, 실시간 시세 연동
+**Phase 2 (진행 중):** 인증 및 사용자 관리, 시뮬레이션, 자동 스냅샷, UX 고도화
+**Phase 3 (예정):** 다중 사용자 서비스 확장, 배당금 관리, 커뮤니티 기능
 
 ## 데이터베이스 아키텍처
 
 ### 핵심 데이터 모델
 
-시스템은 포트폴리오 상태가 불변 레코드인 **스냅샷 기반** 아키텍처를 사용합니다:
+시스템은 **사용자(User)** 중심으로 포트폴리오와 스냅샷을 관리합니다:
 
 ```
-User (Phase 3)
-  └─ SecuritiesAccount (1:N)
-      └─ PortfolioSnapshot (1:N) [불변]
-          └─ StockHolding (1:N)
-              └─ Stock (N:1)
+User
+  ├─ Holding (1:N) [실시간 잔고]
+  │   └─ Stock (N:1)
+  └─ PortfolioSnapshot (1:N) [불변 기록]
+      └─ SnapshotHolding (1:N)
+          └─ Stock (N:1)
 ```
 
 ### 주요 설계 원칙
 
-1. **스냅샷은 불변** - 생성된 후에는 수정 불가 (삭제만 가능)
-2. **Decimal 정밀도** - 모든 금융 계산은 반올림 오류를 피하기 위해 `Decimal` 타입 사용 (float 사용 금지)
-3. **이력 보존을 위한 비정규화** - `StockHolding.currentPrice`는 스냅샷 시점의 가격을 저장 (정규화하지 않음)하여 과거 데이터 보존
-4. **연쇄 삭제** - 스냅샷 삭제 시 관련된 보유 종목도 자동 삭제
-5. **스냅샷 수량 제한** - 플랜별 최대 저장 개수 제한 (Free: 30, Pro: 125, Max: 250)
-6. **자동화 제한** - 자동 스냅샷 기능은 유료 플랜 전용
+1.  **스냅샷 불변성:** 생성된 스냅샷은 수정 불가(삭제만 가능)하여 기록의 신뢰성 보장
+2.  **데이터 정확성:** 금융 계산엔 항상 `Decimal` 타입 사용
+3.  **데이터 정규화:** `Stock` 테이블로 종목 정보 관리, `User` 테이블로 계정 통합 (기존 `SecuritiesAccount` 제거됨)
+4.  **명확한 네이밍:** 스냅샷 내 보유 종목은 `SnapshotHolding`으로 명명하여 실시간 잔고(`Holding`)와 구분
 
 ### 중요 스키마 세부사항
 
-- **PortfolioSnapshot:** 특정 시점의 총 평가액, 수익률, 예수금을 저장하는 핵심 테이블
-- **StockHolding:** 스냅샷 내 개별 주식 포지션 (수량, 가격, 손익)
-- **Stock:** 주식 메타데이터를 위한 마스터 테이블 (종목코드, 종목명, 시장)
-- **Simulation:** (Phase 2) 가상 수익과 실제 수익을 비교하는 "만약에" 시나리오 저장
-
-참고: 완전한 Prisma 스키마는 `PRD.md` 섹션 8.2 참조
-
-## 증권사 API 연동 전략
-
-### Phase 1: NH투자증권
-- **플랫폼:** Windows 전용 (DLL 기반 COM 인터페이스)
-- **해결 방법:** Windows에서 Python/Node 서버 실행, Next.js에 HTTP API로 노출
-- **주요 API:** TR C8201 (계좌 잔고 조회)
-
-### Phase 2+: REST API
-- 한국투자증권: OAuth 2.0, REST API
-- 마이데이터 API: 금융 당국 승인 + 사업자 등록 필요
-
-### 중요한 제약사항
-- 일일 API 호출 제한 가능 - 캐싱 구현 필요
-- 무료 API는 지연 시세 제공 (15분 지연)
-- 계좌번호는 데이터베이스에 AES-256 암호화 필수
+-   **PortfolioSnapshot:** 특정 시점의 포트폴리오 상태(총보유액, 수익률 등) 저장
+-   **SnapshotHolding:** 스냅샷 시점의 개별 종목 상태 (구 `StockHolding`)
+-   **Holding:** 현재 사용자가 보유 중인 실시간 잔고
+-   **Stock:** 종목 마스터 데이터
+-   **User:** 사용자 계정 및 인증 정보
 
 ## 주요 구현 참고사항
 
@@ -93,95 +73,30 @@ const profitRate = new Decimal(currentValue)
   .minus(totalCost)
   .div(totalCost)
   .times(100);
-
-// 잘못된 방법 - 부동소수점 오류 발생
-const profitRate = ((currentValue - totalCost) / totalCost) * 100;
 ```
 
-### 스냅샷 생성 흐름
-1. 증권사 API를 호출하여 현재 포트폴리오 조회
-2. Decimal 연산을 사용하여 수익률 계산
-3. 단일 트랜잭션으로 `PortfolioSnapshot`과 `StockHolding` 레코드 생성
-4. 기존 스냅샷 절대 수정 금지 - 항상 새로 생성
+### 스냅샷 생성
+1.  사용자의 현재 잔고(`Holding`)를 기반으로 자동 생성하거나 수동 입력 가능
+2.  생성 시점의 환율 및 주가 정보를 `SnapshotHolding`에 기록
+3.  단일 트랜잭션으로 처리하여 데이터 무결성 보장
 
-### 자동 스냅샷
-- Vercel Cron Jobs를 통해 스케줄링 (매일 15:30 KST - 장 마감 후)
-- 엔드포인트: `GET /api/cron/snapshot` (`CRON_SECRET` 인증 헤더 필요)
-- 로컬 개발: 테스트용으로 `node-cron` 사용
+### 자동 스냅샷 (Cron)
+-   Vercel Cron Jobs 활용
+-   `GET /api/cron/daily-snapshot`: 매일 장 마감 후 실행
+-   `GET /api/cron/weekly-snapshot`: 주간 요약
 
 ## API 설계 표준
 
-- **RESTful 규약:** 리소스 기반 URL
-- **에러 응답:** `error.code` 및 `error.message`를 포함한 일관된 JSON 형식
-- **페이지네이션:** 성능을 위해 커서 기반 (offset 방식 아님)
-- **인증:** Phase 3 - NextAuth.js를 통한 JWT
-
-에러 형식 예시:
-```json
-{
-  "error": {
-    "code": "SNAPSHOT_NOT_FOUND",
-    "message": "스냅샷을 찾을 수 없습니다.",
-    "details": {}
-  }
-}
-```
+-   **RESTful API:** `app/api/*` 경로 사용
+-   **Server Actions:** 폼 제출 및 단순 데이터 변이(`app/actions.ts`)에 활용
+-   **인증:** `auth()` 함수를 통해 세션 검증 후 접근 허용
+-   **프록시:** `proxy.ts` (구 `middleware.ts`)를 사용하여 라우트 보호
 
 ## 보안 요구사항
 
-1. **절대 커밋 금지:**
-   - API 키 → `.env.local`에 저장
-   - 계좌번호 (DB에 암호화 필수)
-   - `CRON_SECRET` 토큰
-
-2. **암호화:**
-   - 계좌번호: 저장 전 AES-256 암호화
-   - 프로덕션에서 HTTPS만 사용
-
-3. **Prisma 보호:**
-   - 자동 SQL 인젝션 방지
-   - 파라미터화된 쿼리만 사용
-
-## 프로젝트 구조 (구현 예정)
-
-```
-app/
-  api/
-    snapshots/route.ts       # 스냅샷 CRUD
-    portfolio/route.ts       # 실시간 포트폴리오 조회
-    simulation/route.ts      # Phase 2
-    cron/snapshot/route.ts   # 일일 자동 스냅샷
-  dashboard/
-    page.tsx                 # 메인 대시보드
-    snapshots/[id]/page.tsx  # 스냅샷 상세 보기
-  simulations/               # Phase 2
-
-lib/
-  api/
-    nh-securities.ts         # NH API 클라이언트
-    mydata.ts                # Phase 3
-  utils/
-    calculations.ts          # 수익률 계산 (Decimal.js)
-  prisma.ts                  # Prisma 클라이언트 싱글톤
-
-prisma/
-  schema.prisma             # 데이터베이스 스키마 (PRD.md 참조)
-  migrations/               # 자동 생성
-```
-
-## 규제 및 법적 고려사항
-
-- **마이데이터 사업자 등록:** Phase 3 다중 사용자 서비스를 위해 필수 (금융위원회 승인)
-- **개인정보 보호:** 계좌번호는 민감 정보 - 저장 시 암호화 필수
-- **금융거래법:** 사용자가 본인 계좌만 연결하도록 제한
-
-## 피해야 할 일반적인 함정
-
-1. **돈 계산에 부동소수점 사용 금지** - 항상 `Decimal` 타입 사용
-2. **스냅샷 수정 금지** - 대신 새로 생성 (불변성)
-3. **코드에 API 키 저장 금지** - 환경변수만 사용
-4. **Phase 1 과도한 엔지니어링 금지** - MVP는 단순하게 유지 (단일 사용자, 기본 기능)
-5. **API 호출 에러 처리 생략 금지** - 증권사 API는 실패하거나 rate-limit될 수 있음
+1.  **환경 변수:** API 키, DB URL 등은 `.env` 파일로 관리 (커밋 절대 금지)
+2.  **인증:** NextAuth.js를 통한 안전한 세션 관리
+3.  **타입 안전성:** Prisma Client 및 TypeScript 엄격 모드 준수
 
 ## 개발 워크플로우
 
@@ -189,57 +104,39 @@ prisma/
 
 기능 구현을 완료하고 커밋한 후에는 반드시 `plan.md` 파일을 업데이트해야 합니다:
 
-1. **체크리스트 업데이트:** 완료된 항목을 `[ ]`에서 `[x]`로 변경
-2. **현재 상태 업데이트:** "현재 상태" 섹션의 완료된 작업 목록 갱신
-3. **최종 업데이트 날짜:** 파일 상단의 날짜 갱신
-
-**예시:**
-```markdown
-# 변경 전
-- [ ] POST `/api/snapshots` 구현 (스냅샷 생성)
-
-# 변경 후
-- [x] POST `/api/snapshots` 구현 (스냅샷 생성)
-```
+1.  **체크리스트 업데이트:** 완료된 항목을 `[ ]`에서 `[x]`로 변경
+2.  **현재 상태 업데이트:** "현재 상태" 섹션의 완료된 작업 목록 갱신
+3.  **최종 업데이트 날짜:** 파일 상단의 날짜 갱신
 
 ### 커밋 메시지 컨벤션
 
-기능별로 커밋을 분리하고, 다음 형식을 따릅니다:
-
-- `feat:` 새로운 기능 추가
-- `fix:` 버그 수정
-- `chore:` 빌드, 설정 변경
-- `docs:` 문서 수정
-- `refactor:` 리팩토링
+-   `feat:` 새로운 기능 추가
+-   `fix:` 버그 수정
+-   `chore:` 빌드, 설정 변경
+-   `docs:` 문서 수정
+-   `refactor:` 리팩토링
 
 **예시:**
 ```
-feat: implement REST API endpoints
-
-- GET/POST /api/snapshots - list and create snapshots
-- GET/DELETE /api/snapshots/[id] - get detail and delete snapshot
+feat: implement logout functionality
+refactor: rename StockHolding to SnapshotHolding
 ```
 
 ### 🚫 금지 사항
-- 커밋 메시지에 `Generated with Claude Code` 또는 `Co-Authored-By: Claude` 같은 자동 생성 문구 절대 포함 금지
+-   커밋 메시지에 자동 생성 문구 포함 금지
 
 ## 참고 문서
 
-- **완전한 요구사항:** `PRD.md` 참조 (종합 제품 요구사항 문서)
-- **데이터베이스 스키마:** `PRD.md` 섹션 8.2 (Prisma 스키마)
-- **API 명세:** `PRD.md` 섹션 11 (엔드포인트 상세)
-- **개발 로드맵:** `PRD.md` 섹션 12 (단계별 구분)
+-   **개발 계획:** `plan.md` 확인
+-   **Prisma 스키마:** `prisma/schema.prisma` 확인
 
 ## 현재 상태
 
-**상태:** Phase 1 MVP 완료
+**상태:** Phase 2 진행 중 (리팩토링 및 고도화)
 **GitHub:** https://github.com/spungs/snapshot-finance
-**다음 단계:** Vercel 배포, Phase 2 기능 개발 (시뮬레이션, 자동 스냅샷)
 
-### Phase 1 완료 기능
-- 대시보드 (포트폴리오 요약, 수익률 차트)
-- 스냅샷 CRUD (생성/조회/삭제)
-- 수동 스냅샷 입력 폼
-- Supabase PostgreSQL 연동
-
-완전한 개발 로드맵 및 진행 상황은 `plan.md`를 참조하세요.
+### 최근 주요 변경 사항
+-   `SecuritiesAccount` 모델 제거 및 `User` 통합
+-   `StockHolding` → `SnapshotHolding` 리네이밍
+-   `middleware.ts` → `proxy.ts` 변경
+-   로그인/로그아웃 구현 완료

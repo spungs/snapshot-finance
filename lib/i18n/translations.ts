@@ -16,7 +16,7 @@ export const translations = {
         exchangeRate: '매입환율',
         additionalInfo: '추가 정보',
         cash: '예수금',
-        memo: '메모 (선택)',
+        memo: '메모',
         memoPlaceholder: '스냅샷에 대한 메모',
         summary: '요약 미리보기',
         totalInvested: '총 매입금액',
