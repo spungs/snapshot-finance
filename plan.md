@@ -40,7 +40,9 @@
 - [x] Next.js 16 호환성 업데이트 (`middleware.ts` → `proxy.ts`)
 - [x] Vercel 배포 환경 이슈 해결 (DB 연결, 시간대, 환경변수)
 - [x] 구글 애드센스 검증 파일 추가 (`ads.txt`)
+- [x] 구글 애드센스 검증 파일 추가 (`ads.txt`)
 - [x] 스냅샷 목록 버그 수정 (사용자 ID 연동)
+- [x] **버그 수정**: 대시보드 종목 추가 검색 시 한국 주식 미검색 현상 해결 (Yahoo Fallback + Quick Seed)
 
 ---
 
