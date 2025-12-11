@@ -23,6 +23,31 @@ import { Plus, Trash2, Camera, Edit2, Check, X, Loader2 } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
+import { ArrowUpDown, ArrowUp, ArrowDown, Filter } from 'lucide-react'
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    DragEndEvent,
+} from '@dnd-kit/core'
+import {
+    arrayMove,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { SortableTableRow } from './sortable-table-row'
 
 interface Holding {
     id: string
@@ -39,6 +64,20 @@ interface Holding {
     currentValue: number
     profit: number
     profitRate: number
+    displayOrder: number
+}
+
+type SortKey = 'custom' | 'stockName' | 'quantity' | 'averagePrice' | 'currentPrice' | 'totalCost' | 'currentValue' | 'profit' | 'profitRate'
+type SortDirection = 'asc' | 'desc'
+
+interface SortConfig {
+    key: SortKey
+    direction: SortDirection
+}
+
+interface FilterConfig {
+    market: 'all' | 'US' | 'KR'
+    profitStatus: 'all' | 'plus' | 'minus'
 }
 
 interface Summary {
@@ -82,7 +121,63 @@ export function HoldingsManager({ initialData }: Props) {
     } | null>(null)
     const [newQuantity, setNewQuantity] = useState('')
     const [newAveragePrice, setNewAveragePrice] = useState('')
+
     const [isMerge, setIsMerge] = useState(false)
+
+    // 정렬 및 필터 상태
+    const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'custom', direction: 'asc' })
+    const [filterConfig, setFilterConfig] = useState<FilterConfig>({ market: 'all', profitStatus: 'all' })
+
+    const handleSort = (key: SortKey) => {
+        setSortConfig((current) => {
+            if (current.key === key) {
+                // If already sorting by this key, toggle direction.
+                // Exception: 'custom' sort always resets to asc effectively (or toggle if we wanted reverse custom order, but usually custom is just one way)
+                if (key === 'custom') return { key, direction: 'asc' }
+                return { key, direction: current.direction === 'asc' ? 'desc' : 'asc' }
+            }
+            return { key, direction: key === 'stockName' ? 'asc' : 'desc' } // Default desc for numbers, asc for text
+        })
+    }
+
+    const getSortedAndFilteredHoldings = useCallback(() => {
+        let result = [...holdings]
+
+        // 1. Filter
+        if (filterConfig.market !== 'all') {
+            result = result.filter(h => h.market === filterConfig.market)
+        }
+        if (filterConfig.profitStatus !== 'all') {
+            result = result.filter(h => {
+                if (filterConfig.profitStatus === 'plus') return h.profit >= 0
+                if (filterConfig.profitStatus === 'minus') return h.profit < 0
+                return true
+            })
+        }
+
+        // 2. Sort
+        result.sort((a, b) => {
+            const { key, direction } = sortConfig
+            const modifier = direction === 'asc' ? 1 : -1
+
+            if (key === 'custom') {
+                return (a.displayOrder - b.displayOrder) * modifier
+            }
+
+            // Handle number comparison
+            if (key !== 'stockName') {
+                return (a[key] - b[key]) * modifier
+            }
+
+            // Handle string comparison
+            return a.stockName.localeCompare(b.stockName) * modifier
+        })
+
+        return result
+    }, [holdings, filterConfig, sortConfig])
+
+    const filteredHoldings = getSortedAndFilteredHoldings()
+    const isDragEnabled = sortConfig.key === 'custom' && filterConfig.market === 'all' && filterConfig.profitStatus === 'all'
 
     const parseNumericValue = (value: string) => {
         return value.replace(/,/g, '')
@@ -114,6 +209,47 @@ export function HoldingsManager({ initialData }: Props) {
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
+
+    const sensors = useSensors(
+        useSensor(PointerSensor),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        })
+    )
+
+    const handleDragEnd = async (event: DragEndEvent) => {
+        const { active, over } = event
+
+        if (over && active.id !== over.id) {
+            setHoldings((items) => {
+                const oldIndex = items.findIndex((item) => item.id === active.id)
+                const newIndex = items.findIndex((item) => item.id === over.id)
+                const newItems = arrayMove(items, oldIndex, newIndex)
+
+                // Optimistic UI Update + API Call
+                // Debounce or immediate call? Immediate is fine for now as user won't spam reorder too fast usually
+                // But better to trigger API
+                saveOrder(newItems)
+
+                return newItems
+            })
+        }
+    }
+
+    const saveOrder = async (newHoldings: Holding[]) => {
+        try {
+            const orderItems = newHoldings.map((h, index) => ({ id: h.id, order: index }))
+            // Create a dedicated API function or use fetch directly
+            await fetch('/api/holdings/reorder', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ items: orderItems })
+            })
+        } catch (err) {
+            console.error('Failed to save order', err)
+            // Optionally revert state on error, but keeping it simple for now
+        }
+    }
 
     const handleAddHolding = async () => {
         if (!newStock || !newQuantity || !newAveragePrice) return
@@ -353,176 +489,307 @@ export function HoldingsManager({ initialData }: Props) {
                         <Progress value={undefined} className="h-1 w-full rounded-none" />
                     </div>
                 )}
-                <CardHeader className="pb-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-0">
-                    <CardTitle className="text-lg">{t('holdings')} ({holdings.length})</CardTitle>
-                    <Button
-                        onClick={handleSaveSnapshot}
-                        disabled={savingSnapshot || holdings.length === 0 || isRefreshing}
-                        className="flex items-center gap-2 w-full sm:w-auto"
-                    >
-                        <Camera className="w-4 h-4" />
-                        {savingSnapshot ? '저장 중...' : t('saveSnapshot')}
-                    </Button>
+                <CardHeader className="pb-2 flex flex-col gap-4">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                        <CardTitle className="text-lg">{t('holdings')} ({filteredHoldings.length})</CardTitle>
+                        <Button
+                            onClick={handleSaveSnapshot}
+                            disabled={savingSnapshot || holdings.length === 0 || isRefreshing}
+                            variant="outline"
+                            size="sm"
+                            className="flex items-center gap-2 w-full sm:w-auto"
+                        >
+                            <Camera className="w-4 h-4" />
+                            {savingSnapshot ? '저장 중...' : t('saveSnapshot')}
+                        </Button>
+                    </div>
+
+                    {/* 필터 및 정렬 컨트롤 */}
+                    <div className="flex flex-wrap gap-3 p-1 bg-muted/30 rounded-lg items-center">
+                        <div className="flex items-center gap-2">
+                            <Filter className="w-4 h-4 text-muted-foreground" />
+                            <span className="text-sm font-medium">필터:</span>
+                        </div>
+
+                        <Select
+                            value={filterConfig.market}
+                            onValueChange={(val: any) => setFilterConfig(prev => ({ ...prev, market: val }))}
+                        >
+                            <SelectTrigger className="w-[100px] h-8 text-xs">
+                                <SelectValue placeholder="시장" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">전체 시장</SelectItem>
+                                <SelectItem value="US">미국(US)</SelectItem>
+                                <SelectItem value="KR">한국(KR)</SelectItem>
+                            </SelectContent>
+                        </Select>
+
+                        <Select
+                            value={filterConfig.profitStatus}
+                            onValueChange={(val: any) => setFilterConfig(prev => ({ ...prev, profitStatus: val }))}
+                        >
+                            <SelectTrigger className="w-[100px] h-8 text-xs">
+                                <SelectValue placeholder="수익 상태" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">전체 수익</SelectItem>
+                                <SelectItem value="plus">수익 (+)</SelectItem>
+                                <SelectItem value="minus">손실 (-)</SelectItem>
+                            </SelectContent>
+                        </Select>
+
+                        <div className="ml-auto flex items-center gap-2">
+                            {!isDragEnabled && (
+                                <Badge variant="destructive" className="text-[10px] h-5 px-1.5 font-normal">
+                                    커스텀 정렬 비활성
+                                </Badge>
+                            )}
+                            {(filterConfig.market !== 'all' || filterConfig.profitStatus !== 'all') && (
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 text-xs px-2"
+                                    onClick={() => setFilterConfig({ market: 'all', profitStatus: 'all' })}
+                                >
+                                    필터 초기화
+                                </Button>
+                            )}
+                            {sortConfig.key !== 'custom' && (
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 text-xs px-2"
+                                    onClick={() => setSortConfig({ key: 'custom', direction: 'asc' })}
+                                >
+                                    정렬 초기화
+                                </Button>
+                            )}
+                        </div>
+                    </div>
                 </CardHeader>
                 <CardContent className="p-0">
                     <div className={cn("transition-opacity duration-200", (isRefreshing || savingSnapshot) && "opacity-60 pointer-events-none")}>
-                        {holdings.length === 0 ? (
+                        {filteredHoldings.length === 0 ? (
                             <div className="py-12 text-center text-muted-foreground">
-                                보유 종목이 없습니다. 위에서 종목을 추가해주세요.
+                                {holdings.length === 0 ? "보유 종목이 없습니다. 위에서 종목을 추가해주세요." : "필터 조건에 맞는 종목이 없습니다."}
                             </div>
                         ) : (
                             <div className="overflow-x-auto -mx-4 sm:mx-0">
                                 <div className="min-w-[700px] px-4 sm:px-0">
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>{t('stockName')}</TableHead>
-                                                <TableHead className="text-right">{t('quantity')}</TableHead>
-                                                <TableHead className="text-right">{t('averagePrice')}</TableHead>
-                                                <TableHead className="text-right">{t('currentPrice')}</TableHead>
-                                                <TableHead className="text-right">{t('totalCost')}</TableHead>
-                                                <TableHead className="text-right">{t('evaluatedValue')}</TableHead>
-                                                <TableHead className="text-right">{t('pl')}</TableHead>
-                                                <TableHead className="text-right">{t('returnRate')}</TableHead>
-                                                <TableHead className="text-right">{t('actions')}</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {holdings.map((holding) => {
-                                                const isProfit = holding.profit >= 0
-                                                const isEditing = editingId === holding.id
+                                    <DndContext
+                                        sensors={sensors}
+                                        collisionDetection={closestCenter}
+                                        onDragEnd={handleDragEnd}
+                                    >
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead className="w-[50px]"></TableHead>
+                                                    <SortableHeader
+                                                        label={t('stockName')}
+                                                        sortKey="stockName"
+                                                        currentSort={sortConfig}
+                                                        onSort={handleSort}
+                                                    />
+                                                    <SortableHeader
+                                                        label={t('quantity')}
+                                                        sortKey="quantity"
+                                                        align="right"
+                                                        currentSort={sortConfig}
+                                                        onSort={handleSort}
+                                                    />
+                                                    <SortableHeader
+                                                        label={t('averagePrice')}
+                                                        sortKey="averagePrice"
+                                                        align="right"
+                                                        currentSort={sortConfig}
+                                                        onSort={handleSort}
+                                                    />
+                                                    <SortableHeader
+                                                        label={t('currentPrice')}
+                                                        sortKey="currentPrice"
+                                                        align="right"
+                                                        currentSort={sortConfig}
+                                                        onSort={handleSort}
+                                                    />
+                                                    <SortableHeader
+                                                        label={t('totalCost')}
+                                                        sortKey="totalCost"
+                                                        align="right"
+                                                        currentSort={sortConfig}
+                                                        onSort={handleSort}
+                                                    />
+                                                    <SortableHeader
+                                                        label={t('evaluatedValue')}
+                                                        sortKey="currentValue"
+                                                        align="right"
+                                                        currentSort={sortConfig}
+                                                        onSort={handleSort}
+                                                    />
+                                                    <SortableHeader
+                                                        label={t('pl')}
+                                                        sortKey="profit"
+                                                        align="right"
+                                                        currentSort={sortConfig}
+                                                        onSort={handleSort}
+                                                    />
+                                                    <SortableHeader
+                                                        label={t('returnRate')}
+                                                        sortKey="profitRate"
+                                                        align="right"
+                                                        currentSort={sortConfig}
+                                                        onSort={handleSort}
+                                                    />
+                                                    <TableHead className="text-right">{t('actions')}</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                <SortableContext
+                                                    items={filteredHoldings.map(h => h.id)}
+                                                    strategy={verticalListSortingStrategy}
+                                                >
+                                                    {filteredHoldings.map((holding) => {
+                                                        const isProfit = holding.profit >= 0
+                                                        const isEditing = editingId === holding.id
 
-                                                return (
-                                                    <TableRow key={holding.id}>
-                                                        <TableCell>
-                                                            <div>
-                                                                <p className="font-medium">{holding.stockName}</p>
-                                                                <p className="text-sm text-muted-foreground">{holding.stockCode}</p>
-                                                            </div>
-                                                        </TableCell>
-                                                        <TableCell className="text-right">
-                                                            {isEditing ? (
-                                                                <FormattedNumberInput
-                                                                    value={editValues.quantity}
-                                                                    onChange={(val) =>
-                                                                        setEditValues((prev) => ({ ...prev, quantity: val }))
-                                                                    }
-                                                                    className="w-20 text-right"
-                                                                    disabled={isRefreshing || savingSnapshot || savingRowId !== null}
-                                                                />
-                                                            ) : (
-                                                                holding.quantity.toLocaleString()
-                                                            )}
-                                                        </TableCell>
-                                                        <TableCell className="text-right">
-                                                            {isEditing ? (
-                                                                <FormattedNumberInput
-                                                                    value={editValues.averagePrice}
-                                                                    onChange={(val) =>
-                                                                        setEditValues((prev) => ({ ...prev, averagePrice: val }))
-                                                                    }
-                                                                    className="w-28 text-right"
-                                                                    disabled={isRefreshing || savingSnapshot || savingRowId !== null}
-                                                                />
-                                                            ) : (
-                                                                formatCurrency(holding.averagePrice, holding.currency)
-                                                            )}
-                                                        </TableCell>
-                                                        <TableCell className="text-right">
-                                                            {formatCurrency(holding.currentPrice, holding.currency)}
-                                                        </TableCell>
-                                                        <TableCell className="text-right font-medium">
-                                                            <div className="flex flex-col items-end">
-                                                                <span>{formatCurrency(holding.totalCost, holding.currency)}</span>
-                                                                {holding.currency === 'USD' && summary?.exchangeRate && (
-                                                                    <span className="text-xs text-muted-foreground">
-                                                                        {formatCurrency(holding.totalCost * summary.exchangeRate, 'KRW')}
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        </TableCell>
-                                                        <TableCell className="text-right font-medium">
-                                                            <div className="flex flex-col items-end">
-                                                                <span>{formatCurrency(holding.currentValue, holding.currency)}</span>
-                                                                {holding.currency === 'USD' && summary?.exchangeRate && (
-                                                                    <span className="text-xs text-muted-foreground">
-                                                                        {formatCurrency(holding.currentValue * summary.exchangeRate, 'KRW')}
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        </TableCell>
-                                                        <TableCell
-                                                            className={cn('text-right', isProfit ? 'text-red-600' : 'text-blue-600')}
-                                                        >
-                                                            <div className="flex flex-col items-end">
-                                                                <span>{formatCurrency(Math.abs(holding.profit), holding.currency)}</span>
-                                                                {holding.currency === 'USD' && summary?.exchangeRate && (
-                                                                    <span className="text-xs opacity-80">
-                                                                        {formatCurrency(Math.abs(holding.profit * summary.exchangeRate), 'KRW')}
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        </TableCell>
-                                                        <TableCell
-                                                            className={cn(
-                                                                'text-right font-bold',
-                                                                isProfit ? 'text-red-600' : 'text-blue-600'
-                                                            )}
-                                                        >
-                                                            {formatProfitRate(holding.profitRate)}
-                                                        </TableCell>
-                                                        <TableCell className="text-right">
-                                                            <div className="flex justify-end gap-1">
-                                                                {isEditing ? (
-                                                                    <>
-                                                                        <Button
-                                                                            variant="ghost"
-                                                                            size="icon"
-                                                                            onClick={() => handleSaveEdit(holding.id)}
+                                                        return (
+                                                            <SortableTableRow
+                                                                key={holding.id}
+                                                                id={holding.id}
+                                                                disabled={isRefreshing || savingSnapshot || !!editingId || !isDragEnabled}
+                                                            >
+                                                                <TableCell>
+                                                                    <div>
+                                                                        <p className="font-medium">{holding.stockName}</p>
+                                                                        <p className="text-sm text-muted-foreground">{holding.stockCode}</p>
+                                                                    </div>
+                                                                </TableCell>
+                                                                <TableCell className="text-right">
+                                                                    {isEditing ? (
+                                                                        <FormattedNumberInput
+                                                                            value={editValues.quantity}
+                                                                            onChange={(val) =>
+                                                                                setEditValues((prev) => ({ ...prev, quantity: val }))
+                                                                            }
+                                                                            className="w-20 text-right"
                                                                             disabled={isRefreshing || savingSnapshot || savingRowId !== null}
-                                                                        >
-                                                                            {savingRowId === holding.id ? (
-                                                                                <Loader2 className="w-4 h-4 animate-spin" />
-                                                                            ) : (
-                                                                                <Check className="w-4 h-4" />
-                                                                            )}
-                                                                        </Button>
-                                                                        <Button
-                                                                            variant="ghost"
-                                                                            size="icon"
-                                                                            onClick={handleCancelEdit}
+                                                                        />
+                                                                    ) : (
+                                                                        holding.quantity.toLocaleString()
+                                                                    )}
+                                                                </TableCell>
+                                                                <TableCell className="text-right">
+                                                                    {isEditing ? (
+                                                                        <FormattedNumberInput
+                                                                            value={editValues.averagePrice}
+                                                                            onChange={(val) =>
+                                                                                setEditValues((prev) => ({ ...prev, averagePrice: val }))
+                                                                            }
+                                                                            className="w-28 text-right"
                                                                             disabled={isRefreshing || savingSnapshot || savingRowId !== null}
-                                                                        >
-                                                                            <X className="w-4 h-4" />
-                                                                        </Button>
-                                                                    </>
-                                                                ) : (
-                                                                    <>
-                                                                        <Button
-                                                                            variant="ghost"
-                                                                            size="icon"
-                                                                            onClick={() => handleStartEdit(holding)}
-                                                                            disabled={isRefreshing || savingSnapshot}
-                                                                        >
-                                                                            <Edit2 className="w-4 h-4" />
-                                                                        </Button>
-                                                                        <Button
-                                                                            variant="ghost"
-                                                                            size="icon"
-                                                                            onClick={() => handleDeleteHolding(holding.id)}
-                                                                            disabled={isRefreshing || savingSnapshot}
-                                                                        >
-                                                                            <Trash2 className="w-4 h-4 text-red-500" />
-                                                                        </Button>
-                                                                    </>
-                                                                )}
-                                                            </div>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                )
-                                            })}
-                                        </TableBody>
-                                    </Table>
+                                                                        />
+                                                                    ) : (
+                                                                        formatCurrency(holding.averagePrice, holding.currency)
+                                                                    )}
+                                                                </TableCell>
+                                                                <TableCell className="text-right">
+                                                                    {formatCurrency(holding.currentPrice, holding.currency)}
+                                                                </TableCell>
+                                                                <TableCell className="text-right font-medium">
+                                                                    <div className="flex flex-col items-end">
+                                                                        <span>{formatCurrency(holding.totalCost, holding.currency)}</span>
+                                                                        {holding.currency === 'USD' && summary?.exchangeRate && (
+                                                                            <span className="text-xs text-muted-foreground">
+                                                                                {formatCurrency(holding.totalCost * summary.exchangeRate, 'KRW')}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                </TableCell>
+                                                                <TableCell className="text-right font-medium">
+                                                                    <div className="flex flex-col items-end">
+                                                                        <span>{formatCurrency(holding.currentValue, holding.currency)}</span>
+                                                                        {holding.currency === 'USD' && summary?.exchangeRate && (
+                                                                            <span className="text-xs text-muted-foreground">
+                                                                                {formatCurrency(holding.currentValue * summary.exchangeRate, 'KRW')}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                </TableCell>
+                                                                <TableCell
+                                                                    className={cn('text-right', isProfit ? 'text-red-600' : 'text-blue-600')}
+                                                                >
+                                                                    <div className="flex flex-col items-end">
+                                                                        <span>{formatCurrency(Math.abs(holding.profit), holding.currency)}</span>
+                                                                        {holding.currency === 'USD' && summary?.exchangeRate && (
+                                                                            <span className="text-xs opacity-80">
+                                                                                {formatCurrency(Math.abs(holding.profit * summary.exchangeRate), 'KRW')}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                </TableCell>
+                                                                <TableCell
+                                                                    className={cn(
+                                                                        'text-right font-bold',
+                                                                        isProfit ? 'text-red-600' : 'text-blue-600'
+                                                                    )}
+                                                                >
+                                                                    {formatProfitRate(holding.profitRate)}
+                                                                </TableCell>
+                                                                <TableCell className="text-right">
+                                                                    <div className="flex justify-end gap-1">
+                                                                        {isEditing ? (
+                                                                            <>
+                                                                                <Button
+                                                                                    variant="ghost"
+                                                                                    size="icon"
+                                                                                    onClick={() => handleSaveEdit(holding.id)}
+                                                                                    disabled={isRefreshing || savingSnapshot || savingRowId !== null}
+                                                                                >
+                                                                                    {savingRowId === holding.id ? (
+                                                                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                                                                    ) : (
+                                                                                        <Check className="w-4 h-4" />
+                                                                                    )}
+                                                                                </Button>
+                                                                                <Button
+                                                                                    variant="ghost"
+                                                                                    size="icon"
+                                                                                    onClick={handleCancelEdit}
+                                                                                    disabled={isRefreshing || savingSnapshot || savingRowId !== null}
+                                                                                >
+                                                                                    <X className="w-4 h-4" />
+                                                                                </Button>
+                                                                            </>
+                                                                        ) : (
+                                                                            <>
+                                                                                <Button
+                                                                                    variant="ghost"
+                                                                                    size="icon"
+                                                                                    onClick={() => handleStartEdit(holding)}
+                                                                                    disabled={isRefreshing || savingSnapshot}
+                                                                                >
+                                                                                    <Edit2 className="w-4 h-4" />
+                                                                                </Button>
+                                                                                <Button
+                                                                                    variant="ghost"
+                                                                                    size="icon"
+                                                                                    onClick={() => handleDeleteHolding(holding.id)}
+                                                                                    disabled={isRefreshing || savingSnapshot}
+                                                                                >
+                                                                                    <Trash2 className="w-4 h-4 text-red-500" />
+                                                                                </Button>
+                                                                            </>
+                                                                        )}
+                                                                    </div>
+                                                                </TableCell>
+                                                            </SortableTableRow>
+                                                        )
+                                                    })}
+                                                </SortableContext>
+                                            </TableBody>
+                                        </Table>
+                                    </DndContext>
                                 </div>
                             </div>
                         )}
@@ -530,5 +797,40 @@ export function HoldingsManager({ initialData }: Props) {
                 </CardContent>
             </Card>
         </div>
+    )
+}
+
+function SortableHeader({
+    label,
+    sortKey,
+    currentSort,
+    onSort,
+    align = 'left'
+}: {
+    label: string,
+    sortKey: SortKey,
+    currentSort: SortConfig,
+    onSort: (key: SortKey) => void,
+    align?: 'left' | 'right'
+}) {
+    const isActive = currentSort.key === sortKey
+    return (
+        <TableHead
+            className={cn(
+                "cursor-pointer hover:bg-muted/50 transition-colors select-none",
+                align === 'right' ? "text-right" : "text-left",
+                isActive && "text-primary font-bold"
+            )}
+            onClick={() => onSort(sortKey)}
+        >
+            <div className={cn("flex items-center gap-1", align === 'right' && "justify-end")}>
+                {label}
+                {isActive ? (
+                    currentSort.direction === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                ) : (
+                    <ArrowUpDown className="w-3 h-3 opacity-30" />
+                )}
+            </div>
+        </TableHead>
     )
 }
