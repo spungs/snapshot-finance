@@ -376,6 +376,7 @@ export default function EditSnapshotPage() {
                                 type="date"
                                 max={today}
                                 value={snapshotDate}
+                                disabled={saving}
                                 onChange={(e) => {
                                     loadedDateRef.current = null // Enable fetching on change
                                     setSnapshotDate(e.target.value)
@@ -395,7 +396,7 @@ export default function EditSnapshotPage() {
                     <CardHeader>
                         <CardTitle className="flex justify-between items-center">
                             <span>{t('holdings')}</span>
-                            <Button type="button" variant="outline" onClick={addHolding}>
+                            <Button type="button" variant="outline" onClick={addHolding} disabled={saving}>
                                 + {t('addStock')}
                             </Button>
                         </CardTitle>
@@ -415,6 +416,7 @@ export default function EditSnapshotPage() {
                                             size="sm"
                                             className="text-red-500"
                                             onClick={() => removeHolding(index)}
+                                            disabled={saving}
                                         >
                                             {t('delete')}
                                         </Button>
@@ -426,6 +428,7 @@ export default function EditSnapshotPage() {
                                     <StockSearchCombobox
                                         value={holding.stockName ? `${holding.stockName} (${holding.stockCode})` : ''}
                                         onSelect={(stock) => handleStockSelect(index, stock)}
+                                        disabled={saving}
                                     />
                                     {holding.stockCode && (
                                         <p className="text-xs text-stone-500 mt-1">
@@ -441,6 +444,7 @@ export default function EditSnapshotPage() {
                                         min="1"
                                         placeholder="100"
                                         value={holding.quantity}
+                                        disabled={saving}
                                         onChange={(val) =>
                                             updateHolding(index, 'quantity', val)
                                         }
@@ -457,6 +461,7 @@ export default function EditSnapshotPage() {
                                         step="0.0001"
                                         placeholder={holding.currency === 'USD' ? '10.00' : '1,000'}
                                         value={holding.averagePrice}
+                                        disabled={saving}
                                         onChange={(val) =>
                                             updateHolding(index, 'averagePrice', val)
                                         }
@@ -479,6 +484,7 @@ export default function EditSnapshotPage() {
                                 type="text"
                                 placeholder={t('memoPlaceholder')}
                                 value={note}
+                                disabled={saving}
                                 onChange={(e) => setNote(e.target.value)}
                             />
                         </div>
@@ -496,6 +502,7 @@ export default function EditSnapshotPage() {
                                     size="sm"
                                     className="h-7 px-3"
                                     onClick={() => setSummaryDisplayCurrency('KRW')}
+                                    disabled={saving}
                                 >
                                     ₩ KRW
                                 </Button>
@@ -505,6 +512,7 @@ export default function EditSnapshotPage() {
                                     size="sm"
                                     className="h-7 px-3"
                                     onClick={() => setSummaryDisplayCurrency('USD')}
+                                    disabled={saving}
                                 >
                                     $ USD
                                 </Button>

@@ -410,7 +410,7 @@ export function HoldingsManager({ accountId, initialData }: Props) {
                                                                         setEditValues((prev) => ({ ...prev, quantity: val }))
                                                                     }
                                                                     className="w-20 text-right"
-                                                                    disabled={isRefreshing || savingSnapshot}
+                                                                    disabled={isRefreshing || savingSnapshot || savingRowId !== null}
                                                                 />
                                                             ) : (
                                                                 holding.quantity.toLocaleString()
@@ -424,7 +424,7 @@ export function HoldingsManager({ accountId, initialData }: Props) {
                                                                         setEditValues((prev) => ({ ...prev, averagePrice: val }))
                                                                     }
                                                                     className="w-28 text-right"
-                                                                    disabled={isRefreshing || savingSnapshot}
+                                                                    disabled={isRefreshing || savingSnapshot || savingRowId !== null}
                                                                 />
                                                             ) : (
                                                                 formatCurrency(holding.averagePrice, holding.currency)
