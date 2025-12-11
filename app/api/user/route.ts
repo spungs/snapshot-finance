@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { SUBSCRIPTION_LIMITS } from '@/lib/config/subscription'
+
 
 // Test user ID for Phase 1/2 (until auth is implemented)
 // We will use the 'free' user by default for testing, but we should probably make this dynamic or mockable.
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
         const user = await prisma.user.findUnique({
             where: { id: userId },
             include: {
-                accounts: true,
+                securitiesAccounts: true,
             },
         })
 
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
         }
 
         // Get snapshot count (assuming single account for MVP)
-        const account = user.accounts[0]
+        const account = user.securitiesAccounts[0]
         let snapshotCount = 0
         let isAutoSnapshotEnabled = false
 
@@ -38,19 +38,13 @@ export async function GET(request: NextRequest) {
             isAutoSnapshotEnabled = account.isAutoSnapshotEnabled
         }
 
-        const plan = user.plan
-        // Fix: Cast plan to keyof typeof SUBSCRIPTION_LIMITS to avoid index error
-        const limit = SUBSCRIPTION_LIMITS[plan as keyof typeof SUBSCRIPTION_LIMITS]
-
         return NextResponse.json({
             success: true,
             data: {
                 id: user.id,
                 email: user.email,
                 name: user.name,
-                plan,
                 snapshotCount,
-                limit,
                 isAutoSnapshotEnabled,
                 accountId: account?.id,
             },
@@ -72,14 +66,14 @@ export async function PATCH(request: NextRequest) {
 
         const user = await prisma.user.findUnique({
             where: { id: userId },
-            include: { accounts: true },
+            include: { securitiesAccounts: true },
         })
 
-        if (!user || user.accounts.length === 0) {
+        if (!user || user.securitiesAccounts.length === 0) {
             return NextResponse.json({ success: false, error: 'User or account not found' }, { status: 404 })
         }
 
-        const account = user.accounts[0]
+        const account = user.securitiesAccounts[0]
 
         // Update account
         await prisma.securitiesAccount.update({

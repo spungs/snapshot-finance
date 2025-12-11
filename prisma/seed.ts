@@ -39,41 +39,16 @@ async function main() {
   // 테스트용 사용자 생성 (Free Plan)
   const freeUser = await prisma.user.upsert({
     where: { email: 'free@example.com' },
-    update: { plan: 'FREE' },
+    update: {},
     create: {
       id: 'test-user-free',
       email: 'free@example.com',
       name: 'Free User',
-      plan: 'FREE',
     },
   })
-  console.log(`Created user: ${freeUser.email} (${freeUser.plan})`)
+  console.log(`Created user: ${freeUser.email}`)
 
-  // 테스트용 사용자 생성 (Pro Plan)
-  const proUser = await prisma.user.upsert({
-    where: { email: 'pro@example.com' },
-    update: { plan: 'PRO' },
-    create: {
-      id: 'test-user-pro',
-      email: 'pro@example.com',
-      name: 'Pro User',
-      plan: 'PRO',
-    },
-  })
-  console.log(`Created user: ${proUser.email} (${proUser.plan})`)
 
-  // 테스트용 사용자 생성 (Max Plan)
-  const maxUser = await prisma.user.upsert({
-    where: { email: 'max@example.com' },
-    update: { plan: 'MAX' },
-    create: {
-      id: 'test-user-max',
-      email: 'max@example.com',
-      name: 'Max User',
-      plan: 'MAX',
-    },
-  })
-  console.log(`Created user: ${maxUser.email} (${maxUser.plan})`)
 
   // 테스트용 계좌 생성
   const account = await prisma.securitiesAccount.upsert({
@@ -96,47 +71,11 @@ async function main() {
   })
   console.log(`Created account: ${account.accountName}`)
 
-  // Pro User Account
-  const proAccount = await prisma.securitiesAccount.upsert({
-    where: {
-      userId_accountNumber: {
-        userId: proUser.id,
-        accountNumber: '1234567891'
-      }
-    },
-    update: {},
-    create: {
-      id: 'test-account-pro',
-      userId: proUser.id,
-      accountNumber: '1234567891',
-      accountName: 'Pro Account',
-      brokerName: 'NH투자증권',
-      apiType: 'NH',
-      isActive: true,
-    },
-  })
-  console.log(`Created account: ${proAccount.accountName}`)
 
-  // Max User Account
-  const maxAccount = await prisma.securitiesAccount.upsert({
-    where: {
-      userId_accountNumber: {
-        userId: maxUser.id,
-        accountNumber: '1234567892'
-      }
-    },
-    update: {},
-    create: {
-      id: 'test-account-max',
-      userId: maxUser.id,
-      accountNumber: '1234567892',
-      accountName: 'Max Account',
-      brokerName: 'NH투자증권',
-      apiType: 'NH',
-      isActive: true,
-    },
-  })
-  console.log(`Created account: ${maxAccount.accountName}`)
+
+
+
+
 
   console.log('Seeding completed!')
 }

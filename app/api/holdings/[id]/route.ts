@@ -8,8 +8,8 @@ export async function PATCH(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const user = await auth()
-        if (!user) {
+        const session = await auth()
+        if (!session?.user) {
             return NextResponse.json(
                 { success: false, error: { code: 'UNAUTHORIZED', message: '인증이 필요합니다.' } },
                 { status: 401 }
@@ -26,7 +26,7 @@ export async function PATCH(
             include: { account: true },
         })
 
-        if (!holding || holding.account.userId !== user.id) {
+        if (!holding || holding.account.userId !== session.user.id) {
             return NextResponse.json(
                 { success: false, error: { code: 'NOT_FOUND', message: '보유 종목을 찾을 수 없습니다.' } },
                 { status: 404 }
@@ -60,8 +60,8 @@ export async function DELETE(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const user = await auth()
-        if (!user) {
+        const session = await auth()
+        if (!session?.user) {
             return NextResponse.json(
                 { success: false, error: { code: 'UNAUTHORIZED', message: '인증이 필요합니다.' } },
                 { status: 401 }
@@ -76,7 +76,7 @@ export async function DELETE(
             include: { account: true },
         })
 
-        if (!holding || holding.account.userId !== user.id) {
+        if (!holding || holding.account.userId !== session.user.id) {
             return NextResponse.json(
                 { success: false, error: { code: 'NOT_FOUND', message: '보유 종목을 찾을 수 없습니다.' } },
                 { status: 404 }

@@ -29,15 +29,15 @@ async function fetchCurrentPrice(stockCode: string, market: string): Promise<num
 // GET /api/holdings - 현재 잔고 조회 (저장된 현재가 사용)
 export async function GET() {
     try {
-        const user = await auth()
-        if (!user) {
+        const session = await auth()
+        if (!session?.user?.id) {
             return NextResponse.json(
                 { success: false, error: { code: 'UNAUTHORIZED', message: '인증이 필요합니다.' } },
                 { status: 401 }
             )
         }
 
-        const result = await holdingService.getList(user.id)
+        const result = await holdingService.getList(session.user.id)
 
         if (!result.success) {
             return NextResponse.json(result, { status: 500 })
@@ -56,13 +56,15 @@ export async function GET() {
 // POST /api/holdings - 종목 추가 (현재가 조회 후 저장)
 export async function POST(request: NextRequest) {
     try {
-        const user = await auth()
-        if (!user) {
+        const session = await auth()
+        if (!session?.user?.id) {
             return NextResponse.json(
                 { success: false, error: { code: 'UNAUTHORIZED', message: '인증이 필요합니다.' } },
                 { status: 401 }
             )
         }
+
+        const userId = session.user.id
 
         const body = await request.json()
         const { stockId, quantity, averagePrice, mode = 'overwrite' } = body
@@ -77,14 +79,14 @@ export async function POST(request: NextRequest) {
         }
 
         let account = await prisma.securitiesAccount.findFirst({
-            where: { userId: user.id },
+            where: { userId },
         })
 
         // 계좌가 없으면 자동 생성
         if (!account) {
             account = await prisma.securitiesAccount.create({
                 data: {
-                    userId: user.id,
+                    userId,
                     accountNumber: 'default',
                     accountName: '기본 계좌',
                     brokerName: 'Manual',
@@ -191,4 +193,3 @@ export async function POST(request: NextRequest) {
         )
     }
 }
-

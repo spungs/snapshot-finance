@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { calculateProfitRate, calculateProfit, calculateCurrentValue, calculateTotalCost } from '@/lib/utils/calculations'
-import { SUBSCRIPTION_LIMITS } from '@/lib/config/subscription'
+
 import Decimal from 'decimal.js'
 import { getUsdExchangeRate } from '@/lib/api/exchange-rate'
 import { snapshotService } from '@/lib/services/snapshot-service'
@@ -39,28 +39,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 2. 현재 스냅샷 개수 조회
-    const snapshotCount = await prisma.portfolioSnapshot.count({
-      where: { accountId },
-    })
 
-    // 3. 플랜별 한도 체크
-    const userPlan = account.user.plan as keyof typeof SUBSCRIPTION_LIMITS
-    const limit = SUBSCRIPTION_LIMITS[userPlan]
-
-    if (snapshotCount >= limit) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: 'SNAPSHOT_LIMIT_EXCEEDED',
-            message: `스냅샷 저장 한도를 초과했습니다. (${userPlan} 플랜: 최대 ${limit}개)`,
-            details: { currentCount: snapshotCount, limit, plan: userPlan },
-          },
-        },
-        { status: 403 }
-      )
-    }
 
     // 총 매입금액 및 평가금액 계산 (KRW 기준)
     const exchangeRate = await getUsdExchangeRate()

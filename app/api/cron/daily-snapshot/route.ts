@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { canUseAutoSnapshot, SubscriptionPlan } from '@/lib/config/subscription'
+
 import Decimal from 'decimal.js'
 
 export const dynamic = 'force-dynamic' // Vercel Cron needs this
@@ -19,9 +19,6 @@ export async function GET(request: NextRequest) {
         const accounts = await prisma.securitiesAccount.findMany({
             where: {
                 isAutoSnapshotEnabled: true,
-                user: {
-                    plan: { in: ['PRO', 'MAX'] as SubscriptionPlan[] },
-                },
             },
             include: {
                 user: true,

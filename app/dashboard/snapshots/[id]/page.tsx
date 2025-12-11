@@ -10,8 +10,8 @@ export default async function SnapshotDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const user = await auth()
-  if (!user) return null
+  const session = await auth()
+  if (!session?.user?.id) return null
 
   const snapshot = await snapshotService.getDetail(id)
 
@@ -24,7 +24,7 @@ export default async function SnapshotDetailPage({
     where: { id: snapshot.accountId },
   })
 
-  if (account?.userId !== user.id) {
+  if (account?.userId !== session.user.id) {
     notFound()
   }
 
