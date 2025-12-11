@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useLanguage } from '@/lib/i18n/context'
 import { cn } from '@/lib/utils'
+import { LogOut } from 'lucide-react'
+import { logout } from '@/app/actions'
 
 export function NavLinks() {
     const pathname = usePathname()
@@ -16,7 +18,7 @@ export function NavLinks() {
     ]
 
     return (
-        <nav className="flex space-x-1 sm:space-x-4 overflow-x-auto max-w-full pb-1 sm:pb-0 scrollbar-hide">
+        <nav className="flex space-x-1 sm:space-x-4 overflow-x-auto max-w-full pb-1 sm:pb-0 scrollbar-hide items-center">
             {links.map((link) => {
                 return (
                     <Link
@@ -33,6 +35,13 @@ export function NavLinks() {
                     </Link>
                 )
             })}
+            <button
+                onClick={() => logout()}
+                className="px-2 sm:px-3 py-2 rounded-md text-gray-900 hover:bg-gray-100 flex items-center"
+                title={t('logout') || 'Logout'}
+            >
+                <LogOut className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
         </nav>
     )
 }

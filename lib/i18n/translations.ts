@@ -96,6 +96,7 @@ export const translations = {
         snapshotDate: '스냅샷 기준일',
         historicalMode: '※ 과거 날짜 선택시, 해당 날짜의 종가와 환율이 자동으로 적용됩니다.',
         closingPrice: '종가',
+        logout: '로그아웃',
     },
     en: {
         dashboard: 'Dashboard',
@@ -192,5 +193,6 @@ export const translations = {
         snapshotDate: 'Snapshot Date',
         historicalMode: '* Prices and exchange rates will be automatically fetched for past dates.',
         closingPrice: 'Closing Price',
+        logout: 'Logout',
     },
 }
