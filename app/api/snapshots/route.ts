@@ -5,41 +5,36 @@ import { calculateProfitRate, calculateProfit, calculateCurrentValue, calculateT
 import Decimal from 'decimal.js'
 import { getUsdExchangeRate } from '@/lib/api/exchange-rate'
 import { snapshotService } from '@/lib/services/snapshot-service'
+import { auth } from '@/lib/auth'
 
 
 // POST /api/snapshots - 스냅샷 생성
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { accountId, holdings, cashBalance, note, snapshotDate } = body
+    const session = await auth()
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { success: false, error: { code: 'UNAUTHORIZED', message: '인증이 필요합니다.' } },
+        { status: 401 }
+      )
+    }
+    const userId = session.user.id
 
-    if (!accountId || !holdings || holdings.length === 0) {
+    const body = await request.json()
+    const { holdings, cashBalance, note, snapshotDate } = body
+
+    if (!holdings || holdings.length === 0) {
       return NextResponse.json(
         {
           success: false,
           error: {
             code: 'INVALID_REQUEST',
-            message: 'accountId와 holdings는 필수입니다.',
+            message: 'holdings는 필수입니다.',
           },
         },
         { status: 400 }
       )
     }
-
-    // 1. 계좌 및 사용자 플랜 조회
-    const account = await prisma.securitiesAccount.findUnique({
-      where: { id: accountId },
-      include: { user: true },
-    })
-
-    if (!account) {
-      return NextResponse.json(
-        { success: false, error: { code: 'ACCOUNT_NOT_FOUND', message: '계좌를 찾을 수 없습니다.' } },
-        { status: 404 }
-      )
-    }
-
-
 
     // 총 매입금액 및 평가금액 계산 (KRW 기준)
     const exchangeRate = await getUsdExchangeRate()
@@ -94,7 +89,7 @@ export async function POST(request: NextRequest) {
     // 트랜잭션으로 스냅샷 + 보유종목 저장
     const snapshot = await prisma.portfolioSnapshot.create({
       data: {
-        accountId,
+        userId,
         snapshotDate: snapshotDate ? new Date(snapshotDate) : undefined,
         totalValue,
         totalCost,
@@ -136,25 +131,20 @@ export async function POST(request: NextRequest) {
 // GET /api/snapshots - 스냅샷 목록 조회
 export async function GET(request: NextRequest) {
   try {
+    const session = await auth()
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { success: false, error: { code: 'UNAUTHORIZED', message: '인증이 필요합니다.' } },
+        { status: 401 }
+      )
+    }
+    const userId = session.user.id
+
     const { searchParams } = new URL(request.url)
-    const accountId = searchParams.get('accountId')
     const limit = parseInt(searchParams.get('limit') || '20')
     const cursor = searchParams.get('cursor')
 
-    if (!accountId) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: 'MISSING_ACCOUNT_ID',
-            message: 'accountId가 필요합니다.',
-          },
-        },
-        { status: 400 }
-      )
-    }
-
-    const { data: snapshots, pagination } = await snapshotService.getList(accountId, limit, cursor || undefined)
+    const { data: snapshots, pagination } = await snapshotService.getList(userId, limit, cursor || undefined)
 
     return NextResponse.json({
       success: true,

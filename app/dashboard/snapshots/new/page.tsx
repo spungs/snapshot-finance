@@ -263,14 +263,13 @@ export default function NewSnapshotPage() {
 
     try {
       const response = await snapshotsApi.create({
-        accountId: TEST_ACCOUNT_ID,
         snapshotDate: snapshotDate, // Pass the selected date
         holdings: validHoldings.map((h) => ({
           stockId: h.stockId,
           quantity: parseInt(h.quantity),
           averagePrice: parseFloat(h.averagePrice),
           currentPrice: parseFloat(h.currentPrice),
-          currency: h.currency,
+          currency: h.currency, // Include currency
           purchaseRate: parseFloat(h.purchaseRate),
         })),
         cashBalance: parseFloat(cashBalance) || 0,

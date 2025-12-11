@@ -78,23 +78,6 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        let account = await prisma.securitiesAccount.findFirst({
-            where: { userId },
-        })
-
-        // 계좌가 없으면 자동 생성
-        if (!account) {
-            account = await prisma.securitiesAccount.create({
-                data: {
-                    userId,
-                    accountNumber: 'default',
-                    accountName: '기본 계좌',
-                    brokerName: 'Manual',
-                    apiType: 'manual',
-                },
-            })
-        }
-
         // 현재가 조회
         const stock = await prisma.stock.findUnique({ where: { id: stockId } })
         let currentPrice = 0
@@ -124,8 +107,8 @@ export async function POST(request: NextRequest) {
         if (mode === 'merge') {
             const existing = await prisma.holding.findUnique({
                 where: {
-                    accountId_stockId: {
-                        accountId: account.id,
+                    userId_stockId: {
+                        userId,
                         stockId,
                     },
                 },
@@ -157,8 +140,8 @@ export async function POST(request: NextRequest) {
         if (!holding) {
             holding = await prisma.holding.upsert({
                 where: {
-                    accountId_stockId: {
-                        accountId: account.id,
+                    userId_stockId: {
+                        userId,
                         stockId,
                     },
                 },
@@ -171,7 +154,7 @@ export async function POST(request: NextRequest) {
                     priceUpdatedAt: new Date(),
                 },
                 create: {
-                    account: { connect: { id: account.id } },
+                    user: { connect: { id: userId } },
                     stock: { connect: { id: stockId } },
                     quantity,
                     averagePrice,

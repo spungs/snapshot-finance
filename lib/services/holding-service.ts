@@ -23,16 +23,8 @@ async function fetchCurrentPrice(stockCode: string, market: string): Promise<num
 export const holdingService = {
     async getList(userId: string) {
         try {
-            const account = await prisma.securitiesAccount.findFirst({
-                where: { userId },
-            })
-
-            if (!account) {
-                return { success: true, data: { holdings: [], summary: null } }
-            }
-
             const holdings = await prisma.holding.findMany({
-                where: { accountId: account.id },
+                where: { userId },
                 include: { stock: true },
                 orderBy: { createdAt: 'desc' },
             })

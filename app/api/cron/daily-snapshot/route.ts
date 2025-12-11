@@ -13,34 +13,29 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-        // 2. Find eligible accounts
-        // - isAutoSnapshotEnabled = true
-        // - User plan is PRO or MAX
-        const accounts = await prisma.securitiesAccount.findMany({
+        // 2. Find eligible users
+        const users = await prisma.user.findMany({
             where: {
                 isAutoSnapshotEnabled: true,
             },
-            include: {
-                user: true,
-            },
         })
 
-        console.log(`[Cron] Found ${accounts.length} accounts for auto-snapshot.`)
+        console.log(`[Cron] Found ${users.length} users for auto-snapshot.`)
 
         const results = []
 
-        // 3. Process each account
-        for (const account of accounts) {
+        // 3. Process each user
+        for (const user of users) {
             try {
                 // Get the latest snapshot to copy from
                 const latestSnapshot = await prisma.portfolioSnapshot.findFirst({
-                    where: { accountId: account.id },
+                    where: { userId: user.id },
                     orderBy: { snapshotDate: 'desc' },
                     include: { holdings: true },
                 })
 
                 if (!latestSnapshot) {
-                    results.push({ accountId: account.id, status: 'skipped', reason: 'No previous snapshot' })
+                    results.push({ userId: user.id, status: 'skipped', reason: 'No previous snapshot' })
                     continue
                 }
 
@@ -51,7 +46,7 @@ export async function GET(request: NextRequest) {
 
                 const existingToday = await prisma.portfolioSnapshot.findFirst({
                     where: {
-                        accountId: account.id,
+                        userId: user.id,
                         snapshotDate: {
                             gte: startOfDay,
                             lte: endOfDay,
@@ -60,21 +55,21 @@ export async function GET(request: NextRequest) {
                 })
 
                 if (existingToday) {
-                    results.push({ accountId: account.id, status: 'skipped', reason: 'Already exists for today' })
+                    results.push({ userId: user.id, status: 'skipped', reason: 'Already exists for today' })
                     continue
                 }
 
                 // Create new snapshot (Copy logic)
-                // Note: In Phase 2, we copy the latest snapshot. In Phase 3, we will fetch fresh data from API.
                 const newSnapshot = await prisma.portfolioSnapshot.create({
                     data: {
-                        accountId: account.id,
+                        userId: user.id,
                         snapshotDate: new Date(), // Now
                         totalValue: latestSnapshot.totalValue,
                         totalCost: latestSnapshot.totalCost,
                         totalProfit: latestSnapshot.totalProfit,
                         profitRate: latestSnapshot.profitRate,
                         cashBalance: latestSnapshot.cashBalance,
+                        exchangeRate: latestSnapshot.exchangeRate,
                         note: 'Auto-generated via Cron',
                         holdings: {
                             create: latestSnapshot.holdings.map((h: any) => ({
@@ -82,19 +77,21 @@ export async function GET(request: NextRequest) {
                                 quantity: h.quantity,
                                 averagePrice: h.averagePrice,
                                 currentPrice: h.currentPrice, // Keeping old price for now
+                                currency: h.currency,
                                 totalCost: h.totalCost,
                                 currentValue: h.currentValue,
                                 profit: h.profit,
                                 profitRate: h.profitRate,
+                                purchaseRate: h.purchaseRate,
                             })),
                         },
                     },
                 })
 
-                results.push({ accountId: account.id, status: 'success', snapshotId: newSnapshot.id })
+                results.push({ userId: user.id, status: 'success', snapshotId: newSnapshot.id })
             } catch (error) {
-                console.error(`[Cron] Error processing account ${account.id}:`, error)
-                results.push({ accountId: account.id, status: 'failed', error: error instanceof Error ? error.message : 'Unknown error' })
+                console.error(`[Cron] Error processing user ${user.id}:`, error)
+                results.push({ userId: user.id, status: 'failed', error: error instanceof Error ? error.message : 'Unknown error' })
             }
         }
 

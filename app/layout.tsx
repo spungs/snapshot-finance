@@ -38,7 +38,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <div id="g_id_onload"
-          data-client_id={process.env.AUTH_GOOGLE_ID}
+          data-client_id={process.env.GOOGLE_CLIENT_ID}
           data-login_uri={`${process.env.NEXT_PUBLIC_APP_URL || ''}/api/auth/callback/google`}
           data-auto_prompt="false">
         </div>

@@ -1,9 +1,9 @@
 import { prisma } from '@/lib/prisma'
 
 export const snapshotService = {
-    async getList(accountId: string, limit: number = 20, cursor?: string) {
+    async getList(userId: string, limit: number = 20, cursor?: string) {
         const snapshots = await prisma.portfolioSnapshot.findMany({
-            where: { accountId },
+            where: { userId },
             orderBy: { snapshotDate: 'desc' },
             take: limit + 1,
             ...(cursor && {

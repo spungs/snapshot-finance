@@ -17,26 +17,16 @@ export async function GET(request: NextRequest) {
     try {
         const user = await prisma.user.findUnique({
             where: { id: userId },
-            include: {
-                securitiesAccounts: true,
-            },
         })
 
         if (!user) {
             return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 })
         }
 
-        // Get snapshot count (assuming single account for MVP)
-        const account = user.securitiesAccounts[0]
-        let snapshotCount = 0
-        let isAutoSnapshotEnabled = false
-
-        if (account) {
-            snapshotCount = await prisma.portfolioSnapshot.count({
-                where: { accountId: account.id },
-            })
-            isAutoSnapshotEnabled = account.isAutoSnapshotEnabled
-        }
+        // Get snapshot count
+        const snapshotCount = await prisma.portfolioSnapshot.count({
+            where: { userId: user.id },
+        })
 
         return NextResponse.json({
             success: true,
@@ -45,8 +35,7 @@ export async function GET(request: NextRequest) {
                 email: user.email,
                 name: user.name,
                 snapshotCount,
-                isAutoSnapshotEnabled,
-                accountId: account?.id,
+                isAutoSnapshotEnabled: user.isAutoSnapshotEnabled,
             },
         })
     } catch (error) {
@@ -64,24 +53,12 @@ export async function PATCH(request: NextRequest) {
             return NextResponse.json({ success: false, error: 'UserId is required' }, { status: 400 })
         }
 
-        const user = await prisma.user.findUnique({
+        const user = await prisma.user.update({
             where: { id: userId },
-            include: { securitiesAccounts: true },
-        })
-
-        if (!user || user.securitiesAccounts.length === 0) {
-            return NextResponse.json({ success: false, error: 'User or account not found' }, { status: 404 })
-        }
-
-        const account = user.securitiesAccounts[0]
-
-        // Update account
-        await prisma.securitiesAccount.update({
-            where: { id: account.id },
             data: { isAutoSnapshotEnabled },
         })
 
-        return NextResponse.json({ success: true, data: { isAutoSnapshotEnabled } })
+        return NextResponse.json({ success: true, data: { isAutoSnapshotEnabled: user.isAutoSnapshotEnabled } })
     } catch (error) {
         console.error('Error updating user settings:', error)
         return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 })

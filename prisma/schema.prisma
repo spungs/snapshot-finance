@@ -9,18 +9,21 @@ datasource db {
 }
 
 model User {
-  id                 String              @id @default(cuid())
-  email              String              @unique
-  name               String?
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
+  id                    String              @id @default(cuid())
+  email                 String              @unique
+  name                  String?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
 
-  emailVerified      DateTime?
-  image              String?
-  accounts           Account[]
-  sessions           Session[]
-  securitiesAccounts SecuritiesAccount[]
-  simulations        Simulation[]
+  emailVerified         DateTime?
+  image                 String?
+  accounts              Account[]
+  sessions              Session[]
+  
+  // Unified Portfolio
+  isAutoSnapshotEnabled Boolean             @default(false)
+  snapshots             PortfolioSnapshot[]
+  holdings              Holding[]
 
   @@map("users")
 }
@@ -64,29 +67,9 @@ model VerificationToken {
   @@map("verification_tokens")
 }
 
-model SecuritiesAccount {
-  id                    String              @id @default(cuid())
-  userId                String
-  accountNumber         String
-  accountName           String
-  brokerName            String
-  apiType               String
-  isActive              Boolean             @default(true)
-  createdAt             DateTime            @default(now())
-  updatedAt             DateTime            @updatedAt
-  isAutoSnapshotEnabled Boolean             @default(false)
-  snapshots             PortfolioSnapshot[]
-  holdings              Holding[]
-  user                  User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, accountNumber])
-  @@index([userId])
-  @@map("securities_accounts")
-}
-
 model PortfolioSnapshot {
   id           String            @id @default(cuid())
-  accountId    String
+  userId       String
   snapshotDate DateTime          @default(now()) @db.Timestamptz(6)
   totalValue   Decimal           @db.Decimal(15, 2)
   totalCost    Decimal           @db.Decimal(15, 2)
@@ -96,10 +79,10 @@ model PortfolioSnapshot {
   exchangeRate Decimal           @default(1435) @db.Decimal(10, 2)
   note         String?
   createdAt    DateTime          @default(now())
-  account      SecuritiesAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   holdings     StockHolding[]
 
-  @@index([accountId, snapshotDate(sort: Desc)])
+  @@index([userId, snapshotDate(sort: Desc)])
   @@index([snapshotDate(sort: Desc)])
   @@map("portfolio_snapshots")
 }
@@ -134,7 +117,6 @@ model Stock {
   sector       String?
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
-  simulations  Simulation[]
   histories    StockHistory[]
   holdings     StockHolding[]
   liveHoldings Holding[]
@@ -146,7 +128,7 @@ model Stock {
 // 실시간 잔고 (현재 보유 종목)
 model Holding {
   id             String            @id @default(cuid())
-  accountId      String
+  userId         String
   stockId        String
   quantity       Int
   averagePrice   Decimal           @db.Decimal(15, 2)
@@ -156,11 +138,11 @@ model Holding {
   priceUpdatedAt DateTime?
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
-  account        SecuritiesAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   stock          Stock             @relation(fields: [stockId], references: [id])
 
-  @@unique([accountId, stockId])
-  @@index([accountId])
+  @@unique([userId, stockId])
+  @@index([userId])
   @@index([stockId])
   @@map("holdings")
 }
@@ -181,28 +163,6 @@ model StockHistory {
   @@unique([stockId, date])
   @@index([date])
   @@map("stock_histories")
-}
-
-model Simulation {
-  id                String   @id @default(cuid())
-  userId            String
-  stockId           String
-  name              String
-  baseDate          DateTime
-  quantity          Int
-  baseCost          Decimal  @db.Decimal(15, 2)
-  currentPrice      Decimal  @db.Decimal(15, 2)
-  hypotheticalValue Decimal  @db.Decimal(15, 2)
-  actualProfit      Decimal? @db.Decimal(15, 2)
-  difference        Decimal  @db.Decimal(15, 2)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  stock             Stock    @relation(fields: [stockId], references: [id])
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([stockId])
-  @@map("simulations")
 }
 
 model ApiToken {
@@ -226,7 +186,3 @@ model KisStockMaster {
   @@index([stockName])
   @@map("kis_stock_masters")
 }
-
-
-
-

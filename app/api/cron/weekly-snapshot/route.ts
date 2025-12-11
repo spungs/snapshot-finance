@@ -14,8 +14,11 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-        // Get all accounts with holdings
-        const accounts = await prisma.securitiesAccount.findMany({
+        // Get all users with holdings and auto-snapshot enabled
+        const users = await prisma.user.findMany({
+            where: {
+                isAutoSnapshotEnabled: true,
+            },
             include: {
                 holdings: {
                     include: { stock: true },
@@ -25,12 +28,12 @@ export async function GET(request: NextRequest) {
 
         const results = []
 
-        for (const account of accounts) {
-            if (account.holdings.length === 0) continue
+        for (const user of users) {
+            if (user.holdings.length === 0) continue
 
             // Fetch current prices for all holdings
             const holdingsWithPrice = await Promise.all(
-                account.holdings.map(async (holding) => {
+                user.holdings.map(async (holding) => {
                     let currentPrice = 0
                     try {
                         const quote = await yahooFinance.quote(holding.stock.stockCode) as { regularMarketPrice?: number }
@@ -68,7 +71,7 @@ export async function GET(request: NextRequest) {
             // Create snapshot
             const snapshot = await prisma.portfolioSnapshot.create({
                 data: {
-                    accountId: account.id,
+                    userId: user.id,
                     snapshotDate: new Date(),
                     totalValue,
                     totalCost,
@@ -94,7 +97,7 @@ export async function GET(request: NextRequest) {
             })
 
             results.push({
-                accountId: account.id,
+                userId: user.id,
                 snapshotId: snapshot.id,
                 holdingsCount: holdingsWithPrice.length,
             })

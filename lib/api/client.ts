@@ -33,14 +33,13 @@ async function fetchApi<T>(
 
 // 스냅샷 API
 export const snapshotsApi = {
-  getList: (accountId: string, cursor?: string) =>
-    fetchApi<any[]>(`/snapshots?accountId=${accountId}${cursor ? `&cursor=${cursor}` : ''}`),
+  getList: (cursor?: string) =>
+    fetchApi<any[]>(`/snapshots${cursor ? `?cursor=${cursor}` : ''}`),
 
   getDetail: (id: string) =>
     fetchApi<any>(`/snapshots/${id}`),
 
   create: (data: {
-    accountId: string
     snapshotDate?: string
     holdings: Array<{
       stockId: string
@@ -57,7 +56,6 @@ export const snapshotsApi = {
     }),
 
   update: (id: string, data: {
-    accountId?: string
     snapshotDate?: string
     exchangeRate?: number
     holdings?: Array<{

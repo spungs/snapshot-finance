@@ -51,14 +51,13 @@ interface Summary {
 }
 
 interface Props {
-    accountId?: string
     initialData?: {
         holdings: Holding[]
         summary: Summary
     }
 }
 
-export function HoldingsManager({ accountId, initialData }: Props) {
+export function HoldingsManager({ initialData }: Props) {
     const { t } = useLanguage()
     const [holdings, setHoldings] = useState<Holding[]>(initialData?.holdings || [])
     const [summary, setSummary] = useState<Summary | null>(initialData?.summary || null)
@@ -200,7 +199,6 @@ export function HoldingsManager({ accountId, initialData }: Props) {
         setSavingSnapshot(true)
         try {
             const response = await snapshotsApi.create({
-                accountId: accountId || 'test-account-1',
                 holdings: holdings.map((h) => ({
                     stockId: h.stockId,
                     quantity: h.quantity,

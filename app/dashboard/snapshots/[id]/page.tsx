@@ -20,11 +20,7 @@ export default async function SnapshotDetailPage({
   }
 
   // Verify ownership
-  const account = await prisma.securitiesAccount.findUnique({
-    where: { id: snapshot.accountId },
-  })
-
-  if (account?.userId !== session.user.id) {
+  if (snapshot.userId !== session.user.id) {
     notFound()
   }
 

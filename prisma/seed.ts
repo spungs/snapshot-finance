@@ -7,10 +7,15 @@ async function main() {
   console.log('Seeding database...')
 
   // Clean up existing test data
-  await prisma.stockHolding.deleteMany({})
-  await prisma.portfolioSnapshot.deleteMany({})
-  await prisma.securitiesAccount.deleteMany({ where: { id: 'test-account-1' } })
-  await prisma.user.deleteMany({ where: { email: { in: ['test@example.com', 'free@example.com', 'pro@example.com', 'max@example.com'] } } })
+  try {
+    await prisma.stockHolding.deleteMany({})
+    await prisma.portfolioSnapshot.deleteMany({})
+    await prisma.holding.deleteMany({})
+    // await prisma.securitiesAccount.deleteMany({}) // Removed
+    await prisma.user.deleteMany({ where: { email: { in: ['test@example.com', 'free@example.com', 'pro@example.com', 'max@example.com'] } } })
+  } catch (e) {
+    console.log('Cleanup failed (start fresh):', e)
+  }
 
 
   // 주요 종목 마스터 데이터
@@ -47,35 +52,6 @@ async function main() {
     },
   })
   console.log(`Created user: ${freeUser.email}`)
-
-
-
-  // 테스트용 계좌 생성
-  const account = await prisma.securitiesAccount.upsert({
-    where: {
-      userId_accountNumber: {
-        userId: freeUser.id,
-        accountNumber: '1234567890'
-      }
-    },
-    update: {},
-    create: {
-      id: 'test-account-1',
-      userId: freeUser.id,
-      accountNumber: '1234567890',
-      accountName: 'NH투자증권 위탁계좌',
-      brokerName: 'NH투자증권',
-      apiType: 'NH',
-      isActive: true,
-    },
-  })
-  console.log(`Created account: ${account.accountName}`)
-
-
-
-
-
-
 
   console.log('Seeding completed!')
 }
