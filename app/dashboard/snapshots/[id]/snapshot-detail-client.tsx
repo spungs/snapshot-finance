@@ -11,6 +11,7 @@ import { snapshotsApi } from '@/lib/api/client'
 import { useState } from 'react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
+import { StickyNote } from 'lucide-react'
 
 interface SnapshotDetailClientProps {
     snapshot: any
@@ -51,8 +52,9 @@ export default function SnapshotDetailClient({ snapshot }: SnapshotDetailClientP
                         ← {t('snapshotList')}
                     </Link>
                     <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2 flex-wrap">
-                        <span suppressHydrationWarning>{formatDate(snapshot.snapshotDate)}</span> {t('snapshotDetail')}
-                        <Badge variant="secondary" className="text-xs sm:text-sm">
+                        {t('snapshotDetail')}
+                        <Badge variant="secondary" className="text-xs sm:text-sm flex items-center gap-1">
+                            <StickyNote className="w-3 h-3" />
                             {snapshot.note || '메모 없음'}
                         </Badge>
                     </h1>
