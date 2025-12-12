@@ -97,7 +97,7 @@ interface Props {
 }
 
 export function HoldingsManager({ initialData }: Props) {
-    const { t } = useLanguage()
+    const { t, language } = useLanguage()
     const [holdings, setHoldings] = useState<Holding[]>(initialData?.holdings || [])
     const [summary, setSummary] = useState<Summary | null>(initialData?.summary || null)
     const [loading, setLoading] = useState(!initialData)
@@ -107,6 +107,7 @@ export function HoldingsManager({ initialData }: Props) {
     const [savingSnapshot, setSavingSnapshot] = useState(false)
     const [editingId, setEditingId] = useState<string | null>(null)
     const [savingRowId, setSavingRowId] = useState<string | null>(null)
+    const [deletingId, setDeletingId] = useState<string | null>(null)
     const [editValues, setEditValues] = useState<{ quantity: string; averagePrice: string }>({
         quantity: '',
         averagePrice: '',
@@ -268,27 +269,30 @@ export function HoldingsManager({ initialData }: Props) {
                 setNewAveragePrice('')
                 fetchHoldings()
             } else {
-                alert(response.error?.message || '종목 추가 실패')
+                alert(response.error?.message || t('addStockFailed'))
             }
         } catch (err) {
-            alert('네트워크 오류')
+            alert(t('networkError'))
         } finally {
             setAdding(false)
         }
     }
 
     const handleDeleteHolding = async (id: string) => {
-        if (!confirm('이 종목을 삭제하시겠습니까?')) return
+        if (!confirm(t('confirmDeleteHolding'))) return
 
+        setDeletingId(id)
         try {
             const response = await holdingsApi.delete(id)
             if (response.success) {
                 fetchHoldings()
             } else {
-                alert(response.error?.message || '삭제 실패')
+                alert(response.error?.message || t('deleteFailed'))
             }
         } catch (err) {
-            alert('네트워크 오류')
+            alert(t('networkError'))
+        } finally {
+            setDeletingId(null)
         }
     }
 
@@ -317,10 +321,10 @@ export function HoldingsManager({ initialData }: Props) {
                 setEditingId(null)
                 fetchHoldings()
             } else {
-                alert(response.error?.message || '수정 실패')
+                alert(response.error?.message || t('genericUpdateFailed'))
             }
         } catch (err) {
-            alert('네트워크 오류')
+            alert(t('networkError'))
         } finally {
             setSavingRowId(null)
         }
@@ -328,7 +332,7 @@ export function HoldingsManager({ initialData }: Props) {
 
     const handleSaveSnapshot = async () => {
         if (holdings.length === 0) {
-            alert('저장할 잔고가 없습니다.')
+            alert(t('noHoldingsToSave'))
             return
         }
 
@@ -347,12 +351,12 @@ export function HoldingsManager({ initialData }: Props) {
                 note: `스냅샷 - ${new Date().toLocaleDateString('ko-KR')}`,
             })
             if (response.success) {
-                alert('스냅샷이 저장되었습니다!')
+                alert(t('saveSnapshotSuccess'))
             } else {
-                alert(response.error?.message || '스냅샷 저장 실패')
+                alert(response.error?.message || t('saveSnapshotFailed'))
             }
         } catch (err) {
-            alert('네트워크 오류')
+            alert(t('networkError'))
         } finally {
             setSavingSnapshot(false)
         }
@@ -372,7 +376,7 @@ export function HoldingsManager({ initialData }: Props) {
             <Card>
                 <CardContent className="py-8 text-center">
                     <p className="text-red-500 mb-4">{error}</p>
-                    <Button onClick={() => fetchHoldings()}>다시 시도</Button>
+                    <Button onClick={() => fetchHoldings()}>{t('retry')}</Button>
                 </CardContent>
             </Card>
         )
@@ -419,9 +423,9 @@ export function HoldingsManager({ initialData }: Props) {
                                 </p>
                             </div>
                         </div>
-                        {summary.exchangeRate && (
+                        {summary.exchangeRate && language === 'ko' && (
                             <div className="mt-4 pt-4 border-t text-sm text-right text-muted-foreground">
-                                적용 환율: 1 USD = {formatCurrency(summary.exchangeRate, 'KRW')}
+                                {t('appliedExchangeRate')}: 1 USD = {formatCurrency(summary.exchangeRate, 'KRW')}
                             </div>
                         )}
                     </CardContent>
@@ -469,7 +473,7 @@ export function HoldingsManager({ initialData }: Props) {
                                 disabled={adding}
                             />
                             <Label htmlFor="merge-mode" className="whitespace-nowrap">
-                                물타기
+                                {t('averagingDown')}
                             </Label>
                         </div>
                         <Button
@@ -508,7 +512,7 @@ export function HoldingsManager({ initialData }: Props) {
                     <div className="flex flex-wrap gap-3 p-1 bg-muted/30 rounded-lg items-center">
                         <div className="flex items-center gap-2">
                             <Filter className="w-4 h-4 text-muted-foreground" />
-                            <span className="text-sm font-medium">필터:</span>
+                            <span className="text-sm font-medium">{t('filter')}:</span>
                         </div>
 
                         <Select
@@ -516,12 +520,12 @@ export function HoldingsManager({ initialData }: Props) {
                             onValueChange={(val: any) => setFilterConfig(prev => ({ ...prev, market: val }))}
                         >
                             <SelectTrigger className="w-[100px] h-8 text-xs">
-                                <SelectValue placeholder="시장" />
+                                <SelectValue placeholder={t('market')} />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="all">전체 시장</SelectItem>
-                                <SelectItem value="US">미국(US)</SelectItem>
-                                <SelectItem value="KR">한국(KR)</SelectItem>
+                                <SelectItem value="all">{t('marketAll')}</SelectItem>
+                                <SelectItem value="US">{t('marketUS')}</SelectItem>
+                                <SelectItem value="KR">{t('marketKR')}</SelectItem>
                             </SelectContent>
                         </Select>
 
@@ -530,19 +534,19 @@ export function HoldingsManager({ initialData }: Props) {
                             onValueChange={(val: any) => setFilterConfig(prev => ({ ...prev, profitStatus: val }))}
                         >
                             <SelectTrigger className="w-[100px] h-8 text-xs">
-                                <SelectValue placeholder="수익 상태" />
+                                <SelectValue placeholder={t('profitStatus')} />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="all">전체 수익</SelectItem>
-                                <SelectItem value="plus">수익 (+)</SelectItem>
-                                <SelectItem value="minus">손실 (-)</SelectItem>
+                                <SelectItem value="all">{t('statusAll')}</SelectItem>
+                                <SelectItem value="plus">{t('statusPlus')}</SelectItem>
+                                <SelectItem value="minus">{t('statusMinus')}</SelectItem>
                             </SelectContent>
                         </Select>
 
                         <div className="ml-auto flex items-center gap-2">
                             {!isDragEnabled && (
                                 <Badge variant="destructive" className="text-[10px] h-5 px-1.5 font-normal">
-                                    커스텀 정렬 비활성
+                                    {t('customSortDisabled')}
                                 </Badge>
                             )}
                             {(filterConfig.market !== 'all' || filterConfig.profitStatus !== 'all') && (
@@ -552,7 +556,7 @@ export function HoldingsManager({ initialData }: Props) {
                                     className="h-8 text-xs px-2"
                                     onClick={() => setFilterConfig({ market: 'all', profitStatus: 'all' })}
                                 >
-                                    필터 초기화
+                                    {t('resetFilter')}
                                 </Button>
                             )}
                             {sortConfig.key !== 'custom' && (
@@ -562,7 +566,7 @@ export function HoldingsManager({ initialData }: Props) {
                                     className="h-8 text-xs px-2"
                                     onClick={() => setSortConfig({ key: 'custom', direction: 'asc' })}
                                 >
-                                    정렬 초기화
+                                    {t('resetSort')}
                                 </Button>
                             )}
                         </div>
@@ -572,7 +576,7 @@ export function HoldingsManager({ initialData }: Props) {
                     <div className={cn("transition-opacity duration-200", (isRefreshing || savingSnapshot) && "opacity-60 pointer-events-none")}>
                         {filteredHoldings.length === 0 ? (
                             <div className="py-12 text-center text-muted-foreground">
-                                {holdings.length === 0 ? "보유 종목이 없습니다. 위에서 종목을 추가해주세요." : "필터 조건에 맞는 종목이 없습니다."}
+                                {holdings.length === 0 ? t('holdingsEmpty') : t('filterEmpty')}
                             </div>
                         ) : (
                             <div className="overflow-x-auto -mx-4 sm:mx-0">
@@ -657,7 +661,7 @@ export function HoldingsManager({ initialData }: Props) {
                                                             <SortableTableRow
                                                                 key={holding.id}
                                                                 id={holding.id}
-                                                                disabled={isRefreshing || savingSnapshot || !!editingId || !isDragEnabled}
+                                                                disabled={isRefreshing || savingSnapshot || !!editingId || !isDragEnabled || deletingId === holding.id}
                                                             >
                                                                 <TableCell>
                                                                     <div>
@@ -699,9 +703,14 @@ export function HoldingsManager({ initialData }: Props) {
                                                                 <TableCell className="text-right font-medium">
                                                                     <div className="flex flex-col items-end">
                                                                         <span>{formatCurrency(holding.totalCost, holding.currency)}</span>
-                                                                        {holding.currency === 'USD' && summary?.exchangeRate && (
+                                                                        {holding.currency === 'USD' && summary?.exchangeRate && language === 'ko' && (
                                                                             <span className="text-xs text-muted-foreground">
                                                                                 {formatCurrency(holding.totalCost * summary.exchangeRate, 'KRW')}
+                                                                            </span>
+                                                                        )}
+                                                                        {(holding.currency === 'KRW' || !holding.currency) && summary?.exchangeRate && language === 'en' && (
+                                                                            <span className="text-xs text-muted-foreground">
+                                                                                {formatCurrency(holding.totalCost / summary.exchangeRate, 'USD')}
                                                                             </span>
                                                                         )}
                                                                     </div>
@@ -709,9 +718,14 @@ export function HoldingsManager({ initialData }: Props) {
                                                                 <TableCell className="text-right font-medium">
                                                                     <div className="flex flex-col items-end">
                                                                         <span>{formatCurrency(holding.currentValue, holding.currency)}</span>
-                                                                        {holding.currency === 'USD' && summary?.exchangeRate && (
+                                                                        {holding.currency === 'USD' && summary?.exchangeRate && language === 'ko' && (
                                                                             <span className="text-xs text-muted-foreground">
                                                                                 {formatCurrency(holding.currentValue * summary.exchangeRate, 'KRW')}
+                                                                            </span>
+                                                                        )}
+                                                                        {(holding.currency === 'KRW' || !holding.currency) && summary?.exchangeRate && language === 'en' && (
+                                                                            <span className="text-xs text-muted-foreground">
+                                                                                {formatCurrency(holding.currentValue / summary.exchangeRate, 'USD')}
                                                                             </span>
                                                                         )}
                                                                     </div>
@@ -721,9 +735,14 @@ export function HoldingsManager({ initialData }: Props) {
                                                                 >
                                                                     <div className="flex flex-col items-end">
                                                                         <span>{formatCurrency(Math.abs(holding.profit), holding.currency)}</span>
-                                                                        {holding.currency === 'USD' && summary?.exchangeRate && (
+                                                                        {holding.currency === 'USD' && summary?.exchangeRate && language === 'ko' && (
                                                                             <span className="text-xs opacity-80">
                                                                                 {formatCurrency(Math.abs(holding.profit * summary.exchangeRate), 'KRW')}
+                                                                            </span>
+                                                                        )}
+                                                                        {(holding.currency === 'KRW' || !holding.currency) && summary?.exchangeRate && language === 'en' && (
+                                                                            <span className="text-xs opacity-80">
+                                                                                {formatCurrency(Math.abs(holding.profit / summary.exchangeRate), 'USD')}
                                                                             </span>
                                                                         )}
                                                                     </div>
@@ -767,7 +786,7 @@ export function HoldingsManager({ initialData }: Props) {
                                                                                     variant="ghost"
                                                                                     size="icon"
                                                                                     onClick={() => handleStartEdit(holding)}
-                                                                                    disabled={isRefreshing || savingSnapshot}
+                                                                                    disabled={isRefreshing || savingSnapshot || deletingId === holding.id}
                                                                                 >
                                                                                     <Edit2 className="w-4 h-4" />
                                                                                 </Button>
@@ -775,9 +794,13 @@ export function HoldingsManager({ initialData }: Props) {
                                                                                     variant="ghost"
                                                                                     size="icon"
                                                                                     onClick={() => handleDeleteHolding(holding.id)}
-                                                                                    disabled={isRefreshing || savingSnapshot}
+                                                                                    disabled={isRefreshing || savingSnapshot || deletingId === holding.id}
                                                                                 >
-                                                                                    <Trash2 className="w-4 h-4 text-red-500" />
+                                                                                    {deletingId === holding.id ? (
+                                                                                        <Loader2 className="w-4 h-4 animate-spin text-red-500" />
+                                                                                    ) : (
+                                                                                        <Trash2 className="w-4 h-4 text-red-500" />
+                                                                                    )}
                                                                                 </Button>
                                                                             </>
                                                                         )}

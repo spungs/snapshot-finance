@@ -51,20 +51,26 @@ export async function GET(request: NextRequest) {
         }
 
         // 2. English Search - Use Yahoo Finance
-        const yf = new YahooFinance()
-        const results = await yf.search(query)
+        try {
+            const yf = new YahooFinance()
+            const results = await yf.search(query)
 
-        const formattedResults = results.quotes
-            .filter((quote: any) => quote.quoteType === 'EQUITY' || quote.quoteType === 'ETF')
-            .map((quote: any) => ({
-                symbol: quote.symbol,
-                name: quote.shortname || quote.longname || quote.symbol,
-                exchange: quote.exchange,
-                type: quote.quoteType,
-                market: quote.exchange === 'KOE' ? 'KOSPI' : quote.exchange === 'KO' ? 'KOSDAQ' : 'US',
-            }))
+            const formattedResults = results.quotes
+                .filter((quote: any) => quote.quoteType === 'EQUITY' || quote.quoteType === 'ETF')
+                .map((quote: any) => ({
+                    symbol: quote.symbol,
+                    name: quote.shortname || quote.longname || quote.symbol,
+                    exchange: quote.exchange,
+                    type: quote.quoteType,
+                    market: quote.exchange === 'KOE' ? 'KOSPI' : quote.exchange === 'KO' ? 'KOSDAQ' : 'US',
+                }))
 
-        return NextResponse.json({ success: true, data: formattedResults })
+            return NextResponse.json({ success: true, data: formattedResults })
+        } catch (yahooError: any) {
+            console.warn('Yahoo Search Failed:', yahooError.message)
+            // If Yahoo fails (e.g. invalid query for Korean), just return empty results
+            return NextResponse.json({ success: true, data: [] })
+        }
 
     } catch (error: any) {
         console.error('Search Error:', error)

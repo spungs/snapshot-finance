@@ -55,7 +55,7 @@ export default function SnapshotDetailClient({ snapshot }: SnapshotDetailClientP
                         {t('snapshotDetail')}
                         <Badge variant="secondary" className="text-xs sm:text-sm flex items-center gap-1">
                             <StickyNote className="w-3 h-3" />
-                            {snapshot.note || '메모 없음'}
+                            {snapshot.note || t('memoEmpty')}
                         </Badge>
                     </h1>
                     <p className="text-sm text-muted-foreground mt-1">

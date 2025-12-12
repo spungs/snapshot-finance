@@ -112,7 +112,7 @@ export function PortfolioSummaryCard({
         {/* 환율 표시 (KRW일 때) */}
         {baseCurrency === 'KRW' && exchangeRate && (
           <div className="mt-4 pt-4 border-t text-sm text-right text-muted-foreground">
-            적용 환율: 1 USD = {formatCurrency(exchangeRate, 'KRW')}
+            {t('appliedExchangeRate')}: 1 USD = {formatCurrency(exchangeRate, 'KRW')}
           </div>
         )}
       </CardContent>

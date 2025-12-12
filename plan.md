@@ -41,8 +41,10 @@
 - [x] Vercel 배포 환경 이슈 해결 (DB 연결, 시간대, 환경변수)
 - [x] 구글 애드센스 검증 파일 추가 (`ads.txt`)
 - [x] 구글 애드센스 검증 파일 추가 (`ads.txt`)
+- [x] 구글 애드센스 검증 파일 추가 (`ads.txt`)
 - [x] 스냅샷 목록 버그 수정 (사용자 ID 연동)
-- [x] **버그 수정**: 대시보드 종목 추가 검색 시 한국 주식 미검색 현상 해결 (Yahoo Fallback + Quick Seed)
+- [x] [Bug] Korean Search: Korean stock names not found (Result: "Invalid Search Query") -> Fixed with full KIS master seed and improved fallback
+- [x] [UX] Delete Holding: Disable row and show loading state during deletion)
 
 ---
 
@@ -51,6 +53,7 @@
 ### 1. 사용자 경험 (UX/UI) 개선
 - [x] **보유 종목 정렬 및 필터링** (대시보드 & 스냅샷 상세)
 - [x] **커스텀 정렬**: 드래그 앤 드롭으로 종목 순서 변경
+- [x] **다국어 처리(i18n)**: 한국어/영어 지원 및 UI 최적화
 - [ ] **대시보드 고도화**:
     - 자산 추이 그래프 시각화 개선
     - 로딩 속도 최적화 (React Server Components 활용 및 캐싱)

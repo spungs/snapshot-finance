@@ -61,7 +61,7 @@ interface HoldingsTableProps {
 // Merged into top block.
 
 export function HoldingsTable({ holdings, exchangeRate }: HoldingsTableProps) {
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
 
   // State
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: 'asc' })
@@ -131,7 +131,7 @@ export function HoldingsTable({ holdings, exchangeRate }: HoldingsTableProps) {
         <div className="flex flex-wrap gap-3 p-1 bg-muted/30 rounded-lg items-center">
           <div className="flex items-center gap-2">
             <Filter className="w-4 h-4 text-muted-foreground" />
-            <span className="text-sm font-medium">필터:</span>
+            <span className="text-sm font-medium">{t('filter')}:</span>
           </div>
 
           <Select
@@ -139,12 +139,12 @@ export function HoldingsTable({ holdings, exchangeRate }: HoldingsTableProps) {
             onValueChange={(val: any) => setFilterConfig(prev => ({ ...prev, market: val }))}
           >
             <SelectTrigger className="w-[100px] h-8 text-xs">
-              <SelectValue placeholder="시장" />
+              <SelectValue placeholder={t('market')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">전체 시장</SelectItem>
-              <SelectItem value="US">미국(US)</SelectItem>
-              <SelectItem value="KR">한국(KR)</SelectItem>
+              <SelectItem value="all">{t('marketAll')}</SelectItem>
+              <SelectItem value="US">{t('marketUS')}</SelectItem>
+              <SelectItem value="KR">{t('marketKR')}</SelectItem>
             </SelectContent>
           </Select>
 
@@ -153,12 +153,12 @@ export function HoldingsTable({ holdings, exchangeRate }: HoldingsTableProps) {
             onValueChange={(val: any) => setFilterConfig(prev => ({ ...prev, profitStatus: val }))}
           >
             <SelectTrigger className="w-[100px] h-8 text-xs">
-              <SelectValue placeholder="수익 상태" />
+              <SelectValue placeholder={t('profitStatus')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">전체 수익</SelectItem>
-              <SelectItem value="plus">수익 (+)</SelectItem>
-              <SelectItem value="minus">손실 (-)</SelectItem>
+              <SelectItem value="all">{t('statusAll')}</SelectItem>
+              <SelectItem value="plus">{t('statusPlus')}</SelectItem>
+              <SelectItem value="minus">{t('statusMinus')}</SelectItem>
             </SelectContent>
           </Select>
 
@@ -170,7 +170,7 @@ export function HoldingsTable({ holdings, exchangeRate }: HoldingsTableProps) {
                 className="h-8 text-xs px-2"
                 onClick={() => setFilterConfig({ market: 'all', profitStatus: 'all' })}
               >
-                필터 초기화
+                {t('resetFilter')}
               </Button>
             )}
             {sortConfig.key !== null && (
@@ -180,7 +180,7 @@ export function HoldingsTable({ holdings, exchangeRate }: HoldingsTableProps) {
                 className="h-8 text-xs px-2"
                 onClick={() => setSortConfig({ key: null, direction: 'asc' })}
               >
-                정렬 초기화
+                {t('resetSort')}
               </Button>
             )}
           </div>
@@ -189,7 +189,7 @@ export function HoldingsTable({ holdings, exchangeRate }: HoldingsTableProps) {
       <CardContent>
         {filteredHoldings.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
-            {holdings.length === 0 ? t('holdingsEmpty') : "필터 조건에 맞는 종목이 없습니다."}
+            {holdings.length === 0 ? t('holdingsEmpty') : t('filterEmpty')}
           </div>
         ) : (
           <div className="overflow-x-auto -mx-4 sm:mx-0">
@@ -233,9 +233,14 @@ export function HoldingsTable({ holdings, exchangeRate }: HoldingsTableProps) {
                         <TableCell className="text-right font-medium">
                           <div className="flex flex-col items-end">
                             <span>{formatCurrency(Number(holding.totalCost), currency)}</span>
-                            {currency === 'USD' && exchangeRate && (
+                            {currency === 'USD' && exchangeRate && language === 'ko' && (
                               <span className="text-xs text-muted-foreground">
                                 {formatCurrency(Number(holding.totalCost) * exchangeRate, 'KRW')}
+                              </span>
+                            )}
+                            {(currency === 'KRW' || !currency) && exchangeRate && language === 'en' && (
+                              <span className="text-xs text-muted-foreground">
+                                {formatCurrency(Number(holding.totalCost) / exchangeRate, 'USD')}
                               </span>
                             )}
                           </div>
@@ -243,9 +248,14 @@ export function HoldingsTable({ holdings, exchangeRate }: HoldingsTableProps) {
                         <TableCell className="text-right font-medium">
                           <div className="flex flex-col items-end">
                             <span>{formatCurrency(Number(holding.currentValue), currency)}</span>
-                            {currency === 'USD' && exchangeRate && (
+                            {currency === 'USD' && exchangeRate && language === 'ko' && (
                               <span className="text-xs text-muted-foreground">
                                 {formatCurrency(Number(holding.currentValue) * exchangeRate, 'KRW')}
+                              </span>
+                            )}
+                            {(currency === 'KRW' || !currency) && exchangeRate && language === 'en' && (
+                              <span className="text-xs text-muted-foreground">
+                                {formatCurrency(Number(holding.currentValue) / exchangeRate, 'USD')}
                               </span>
                             )}
                           </div>
@@ -258,9 +268,14 @@ export function HoldingsTable({ holdings, exchangeRate }: HoldingsTableProps) {
                         >
                           <div className="flex flex-col items-end">
                             <span>{formatCurrency(Math.abs(Number(holding.profit)), currency)}</span>
-                            {currency === 'USD' && exchangeRate && (
+                            {currency === 'USD' && exchangeRate && language === 'ko' && (
                               <span className="text-xs opacity-80">
                                 {formatCurrency(Math.abs(Number(holding.profit) * exchangeRate), 'KRW')}
+                              </span>
+                            )}
+                            {(currency === 'KRW' || !currency) && exchangeRate && language === 'en' && (
+                              <span className="text-xs opacity-80">
+                                {formatCurrency(Math.abs(Number(holding.profit) / exchangeRate), 'USD')}
                               </span>
                             )}
                           </div>
