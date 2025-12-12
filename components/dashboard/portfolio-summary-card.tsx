@@ -76,33 +76,49 @@ export function PortfolioSummaryCard({
           </div>
 
           {/* 자산 구성 (주식/현금) */}
-          <div className="lg:col-span-3 grid grid-cols-2 sm:grid-cols-3 gap-4">
-            <div>
-              <p className="text-xs text-gray-500 mb-1">{t('stockValue')}</p>
+          <div>
+            <p className="text-xs text-gray-500 mb-1">{t('stockValue')}</p>
+            <div className="flex items-baseline gap-2">
               <p className="text-lg font-semibold">{formatCurrency(displayStockValue, currency)}</p>
-            </div>
-            <div>
-              <div className="flex items-center gap-1 mb-1">
-                <p className="text-xs text-gray-500">{t('cash')}</p>
-                {isEditable && (
-                  <CashBalanceDialog
-                    initialBalance={props.cashBalance || 0}
-                    currency={currency}
-                    exchangeRate={exchangeRate}
-                  />
-                )}
-              </div>
-              <p className="text-lg font-semibold">{formatCurrency(displayCash, currency)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500 mb-1">{t('holdings')}</p>
-              <p className="text-lg font-semibold">{holdingsCount}{t('countUnit')}</p>
+              {displayValue > 0 && (
+                <span className="text-sm text-muted-foreground">
+                  ({((displayStockValue / displayValue) * 100).toFixed(1)}%)
+                </span>
+              )}
             </div>
           </div>
 
-          <div className="col-span-full border-t pt-4 grid grid-cols-3 gap-4">
+          <div>
+            <div className="flex items-center gap-1 mb-1">
+              <p className="text-xs text-gray-500">{t('cash')}</p>
+              {isEditable && (
+                <CashBalanceDialog
+                  initialBalance={props.cashBalance || 0}
+                  currency={currency}
+                  exchangeRate={exchangeRate}
+                />
+              )}
+            </div>
+            <div className="flex items-baseline gap-2">
+              <p className="text-lg font-semibold">{formatCurrency(displayCash, currency)}</p>
+              {displayValue > 0 && (
+                <span className="text-sm text-muted-foreground">
+                  ({((displayCash / displayValue) * 100).toFixed(1)}%)
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <p className="text-xs text-gray-500 mb-1">{t('holdings')}</p>
+            <p className="text-lg font-semibold">{holdingsCount}{t('countUnit')}</p>
+          </div>
+        </div>
+
+        <div className="col-span-full border-t pt-4 mt-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             {/* 총 매입금액 */}
-            <div>
+            <div className="lg:col-span-1">
               <p className="text-xs sm:text-sm text-gray-500 mb-1">{t('totalInvested')}</p>
               <p className="text-lg font-semibold text-gray-700">
                 {formatCurrency(displayCost, currency)}
@@ -134,6 +150,9 @@ export function PortfolioSummaryCard({
                 {formatProfitRate(profitRate)}
               </p>
             </div>
+
+            {/* Empty slot to maintain alignment with Holdings column */}
+            <div className="hidden lg:block" />
           </div>
         </div>
 
