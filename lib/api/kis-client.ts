@@ -103,7 +103,7 @@ export class KisClient {
         return this.tokenPromise
     }
 
-    async getCurrentPrice(symbol: string, market: 'KOSPI' | 'KOSDAQ' | 'US' = 'KOSPI') {
+    async getCurrentPrice(symbol: string, market: 'KOSPI' | 'KOSDAQ' | 'US' = 'KOSPI', retryCount = 0): Promise<{ price: number; change: number; changeRate: number }> {
         const token = await this.getAccessToken()
 
         // Domestic Stock (KOSPI/KOSDAQ)
@@ -127,7 +127,23 @@ export class KisClient {
             })
 
             if (!response.ok) {
-                throw new Error(`KIS API Error: ${response.status}`)
+                const errorText = await response.text()
+                console.error('KIS API Error Response:', errorText)
+
+                // Check if token is expired
+                if (errorText.includes('기간이 만료된 token') || errorText.includes('EGW00123')) {
+                    if (retryCount < 1) {
+                        console.log('Token expired, refreshing and retrying...')
+                        // Delete expired token from DB
+                        await prisma.apiToken.deleteMany({
+                            where: { provider: 'KIS' }
+                        })
+                        // Retry with new token
+                        return this.getCurrentPrice(symbol, market, retryCount + 1)
+                    }
+                }
+
+                throw new Error(`KIS API Error: ${response.status} - ${errorText}`)
             }
 
             const data = await response.json()
@@ -160,7 +176,7 @@ export class KisClient {
         }
     }
 
-    async getDailyPrice(symbol: string, market: 'KOSPI' | 'KOSDAQ' | 'US', date: string) {
+    async getDailyPrice(symbol: string, market: 'KOSPI' | 'KOSDAQ' | 'US', date: string, retryCount = 0): Promise<any> {
         const token = await this.getAccessToken()
 
         // Domestic Stock
@@ -186,7 +202,23 @@ export class KisClient {
             })
 
             if (!response.ok) {
-                throw new Error(`KIS API Error: ${response.status}`)
+                const errorText = await response.text()
+                console.error('KIS API Daily Price Error Response:', errorText)
+
+                // Check if token is expired
+                if (errorText.includes('기간이 만료된 token') || errorText.includes('EGW00123')) {
+                    if (retryCount < 1) {
+                        console.log('Token expired, refreshing and retrying...')
+                        // Delete expired token from DB
+                        await prisma.apiToken.deleteMany({
+                            where: { provider: 'KIS' }
+                        })
+                        // Retry with new token
+                        return this.getDailyPrice(symbol, market, date, retryCount + 1)
+                    }
+                }
+
+                throw new Error(`KIS API Error: ${response.status} - ${errorText}`)
             }
 
             const data = await response.json()
