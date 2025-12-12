@@ -4,6 +4,9 @@
 import { useEffect, useState } from 'react'
 import { signIn } from 'next-auth/react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { ArrowLeft } from 'lucide-react'
+import Link from 'next/link'
 
 export default function SignIn() {
     const [isSigningIn, setIsSigningIn] = useState(false)
@@ -15,7 +18,13 @@ export default function SignIn() {
     }
 
     return (
-        <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900 p-4">
+        <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900 p-4 relative">
+            <Link href="/" className="absolute top-4 left-4">
+                <Button variant="ghost" size="sm" className="gap-2">
+                    <ArrowLeft className="h-4 w-4" />
+                    Back
+                </Button>
+            </Link>
             <Card className="w-full max-w-md">
                 <CardHeader className="text-center">
                     <CardTitle className="text-2xl">Snapshot Finance</CardTitle>
