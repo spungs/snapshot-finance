@@ -484,7 +484,7 @@ export function HoldingsManager({ initialData }: Props) {
                             value={filterConfig.market}
                             onValueChange={(val: any) => setFilterConfig(prev => ({ ...prev, market: val }))}
                         >
-                            <SelectTrigger className="w-[100px] h-8 text-xs">
+                            <SelectTrigger className="min-w-[100px] w-auto h-8 text-xs">
                                 <SelectValue placeholder={t('market')} />
                             </SelectTrigger>
                             <SelectContent>
@@ -498,7 +498,7 @@ export function HoldingsManager({ initialData }: Props) {
                             value={filterConfig.profitStatus}
                             onValueChange={(val: any) => setFilterConfig(prev => ({ ...prev, profitStatus: val }))}
                         >
-                            <SelectTrigger className="w-[100px] h-8 text-xs">
+                            <SelectTrigger className="min-w-[100px] w-auto h-8 text-xs">
                                 <SelectValue placeholder={t('profitStatus')} />
                             </SelectTrigger>
                             <SelectContent>
