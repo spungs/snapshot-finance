@@ -5,8 +5,8 @@ import { holdingService } from '@/lib/services/holding-service'
 import { redirect } from 'next/navigation'
 
 import { HoldingsManager } from '@/components/dashboard/holdings-manager'
-import { DashboardHeader } from '@/components/dashboard/dashboard-header'
-import { ViewAllSnapshotsLink } from '@/components/dashboard/view-all-snapshots-link'
+import { DashboardRefreshWrapper } from '@/components/dashboard/dashboard-refresh-wrapper'
+
 import { Skeleton } from '@/components/ui/skeleton'
 
 export const dynamic = 'force-dynamic'
@@ -30,21 +30,12 @@ export default async function DashboardPage() {
   } : undefined
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <Suspense fallback={<Skeleton className="h-12 w-full" />}>
-        <DashboardHeader cashBalance={initialData?.summary?.cashBalance} />
-      </Suspense>
-
+    <DashboardRefreshWrapper cashBalance={initialData?.summary?.cashBalance}>
       {/* 잔고 관리 */}
       <Suspense fallback={<Skeleton className="h-96 w-full" />}>
         <HoldingsManager initialData={initialData as any} />
       </Suspense>
 
-      {/* 스냅샷 보기 링크 */}
-      <Suspense fallback={<Skeleton className="h-8 w-full" />}>
-        <ViewAllSnapshotsLink />
-      </Suspense>
-    </div>
+    </DashboardRefreshWrapper >
   )
 }
