@@ -46,6 +46,7 @@
 - [x] [Bug] Korean Search: Korean stock names not found (Result: "Invalid Search Query") -> Fixed with full KIS master seed and improved fallback
 - [x] [UX] Delete Holding: Disable row and show loading state during deletion)
 - [x] [Fix] Build Error: Fix type mismatch in i18n context (`t` function)
+- [x] [Fix] KIS API Token 자동 갱신: 토큰 만료 시 자동으로 재발급 및 재시도 로직 구현
 
 ---
 
@@ -61,6 +62,7 @@
     - 자산 추이 그래프 시각화 개선
     - 로딩 속도 최적화 (React Server Components 활용 및 캐싱)
 - [x] **모바일 반응형 레이아웃 디테일 수정**: 모바일용 카드 뷰(Card View) 구현 완료 (보유 종목, 스냅샷 목록)
+- [x] **커스텀 파비콘(Favicon) 구현**: icon.tsx 및 apple-icon.tsx 추가
 - [ ] **디자인 통일성**: 전반적인 컴포넌트 및 테마 스타일링 개선
 
 ### 2. 기능 확장
