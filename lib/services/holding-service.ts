@@ -29,6 +29,13 @@ export const holdingService = {
                 orderBy: { displayOrder: 'asc' },
             })
 
+            // Fetch User Cash Balance
+            const user = await prisma.user.findUnique({
+                where: { id: userId },
+                select: { cashBalance: true }
+            })
+            const cashBalance = user?.cashBalance ? Number(user.cashBalance) : 0
+
             // Fetch Exchange Rate and ensure KIS connection in parallel
             const [exchangeRate] = await Promise.all([
                 getUsdExchangeRate(),
@@ -90,20 +97,22 @@ export const holdingService = {
 
             // Calculate Total Summary (KRW Base)
             let totalCostKRW = 0
-            let totalValueKRW = 0
+            let totalStockValueKRW = 0 // 주식 평가금액만
 
             holdingsWithPrice.forEach(h => {
                 if (h.currency === 'USD') {
                     totalCostKRW += h.totalCost * exchangeRate
-                    totalValueKRW += h.currentValue * exchangeRate
+                    totalStockValueKRW += h.currentValue * exchangeRate
                 } else {
                     totalCostKRW += h.totalCost
-                    totalValueKRW += h.currentValue
+                    totalStockValueKRW += h.currentValue
                 }
             })
 
-            const totalProfitKRW = totalValueKRW - totalCostKRW
-            const totalProfitRateKRW = totalCostKRW > 0 ? (totalProfitKRW / totalCostKRW) * 100 : 0
+            // 총 자산 = 주식 평가금액 + 예수금
+            const totalValueKRW = totalStockValueKRW + cashBalance
+            const totalProfit = totalStockValueKRW - totalCostKRW // 주식 투자 손익만 계산 (예수금은 변동 없으므로)
+            const totalProfitRate = totalCostKRW > 0 ? (totalProfit / totalCostKRW) * 100 : 0
 
             return {
                 success: true,
@@ -111,11 +120,13 @@ export const holdingService = {
                     holdings: holdingsWithPrice,
                     summary: {
                         totalCost: totalCostKRW,
-                        totalValue: totalValueKRW,
-                        totalProfit: totalProfitKRW,
-                        totalProfitRate: totalProfitRateKRW,
+                        totalValue: totalValueKRW, // 주식 + 예수금
+                        totalStockValue: totalStockValueKRW, // 주식만 (Optional, but useful)
+                        totalProfit: totalProfit,
+                        totalProfitRate: totalProfitRate,
                         holdingsCount: holdingsWithPrice.length,
                         exchangeRate,
+                        cashBalance, // FE에서 표시할 수 있게 전달
                     },
                 },
             }

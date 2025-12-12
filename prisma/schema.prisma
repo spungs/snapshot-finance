@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
+  provider = "postgresql"
 }
 
 model User {
@@ -12,15 +12,13 @@ model User {
   name                  String?
   createdAt             DateTime            @default(now())
   updatedAt             DateTime            @updatedAt
-
   emailVerified         DateTime?
   image                 String?
-  accounts              Account[]
-  
-  // Unified Portfolio
   isAutoSnapshotEnabled Boolean             @default(false)
-  snapshots             PortfolioSnapshot[]
+  cashBalance           Decimal             @default(0) @db.Decimal(15, 2)
+  accounts              Account[]
   holdings              Holding[]
+  snapshots             PortfolioSnapshot[]
 
   @@map("users")
 }
@@ -31,20 +29,18 @@ model Account {
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?
   session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
   @@map("accounts")
 }
-
 
 model VerificationToken {
   identifier String
@@ -57,16 +53,16 @@ model VerificationToken {
 
 model PortfolioSnapshot {
   id           String            @id @default(cuid())
-  userId       String
   snapshotDate DateTime          @default(now()) @db.Timestamptz(6)
   totalValue   Decimal           @db.Decimal(15, 2)
   totalCost    Decimal           @db.Decimal(15, 2)
   totalProfit  Decimal           @db.Decimal(15, 2)
   profitRate   Decimal           @db.Decimal(10, 4)
   cashBalance  Decimal           @db.Decimal(15, 2)
-  exchangeRate Decimal           @default(1435) @db.Decimal(10, 2)
   note         String?
   createdAt    DateTime          @default(now())
+  exchangeRate Decimal           @default(1435) @db.Decimal(10, 2)
+  userId       String
   user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   holdings     SnapshotHolding[]
 
@@ -105,29 +101,28 @@ model Stock {
   sector       String?
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
-  holdings     SnapshotHolding[]
   liveHoldings Holding[]
+  holdings     SnapshotHolding[]
 
   @@index([stockCode])
   @@map("stocks")
 }
 
-// 실시간 잔고 (현재 보유 종목)
 model Holding {
-  id             String            @id @default(cuid())
+  id             String    @id @default(cuid())
   userId         String
   stockId        String
   quantity       Int
-  averagePrice   Decimal           @db.Decimal(15, 2)
-  currentPrice   Decimal           @default(0) @db.Decimal(15, 2)
-  currency       String            @default("KRW")
-  purchaseRate   Decimal           @default(1) @db.Decimal(10, 2)
+  averagePrice   Decimal   @db.Decimal(15, 2)
+  currentPrice   Decimal   @default(0) @db.Decimal(15, 2)
+  currency       String    @default("KRW")
+  purchaseRate   Decimal   @default(1) @db.Decimal(10, 2)
   priceUpdatedAt DateTime?
-  displayOrder   Int               @default(0)
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
-  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  stock          Stock             @relation(fields: [stockId], references: [id])
+  displayOrder   Int       @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  stock          Stock     @relation(fields: [stockId], references: [id])
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, stockId])
   @@index([userId])
