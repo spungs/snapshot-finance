@@ -151,8 +151,19 @@ export function PortfolioSummaryCard({
               </p>
             </div>
 
-            {/* Empty slot to maintain alignment with Holdings column */}
-            <div className="hidden lg:block" />
+            {/* Fun Feature: Equivalent Principal at 35 Interest */}
+            {isProfit && totalProfit > 0 ? (
+              <div>
+                <p className="text-xs sm:text-sm text-muted-foreground mb-1">{t('interestPrincipal')}</p>
+                <div className="flex items-center gap-1.5">
+                  <p className="text-lg font-semibold text-muted-foreground/80">
+                    {formatCurrency(displayProfit / 0.03, currency)}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="hidden lg:block" />
+            )}
           </div>
         </div>
 

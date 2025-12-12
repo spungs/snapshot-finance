@@ -141,6 +141,7 @@ export const translations = {
         addingProgress: '추가 중...',
         savingSnapshotProgress: '저장 중...',
         snapshotPrefix: '스냅샷',
+        interestPrincipal: '이자 3% 환산 원금',
         // Landing Page
         landing: {
             features: '기능',
@@ -332,6 +333,7 @@ export const translations = {
         addingProgress: 'Adding...',
         savingSnapshotProgress: 'Saving...',
         snapshotPrefix: 'Snapshot',
+        interestPrincipal: 'Principal for 3% Interest',
         // Landing Page
         landing: {
             features: 'Features',

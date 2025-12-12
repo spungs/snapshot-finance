@@ -669,6 +669,7 @@ export function HoldingsManager({ initialData }: Props) {
                                 <div className="hidden md:block overflow-x-auto -mx-4 sm:mx-0">
                                     <div className="min-w-[700px] px-4 sm:px-0">
                                         <DndContext
+                                            id="holdings-dnd-context"
                                             sensors={sensors}
                                             collisionDetection={closestCenter}
                                             onDragEnd={handleDragEnd}
