@@ -4,8 +4,18 @@ import https from 'https'
 import AdmZip from 'adm-zip'
 import iconv from 'iconv-lite'
 import { PrismaClient } from '@prisma/client'
+import { Pool } from 'pg'
+import { PrismaPg } from '@prisma/adapter-pg'
+import dotenv from 'dotenv'
 
-const prisma = new PrismaClient()
+// Load env vars - prioritize .env for production DB as requested
+dotenv.config({ path: path.resolve(__dirname, '../.env'), override: true });
+// dotenv.config({ path: path.resolve(__dirname, '../.env.local') });
+
+const connectionString = process.env.DATABASE_URL
+const pool = new Pool({ connectionString })
+const adapter = new PrismaPg(pool)
+const prisma = new PrismaClient({ adapter })
 
 const DOWNLOAD_DIR = path.join(process.cwd(), 'tmp')
 const BASE_URL = 'https://new.real.download.dws.co.kr/common/master'
