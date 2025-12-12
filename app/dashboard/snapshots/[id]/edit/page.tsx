@@ -339,7 +339,7 @@ export default function EditSnapshotPage() {
     if (error && !holdings.length) {
         return (
             <div className="text-center py-12">
-                <p className="text-red-500 mb-4">{error}</p>
+                <p className="text-destructive mb-4">{error}</p>
                 <Link href="/dashboard/snapshots">
                     <Button>{t('backToList')}</Button>
                 </Link>
@@ -355,7 +355,7 @@ export default function EditSnapshotPage() {
             <div>
                 <Link
                     href={`/dashboard/snapshots/${params.id}`}
-                    className="text-sm text-gray-500 hover:text-gray-700 mb-2 inline-block"
+                    className="text-sm text-muted-foreground hover:text-foreground mb-2 inline-block"
                 >
                     ← {t('snapshotDetail')}
                 </Link>
@@ -385,7 +385,7 @@ export default function EditSnapshotPage() {
                             <p className="text-xs text-muted-foreground">
                                 {t('historicalMode')}
                             </p>
-                            <p className="text-sm text-stone-500">
+                            <p className="text-sm text-muted-foreground">
                                 {t('exchangeRate')}: ₩{exchangeRate.toLocaleString()} / USD
                             </p>
                         </div>
@@ -414,7 +414,7 @@ export default function EditSnapshotPage() {
                                             type="button"
                                             variant="ghost"
                                             size="sm"
-                                            className="text-red-500"
+                                            className="text-destructive hover:text-destructive"
                                             onClick={() => removeHolding(index)}
                                             disabled={saving}
                                         >
@@ -431,7 +431,7 @@ export default function EditSnapshotPage() {
                                         disabled={saving}
                                     />
                                     {holding.stockCode && (
-                                        <p className="text-xs text-stone-500 mt-1">
+                                        <p className="text-xs text-muted-foreground mt-1">
                                             {snapshotDate === today ? t('currentPrice') : `${snapshotDate} ${t('closingPrice')}`}: {formatCurrency(parseFloat(holding.currentPrice) || 0, holding.currency)}
                                         </p>
                                     )}
@@ -495,7 +495,7 @@ export default function EditSnapshotPage() {
                     <CardHeader>
                         <CardTitle className="flex justify-between items-center">
                             <span>{t('summary')}</span>
-                            <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+                            <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
                                 <Button
                                     type="button"
                                     variant={summaryDisplayCurrency === 'KRW' ? 'default' : 'ghost'}
@@ -522,19 +522,19 @@ export default function EditSnapshotPage() {
                     <CardContent>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                             <div>
-                                <p className="text-sm text-gray-500">{t('totalInvested')}</p>
-                                <p className="text-lg font-semibold">
-                                    {formatCurrency(totals.totalCost, totals.currency)}
-                                </p>
-                            </div>
-                            <div>
-                                <p className="text-sm text-gray-500">{t('totalValue')}</p>
+                                <p className="text-sm text-muted-foreground">{t('totalValue')}</p>
                                 <p className="text-lg font-semibold">
                                     {formatCurrency(totals.totalValue, totals.currency)}
                                 </p>
                             </div>
                             <div>
-                                <p className="text-sm text-gray-500">{t('pl')}</p>
+                                <p className="text-sm text-muted-foreground">{t('totalInvested')}</p>
+                                <p className="text-lg font-semibold">
+                                    {formatCurrency(totals.totalCost, totals.currency)}
+                                </p>
+                            </div>
+                            <div>
+                                <p className="text-sm text-muted-foreground">{t('pl')}</p>
                                 <p
                                     className={`text-lg font-semibold ${isProfit ? 'text-red-600' : 'text-blue-600'
                                         }`}
@@ -543,7 +543,7 @@ export default function EditSnapshotPage() {
                                 </p>
                             </div>
                             <div>
-                                <p className="text-sm text-gray-500">{t('returnRate')}</p>
+                                <p className="text-sm text-muted-foreground">{t('returnRate')}</p>
                                 <p
                                     className={`text-lg font-semibold ${isProfit ? 'text-red-600' : 'text-blue-600'
                                         }`}
@@ -556,7 +556,7 @@ export default function EditSnapshotPage() {
                 </Card>
 
                 {error && (
-                    <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
+                    <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-lg">
                         {error}
                     </div>
                 )}

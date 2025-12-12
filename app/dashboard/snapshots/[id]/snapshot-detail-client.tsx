@@ -47,7 +47,7 @@ export default function SnapshotDetailClient({ snapshot }: SnapshotDetailClientP
                 <div>
                     <Link
                         href="/dashboard/snapshots"
-                        className="text-sm text-gray-500 hover:text-gray-700 mb-2 inline-block"
+                        className="text-sm text-muted-foreground hover:text-foreground mb-2 inline-block"
                     >
                         ← {t('snapshotList')}
                     </Link>

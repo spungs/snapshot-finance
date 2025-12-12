@@ -380,7 +380,7 @@ export function HoldingsManager({ initialData }: Props) {
         return (
             <Card>
                 <CardContent className="py-8 text-center">
-                    <p className="text-red-500 mb-4">{error}</p>
+                    <p className="text-destructive mb-4">{error}</p>
                     <Button onClick={() => fetchHoldings()}>{t('retry')}</Button>
                 </CardContent>
             </Card>
@@ -558,11 +558,11 @@ export function HoldingsManager({ initialData }: Props) {
                                         const isProfit = holding.profit >= 0
                                         const currency = holding.currency || 'KRW'
                                         return (
-                                            <div key={holding.id} className="bg-gray-50 rounded-lg p-4 border space-y-3">
+                                            <div key={holding.id} className="bg-muted/40 rounded-lg p-4 border space-y-3">
                                                 <div className="flex justify-between items-start">
                                                     <div>
                                                         <div className="font-semibold text-lg">{holding.stockName}</div>
-                                                        <div className="text-sm text-gray-500">{holding.stockCode}</div>
+                                                        <div className="text-sm text-muted-foreground">{holding.stockCode}</div>
                                                     </div>
                                                     <div className="text-right">
                                                         <div className="flex justify-end gap-1">
@@ -581,9 +581,9 @@ export function HoldingsManager({ initialData }: Props) {
                                                                 disabled={isRefreshing || savingSnapshot || deletingId === holding.id}
                                                             >
                                                                 {deletingId === holding.id ? (
-                                                                    <Loader2 className="w-4 h-4 animate-spin text-red-500" />
+                                                                    <Loader2 className="w-4 h-4 animate-spin text-destructive" />
                                                                 ) : (
-                                                                    <Trash2 className="w-4 h-4 text-red-500" />
+                                                                    <Trash2 className="w-4 h-4 text-destructive" />
                                                                 )}
                                                             </Button>
                                                         </div>
@@ -592,16 +592,16 @@ export function HoldingsManager({ initialData }: Props) {
 
                                                 <div className="grid grid-cols-2 gap-4 border-t pt-3">
                                                     <div>
-                                                        <div className="text-xs text-gray-500 mb-1">{t('quantity')}</div>
+                                                        <div className="text-xs text-muted-foreground mb-1">{t('quantity')}</div>
                                                         <div className="font-medium">{formatNumber(holding.quantity)}{t('countUnit')}</div>
                                                     </div>
                                                     <div className="text-right">
-                                                        <div className="text-xs text-gray-500 mb-1">{t('avgPrice')}</div>
+                                                        <div className="text-xs text-muted-foreground mb-1">{t('avgPrice')}</div>
                                                         <div className="font-medium">{formatCurrency(holding.averagePrice, currency)}</div>
                                                     </div>
 
                                                     <div>
-                                                        <div className="text-xs text-gray-500 mb-1">{t('currentPrice')}</div>
+                                                        <div className="text-xs text-muted-foreground mb-1">{t('currentPrice')}</div>
                                                         <div className="font-medium">{formatCurrency(holding.currentPrice, currency)}</div>
                                                         {holding.currency === 'USD' && summary?.exchangeRate && language === 'ko' && (
                                                             <div className="text-xs text-muted-foreground mt-0.5">
@@ -615,7 +615,7 @@ export function HoldingsManager({ initialData }: Props) {
                                                         )}
                                                     </div>
                                                     <div className="text-right">
-                                                        <div className="text-xs text-gray-500 mb-1">{t('totalCost')}</div>
+                                                        <div className="text-xs text-muted-foreground mb-1">{t('totalCost')}</div>
                                                         <div className="font-medium">{formatCurrency(holding.totalCost, currency)}</div>
                                                         {holding.currency === 'USD' && summary?.exchangeRate && language === 'ko' && (
                                                             <div className="text-xs text-muted-foreground mt-0.5">
@@ -630,9 +630,9 @@ export function HoldingsManager({ initialData }: Props) {
                                                     </div>
                                                 </div>
 
-                                                <div className="flex justify-between items-center bg-white p-3 rounded border">
+                                                <div className="flex justify-between items-center bg-background p-3 rounded border">
                                                     <div>
-                                                        <div className="text-xs text-gray-500">{t('pl')}</div>
+                                                        <div className="text-xs text-muted-foreground">{t('pl')}</div>
                                                         <div className={cn(
                                                             "font-medium",
                                                             isProfit ? 'text-red-600' : 'text-blue-600'
@@ -651,7 +651,7 @@ export function HoldingsManager({ initialData }: Props) {
                                                         )}
                                                     </div>
                                                     <div className="text-right">
-                                                        <div className="text-xs text-gray-500">{t('returnRate')}</div>
+                                                        <div className="text-xs text-muted-foreground">{t('returnRate')}</div>
                                                         <div className={cn(
                                                             "font-bold text-lg",
                                                             isProfit ? 'text-red-600' : 'text-blue-600'

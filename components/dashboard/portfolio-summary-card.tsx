@@ -61,7 +61,7 @@ export function PortfolioSummaryCard({
         <CardTitle className="flex justify-between items-center">
           <span>{t('portfolioSummary')}</span>
           {snapshotDate && (
-            <span className="text-sm font-normal text-gray-500">
+            <span className="text-sm font-normal text-muted-foreground">
               {snapshotDate}
             </span>
           )}
@@ -71,13 +71,13 @@ export function PortfolioSummaryCard({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           {/* 총 자산 */}
           <div className="lg:col-span-1">
-            <p className="text-xs sm:text-sm text-gray-500 mb-1">{t('totalValue')}</p>
+            <p className="text-xs sm:text-sm text-muted-foreground mb-1">{t('totalValue')}</p>
             <p className="text-xl sm:text-2xl font-bold text-primary">{formatCurrency(displayValue, currency)}</p>
           </div>
 
           {/* 자산 구성 (주식/현금) */}
           <div>
-            <p className="text-xs text-gray-500 mb-1">{t('stockValue')}</p>
+            <p className="text-xs text-muted-foreground mb-1">{t('stockValue')}</p>
             <div className="flex items-baseline gap-2">
               <p className="text-lg font-semibold">{formatCurrency(displayStockValue, currency)}</p>
               {displayValue > 0 && (
@@ -90,7 +90,7 @@ export function PortfolioSummaryCard({
 
           <div>
             <div className="flex items-center gap-1 mb-1">
-              <p className="text-xs text-gray-500">{t('cash')}</p>
+              <p className="text-xs text-muted-foreground">{t('cash')}</p>
               {isEditable && (
                 <CashBalanceDialog
                   initialBalance={props.cashBalance || 0}
@@ -110,24 +110,24 @@ export function PortfolioSummaryCard({
           </div>
 
           <div>
-            <p className="text-xs text-gray-500 mb-1">{t('holdings')}</p>
+            <p className="text-xs text-muted-foreground mb-1">{t('holdings')}</p>
             <p className="text-lg font-semibold">{holdingsCount}{t('countUnit')}</p>
           </div>
         </div>
 
-        <div className="col-span-full border-t pt-4 mt-4">
+        <div className="col-span-full border-t border-border pt-4 mt-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             {/* 총 매입금액 */}
             <div className="lg:col-span-1">
-              <p className="text-xs sm:text-sm text-gray-500 mb-1">{t('totalInvested')}</p>
-              <p className="text-lg font-semibold text-gray-700">
+              <p className="text-xs sm:text-sm text-muted-foreground mb-1">{t('totalInvested')}</p>
+              <p className="text-lg font-semibold text-foreground">
                 {formatCurrency(displayCost, currency)}
               </p>
             </div>
 
             {/* 평가손익 (투자) */}
             <div>
-              <p className="text-xs sm:text-sm text-gray-500 mb-1">{t('plInvest')}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground mb-1">{t('plInvest')}</p>
               <p
                 className={cn(
                   'text-lg font-bold',
@@ -140,7 +140,7 @@ export function PortfolioSummaryCard({
 
             {/* 수익률 */}
             <div>
-              <p className="text-xs sm:text-sm text-gray-500 mb-1">{t('returnRate')}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground mb-1">{t('returnRate')}</p>
               <p
                 className={cn(
                   'text-lg font-bold',
@@ -158,7 +158,7 @@ export function PortfolioSummaryCard({
 
         {/* 환율 표시 (KRW일 때) */}
         {currency === 'KRW' && exchangeRate && (
-          <div className="mt-4 pt-4 border-t text-sm text-right text-muted-foreground">
+          <div className="mt-4 pt-4 border-t border-border text-sm text-right text-muted-foreground">
             {t('appliedExchangeRate')}: 1 USD = {formatCurrency(exchangeRate, 'KRW')}
           </div>
         )}

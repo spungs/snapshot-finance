@@ -361,7 +361,7 @@ export default function NewSnapshotPage() {
         <div className="flex justify-between items-start mb-2">
           <Link
             href="/dashboard"
-            className="text-sm text-gray-500 hover:text-gray-700 inline-block"
+            className="text-sm text-muted-foreground hover:text-foreground inline-block"
           >
             ← {t('dashboard')}
           </Link>
@@ -378,7 +378,7 @@ export default function NewSnapshotPage() {
           </Button>
         </div>
         <h1 className="text-2xl font-bold">{t('newSnapshot')}</h1>
-        <p className="text-gray-500">
+        <p className="text-muted-foreground">
           {t('newSnapshotDesc')}
         </p>
       </div>
@@ -400,11 +400,11 @@ export default function NewSnapshotPage() {
               className="w-full md:w-1/3"
             />
             {snapshotDate !== today && (
-              <p className="text-sm text-blue-600">
+              <p className="text-sm text-primary">
                 {t('historicalMode') || '* Past date selected. Stock prices and exchange rates will be automatically fetched for this date.'}
               </p>
             )}
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-muted-foreground">
               {t('exchangeRate')}: {formatCurrency(exchangeRate, 'KRW')} / USD
             </p>
           </div>
@@ -415,10 +415,10 @@ export default function NewSnapshotPage() {
       <form onSubmit={handleSubmit} className="space-y-6 relative">
         {/* Loading Overlay */}
         {loading && (
-          <div className="absolute inset-0 bg-white/50 backdrop-blur-sm z-50 flex items-center justify-center rounded-lg">
+          <div className="absolute inset-0 bg-background/50 backdrop-blur-sm z-50 flex items-center justify-center rounded-lg">
             <div className="flex flex-col items-center gap-3">
               <Loader2 className="w-10 h-10 animate-spin text-primary" />
-              <p className="text-sm font-medium text-gray-600 animate-pulse">{t('calculating') || 'Loading...'}</p>
+              <p className="text-sm font-medium text-muted-foreground animate-pulse">{t('calculating') || 'Loading...'}</p>
             </div>
           </div>
         )}
@@ -446,7 +446,7 @@ export default function NewSnapshotPage() {
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="text-red-500"
+                      className="text-destructive hover:text-destructive"
                       onClick={() => removeHolding(index)}
                     >
                       {t('delete')}
@@ -461,7 +461,7 @@ export default function NewSnapshotPage() {
                     onSelect={(stock) => handleStockSelect(index, stock)}
                   />
                   {holding.stockCode && (
-                    <p className="text-xs text-stone-500 mt-1">
+                    <p className="text-xs text-muted-foreground mt-1">
                       {snapshotDate === today ? t('currentPrice') : `${snapshotDate} ${t('closingPrice')}`}: {formatCurrency(parseFloat(holding.currentPrice) || 0, holding.currency)}
                     </p>
                   )}
@@ -524,7 +524,7 @@ export default function NewSnapshotPage() {
           <CardHeader>
             <CardTitle className="flex justify-between items-center">
               <span>{t('summary')}</span>
-              <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+              <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
                 <Button
                   type="button"
                   variant={summaryDisplayCurrency === 'KRW' ? 'default' : 'ghost'}
@@ -549,19 +549,19 @@ export default function NewSnapshotPage() {
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
-                <p className="text-sm text-gray-500">{t('totalInvested')}</p>
+                <p className="text-sm text-muted-foreground">{t('totalInvested')}</p>
                 <p className="text-lg font-semibold">
                   {formatCurrency(totals.totalCost, totals.currency)}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">{t('totalValue')}</p>
+                <p className="text-sm text-muted-foreground">{t('totalValue')}</p>
                 <p className="text-lg font-semibold">
                   {formatCurrency(totals.totalValue, totals.currency)}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">{t('pl')}</p>
+                <p className="text-sm text-muted-foreground">{t('pl')}</p>
                 <p
                   className={`text-lg font-semibold ${isProfit ? 'text-red-600' : 'text-blue-600'
                     }`}
@@ -570,7 +570,7 @@ export default function NewSnapshotPage() {
                 </p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">{t('returnRate')}</p>
+                <p className="text-sm text-muted-foreground">{t('returnRate')}</p>
                 <p
                   className={`text-lg font-semibold ${isProfit ? 'text-red-600' : 'text-blue-600'
                     }`}
@@ -584,7 +584,7 @@ export default function NewSnapshotPage() {
 
         {/* 에러 메시지 */}
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
+          <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-lg">
             {error}
           </div>
         )}

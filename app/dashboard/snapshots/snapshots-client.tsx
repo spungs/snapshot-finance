@@ -75,7 +75,7 @@ export function SnapshotsClient({ initialSnapshots }: SnapshotsClientProps) {
             {snapshots.length === 0 ? (
                 <Card>
                     <CardContent className="text-center py-12">
-                        <p className="text-gray-500 mb-4">{t('noSnapshots')}</p>
+                        <p className="text-muted-foreground mb-4">{t('noSnapshots')}</p>
                         <Link href="/dashboard/snapshots/new">
                             <Button>{t('createFirstSnapshot')}</Button>
                         </Link>
@@ -84,7 +84,7 @@ export function SnapshotsClient({ initialSnapshots }: SnapshotsClientProps) {
             ) : (
                 <Card>
                     <CardContent className="p-0">
-                        <div className="bg-white rounded-lg shadow overflow-hidden">
+                        <div className="bg-card rounded-lg shadow overflow-hidden">
                             {/* Mobile View: Cards */}
                             <div className="md:hidden space-y-4 p-4">
                                 {snapshots.map((snapshot) => {
@@ -103,7 +103,7 @@ export function SnapshotsClient({ initialSnapshots }: SnapshotsClientProps) {
                                     }
 
                                     return (
-                                        <div key={snapshot.id} className="bg-gray-50 rounded-lg p-4 border space-y-3">
+                                        <div key={snapshot.id} className="bg-muted/40 rounded-lg p-4 border space-y-3">
                                             <div className="flex justify-between items-start">
                                                 <div className="flex flex-col">
                                                     <Link
@@ -112,7 +112,7 @@ export function SnapshotsClient({ initialSnapshots }: SnapshotsClientProps) {
                                                     >
                                                         <span suppressHydrationWarning>{formatDate(snapshot.snapshotDate)}</span>
                                                     </Link>
-                                                    <span className="text-sm text-gray-500 mt-1">{snapshot.holdings.length}{t('countUnit')}</span>
+                                                    <span className="text-sm text-muted-foreground mt-1">{snapshot.holdings.length}{t('countUnit')}</span>
                                                 </div>
                                                 <div className="flex gap-2">
                                                     <Link href={`/dashboard/snapshots/${snapshot.id}`}>
@@ -134,11 +134,11 @@ export function SnapshotsClient({ initialSnapshots }: SnapshotsClientProps) {
 
                                             <div className="grid grid-cols-2 gap-4 pt-2">
                                                 <div>
-                                                    <div className="text-xs text-gray-500 mb-1">{t('totalValue')}</div>
+                                                    <div className="text-xs text-muted-foreground mb-1">{t('totalValue')}</div>
                                                     <div className="font-medium text-base">{formatCurrency(displayValue, currency)}</div>
                                                 </div>
                                                 <div className="text-right">
-                                                    <div className="text-xs text-gray-500 mb-1">{t('returnRate')}</div>
+                                                    <div className="text-xs text-muted-foreground mb-1">{t('returnRate')}</div>
                                                     <div className={cn(
                                                         "font-bold text-base",
                                                         isProfit ? 'text-red-600' : 'text-blue-600'
@@ -147,7 +147,7 @@ export function SnapshotsClient({ initialSnapshots }: SnapshotsClientProps) {
                                                     </div>
                                                 </div>
                                                 <div className="col-span-2 flex justify-between items-center border-t pt-2 mt-1">
-                                                    <span className="text-xs text-gray-500">{t('pl')}</span>
+                                                    <span className="text-xs text-muted-foreground">{t('pl')}</span>
                                                     <span className={cn(
                                                         "font-medium",
                                                         isProfit ? 'text-red-600' : 'text-blue-600'
@@ -158,7 +158,7 @@ export function SnapshotsClient({ initialSnapshots }: SnapshotsClientProps) {
                                             </div>
 
                                             {snapshot.note && (
-                                                <div className="text-sm text-gray-600 bg-white p-2 rounded border mt-2">
+                                                <div className="text-sm text-muted-foreground bg-background p-2 rounded border mt-2">
                                                     {snapshot.note}
                                                 </div>
                                             )}
@@ -231,7 +231,7 @@ export function SnapshotsClient({ initialSnapshots }: SnapshotsClientProps) {
                                                         <TableCell className="text-right">
                                                             {snapshot.holdings.length}{t('countUnit')}
                                                         </TableCell>
-                                                        <TableCell className="text-gray-500 max-w-[200px] truncate">
+                                                        <TableCell className="text-muted-foreground max-w-[200px] truncate">
                                                             {snapshot.note || '-'}
                                                         </TableCell>
                                                         <TableCell className="text-right">

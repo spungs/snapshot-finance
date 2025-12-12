@@ -32,10 +32,10 @@ export function DashboardRefreshWrapper({ cashBalance, children }: DashboardRefr
 
             <div className="relative">
                 {isPending && (
-                    <div className="absolute inset-0 bg-white/50 backdrop-blur-sm z-50 flex items-start pt-20 justify-center rounded-lg">
+                    <div className="absolute inset-0 bg-background/50 backdrop-blur-sm z-50 flex items-start pt-20 justify-center rounded-lg">
                         <div className="sticky top-20 flex flex-col items-center gap-3">
                             <Loader2 className="w-10 h-10 animate-spin text-primary" />
-                            <p className="text-sm font-medium text-gray-600 animate-pulse">{t('refreshing')}</p>
+                            <p className="text-sm font-medium text-muted-foreground animate-pulse">{t('refreshing')}</p>
                         </div>
                     </div>
                 )}

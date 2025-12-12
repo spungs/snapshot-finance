@@ -188,7 +188,7 @@ export function HoldingsTable({ holdings, exchangeRate }: HoldingsTableProps) {
       </CardHeader>
       <CardContent>
         {filteredHoldings.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
+          <div className="text-center py-8 text-muted-foreground">
             {holdings.length === 0 ? t('holdingsEmpty') : t('filterEmpty')}
           </div>
         ) : (
@@ -199,30 +199,30 @@ export function HoldingsTable({ holdings, exchangeRate }: HoldingsTableProps) {
                 const isProfit = Number(holding.profit) >= 0
                 const currency = holding.currency || 'KRW'
                 return (
-                  <div key={holding.id} className="bg-gray-50 rounded-lg p-4 border space-y-3">
+                  <div key={holding.id} className="bg-muted/40 rounded-lg p-4 border space-y-3">
                     <div className="flex justify-between items-start">
                       <div>
                         <div className="font-semibold text-lg">{holding.stock.stockName}</div>
-                        <div className="text-sm text-gray-500">{holding.stock.stockCode}</div>
+                        <div className="text-sm text-muted-foreground">{holding.stock.stockCode}</div>
                       </div>
                       <div className="text-right">
-                        <div className="text-sm text-gray-500">{t('quantity')}</div>
+                        <div className="text-sm text-muted-foreground">{t('quantity')}</div>
                         <div className="font-medium">{formatNumber(holding.quantity)}{t('countUnit')}</div>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4 border-t pt-3">
                       <div>
-                        <div className="text-xs text-gray-500 mb-1">{t('avgPrice')}</div>
+                        <div className="text-xs text-muted-foreground mb-1">{t('avgPrice')}</div>
                         <div className="font-medium">{formatCurrency(Number(holding.averagePrice), currency)}</div>
                       </div>
                       <div className="text-right">
-                        <div className="text-xs text-gray-500 mb-1">{t('currentPrice')}</div>
+                        <div className="text-xs text-muted-foreground mb-1">{t('currentPrice')}</div>
                         <div className="font-medium">{formatCurrency(Number(holding.currentPrice), currency)}</div>
                       </div>
 
                       <div>
-                        <div className="text-xs text-gray-500 mb-1">{t('totalCost')}</div>
+                        <div className="text-xs text-muted-foreground mb-1">{t('totalCost')}</div>
                         <div className="font-medium">{formatCurrency(Number(holding.totalCost), currency)}</div>
                         {currency === 'USD' && exchangeRate && language === 'ko' && (
                           <div className="text-xs text-muted-foreground mt-0.5">
@@ -236,7 +236,7 @@ export function HoldingsTable({ holdings, exchangeRate }: HoldingsTableProps) {
                         )}
                       </div>
                       <div className="text-right">
-                        <div className="text-xs text-gray-500 mb-1">{t('evaluatedValue')}</div>
+                        <div className="text-xs text-muted-foreground mb-1">{t('evaluatedValue')}</div>
                         <div className="font-medium">{formatCurrency(Number(holding.currentValue), currency)}</div>
                         {currency === 'USD' && exchangeRate && language === 'ko' && (
                           <div className="text-xs text-muted-foreground mt-0.5">
@@ -251,9 +251,9 @@ export function HoldingsTable({ holdings, exchangeRate }: HoldingsTableProps) {
                       </div>
                     </div>
 
-                    <div className="flex justify-between items-center bg-white p-3 rounded border">
+                    <div className="flex justify-between items-center bg-background p-3 rounded border">
                       <div>
-                        <div className="text-xs text-gray-500">{t('pl')}</div>
+                        <div className="text-xs text-muted-foreground">{t('pl')}</div>
                         <div className={cn(
                           "font-medium",
                           isProfit ? 'text-red-600' : 'text-blue-600'
@@ -272,7 +272,7 @@ export function HoldingsTable({ holdings, exchangeRate }: HoldingsTableProps) {
                         )}
                       </div>
                       <div className="text-right">
-                        <div className="text-xs text-gray-500">{t('returnRate')}</div>
+                        <div className="text-xs text-muted-foreground">{t('returnRate')}</div>
                         <div className={cn(
                           "font-bold text-lg",
                           isProfit ? 'text-red-600' : 'text-blue-600'
@@ -311,7 +311,7 @@ export function HoldingsTable({ holdings, exchangeRate }: HoldingsTableProps) {
                           <TableCell>
                             <div>
                               <p className="font-medium">{holding.stock.stockName}</p>
-                              <p className="text-sm text-gray-500">
+                              <p className="text-sm text-muted-foreground">
                                 {holding.stock.stockCode}
                               </p>
                             </div>

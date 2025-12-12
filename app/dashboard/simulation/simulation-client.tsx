@@ -229,16 +229,16 @@ export default function SimulationClient({ initialSnapshots }: SimulationClientP
                                         <p className="text-xs text-muted-foreground">{t('basedOnRealtime')}</p>
                                     </CardContent>
                                 </Card>
-                                <Card className={totalGain >= 0 ? "border-red-200 bg-red-50 dark:bg-red-900/20" : "border-blue-200 bg-blue-50 dark:bg-blue-900/20"}>
+                                <Card className={totalGain >= 0 ? "border-profit/20 bg-profit/5 dark:bg-profit/10" : "border-loss/20 bg-loss/5 dark:bg-loss/10"}>
                                     <CardHeader className="pb-2">
                                         <CardTitle className="text-sm font-medium">{t('virtualProfit')}</CardTitle>
                                     </CardHeader>
                                     <CardContent>
-                                        <div className={`text-2xl font-bold flex items-center ${totalGain >= 0 ? "text-red-600" : "text-blue-600"}`}>
+                                        <div className={`text-2xl font-bold flex items-center ${totalGain >= 0 ? "text-profit" : "text-loss"}`}>
                                             {totalGain >= 0 ? <TrendingUp className="mr-2 h-6 w-6" /> : <TrendingDown className="mr-2 h-6 w-6" />}
                                             {formatCurrency(Math.abs(totalGain), currency)}
                                         </div>
-                                        <p className={`text-xs font-medium ${totalGain >= 0 ? "text-red-600" : "text-blue-600"}`}>
+                                        <p className={`text-xs font-medium ${totalGain >= 0 ? "text-profit" : "text-loss"}`}>
                                             {formatProfitRate(result.totalGainRate)}
                                         </p>
 
@@ -252,13 +252,13 @@ export default function SimulationClient({ initialSnapshots }: SimulationClientP
                                                         </span>
                                                     )}
                                                 </span>
-                                                <span className={snapshotProfit >= 0 ? "text-red-600" : "text-blue-600"}>
+                                                <span className={snapshotProfit >= 0 ? "text-profit" : "text-loss"}>
                                                     {formatCurrency(snapshotProfit, currency)}
                                                 </span>
                                             </div>
                                             <div className="flex justify-between text-sm font-medium">
                                                 <span className="text-muted-foreground">차이</span>
-                                                <span className={profitDiff >= 0 ? "text-red-600" : "text-blue-600"}>
+                                                <span className={profitDiff >= 0 ? "text-profit" : "text-loss"}>
                                                     {profitDiff > 0 ? '+' : ''}{formatCurrency(profitDiff, currency)}
                                                     <span className="text-xs ml-1 text-muted-foreground font-normal">
                                                         ({profitDiff >= 0 ? '🎉' : '👿'})
@@ -302,37 +302,37 @@ export default function SimulationClient({ initialSnapshots }: SimulationClientP
                                     }
 
                                     return (
-                                        <div key={`mobile-${item.stockCode}-${index}`} className="bg-gray-50 rounded-lg p-4 border space-y-3">
+                                        <div key={`mobile-${item.stockCode}-${index}`} className="bg-muted/40 rounded-lg p-4 border space-y-3">
                                             <div className="flex justify-between items-start">
                                                 <div>
                                                     <div className="font-semibold">{item.stockName}</div>
-                                                    <div className="text-sm text-gray-500">{item.stockCode}</div>
+                                                    <div className="text-sm text-muted-foreground">{item.stockCode}</div>
                                                 </div>
-                                                <div className={`font-medium ${displayGain >= 0 ? 'text-red-600' : 'text-blue-600'}`}>
+                                                <div className={`font-medium ${displayGain >= 0 ? 'text-profit' : 'text-loss'}`}>
                                                     {formatCurrency(Math.abs(displayGain), displayCurrency)}
                                                 </div>
                                             </div>
 
                                             <div className="grid grid-cols-2 gap-4 border-t pt-3">
                                                 <div>
-                                                    <div className="text-xs text-gray-500 mb-1">{t('quantity')}</div>
+                                                    <div className="text-xs text-muted-foreground mb-1">{t('quantity')}</div>
                                                     <div className="font-medium">{formatNumber(item.quantity)}{t('countUnit')}</div>
                                                 </div>
                                                 <div className="text-right">
-                                                    <div className="text-xs text-gray-500 mb-1">{t('returnRate')}</div>
-                                                    <div className={`${item.gainRate >= 0 ? 'text-red-600' : 'text-blue-600'} font-medium`}>
+                                                    <div className="text-xs text-muted-foreground mb-1">{t('returnRate')}</div>
+                                                    <div className={`${item.gainRate >= 0 ? 'text-profit' : 'text-loss'} font-medium`}>
                                                         {formatProfitRate(item.gainRate)}
                                                     </div>
                                                 </div>
                                                 <div>
-                                                    <div className="text-xs text-gray-500 mb-1">{t('avgPrice')}</div>
+                                                    <div className="text-xs text-muted-foreground mb-1">{t('avgPrice')}</div>
                                                     <div className="font-medium">{formatCurrency(displayAvgPrice, displayCurrency)}</div>
                                                 </div>
                                                 <div className="text-right">
-                                                    <div className="text-xs text-gray-500 mb-1">{t('currentPrice')}</div>
+                                                    <div className="text-xs text-muted-foreground mb-1">{t('currentPrice')}</div>
                                                     <div className="font-medium">
                                                         {item.error ? (
-                                                            <span className="text-red-500 text-xs">{t('fetchFailed')}</span>
+                                                            <span className="text-destructive text-xs">{t('fetchFailed')}</span>
                                                         ) : (
                                                             formatCurrency(displayCurrentPrice, displayCurrency)
                                                         )}
@@ -417,27 +417,27 @@ export default function SimulationClient({ initialSnapshots }: SimulationClientP
                                                         <TableCell className="text-right">{formatCurrency(displayAvgPrice, displayCurrency)}</TableCell>
                                                         <TableCell className="text-right">
                                                             {item.error ? (
-                                                                <span className="text-red-500 text-xs">{t('fetchFailed')}</span>
+                                                                <span className="text-destructive text-xs">{t('fetchFailed')}</span>
                                                             ) : (
                                                                 formatCurrency(displayCurrentPrice, displayCurrency)
                                                             )}
                                                         </TableCell>
                                                         <TableCell className="text-right">
-                                                            <div className={`font-medium ${displayGain >= 0 ? 'text-red-600' : 'text-blue-600'}`}>
+                                                            <div className={`font-medium ${displayGain >= 0 ? 'text-profit' : 'text-loss'}`}>
                                                                 {formatCurrency(Math.abs(displayGain), displayCurrency)}
                                                             </div>
                                                             {displayCurrency === 'USD' && item.gainKRW !== undefined && (
-                                                                <div className={`text-xs ${item.gainKRW >= 0 ? 'text-red-600/70' : 'text-blue-600/70'}`}>
+                                                                <div className={`text-xs ${item.gainKRW >= 0 ? 'text-profit/70' : 'text-loss/70'}`}>
                                                                     ({formatCurrency(Math.abs(item.gainKRW), 'KRW')})
                                                                 </div>
                                                             )}
                                                         </TableCell>
                                                         <TableCell className="text-right">
-                                                            <div className={`${item.gainRate >= 0 ? 'text-red-600' : 'text-blue-600'}`}>
+                                                            <div className={`${item.gainRate >= 0 ? 'text-profit' : 'text-loss'}`}>
                                                                 {formatProfitRate(item.gainRate)}
                                                             </div>
                                                             {displayCurrency === 'USD' && item.gainRateKRW !== undefined && (
-                                                                <div className={`text-xs ${item.gainRateKRW >= 0 ? 'text-red-600/70' : 'text-blue-600/70'}`}>
+                                                                <div className={`text-xs ${item.gainRateKRW >= 0 ? 'text-profit/70' : 'text-loss/70'}`}>
                                                                     ({formatProfitRate(item.gainRateKRW)})
                                                                 </div>
                                                             )}

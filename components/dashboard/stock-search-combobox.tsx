@@ -163,7 +163,7 @@ export function StockSearchCombobox({
                             </div>
                         )}
                         {error && (
-                            <div className="py-6 text-center text-sm text-red-500 px-4 whitespace-pre-wrap">
+                            <div className="py-6 text-center text-sm text-destructive px-4 whitespace-pre-wrap">
                                 {error}
                             </div>
                         )}
