@@ -1,6 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
+import { useLanguage } from '@/lib/i18n/context'
 
 export type Currency = 'KRW' | 'USD'
 
@@ -23,6 +24,16 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
             setBaseCurrencyState(savedCurrency)
         }
     }, [])
+
+    // Sync with Language
+    const { language } = useLanguage()
+    useEffect(() => {
+        if (language === 'en') {
+            setBaseCurrencyState('USD')
+        } else {
+            setBaseCurrencyState('KRW')
+        }
+    }, [language])
 
     const setBaseCurrency = (currency: Currency) => {
         setBaseCurrencyState(currency)

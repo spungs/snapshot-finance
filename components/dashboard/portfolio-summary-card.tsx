@@ -5,7 +5,7 @@ import { formatCurrency, formatProfitRate } from '@/lib/utils/formatters'
 import { cn } from '@/lib/utils'
 
 import { useLanguage } from '@/lib/i18n/context'
-import { Currency } from '@/lib/currency/context'
+import { Currency, useCurrency } from '@/lib/currency/context'
 
 interface PortfolioSummaryCardProps {
   totalValue: number
@@ -25,14 +25,19 @@ export function PortfolioSummaryCard({
   profitRate,
   holdingsCount,
   snapshotDate,
-  baseCurrency = 'KRW',
+  baseCurrency, // Now optional in destructuring, but we need to handle default from context
   exchangeRate = 1435,
 }: PortfolioSummaryCardProps) {
   const { t } = useLanguage()
+  const { baseCurrency: contextBaseCurrency } = useCurrency()
+
+  const currency = baseCurrency || contextBaseCurrency
 
   // Conversion helper
   const convert = (value: number) => {
-    if (baseCurrency === 'KRW') return value // Assuming input is already in KRW (default behavior of existing code)
+    // If target currency is KRW, and input is KRW (assumed), no conversion.
+    // If target is USD, divide by rate.
+    if (currency === 'KRW') return value
     return value / exchangeRate
   }
 
@@ -63,14 +68,14 @@ export function PortfolioSummaryCard({
           {/* 총 평가금액 */}
           <div>
             <p className="text-xs sm:text-sm text-gray-500 mb-1">{t('totalValue')}</p>
-            <p className="text-xl sm:text-2xl font-bold">{formatCurrency(displayValue, baseCurrency)}</p>
+            <p className="text-xl sm:text-2xl font-bold">{formatCurrency(displayValue, currency)}</p>
           </div>
 
           {/* 총 매입금액 */}
           <div>
             <p className="text-xs sm:text-sm text-gray-500 mb-1">{t('totalInvested')}</p>
             <p className="text-lg sm:text-xl font-semibold text-gray-700">
-              {formatCurrency(displayCost, baseCurrency)}
+              {formatCurrency(displayCost, currency)}
             </p>
           </div>
 
@@ -83,7 +88,7 @@ export function PortfolioSummaryCard({
                 isProfit ? 'text-red-600' : 'text-blue-600'
               )}
             >
-              {formatCurrency(Math.abs(displayProfit), baseCurrency)}
+              {formatCurrency(Math.abs(displayProfit), currency)}
             </p>
           </div>
 
@@ -110,7 +115,7 @@ export function PortfolioSummaryCard({
         </div>
 
         {/* 환율 표시 (KRW일 때) */}
-        {baseCurrency === 'KRW' && exchangeRate && (
+        {currency === 'KRW' && exchangeRate && (
           <div className="mt-4 pt-4 border-t text-sm text-right text-muted-foreground">
             {t('appliedExchangeRate')}: 1 USD = {formatCurrency(exchangeRate, 'KRW')}
           </div>

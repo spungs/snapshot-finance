@@ -30,6 +30,7 @@ interface Snapshot {
         stock: { stockName: string }
     }>
     note?: string | null
+    exchangeRate?: number
 }
 
 interface SnapshotsClientProps {
@@ -102,6 +103,18 @@ export function SnapshotsClient({ initialSnapshots }: SnapshotsClientProps) {
                                             {snapshots.map((snapshot) => {
                                                 const profit = Number(snapshot.totalProfit)
                                                 const isProfit = profit >= 0
+                                                const { t, language } = useLanguage()
+
+                                                // Calculate display values
+                                                let displayValue = Number(snapshot.totalValue)
+                                                let displayProfit = profit
+                                                let currency = 'KRW'
+
+                                                if (language === 'en' && snapshot.exchangeRate) {
+                                                    displayValue = displayValue / snapshot.exchangeRate
+                                                    displayProfit = displayProfit / snapshot.exchangeRate
+                                                    currency = 'USD'
+                                                }
 
                                                 return (
                                                     <TableRow key={snapshot.id}>
@@ -114,7 +127,7 @@ export function SnapshotsClient({ initialSnapshots }: SnapshotsClientProps) {
                                                             </Link>
                                                         </TableCell>
                                                         <TableCell className="text-right font-medium">
-                                                            {formatCurrency(Number(snapshot.totalValue))}
+                                                            {formatCurrency(displayValue, currency)}
                                                         </TableCell>
                                                         <TableCell
                                                             className={cn(
@@ -122,7 +135,7 @@ export function SnapshotsClient({ initialSnapshots }: SnapshotsClientProps) {
                                                                 isProfit ? 'text-red-600' : 'text-blue-600'
                                                             )}
                                                         >
-                                                            {formatCurrency(Math.abs(profit))}
+                                                            {formatCurrency(Math.abs(displayProfit), currency)}
                                                         </TableCell>
                                                         <TableCell
                                                             className={cn(

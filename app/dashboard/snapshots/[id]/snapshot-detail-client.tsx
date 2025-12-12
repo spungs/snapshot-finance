@@ -89,7 +89,6 @@ export default function SnapshotDetailClient({ snapshot }: SnapshotDetailClientP
                 totalProfit={snapshot.totalProfit}
                 profitRate={snapshot.profitRate}
                 holdingsCount={snapshot.holdings.length}
-                baseCurrency="KRW"
                 exchangeRate={snapshot.exchangeRate}
             />
 

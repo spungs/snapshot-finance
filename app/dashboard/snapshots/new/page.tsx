@@ -9,9 +9,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { StockSearchCombobox } from '@/components/dashboard/stock-search-combobox'
 import { FormattedNumberInput } from '@/components/ui/formatted-number-input'
-import { snapshotsApi } from '@/lib/api/client'
+import { snapshotsApi, holdingsApi } from '@/lib/api/client'
 import { formatCurrency } from '@/lib/utils/formatters'
 import { useLanguage } from '@/lib/i18n/context'
+import { Download, Loader2 } from 'lucide-react'
 
 const TEST_ACCOUNT_ID = 'test-account-1'
 
@@ -34,7 +35,7 @@ interface HoldingInput {
 
 export default function NewSnapshotPage() {
   const router = useRouter()
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   const today = new Date().toISOString().split('T')[0]
   const [snapshotDate, setSnapshotDate] = useState(today)
   const [holdings, setHoldings] = useState<HoldingInput[]>([
@@ -47,6 +48,15 @@ export default function NewSnapshotPage() {
   const [summaryDisplayCurrency, setSummaryDisplayCurrency] = useState<'KRW' | 'USD'>('KRW')
   const [exchangeRate, setExchangeRate] = useState<number>(1435)
   const [updatingPrices, setUpdatingPrices] = useState(false)
+  // Sync summary currency with language
+  useEffect(() => {
+    if (language === 'en') {
+      setSummaryDisplayCurrency('USD')
+    } else {
+      setSummaryDisplayCurrency('KRW')
+    }
+  }, [language])
+
 
   // Fetch Exchange Rate AND Stock Prices when date changes
   useEffect(() => {
@@ -56,7 +66,20 @@ export default function NewSnapshotPage() {
         // 1. Update Exchange Rate
         let currentRate = 1435
         if (snapshotDate === today) {
-          setExchangeRate(1435)
+          try {
+            const res = await fetch('/api/exchange-rate')
+            const data = await res.json()
+            if (data.success && data.rate) {
+              currentRate = data.rate
+              setExchangeRate(currentRate)
+            } else {
+              console.warn('Failed to fetch current exchange rate, using default 1435.')
+              setExchangeRate(1435)
+            }
+          } catch (e) {
+            console.error('Failed to fetch current exchange rate', e)
+            setExchangeRate(1435)
+          }
         } else {
           console.log('Fetching historical exchange rate for:', snapshotDate)
           try {
@@ -202,6 +225,45 @@ export default function NewSnapshotPage() {
     }
   }
 
+  async function loadCurrentHoldings() {
+    if (confirm(t('loadCurrentHoldingsConfirm'))) {
+      setLoading(true)
+      try {
+        const response = await holdingsApi.getList()
+        if (response.success && response.data) {
+          const newHoldings: HoldingInput[] = response.data.holdings.map((h: any) => {
+            const currency = h.currency || 'KRW'
+            // If USD stock has no valid purchaseRate (e.g. 1 or 0), assume current exchange rate as fallback estimate
+            // to prevent total cost from being calculated as (USD_Amount * 1 KRW)
+            const rawPurchaseRate = h.purchaseRate?.toString()
+            let purchaseRate = rawPurchaseRate || '1'
+            if (currency === 'USD' && (!rawPurchaseRate || rawPurchaseRate === '1')) {
+              purchaseRate = exchangeRate.toString()
+            }
+
+            return {
+              stockId: h.stockId,
+              stockName: h.stockName,
+              stockCode: h.stockCode,
+              quantity: h.quantity.toString(),
+              averagePrice: h.averagePrice.toString(),
+              currentPrice: h.currentPrice.toString(),
+              currency: currency,
+              purchaseRate: purchaseRate,
+            }
+          })
+          setHoldings(newHoldings)
+        } else {
+          setError(t('loadFailed') || 'Failed to load holdings')
+        }
+      } catch (err) {
+        setError(t('networkError'))
+      } finally {
+        setLoading(false)
+      }
+    }
+  }
+
   function calculateTotals(displayCurrency: 'KRW' | 'USD') {
     let totalCost = 0
     let totalValue = 0
@@ -264,6 +326,7 @@ export default function NewSnapshotPage() {
     try {
       const response = await snapshotsApi.create({
         snapshotDate: snapshotDate, // Pass the selected date
+        exchangeRate: exchangeRate, // Pass the selected/fetched exchange rate
         holdings: validHoldings.map((h) => ({
           stockId: h.stockId,
           quantity: parseInt(h.quantity),
@@ -295,12 +358,25 @@ export default function NewSnapshotPage() {
     <div className="space-y-6">
       {/* 페이지 헤더 */}
       <div>
-        <Link
-          href="/dashboard"
-          className="text-sm text-gray-500 hover:text-gray-700 mb-2 inline-block"
-        >
-          ← {t('dashboard')}
-        </Link>
+        <div className="flex justify-between items-start mb-2">
+          <Link
+            href="/dashboard"
+            className="text-sm text-gray-500 hover:text-gray-700 inline-block"
+          >
+            ← {t('dashboard')}
+          </Link>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={loadCurrentHoldings}
+            disabled={loading || updatingPrices}
+            className="flex items-center gap-2"
+          >
+            <Download className="w-4 h-4" />
+            {t('loadCurrentHoldings')}
+          </Button>
+        </div>
         <h1 className="text-2xl font-bold">{t('newSnapshot')}</h1>
         <p className="text-gray-500">
           {t('newSnapshotDesc')}
@@ -335,7 +411,18 @@ export default function NewSnapshotPage() {
         </CardContent>
       </Card>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+
+      <form onSubmit={handleSubmit} className="space-y-6 relative">
+        {/* Loading Overlay */}
+        {loading && (
+          <div className="absolute inset-0 bg-white/50 backdrop-blur-sm z-50 flex items-center justify-center rounded-lg">
+            <div className="flex flex-col items-center gap-3">
+              <Loader2 className="w-10 h-10 animate-spin text-primary" />
+              <p className="text-sm font-medium text-gray-600 animate-pulse">{t('calculating') || 'Loading...'}</p>
+            </div>
+          </div>
+        )}
+
         {/* 보유 종목 입력 */}
         <Card>
           <CardHeader>

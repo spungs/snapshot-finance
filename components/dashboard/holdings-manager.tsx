@@ -17,6 +17,7 @@ import { formatCurrency, formatProfitRate } from '@/lib/utils/formatters'
 import { cn } from '@/lib/utils'
 import { useLanguage } from '@/lib/i18n/context'
 import { StockSearchCombobox } from '@/components/dashboard/stock-search-combobox'
+import { PortfolioSummaryCard } from '@/components/dashboard/portfolio-summary-card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { FormattedNumberInput } from '@/components/ui/formatted-number-input'
 import { Plus, Trash2, Camera, Edit2, Check, X, Loader2 } from 'lucide-react'
@@ -386,50 +387,14 @@ export function HoldingsManager({ initialData }: Props) {
         <div className="space-y-6">
             {/* 요약 카드 */}
             {summary && (
-                <Card>
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-lg">{t('portfolioSummary')}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                            <div>
-                                <p className="text-sm text-muted-foreground">{t('totalValue')}</p>
-                                <p className="text-2xl font-bold">{formatCurrency(summary.totalValue)}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm text-muted-foreground">{t('totalCost')}</p>
-                                <p className="text-lg font-medium">{formatCurrency(summary.totalCost)}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm text-muted-foreground">{t('pl')}</p>
-                                <p
-                                    className={cn(
-                                        'text-2xl font-bold',
-                                        summary.totalProfit >= 0 ? 'text-red-600' : 'text-blue-600'
-                                    )}
-                                >
-                                    {formatCurrency(Math.abs(summary.totalProfit))}
-                                </p>
-                            </div>
-                            <div>
-                                <p className="text-sm text-muted-foreground">{t('returnRate')}</p>
-                                <p
-                                    className={cn(
-                                        'text-2xl font-bold',
-                                        summary.totalProfitRate >= 0 ? 'text-red-600' : 'text-blue-600'
-                                    )}
-                                >
-                                    {formatProfitRate(summary.totalProfitRate)}
-                                </p>
-                            </div>
-                        </div>
-                        {summary.exchangeRate && language === 'ko' && (
-                            <div className="mt-4 pt-4 border-t text-sm text-right text-muted-foreground">
-                                {t('appliedExchangeRate')}: 1 USD = {formatCurrency(summary.exchangeRate, 'KRW')}
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
+                <PortfolioSummaryCard
+                    totalValue={summary.totalValue}
+                    totalCost={summary.totalCost}
+                    totalProfit={summary.totalProfit}
+                    profitRate={summary.totalProfitRate}
+                    holdingsCount={summary.holdingsCount}
+                    exchangeRate={summary.exchangeRate}
+                />
             )}
 
             {/* 종목 추가 */}
