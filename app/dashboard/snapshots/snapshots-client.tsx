@@ -38,7 +38,7 @@ interface SnapshotsClientProps {
 }
 
 export function SnapshotsClient({ initialSnapshots }: SnapshotsClientProps) {
-    const { t } = useLanguage()
+    const { t, language } = useLanguage()
     const [snapshots, setSnapshots] = useState<Snapshot[]>(initialSnapshots)
     const [deleting, setDeleting] = useState<string | null>(null)
 
@@ -85,7 +85,90 @@ export function SnapshotsClient({ initialSnapshots }: SnapshotsClientProps) {
                 <Card>
                     <CardContent className="p-0">
                         <div className="bg-white rounded-lg shadow overflow-hidden">
-                            <div className="overflow-x-auto">
+                            {/* Mobile View: Cards */}
+                            <div className="md:hidden space-y-4 p-4">
+                                {snapshots.map((snapshot) => {
+                                    const profit = Number(snapshot.totalProfit)
+                                    const isProfit = profit >= 0
+
+                                    // Calculate display values for mobile
+                                    let displayValue = Number(snapshot.totalValue)
+                                    let displayProfit = profit
+                                    let currency = 'KRW'
+
+                                    if (language === 'en' && snapshot.exchangeRate) {
+                                        displayValue = displayValue / snapshot.exchangeRate
+                                        displayProfit = displayProfit / snapshot.exchangeRate
+                                        currency = 'USD'
+                                    }
+
+                                    return (
+                                        <div key={snapshot.id} className="bg-gray-50 rounded-lg p-4 border space-y-3">
+                                            <div className="flex justify-between items-start">
+                                                <div className="flex flex-col">
+                                                    <Link
+                                                        href={`/dashboard/snapshots/${snapshot.id}`}
+                                                        className="font-semibold text-blue-600 hover:underline text-lg"
+                                                    >
+                                                        <span suppressHydrationWarning>{formatDate(snapshot.snapshotDate)}</span>
+                                                    </Link>
+                                                    <span className="text-sm text-gray-500 mt-1">{snapshot.holdings.length}{t('countUnit')}</span>
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    <Link href={`/dashboard/snapshots/${snapshot.id}`}>
+                                                        <Button variant="outline" size="sm" className="h-8 px-2">
+                                                            {t('details')}
+                                                        </Button>
+                                                    </Link>
+                                                    <Button
+                                                        variant="destructive"
+                                                        size="sm"
+                                                        className="h-8 px-2"
+                                                        onClick={() => handleDelete(snapshot.id)}
+                                                        disabled={deleting === snapshot.id}
+                                                    >
+                                                        {deleting === snapshot.id ? t('deleting') : t('delete')}
+                                                    </Button>
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-4 pt-2">
+                                                <div>
+                                                    <div className="text-xs text-gray-500 mb-1">{t('totalValue')}</div>
+                                                    <div className="font-medium text-base">{formatCurrency(displayValue, currency)}</div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="text-xs text-gray-500 mb-1">{t('returnRate')}</div>
+                                                    <div className={cn(
+                                                        "font-bold text-base",
+                                                        isProfit ? 'text-red-600' : 'text-blue-600'
+                                                    )}>
+                                                        {formatProfitRate(Number(snapshot.profitRate))}
+                                                    </div>
+                                                </div>
+                                                <div className="col-span-2 flex justify-between items-center border-t pt-2 mt-1">
+                                                    <span className="text-xs text-gray-500">{t('pl')}</span>
+                                                    <span className={cn(
+                                                        "font-medium",
+                                                        isProfit ? 'text-red-600' : 'text-blue-600'
+                                                    )}>
+                                                        {formatCurrency(Math.abs(displayProfit), currency)}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            {snapshot.note && (
+                                                <div className="text-sm text-gray-600 bg-white p-2 rounded border mt-2">
+                                                    {snapshot.note}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )
+                                })}
+                            </div>
+
+                            {/* Desktop View: Table */}
+                            <div className="hidden md:block overflow-x-auto">
                                 <div className="min-w-[800px]">
                                     <Table>
                                         <TableHeader>

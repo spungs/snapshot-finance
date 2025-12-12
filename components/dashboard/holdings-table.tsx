@@ -192,109 +192,185 @@ export function HoldingsTable({ holdings, exchangeRate }: HoldingsTableProps) {
             {holdings.length === 0 ? t('holdingsEmpty') : t('filterEmpty')}
           </div>
         ) : (
-          <div className="overflow-x-auto -mx-4 sm:mx-0">
-            <div className="min-w-[700px] px-4 sm:px-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <SortableHeader label={t('stockName')} sortKey="stockName" currentSort={sortConfig} onSort={handleSort} />
-                    <SortableHeader label={t('quantity')} sortKey="quantity" align="right" currentSort={sortConfig} onSort={handleSort} />
-                    <SortableHeader label={t('avgPrice')} sortKey="averagePrice" align="right" currentSort={sortConfig} onSort={handleSort} />
-                    <SortableHeader label={t('currentPrice')} sortKey="currentPrice" align="right" currentSort={sortConfig} onSort={handleSort} />
-                    <SortableHeader label={t('totalCost')} sortKey="totalCost" align="right" currentSort={sortConfig} onSort={handleSort} />
-                    <SortableHeader label={t('evaluatedValue')} sortKey="currentValue" align="right" currentSort={sortConfig} onSort={handleSort} />
-                    <SortableHeader label={t('pl')} sortKey="profit" align="right" currentSort={sortConfig} onSort={handleSort} />
-                    <SortableHeader label={t('returnRate')} sortKey="profitRate" align="right" currentSort={sortConfig} onSort={handleSort} />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredHoldings.map((holding) => {
-                    const isProfit = Number(holding.profit) >= 0
-                    const currency = holding.currency || 'KRW'
-                    return (
-                      <TableRow key={holding.id}>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium">{holding.stock.stockName}</p>
-                            <p className="text-sm text-gray-500">
-                              {holding.stock.stockCode}
-                            </p>
+          <>
+            {/* Mobile View: Cards */}
+            <div className="md:hidden space-y-4">
+              {filteredHoldings.map((holding) => {
+                const isProfit = Number(holding.profit) >= 0
+                const currency = holding.currency || 'KRW'
+                return (
+                  <div key={holding.id} className="bg-gray-50 rounded-lg p-4 border space-y-3">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="font-semibold text-lg">{holding.stock.stockName}</div>
+                        <div className="text-sm text-gray-500">{holding.stock.stockCode}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm text-gray-500">{t('quantity')}</div>
+                        <div className="font-medium">{formatNumber(holding.quantity)}{t('countUnit')}</div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 border-t pt-3">
+                      <div>
+                        <div className="text-xs text-gray-500 mb-1">{t('avgPrice')}</div>
+                        <div className="font-medium">{formatCurrency(Number(holding.averagePrice), currency)}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-xs text-gray-500 mb-1">{t('currentPrice')}</div>
+                        <div className="font-medium">{formatCurrency(Number(holding.currentPrice), currency)}</div>
+                      </div>
+
+                      <div>
+                        <div className="text-xs text-gray-500 mb-1">{t('totalCost')}</div>
+                        <div className="font-medium">{formatCurrency(Number(holding.totalCost), currency)}</div>
+                        {currency === 'USD' && exchangeRate && language === 'ko' && (
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            {formatCurrency(Number(holding.totalCost) * exchangeRate, 'KRW')}
                           </div>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {formatNumber(holding.quantity)}{t('countUnit')}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {formatCurrency(Number(holding.averagePrice), currency)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {formatCurrency(Number(holding.currentPrice), currency)}
-                        </TableCell>
-                        <TableCell className="text-right font-medium">
-                          <div className="flex flex-col items-end">
-                            <span>{formatCurrency(Number(holding.totalCost), currency)}</span>
-                            {currency === 'USD' && exchangeRate && language === 'ko' && (
-                              <span className="text-xs text-muted-foreground">
-                                {formatCurrency(Number(holding.totalCost) * exchangeRate, 'KRW')}
-                              </span>
-                            )}
-                            {(currency === 'KRW' || !currency) && exchangeRate && language === 'en' && (
-                              <span className="text-xs text-muted-foreground">
-                                {formatCurrency(Number(holding.totalCost) / exchangeRate, 'USD')}
-                              </span>
-                            )}
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <div className="text-xs text-gray-500 mb-1">{t('evaluatedValue')}</div>
+                        <div className="font-medium">{formatCurrency(Number(holding.currentValue), currency)}</div>
+                        {currency === 'USD' && exchangeRate && language === 'ko' && (
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            {formatCurrency(Number(holding.currentValue) * exchangeRate, 'KRW')}
                           </div>
-                        </TableCell>
-                        <TableCell className="text-right font-medium">
-                          <div className="flex flex-col items-end">
-                            <span>{formatCurrency(Number(holding.currentValue), currency)}</span>
-                            {currency === 'USD' && exchangeRate && language === 'ko' && (
-                              <span className="text-xs text-muted-foreground">
-                                {formatCurrency(Number(holding.currentValue) * exchangeRate, 'KRW')}
-                              </span>
-                            )}
-                            {(currency === 'KRW' || !currency) && exchangeRate && language === 'en' && (
-                              <span className="text-xs text-muted-foreground">
-                                {formatCurrency(Number(holding.currentValue) / exchangeRate, 'USD')}
-                              </span>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell
-                          className={cn(
-                            'text-right font-medium',
-                            isProfit ? 'text-red-600' : 'text-blue-600'
-                          )}
-                        >
-                          <div className="flex flex-col items-end">
-                            <span>{formatCurrency(Math.abs(Number(holding.profit)), currency)}</span>
-                            {currency === 'USD' && exchangeRate && language === 'ko' && (
-                              <span className="text-xs opacity-80">
-                                {formatCurrency(Math.abs(Number(holding.profit) * exchangeRate), 'KRW')}
-                              </span>
-                            )}
-                            {(currency === 'KRW' || !currency) && exchangeRate && language === 'en' && (
-                              <span className="text-xs opacity-80">
-                                {formatCurrency(Math.abs(Number(holding.profit) / exchangeRate), 'USD')}
-                              </span>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell
-                          className={cn(
-                            'text-right font-bold',
-                            isProfit ? 'text-red-600' : 'text-blue-600'
-                          )}
-                        >
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center bg-white p-3 rounded border">
+                      <div>
+                        <div className="text-xs text-gray-500">{t('pl')}</div>
+                        <div className={cn(
+                          "font-medium",
+                          isProfit ? 'text-red-600' : 'text-blue-600'
+                        )}>
+                          {formatCurrency(Math.abs(Number(holding.profit)), currency)}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-xs text-gray-500">{t('returnRate')}</div>
+                        <div className={cn(
+                          "font-bold text-lg",
+                          isProfit ? 'text-red-600' : 'text-blue-600'
+                        )}>
                           {formatProfitRate(Number(holding.profitRate))}
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
-          </div>
+
+            {/* Desktop View: Table */}
+            <div className="hidden md:block overflow-x-auto -mx-4 sm:mx-0">
+              <div className="min-w-[700px] px-4 sm:px-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <SortableHeader label={t('stockName')} sortKey="stockName" currentSort={sortConfig} onSort={handleSort} />
+                      <SortableHeader label={t('quantity')} sortKey="quantity" align="right" currentSort={sortConfig} onSort={handleSort} />
+                      <SortableHeader label={t('avgPrice')} sortKey="averagePrice" align="right" currentSort={sortConfig} onSort={handleSort} />
+                      <SortableHeader label={t('currentPrice')} sortKey="currentPrice" align="right" currentSort={sortConfig} onSort={handleSort} />
+                      <SortableHeader label={t('totalCost')} sortKey="totalCost" align="right" currentSort={sortConfig} onSort={handleSort} />
+                      <SortableHeader label={t('evaluatedValue')} sortKey="currentValue" align="right" currentSort={sortConfig} onSort={handleSort} />
+                      <SortableHeader label={t('pl')} sortKey="profit" align="right" currentSort={sortConfig} onSort={handleSort} />
+                      <SortableHeader label={t('returnRate')} sortKey="profitRate" align="right" currentSort={sortConfig} onSort={handleSort} />
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredHoldings.map((holding) => {
+                      const isProfit = Number(holding.profit) >= 0
+                      const currency = holding.currency || 'KRW'
+                      return (
+                        <TableRow key={holding.id}>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">{holding.stock.stockName}</p>
+                              <p className="text-sm text-gray-500">
+                                {holding.stock.stockCode}
+                              </p>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {formatNumber(holding.quantity)}{t('countUnit')}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {formatCurrency(Number(holding.averagePrice), currency)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {formatCurrency(Number(holding.currentPrice), currency)}
+                          </TableCell>
+                          <TableCell className="text-right font-medium">
+                            <div className="flex flex-col items-end">
+                              <span>{formatCurrency(Number(holding.totalCost), currency)}</span>
+                              {currency === 'USD' && exchangeRate && language === 'ko' && (
+                                <span className="text-xs text-muted-foreground">
+                                  {formatCurrency(Number(holding.totalCost) * exchangeRate, 'KRW')}
+                                </span>
+                              )}
+                              {(currency === 'KRW' || !currency) && exchangeRate && language === 'en' && (
+                                <span className="text-xs text-muted-foreground">
+                                  {formatCurrency(Number(holding.totalCost) / exchangeRate, 'USD')}
+                                </span>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right font-medium">
+                            <div className="flex flex-col items-end">
+                              <span>{formatCurrency(Number(holding.currentValue), currency)}</span>
+                              {currency === 'USD' && exchangeRate && language === 'ko' && (
+                                <span className="text-xs text-muted-foreground">
+                                  {formatCurrency(Number(holding.currentValue) * exchangeRate, 'KRW')}
+                                </span>
+                              )}
+                              {(currency === 'KRW' || !currency) && exchangeRate && language === 'en' && (
+                                <span className="text-xs text-muted-foreground">
+                                  {formatCurrency(Number(holding.currentValue) / exchangeRate, 'USD')}
+                                </span>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell
+                            className={cn(
+                              'text-right font-medium',
+                              isProfit ? 'text-red-600' : 'text-blue-600'
+                            )}
+                          >
+                            <div className="flex flex-col items-end">
+                              <span>{formatCurrency(Math.abs(Number(holding.profit)), currency)}</span>
+                              {currency === 'USD' && exchangeRate && language === 'ko' && (
+                                <span className="text-xs opacity-80">
+                                  {formatCurrency(Math.abs(Number(holding.profit) * exchangeRate), 'KRW')}
+                                </span>
+                              )}
+                              {(currency === 'KRW' || !currency) && exchangeRate && language === 'en' && (
+                                <span className="text-xs opacity-80">
+                                  {formatCurrency(Math.abs(Number(holding.profit) / exchangeRate), 'USD')}
+                                </span>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell
+                            className={cn(
+                              'text-right font-bold',
+                              isProfit ? 'text-red-600' : 'text-blue-600'
+                            )}
+                          >
+                            {formatProfitRate(Number(holding.profitRate))}
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          </>
         )}
       </CardContent>
     </Card>
