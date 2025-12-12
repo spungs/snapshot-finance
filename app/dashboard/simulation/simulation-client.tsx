@@ -203,7 +203,7 @@ export default function SimulationClient({ initialSnapshots }: SimulationClientP
                             ? cashBalance / result.exchangeRate
                             : cashBalance
 
-                        const currentTotalValue = currentStockValue + currentCashValue
+                        const currentTotalValue = currentStockValue // User requested to exclude cash
 
                         // Profit is simple difference in the target currency (Holdings Only? Or Total?)
                         // If we compare Total Assets, we should use Total gain.
@@ -249,7 +249,7 @@ export default function SimulationClient({ initialSnapshots }: SimulationClientP
                                         <CardTitle className="text-sm font-medium">{t('pastValue')}</CardTitle>
                                     </CardHeader>
                                     <CardContent>
-                                        <div className="text-xs text-muted-foreground mb-1">{t('totalAssets')}</div>
+                                        <div className="text-xs text-muted-foreground mb-1">{t('evaluatedValue')}</div>
                                         <div className="text-2xl font-bold">{formatCurrency(displaySnapshotValue, currency)}</div>
                                         <p className="text-xs text-muted-foreground mt-1">
                                             {formatDate(result.snapshotDate)} {t('basedOn')}
@@ -268,9 +268,11 @@ export default function SimulationClient({ initialSnapshots }: SimulationClientP
                                         <CardTitle className="text-sm font-medium">{t('currentValue')}</CardTitle>
                                     </CardHeader>
                                     <CardContent>
-                                        <div className="text-xs text-muted-foreground mb-1">{t('totalAssets')}</div>
+                                        <div className="text-xs text-muted-foreground mb-1">{t('evaluatedValue')}</div>
                                         <div className="text-2xl font-bold">{formatCurrency(currentTotalValue, currency)}</div>
-                                        <p className="text-xs text-muted-foreground mt-1">{t('basedOnRealtime')}</p>
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                            {t('basedOnRealtime')} <span className="text-[10px] text-muted-foreground">({t('exclCash')})</span>
+                                        </p>
                                         <p className="text-xs text-muted-foreground mt-1 border-t pt-1 w-fit opacity-0" aria-hidden="true">
                                             {t('totalInvested')}: {formatCurrency(totalInvested, currency)}
                                         </p>

@@ -142,6 +142,7 @@ export const translations = {
         savingSnapshotProgress: '저장 중...',
         snapshotPrefix: '스냅샷',
         interestPrincipal: '이자 3% 환산 원금',
+        exclCash: '예수금 제외',
         // Landing Page
         landing: {
             features: '기능',
@@ -287,7 +288,7 @@ export const translations = {
         simulationFailed: 'Simulation failed',
         runSimulationFailed: 'Failed to run simulation',
         holdingsEmpty: 'No holdings found.',
-        evaluatedValue: 'Current Value',
+        evaluatedValue: 'Evaluated Value',
         totalCost: 'Total Cost',
         averagePrice: 'Avg Price',
         add: 'Add',
@@ -334,6 +335,7 @@ export const translations = {
         savingSnapshotProgress: 'Saving...',
         snapshotPrefix: 'Snapshot',
         interestPrincipal: 'Principal for 3% Interest',
+        exclCash: 'Excl. Cash',
         // Landing Page
         landing: {
             features: 'Features',
