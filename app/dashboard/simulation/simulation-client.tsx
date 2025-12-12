@@ -277,7 +277,74 @@ export default function SimulationClient({ initialSnapshots }: SimulationClientP
                             <CardTitle>{t('holdingsComparison')}</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="overflow-x-auto -mx-6 sm:mx-0">
+                            <div className="md:hidden space-y-4">
+                                {result.holdings.map((item, index) => {
+                                    const isEn = language === 'en'
+                                    const rate = result.exchangeRate || 1435
+                                    const snapshotRate = result.snapshotExchangeRate || 1
+
+                                    let displayCurrency = item.currency
+                                    let displayCurrentPrice = item.currentPrice
+                                    let displayAvgPrice = item.snapshotPrice
+                                    let displayGain = item.gain
+
+                                    if (isEn) {
+                                        displayCurrency = 'USD'
+                                        if (item.currency === 'KRW') {
+                                            displayCurrentPrice = item.currentPrice / rate
+                                        }
+                                        if (item.currency === 'KRW') {
+                                            displayAvgPrice = item.snapshotPrice / snapshotRate
+                                        }
+                                        const valNowUSD = item.currency === 'KRW' ? (item.currentPrice * item.quantity) / rate : (item.currentPrice * item.quantity)
+                                        const valThenUSD = item.currency === 'KRW' ? (item.snapshotPrice * item.quantity) / snapshotRate : (item.snapshotPrice * item.quantity)
+                                        displayGain = valNowUSD - valThenUSD
+                                    }
+
+                                    return (
+                                        <div key={`mobile-${item.stockCode}-${index}`} className="bg-gray-50 rounded-lg p-4 border space-y-3">
+                                            <div className="flex justify-between items-start">
+                                                <div>
+                                                    <div className="font-semibold">{item.stockName}</div>
+                                                    <div className="text-sm text-gray-500">{item.stockCode}</div>
+                                                </div>
+                                                <div className={`font-medium ${displayGain >= 0 ? 'text-red-600' : 'text-blue-600'}`}>
+                                                    {formatCurrency(Math.abs(displayGain), displayCurrency)}
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-4 border-t pt-3">
+                                                <div>
+                                                    <div className="text-xs text-gray-500 mb-1">{t('quantity')}</div>
+                                                    <div className="font-medium">{formatNumber(item.quantity)}{t('countUnit')}</div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="text-xs text-gray-500 mb-1">{t('returnRate')}</div>
+                                                    <div className={`${item.gainRate >= 0 ? 'text-red-600' : 'text-blue-600'} font-medium`}>
+                                                        {formatProfitRate(item.gainRate)}
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <div className="text-xs text-gray-500 mb-1">{t('avgPrice')}</div>
+                                                    <div className="font-medium">{formatCurrency(displayAvgPrice, displayCurrency)}</div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="text-xs text-gray-500 mb-1">{t('currentPrice')}</div>
+                                                    <div className="font-medium">
+                                                        {item.error ? (
+                                                            <span className="text-red-500 text-xs">{t('fetchFailed')}</span>
+                                                        ) : (
+                                                            formatCurrency(displayCurrentPrice, displayCurrency)
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+
+                            <div className="hidden md:block overflow-x-auto -mx-6 sm:mx-0">
                                 <div className="min-w-[800px] px-6 sm:px-0">
                                     <Table>
                                         <TableHeader>
