@@ -33,7 +33,7 @@ export default async function DashboardPage() {
     <div className="space-y-6">
       {/* Header */}
       <Suspense fallback={<Skeleton className="h-12 w-full" />}>
-        <DashboardHeader />
+        <DashboardHeader cashBalance={initialData?.summary?.cashBalance} />
       </Suspense>
 
       {/* 잔고 관리 */}

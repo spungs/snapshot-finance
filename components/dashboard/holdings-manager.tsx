@@ -88,6 +88,8 @@ interface Summary {
     totalProfitRate: number
     holdingsCount: number
     exchangeRate?: number
+    cashBalance?: number
+    totalStockValue?: number
 }
 
 interface Props {
@@ -208,9 +210,11 @@ export function HoldingsManager({ initialData }: Props) {
     useEffect(() => {
         if (!initialData) {
             fetchHoldings()
+        } else {
+            setHoldings(initialData.holdings)
+            setSummary(initialData.summary)
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [])
+    }, [initialData, fetchHoldings])
 
     const sensors = useSensors(
         useSensor(PointerSensor),
@@ -348,7 +352,7 @@ export function HoldingsManager({ initialData }: Props) {
                     currency: h.currency,
                     purchaseRate: h.purchaseRate,
                 })),
-                cashBalance: 0,
+                cashBalance: summary?.cashBalance || 0,
                 note: `스냅샷 - ${new Date().toLocaleDateString('ko-KR')}`,
             })
             if (response.success) {
@@ -394,6 +398,9 @@ export function HoldingsManager({ initialData }: Props) {
                     profitRate={summary.totalProfitRate}
                     holdingsCount={summary.holdingsCount}
                     exchangeRate={summary.exchangeRate}
+                    cashBalance={summary.cashBalance}
+                    totalStockValue={summary.totalStockValue}
+                    isEditable={true}
                 />
             )}
 

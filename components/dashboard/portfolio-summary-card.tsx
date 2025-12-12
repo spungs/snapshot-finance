@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 
 import { useLanguage } from '@/lib/i18n/context'
 import { Currency, useCurrency } from '@/lib/currency/context'
+import { CashBalanceDialog } from './cash-balance-dialog'
 
 interface PortfolioSummaryCardProps {
   totalValue: number
@@ -16,6 +17,9 @@ interface PortfolioSummaryCardProps {
   snapshotDate?: string
   baseCurrency?: Currency
   exchangeRate?: number
+  cashBalance?: number
+  totalStockValue?: number
+  isEditable?: boolean
 }
 
 export function PortfolioSummaryCard({
@@ -27,6 +31,8 @@ export function PortfolioSummaryCard({
   snapshotDate,
   baseCurrency, // Now optional in destructuring, but we need to handle default from context
   exchangeRate = 1435,
+  isEditable = false,
+  ...props
 }: PortfolioSummaryCardProps) {
   const { t } = useLanguage()
   const { baseCurrency: contextBaseCurrency } = useCurrency()
@@ -41,11 +47,9 @@ export function PortfolioSummaryCard({
     return value / exchangeRate
   }
 
-  // However, the input props might be in mixed or KRW. 
-  // The existing logic in page.tsx calculates totals in KRW.
-  // So we assume inputs are in KRW.
-
   const displayValue = convert(totalValue)
+  const displayStockValue = convert(props.totalStockValue || (totalValue - (props.cashBalance || 0)))
+  const displayCash = convert(props.cashBalance || 0)
   const displayCost = convert(totalCost)
   const displayProfit = convert(totalProfit)
 
@@ -64,53 +68,72 @@ export function PortfolioSummaryCard({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
-          {/* 총 평가금액 */}
-          <div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+          {/* 총 자산 */}
+          <div className="lg:col-span-1">
             <p className="text-xs sm:text-sm text-gray-500 mb-1">{t('totalValue')}</p>
-            <p className="text-xl sm:text-2xl font-bold">{formatCurrency(displayValue, currency)}</p>
+            <p className="text-xl sm:text-2xl font-bold text-primary">{formatCurrency(displayValue, currency)}</p>
           </div>
 
-          {/* 총 매입금액 */}
-          <div>
-            <p className="text-xs sm:text-sm text-gray-500 mb-1">{t('totalInvested')}</p>
-            <p className="text-lg sm:text-xl font-semibold text-gray-700">
-              {formatCurrency(displayCost, currency)}
-            </p>
+          {/* 자산 구성 (주식/현금) */}
+          <div className="lg:col-span-3 grid grid-cols-2 sm:grid-cols-3 gap-4">
+            <div>
+              <p className="text-xs text-gray-500 mb-1">{t('stockValue')}</p>
+              <p className="text-lg font-semibold">{formatCurrency(displayStockValue, currency)}</p>
+            </div>
+            <div>
+              <div className="flex items-center gap-1 mb-1">
+                <p className="text-xs text-gray-500">{t('cash')}</p>
+                {isEditable && (
+                  <CashBalanceDialog
+                    initialBalance={props.cashBalance || 0}
+                    currency={currency}
+                    exchangeRate={exchangeRate}
+                  />
+                )}
+              </div>
+              <p className="text-lg font-semibold">{formatCurrency(displayCash, currency)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 mb-1">{t('holdings')}</p>
+              <p className="text-lg font-semibold">{holdingsCount}{t('countUnit')}</p>
+            </div>
           </div>
 
-          {/* 평가손익 */}
-          <div>
-            <p className="text-xs sm:text-sm text-gray-500 mb-1">{t('pl')}</p>
-            <p
-              className={cn(
-                'text-lg sm:text-xl font-bold',
-                isProfit ? 'text-red-600' : 'text-blue-600'
-              )}
-            >
-              {formatCurrency(Math.abs(displayProfit), currency)}
-            </p>
-          </div>
+          <div className="col-span-full border-t pt-4 grid grid-cols-3 gap-4">
+            {/* 총 매입금액 */}
+            <div>
+              <p className="text-xs sm:text-sm text-gray-500 mb-1">{t('totalInvested')}</p>
+              <p className="text-lg font-semibold text-gray-700">
+                {formatCurrency(displayCost, currency)}
+              </p>
+            </div>
 
-          {/* 수익률 */}
-          <div>
-            <p className="text-xs sm:text-sm text-gray-500 mb-1">{t('returnRate')}</p>
-            <p
-              className={cn(
-                'text-lg sm:text-xl font-bold',
-                isProfit ? 'text-red-600' : 'text-blue-600'
-              )}
-            >
-              {formatProfitRate(profitRate)}
-            </p>
-          </div>
+            {/* 평가손익 (투자) */}
+            <div>
+              <p className="text-xs sm:text-sm text-gray-500 mb-1">{t('plInvest')}</p>
+              <p
+                className={cn(
+                  'text-lg font-bold',
+                  isProfit ? 'text-red-600' : 'text-blue-600'
+                )}
+              >
+                {formatCurrency(Math.abs(displayProfit), currency)}
+              </p>
+            </div>
 
-          {/* 보유 종목 수 */}
-          <div>
-            <p className="text-xs sm:text-sm text-gray-500 mb-1">{t('holdings')}</p>
-            <p className="text-lg sm:text-xl font-semibold text-gray-700">
-              {holdingsCount}{t('countUnit')}
-            </p>
+            {/* 수익률 */}
+            <div>
+              <p className="text-xs sm:text-sm text-gray-500 mb-1">{t('returnRate')}</p>
+              <p
+                className={cn(
+                  'text-lg font-bold',
+                  isProfit ? 'text-red-600' : 'text-blue-600'
+                )}
+              >
+                {formatProfitRate(profitRate)}
+              </p>
+            </div>
           </div>
         </div>
 
