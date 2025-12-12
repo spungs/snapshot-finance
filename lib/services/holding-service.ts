@@ -15,7 +15,7 @@ async function fetchCurrentPrice(stockCode: string, market: string): Promise<num
         const priceData = await kisClient.getCurrentPrice(stockCode, marketType)
         return priceData.price
     } catch (e) {
-        console.error(`Failed to fetch price for ${stockCode}:`, e)
+        console.warn(`Failed to fetch price for ${stockCode}:`, e)
         return 0
     }
 }
@@ -54,7 +54,7 @@ export const holdingService = {
                         })
                     }
                 } catch (e) {
-                    console.error(`Price fetch failed for ${holding.stock.stockName}`, e)
+                    console.warn(`Price fetch failed for ${holding.stock.stockName}`, e)
                     currentPrice = Number(holding.currentPrice) || 0
                 }
 

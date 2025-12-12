@@ -596,10 +596,30 @@ export function HoldingsManager({ initialData }: Props) {
                                                     <div>
                                                         <div className="text-xs text-gray-500 mb-1">{t('currentPrice')}</div>
                                                         <div className="font-medium">{formatCurrency(holding.currentPrice, currency)}</div>
+                                                        {holding.currency === 'USD' && summary?.exchangeRate && language === 'ko' && (
+                                                            <div className="text-xs text-muted-foreground mt-0.5">
+                                                                {formatCurrency(holding.currentPrice * summary.exchangeRate, 'KRW')}
+                                                            </div>
+                                                        )}
+                                                        {(holding.currency === 'KRW' || !holding.currency) && summary?.exchangeRate && language === 'en' && (
+                                                            <div className="text-xs text-muted-foreground mt-0.5">
+                                                                {formatCurrency(holding.currentPrice / summary.exchangeRate, 'USD')}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                     <div className="text-right">
                                                         <div className="text-xs text-gray-500 mb-1">{t('totalCost')}</div>
                                                         <div className="font-medium">{formatCurrency(holding.totalCost, currency)}</div>
+                                                        {holding.currency === 'USD' && summary?.exchangeRate && language === 'ko' && (
+                                                            <div className="text-xs text-muted-foreground mt-0.5">
+                                                                {formatCurrency(holding.totalCost * summary.exchangeRate, 'KRW')}
+                                                            </div>
+                                                        )}
+                                                        {(holding.currency === 'KRW' || !holding.currency) && summary?.exchangeRate && language === 'en' && (
+                                                            <div className="text-xs text-muted-foreground mt-0.5">
+                                                                {formatCurrency(holding.totalCost / summary.exchangeRate, 'USD')}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
 
@@ -612,6 +632,16 @@ export function HoldingsManager({ initialData }: Props) {
                                                         )}>
                                                             {formatCurrency(Math.abs(holding.profit), currency)}
                                                         </div>
+                                                        {holding.currency === 'USD' && summary?.exchangeRate && language === 'ko' && (
+                                                            <div className="text-xs text-muted-foreground mt-0.5">
+                                                                {formatCurrency(Math.abs(holding.profit * summary.exchangeRate), 'KRW')}
+                                                            </div>
+                                                        )}
+                                                        {(holding.currency === 'KRW' || !holding.currency) && summary?.exchangeRate && language === 'en' && (
+                                                            <div className="text-xs text-muted-foreground mt-0.5">
+                                                                {formatCurrency(Math.abs(holding.profit / summary.exchangeRate), 'USD')}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                     <div className="text-right">
                                                         <div className="text-xs text-gray-500">{t('returnRate')}</div>

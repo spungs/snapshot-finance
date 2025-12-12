@@ -229,6 +229,11 @@ export function HoldingsTable({ holdings, exchangeRate }: HoldingsTableProps) {
                             {formatCurrency(Number(holding.totalCost) * exchangeRate, 'KRW')}
                           </div>
                         )}
+                        {(currency === 'KRW' || !currency) && exchangeRate && language === 'en' && (
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            {formatCurrency(Number(holding.totalCost) / exchangeRate, 'USD')}
+                          </div>
+                        )}
                       </div>
                       <div className="text-right">
                         <div className="text-xs text-gray-500 mb-1">{t('evaluatedValue')}</div>
@@ -236,6 +241,11 @@ export function HoldingsTable({ holdings, exchangeRate }: HoldingsTableProps) {
                         {currency === 'USD' && exchangeRate && language === 'ko' && (
                           <div className="text-xs text-muted-foreground mt-0.5">
                             {formatCurrency(Number(holding.currentValue) * exchangeRate, 'KRW')}
+                          </div>
+                        )}
+                        {(currency === 'KRW' || !currency) && exchangeRate && language === 'en' && (
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            {formatCurrency(Number(holding.currentValue) / exchangeRate, 'USD')}
                           </div>
                         )}
                       </div>
@@ -250,6 +260,16 @@ export function HoldingsTable({ holdings, exchangeRate }: HoldingsTableProps) {
                         )}>
                           {formatCurrency(Math.abs(Number(holding.profit)), currency)}
                         </div>
+                        {currency === 'USD' && exchangeRate && language === 'ko' && (
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            {formatCurrency(Math.abs(Number(holding.profit) * exchangeRate), 'KRW')}
+                          </div>
+                        )}
+                        {(currency === 'KRW' || !currency) && exchangeRate && language === 'en' && (
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            {formatCurrency(Math.abs(Number(holding.profit) / exchangeRate), 'USD')}
+                          </div>
+                        )}
                       </div>
                       <div className="text-right">
                         <div className="text-xs text-gray-500">{t('returnRate')}</div>
