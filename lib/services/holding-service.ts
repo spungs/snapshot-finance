@@ -29,11 +29,11 @@ export const holdingService = {
                 orderBy: { displayOrder: 'asc' },
             })
 
-            // Fetch Exchange Rate
-            const exchangeRate = await getUsdExchangeRate()
-
-            // Ensure KIS Token is valid before starting parallel requests
-            await kisClient.ensureConnection()
+            // Fetch Exchange Rate and ensure KIS connection in parallel
+            const [exchangeRate] = await Promise.all([
+                getUsdExchangeRate(),
+                kisClient.ensureConnection()
+            ])
 
             // Fetch Real-time Prices and Calculate Summary
             const holdingsWithPrice = await Promise.all(holdings.map(async (holding) => {

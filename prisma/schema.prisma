@@ -132,6 +132,7 @@ model Holding {
   @@unique([userId, stockId])
   @@index([userId])
   @@index([stockId])
+  @@index([userId, displayOrder])
   @@map("holdings")
 }
 
