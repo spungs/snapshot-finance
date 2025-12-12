@@ -125,6 +125,12 @@ export const translations = {
         appliedExchangeRate: '적용 환율',
         loadCurrentHoldings: '현재 잔고 불러오기',
         loadCurrentHoldingsConfirm: '현재 잔고를 불러오시겠습니까? 입력된 내용이 있다면 덮어씌워집니다.',
+        editCash: '예수금 수정',
+        updateCashSuccess: '예수금이 업데이트되었습니다.',
+        updateCashFailed: '예수금 업데이트에 실패했습니다.',
+        invalidAmount: '유효한 금액을 입력해주세요.',
+        stockValue: '주식 평가액',
+        plInvest: '평가손익 (투자)',
         // Landing Page
         landing: {
             features: '기능',
@@ -300,6 +306,12 @@ export const translations = {
         appliedExchangeRate: 'Applied Rate',
         loadCurrentHoldings: 'Load Current Holdings',
         loadCurrentHoldingsConfirm: 'Load current holdings? Existing input will be overwritten.',
+        editCash: 'Edit Cash Balance',
+        updateCashSuccess: 'Cash balance updated successfully.',
+        updateCashFailed: 'Failed to update cash balance.',
+        invalidAmount: 'Please enter a valid amount.',
+        stockValue: 'Stock Value',
+        plInvest: 'P/L (Invested)',
         // Landing Page
         landing: {
             features: 'Features',
