@@ -197,10 +197,10 @@ export function HoldingsManager({ initialData }: Props) {
                 setHoldings(response.data.holdings)
                 setSummary(response.data.summary)
             } else {
-                setError(response.error?.message || '잔고 조회 실패')
+                setError(response.error?.message || t('fetchBalanceFailed'))
             }
         } catch (err) {
-            setError('네트워크 오류')
+            setError(t('networkError'))
         } finally {
             setLoading(false)
             setIsRefreshing(false)
@@ -353,7 +353,7 @@ export function HoldingsManager({ initialData }: Props) {
                     purchaseRate: h.purchaseRate,
                 })),
                 cashBalance: summary?.cashBalance || 0,
-                note: `스냅샷 - ${new Date().toLocaleDateString('ko-KR')}`,
+                note: `${t('snapshotPrefix')} - ${new Date().toLocaleDateString(language === 'ko' ? 'ko-KR' : 'en-US')}`,
             })
             if (response.success) {
                 alert(t('saveSnapshotSuccess'))
@@ -452,7 +452,7 @@ export function HoldingsManager({ initialData }: Props) {
                             onClick={handleAddHolding}
                             disabled={!newStock || !newQuantity || !newAveragePrice || adding}
                         >
-                            {adding ? '추가 중...' : t('add')}
+                            {adding ? t('addingProgress') : t('add')}
                         </Button>
                     </div>
                 </CardContent>
@@ -476,7 +476,7 @@ export function HoldingsManager({ initialData }: Props) {
                             className="flex items-center gap-2 w-full sm:w-auto"
                         >
                             <Camera className="w-4 h-4" />
-                            {savingSnapshot ? '저장 중...' : t('saveSnapshot')}
+                            {savingSnapshot ? t('savingSnapshotProgress') : t('saveSnapshot')}
                         </Button>
                     </div>
 

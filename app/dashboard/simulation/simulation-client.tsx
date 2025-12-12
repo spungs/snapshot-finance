@@ -121,8 +121,8 @@ export default function SimulationClient({ initialSnapshots }: SimulationClientP
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <div className="flex flex-col sm:flex-row gap-4 items-end">
-                        <div className="flex-1 w-full sm:max-w-sm">
+                    <div className="flex flex-col sm:flex-row gap-2 items-end sm:items-center">
+                        <div className="w-full sm:w-auto min-w-[320px]">
                             <Select value={selectedSnapshotId} onValueChange={setSelectedSnapshotId}>
                                 <SelectTrigger>
                                     <SelectValue placeholder={t('selectSnapshotPlaceholder')} />
@@ -138,9 +138,17 @@ export default function SimulationClient({ initialSnapshots }: SimulationClientP
                                             currency = 'USD'
                                         }
 
+                                        const dateStr = formatDate(snap.snapshotDate)
+                                        const assetStr = `${t('totalAssets')}: ${formatCurrency(displayValue, currency)}`
+
+                                        // User Request: Show Note first if exists
+                                        const label = snap.note
+                                            ? `${dateStr} | ${snap.note}`
+                                            : dateStr
+
                                         return (
                                             <SelectItem key={snap.id} value={snap.id}>
-                                                {formatDate(snap.snapshotDate)} ({t('totalAssets')}: {formatCurrency(displayValue, currency)})
+                                                {label} ({assetStr})
                                             </SelectItem>
                                         )
                                     })}
@@ -176,93 +184,127 @@ export default function SimulationClient({ initialSnapshots }: SimulationClientP
                         const isEn = language === 'en'
                         const currency = isEn ? 'USD' : 'KRW'
 
-                        // USD Conversion:
-                        // Original Value (Invested) uses Snapshot Exchange Rate (Historic)
-                        // Current Value (Simulated) uses Current Exchange Rate 
-
+                        // Cost Basis (Total Invested)
+                        // This corresponds to the user's initial investment
                         const totalInvested = isEn && result.snapshotExchangeRate
                             ? result.totalOriginalValue / result.snapshotExchangeRate
                             : result.totalOriginalValue
 
-                        const currentValue = isEn && result.exchangeRate
+                        // Current Value (Simulated Today)
+                        // Current Stock Value
+                        const currentStockValue = isEn && result.exchangeRate
                             ? result.totalSimulatedValue / result.exchangeRate
                             : result.totalSimulatedValue
 
-                        // Profit is simple difference in the target currency
-                        const totalGain = currentValue - totalInvested
+                        // Current Cash Value (Assuming Cash is held as is)
+                        // If EN, we convert the KRW cash to USD at CURRENT rate (buying power today)
+                        const cashBalance = selectedSnapshot ? Number(selectedSnapshot.cashBalance) : 0
+                        const currentCashValue = isEn && result.exchangeRate
+                            ? cashBalance / result.exchangeRate
+                            : cashBalance
 
-                        // Since profit might be calculated differently if we just converting final totals vs summing up individual converted items.
-                        // Ideally: Sum(Individual USD Values) vs Total KRW / Rate.
-                        // Given API returns Total KRW, diving by rate is an approximation if rates differed per stock (but we only have one rate for US, one for KR - wait, actually we have one global exchange rate used for US stocks).
-                        // In API: totalKRW = sum(native * rate).
-                        // If we divide totalKRW by rate, we get ~ sum(native). 
-                        // But KR stocks shouldn't be divided by exchange rate to get USD? YES THEY SHOULD.
-                        // If I have 1 Samsung ($1 equivalent), Total KRW = 1000. 
-                        // In USD view, I want to see $1. So 1000 / 1000 = 1. Correct. 
-                        // So dividing the Total KRW Amount by the Exchange Rate is the correct way to show "Portfolio Value in USD".
+                        const currentTotalValue = currentStockValue + currentCashValue
 
-                        // Snapshot Profit (Historic)
+                        // Profit is simple difference in the target currency (Holdings Only? Or Total?)
+                        // If we compare Total Assets, we should use Total gain.
+                        // totalGain (Stock Only) = CurrentStock - Cost
+                        // But for "Simulation Difference", we want TotalAssetNow - TotalAssetThen.
+
+                        // Snapshot Value (Value at the time of snapshot)
+                        // This includes Cash.
+                        const snapshotValuationVal = selectedSnapshot ? Number(selectedSnapshot.totalValue) : 0
+                        const displaySnapshotValue = isEn && result.snapshotExchangeRate
+                            ? snapshotValuationVal / result.snapshotExchangeRate
+                            : snapshotValuationVal
+
+                        // Snapshot Cash Value (for display in Past Value card)
+                        const snapshotCashValue = isEn && result.snapshotExchangeRate
+                            ? cashBalance / result.snapshotExchangeRate
+                            : cashBalance
+
+                        // Profits Calculation
+
+                        // 1. Total Gain (Current Value - Cost)
+                        // Cost doesn't include cash usually. 
+                        // But Total Asset Value includes Cash.
+                        // So (Stock + Cash) - Cost = Gain.
+                        const totalGain = currentTotalValue - totalInvested
+
+                        // 2. Snapshot Profit (Snapshot Value - Cost)
                         const snapshotProfitVal = selectedSnapshot ? Number(selectedSnapshot.totalProfit) : 0
                         const snapshotProfit = isEn && result.snapshotExchangeRate
                             ? snapshotProfitVal / result.snapshotExchangeRate
                             : snapshotProfitVal
 
-                        const profitDiff = totalGain - snapshotProfit
+                        // 3. Simulation Difference (Current Value - Snapshot Value)
+                        const profitDiff = currentTotalValue - displaySnapshotValue
+
+                        // 4. Simulation Yield (Difference / Snapshot Value)
+                        const simulationYield = displaySnapshotValue ? (profitDiff / displaySnapshotValue) * 100 : 0
 
                         return (
                             <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
                                 <Card>
                                     <CardHeader className="pb-2">
-                                        <CardTitle className="text-sm font-medium">{t('totalInvested')}</CardTitle>
+                                        <CardTitle className="text-sm font-medium">{t('pastValue')}</CardTitle>
                                     </CardHeader>
                                     <CardContent>
-                                        <div className="text-2xl font-bold">{formatCurrency(totalInvested, currency)}</div>
-                                        <p className="text-xs text-muted-foreground">{formatDate(result.snapshotDate)} {t('basedOn')}</p>
+                                        <div className="text-xs text-muted-foreground mb-1">{t('totalAssets')}</div>
+                                        <div className="text-2xl font-bold">{formatCurrency(displaySnapshotValue, currency)}</div>
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                            {formatDate(result.snapshotDate)} {t('basedOn')}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground mt-1 border-t pt-1 w-fit">
+                                            {t('totalInvested')}: {formatCurrency(totalInvested, currency)}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground mt-1 w-fit">
+                                            {t('cash')}: {formatCurrency(snapshotCashValue, currency)}
+                                        </p>
                                     </CardContent>
                                 </Card>
+
                                 <Card>
                                     <CardHeader className="pb-2">
                                         <CardTitle className="text-sm font-medium">{t('currentValue')}</CardTitle>
                                     </CardHeader>
                                     <CardContent>
-                                        <div className="text-2xl font-bold">{formatCurrency(currentValue, currency)}</div>
-                                        <p className="text-xs text-muted-foreground">{t('basedOnRealtime')}</p>
+                                        <div className="text-xs text-muted-foreground mb-1">{t('totalAssets')}</div>
+                                        <div className="text-2xl font-bold">{formatCurrency(currentTotalValue, currency)}</div>
+                                        <p className="text-xs text-muted-foreground mt-1">{t('basedOnRealtime')}</p>
+                                        <p className="text-xs text-muted-foreground mt-1 border-t pt-1 w-fit opacity-0" aria-hidden="true">
+                                            {t('totalInvested')}: {formatCurrency(totalInvested, currency)}
+                                        </p>
                                     </CardContent>
                                 </Card>
-                                <Card className={totalGain >= 0 ? "border-profit/20 bg-profit/5 dark:bg-profit/10" : "border-loss/20 bg-loss/5 dark:bg-loss/10"}>
+
+                                <Card className={profitDiff >= 0 ? "border-profit/20 bg-profit/5 dark:bg-profit/10" : "border-loss/20 bg-loss/5 dark:bg-loss/10"}>
                                     <CardHeader className="pb-2">
-                                        <CardTitle className="text-sm font-medium">{t('virtualProfit')}</CardTitle>
+                                        <CardTitle className="text-sm font-medium">{t('simulationResult')}</CardTitle>
                                     </CardHeader>
                                     <CardContent>
-                                        <div className={`text-2xl font-bold flex items-center ${totalGain >= 0 ? "text-profit" : "text-loss"}`}>
-                                            {totalGain >= 0 ? <TrendingUp className="mr-2 h-6 w-6" /> : <TrendingDown className="mr-2 h-6 w-6" />}
-                                            {formatCurrency(Math.abs(totalGain), currency)}
+                                        <div className={`text-2xl font-bold flex items-center ${profitDiff >= 0 ? "text-profit" : "text-loss"}`}>
+                                            {profitDiff >= 0 ? <TrendingUp className="mr-2 h-6 w-6" /> : <TrendingDown className="mr-2 h-6 w-6" />}
+                                            {formatCurrency(Math.abs(profitDiff), currency)}
                                         </div>
-                                        <p className={`text-xs font-medium ${totalGain >= 0 ? "text-profit" : "text-loss"}`}>
-                                            {formatProfitRate(result.totalGainRate)}
+                                        <p className={`text-xs font-medium ${profitDiff >= 0 ? "text-profit" : "text-loss"}`}>
+                                            {formatProfitRate(simulationYield)}
                                         </p>
 
                                         <div className="mt-4 pt-4 border-t space-y-2">
                                             <div className="flex justify-between text-sm">
                                                 <span className="text-muted-foreground">
-                                                    스냅샷 당시 수익
-                                                    {selectedSnapshot && (
-                                                        <span className="text-xs ml-1" suppressHydrationWarning>
-                                                            ({formatDate(selectedSnapshot.snapshotDate, 'yyyy-MM-dd')})
-                                                        </span>
-                                                    )}
+                                                    {t('currentPL')}
+                                                </span>
+                                                <span className={totalGain >= 0 ? "text-profit" : "text-loss"}>
+                                                    {formatCurrency(totalGain, currency)}
+                                                </span>
+                                            </div>
+                                            <div className="flex justify-between text-sm">
+                                                <span className="text-muted-foreground">
+                                                    {t('snapshotPL')}
                                                 </span>
                                                 <span className={snapshotProfit >= 0 ? "text-profit" : "text-loss"}>
                                                     {formatCurrency(snapshotProfit, currency)}
-                                                </span>
-                                            </div>
-                                            <div className="flex justify-between text-sm font-medium">
-                                                <span className="text-muted-foreground">차이</span>
-                                                <span className={profitDiff >= 0 ? "text-profit" : "text-loss"}>
-                                                    {profitDiff > 0 ? '+' : ''}{formatCurrency(profitDiff, currency)}
-                                                    <span className="text-xs ml-1 text-muted-foreground font-normal">
-                                                        ({profitDiff >= 0 ? '🎉' : '👿'})
-                                                    </span>
                                                 </span>
                                             </div>
                                         </div>

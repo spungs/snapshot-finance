@@ -88,6 +88,10 @@ export const translations = {
         stockName: '종목명',
         pastPrice: '과거 주가',
         fetchFailed: '조회 실패',
+        simulationResult: '시뮬레이션 결과',
+        diff: '차이',
+        currentPL: '현재 평가손익',
+        snapshotPL: '스냅샷 평가손익',
         simulationFailed: '시뮬레이션 실패',
         runSimulationFailed: '시뮬레이션 실행에 실패했습니다.',
         holdingsEmpty: '보유 종목이 없습니다.',
@@ -133,6 +137,10 @@ export const translations = {
         invalidAmount: '유효한 금액을 입력해주세요.',
         stockValue: '주식 평가액',
         plInvest: '평가손익 (투자)',
+        fetchBalanceFailed: '잔고 조회 실패',
+        addingProgress: '추가 중...',
+        savingSnapshotProgress: '저장 중...',
+        snapshotPrefix: '스냅샷',
         // Landing Page
         landing: {
             features: '기능',
@@ -271,6 +279,10 @@ export const translations = {
         stockName: 'Stock Name',
         pastPrice: 'Past Price',
         fetchFailed: 'Fetch Failed',
+        simulationResult: 'Simulation Result',
+        diff: 'Difference',
+        currentPL: 'Current P/L',
+        snapshotPL: 'Snapshot P/L',
         simulationFailed: 'Simulation failed',
         runSimulationFailed: 'Failed to run simulation',
         holdingsEmpty: 'No holdings found.',
@@ -316,6 +328,10 @@ export const translations = {
         invalidAmount: 'Please enter a valid amount.',
         stockValue: 'Stock Value',
         plInvest: 'Profit/Loss (Invested)',
+        fetchBalanceFailed: 'Failed to fetch holdings',
+        addingProgress: 'Adding...',
+        savingSnapshotProgress: 'Saving...',
+        snapshotPrefix: 'Snapshot',
         // Landing Page
         landing: {
             features: 'Features',
