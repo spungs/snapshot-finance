@@ -1,0 +1,3 @@
+-- Manual deletion of sessions table confirmed by user
+-- This migration file is empty to prevent re-execution errors
+-- DROP TABLE "sessions";
