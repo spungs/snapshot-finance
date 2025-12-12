@@ -45,6 +45,7 @@
 - [x] 스냅샷 목록 버그 수정 (사용자 ID 연동)
 - [x] [Bug] Korean Search: Korean stock names not found (Result: "Invalid Search Query") -> Fixed with full KIS master seed and improved fallback
 - [x] [UX] Delete Holding: Disable row and show loading state during deletion)
+- [x] [Fix] Build Error: Fix type mismatch in i18n context (`t` function)
 
 ---
 

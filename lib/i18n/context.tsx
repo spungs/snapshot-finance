@@ -6,8 +6,13 @@ import { Language, translations } from './translations'
 interface LanguageContextType {
     language: Language
     setLanguage: (lang: Language) => void
-    t: (key: keyof typeof translations['ko']) => string
+    t: (key: StringKeys<typeof translations['ko']>) => string
 }
+
+// Helper type to extract only keys that have string values
+type StringKeys<T> = {
+    [K in keyof T]: T[K] extends string ? K : never
+}[keyof T]
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined)
 
@@ -31,9 +36,11 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem('language', lang)
     }
 
-    const t = (key: keyof typeof translations['ko']) => {
+    const t = (key: StringKeys<typeof translations['ko']>) => {
         const value = translations[language][key]
-        return value !== undefined ? value : key
+        // Since we constrained the key to StringKeys, value should be string,
+        // but TypeScript might still need convincing because translations[language] is a union
+        return (value as string) || key as string
     }
 
     return (
