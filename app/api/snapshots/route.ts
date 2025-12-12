@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     const userId = session.user.id
 
     const body = await request.json()
-    const { holdings, cashBalance, note, snapshotDate } = body
+    const { holdings, cashBalance, note, snapshotDate, exchangeRate: providedExchangeRate } = body
 
     if (!holdings || holdings.length === 0) {
       return NextResponse.json(
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 총 매입금액 및 평가금액 계산 (KRW 기준)
-    const exchangeRate = await getUsdExchangeRate()
+    const exchangeRate = providedExchangeRate ? Number(providedExchangeRate) : await getUsdExchangeRate()
     let totalCost = new Decimal(0)
     let totalValue = new Decimal(0)
 
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
     // 트랜잭션으로 스냅샷 + 보유종목 저장
     const snapshot = await prisma.portfolioSnapshot.create({
       data: {
-        userId,
+        user: { connect: { id: userId } },
         snapshotDate: snapshotDate ? new Date(snapshotDate) : undefined,
         totalValue,
         totalCost,

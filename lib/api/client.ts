@@ -41,6 +41,7 @@ export const snapshotsApi = {
 
   create: (data: {
     snapshotDate?: string
+    exchangeRate?: number
     holdings: Array<{
       stockId: string
       quantity: number
