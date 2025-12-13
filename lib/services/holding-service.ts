@@ -32,9 +32,11 @@ export const holdingService = {
             // Fetch User Cash Balance
             const user = await prisma.user.findUnique({
                 where: { id: userId },
-                select: { cashBalance: true }
+                select: { cashBalance: true, targetAsset: true }
             })
+
             const cashBalance = user?.cashBalance ? Number(user.cashBalance) : 0
+            const targetAsset = user?.targetAsset ? Number(user.targetAsset) : 0
 
             // Fetch Exchange Rate and ensure KIS connection in parallel
             const [exchangeRate] = await Promise.all([
@@ -127,6 +129,7 @@ export const holdingService = {
                         holdingsCount: holdingsWithPrice.length,
                         exchangeRate,
                         cashBalance, // FE에서 표시할 수 있게 전달
+                        targetAsset,
                     },
                 },
             }
