@@ -71,13 +71,13 @@ export function TargetAssetDialog({ initialTarget, currency = 'KRW', exchangeRat
             // Let's check `cash-actions.ts`.
 
             if (result.success) {
-                toast.success(t('updateSuccess') || 'Goal updated')
+                toast.success(t('targetUpdateSuccess') || 'Goal updated')
                 setOpen(false)
                 startTransition(() => {
                     router.refresh()
                 })
             } else {
-                toast.error(t('updateFailed') || 'Failed to update')
+                toast.error(t('targetUpdateFailed') || 'Failed to update')
             }
         } catch (error) {
             toast.error(t('networkError') || 'Network error')
