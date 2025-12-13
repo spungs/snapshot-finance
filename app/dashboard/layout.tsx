@@ -4,6 +4,7 @@ import { MobileNav } from '@/components/mobile-nav'
 import { Camera } from 'lucide-react'
 
 import { SiteFooter } from '@/components/site-footer'
+import { AdminTrigger } from '@/components/dashboard/admin-trigger'
 
 export default function DashboardLayout({
   children,
@@ -16,10 +17,12 @@ export default function DashboardLayout({
       <header className="bg-white border-b sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <Link href="/dashboard" className="text-xl font-bold text-gray-900 flex items-center gap-2">
-              <Camera className="h-6 w-6" />
-              Snapshot Finance
-            </Link>
+            <AdminTrigger>
+              <Link href="/dashboard" className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                <Camera className="h-6 w-6" />
+                Snapshot Finance
+              </Link>
+            </AdminTrigger>
             <div className="hidden sm:block">
               <NavLinks />
             </div>
