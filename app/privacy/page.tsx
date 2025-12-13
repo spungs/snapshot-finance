@@ -1,6 +1,7 @@
 'use client'
 
-import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
 import { useLanguage } from '@/lib/i18n/context'
@@ -9,15 +10,35 @@ import { translations } from '@/lib/i18n/translations'
 export default function PrivacyPage() {
     const { language } = useLanguage()
     const t = translations[language]
+    const router = useRouter()
+    const [canGoBack, setCanGoBack] = useState(false)
+
+    useEffect(() => {
+        // Check if there is history to go back to
+        setCanGoBack(window.history.length > 1)
+    }, [])
+
+    const handleBack = () => {
+        if (canGoBack) {
+            router.back()
+        } else {
+            router.push('/')
+        }
+    }
 
     return (
         <div className="min-h-screen bg-background p-6 md:p-12 max-w-3xl mx-auto">
-            <Link href="/" className="inline-block mb-8">
-                <Button variant="ghost" size="sm" className="gap-2 pl-0 hover:pl-2 transition-all">
+            <div className="inline-block mb-8">
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    className="gap-2 pl-0 hover:pl-2 transition-all"
+                    onClick={handleBack}
+                >
                     <ArrowLeft className="w-4 h-4" />
-                    {t.privacy.backToMain}
+                    {canGoBack ? t.privacy.back : t.privacy.goToMain}
                 </Button>
-            </Link>
+            </div>
 
             <header className="mb-10">
                 <h1 className="text-3xl font-bold tracking-tight mb-2">{t.privacy.title}</h1>

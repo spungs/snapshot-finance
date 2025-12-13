@@ -122,7 +122,7 @@ export default function SimulationClient({ initialSnapshots }: SimulationClientP
                 </CardHeader>
                 <CardContent>
                     <div className="flex flex-col sm:flex-row gap-2 items-end sm:items-center">
-                        <div className="w-full sm:w-auto min-w-[320px]">
+                        <div className="w-full sm:w-auto sm:min-w-[320px]">
                             <Select value={selectedSnapshotId} onValueChange={setSelectedSnapshotId}>
                                 <SelectTrigger>
                                     <SelectValue placeholder={t('selectSnapshotPlaceholder')} />
@@ -148,7 +148,9 @@ export default function SimulationClient({ initialSnapshots }: SimulationClientP
 
                                         return (
                                             <SelectItem key={snap.id} value={snap.id}>
-                                                {label} ({assetStr})
+                                                <span className="block truncate max-w-[260px] sm:max-w-none">
+                                                    {label} ({assetStr})
+                                                </span>
                                             </SelectItem>
                                         )
                                     })}
@@ -352,8 +354,15 @@ export default function SimulationClient({ initialSnapshots }: SimulationClientP
                                                     <div className="font-semibold">{item.stockName}</div>
                                                     <div className="text-sm text-muted-foreground">{item.stockCode}</div>
                                                 </div>
-                                                <div className={`font-medium ${displayGain >= 0 ? 'text-profit' : 'text-loss'}`}>
-                                                    {formatCurrency(Math.abs(displayGain), displayCurrency)}
+                                                <div className="text-right">
+                                                    <div className={`font-medium ${displayGain >= 0 ? 'text-profit' : 'text-loss'}`}>
+                                                        {formatCurrency(Math.abs(displayGain), displayCurrency)}
+                                                    </div>
+                                                    {displayCurrency === 'USD' && item.gainKRW !== undefined && (
+                                                        <div className={`text-xs ${item.gainKRW >= 0 ? 'text-profit/70' : 'text-loss/70'} mt-0.5`}>
+                                                            ({formatCurrency(Math.abs(item.gainKRW), 'KRW')})
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
 
@@ -367,6 +376,11 @@ export default function SimulationClient({ initialSnapshots }: SimulationClientP
                                                     <div className={`${item.gainRate >= 0 ? 'text-profit' : 'text-loss'} font-medium`}>
                                                         {formatProfitRate(item.gainRate)}
                                                     </div>
+                                                    {displayCurrency === 'USD' && item.gainRateKRW !== undefined && (
+                                                        <div className={`text-xs ${item.gainRateKRW >= 0 ? 'text-profit/70' : 'text-loss/70'} mt-0.5`}>
+                                                            ({formatProfitRate(item.gainRateKRW)})
+                                                        </div>
+                                                    )}
                                                 </div>
                                                 <div>
                                                     <div className="text-xs text-muted-foreground mb-1">{t('avgPrice')}</div>

@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils'
 import { useLanguage } from '@/lib/i18n/context'
 import { logout } from '@/app/actions'
 import { translations } from '@/lib/i18n/translations'
+import { DeleteAccountDialog } from '@/components/delete-account-dialog'
 
 interface MobileNavProps {
     type: 'landing' | 'dashboard'
@@ -88,20 +89,23 @@ export function MobileNav({ type }: MobileNavProps) {
                         )}
 
                         {type === 'dashboard' && (
-                            <button
-                                onClick={() => {
-                                    setOpen(false)
-                                    logout()
-                                }}
-                                className="flex items-center gap-2 text-red-600 hover:text-red-700 py-2 border-b border-border/50 text-left"
-                            >
-                                <LogOut className="h-5 w-5" />
-                                {t('logout') || 'Logout'}
-                            </button>
+                            <>
+                                <button
+                                    onClick={() => {
+                                        setOpen(false)
+                                        logout()
+                                    }}
+                                    className="flex items-center gap-2 text-red-600 hover:text-red-700 py-2 border-b border-border/50 text-left"
+                                >
+                                    <LogOut className="h-5 w-5" />
+                                    {t('logout') || 'Logout'}
+                                </button>
+                                <DeleteAccountDialog variant="item" />
+                            </>
                         )}
                     </nav>
                 </DialogContent>
             </Dialog>
-        </div>
+        </div >
     )
 }

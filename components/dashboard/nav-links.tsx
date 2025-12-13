@@ -6,6 +6,7 @@ import { useLanguage } from '@/lib/i18n/context'
 import { cn } from '@/lib/utils'
 import { LogOut } from 'lucide-react'
 import { logout } from '@/app/actions'
+import { DeleteAccountDialog } from '@/components/delete-account-dialog'
 
 export function NavLinks() {
     const pathname = usePathname()
@@ -42,6 +43,7 @@ export function NavLinks() {
             >
                 <LogOut className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
+            <DeleteAccountDialog />
         </nav>
     )
 }
