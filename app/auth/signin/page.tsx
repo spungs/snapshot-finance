@@ -2,19 +2,19 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { signIn } from 'next-auth/react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
+import { googleLogin } from '@/app/actions'
 
 export default function SignIn() {
     const [isSigningIn, setIsSigningIn] = useState(false)
 
     // Alternative: Using standard NextAuth flow for robustness
-    const handleGoogleSignIn = () => {
+    const handleGoogleSignIn = async () => {
         setIsSigningIn(true)
-        signIn('google', { callbackUrl: '/dashboard' }, { prompt: 'login select_account' })
+        await googleLogin()
     }
 
     return (

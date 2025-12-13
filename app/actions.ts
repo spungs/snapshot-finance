@@ -18,10 +18,14 @@ export async function toggleAutoSnapshot(userId: string, enabled: boolean) {
     }
 }
 // ... existing code ...
-import { signOut } from '@/lib/auth'
+import { signOut, signIn } from '@/lib/auth'
 
 export async function logout() {
     await signOut({ redirectTo: '/' })
+}
+
+export async function googleLogin() {
+    await signIn('google', { redirectTo: '/dashboard' }, { prompt: 'login select_account' })
 }
 
 export async function updateTargetAsset(amount: number) {
