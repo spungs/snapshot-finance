@@ -9,7 +9,7 @@ export const authConfig = {
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
             authorization: {
                 params: {
-                    prompt: "select_account",
+                    prompt: "login select_account",
                     access_type: "offline",
                     response_type: "code",
                 },
