@@ -10,6 +10,7 @@ import { useLanguage } from '@/lib/i18n/context'
 import { logout } from '@/app/actions'
 import { translations } from '@/lib/i18n/translations'
 import { DeleteAccountDialog } from '@/components/delete-account-dialog'
+import { AdminTrigger } from '@/components/dashboard/admin-trigger'
 
 interface MobileNavProps {
     type: 'landing' | 'dashboard'
@@ -47,14 +48,23 @@ export function MobileNav({ type }: MobileNavProps) {
                 <DialogContent showCloseButton={false} className="w-full h-full max-w-full m-0 p-0 border-none rounded-none bg-background/95 backdrop-blur-sm flex flex-col">
                     <DialogTitle className="sr-only">Navigation Menu</DialogTitle>
                     <div className="flex items-center justify-between p-4 border-b">
-                        <Link
-                            href={type === 'dashboard' ? "/dashboard" : "/"}
-                            className="flex items-center font-bold text-xl"
-                            onClick={() => setOpen(false)}
-                        >
-                            <Camera className="mr-2 h-6 w-6" />
-                            Snapshot Finance
-                        </Link>
+                        {type === 'dashboard' ? (
+                            <AdminTrigger>
+                                <div className="flex items-center font-bold text-xl">
+                                    <Camera className="mr-2 h-6 w-6" />
+                                    Snapshot Finance
+                                </div>
+                            </AdminTrigger>
+                        ) : (
+                            <Link
+                                href="/"
+                                className="flex items-center font-bold text-xl"
+                                onClick={() => setOpen(false)}
+                            >
+                                <Camera className="mr-2 h-6 w-6" />
+                                Snapshot Finance
+                            </Link>
+                        )}
                         <Button variant="ghost" size="icon" onClick={() => setOpen(false)}>
                             <X className="h-6 w-6" />
                             <span className="sr-only">Close menu</span>
