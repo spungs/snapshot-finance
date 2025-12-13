@@ -20,7 +20,17 @@ export async function toggleAutoSnapshot(userId: string, enabled: boolean) {
 // ... existing code ...
 import { signOut, signIn } from '@/lib/auth'
 
+import { cookies } from 'next/headers'
+
 export async function logout() {
+    // Force clear session cookies for Netlify compatibility
+    const cookieStore = await cookies()
+    cookieStore.getAll().forEach((cookie) => {
+        if (cookie.name.includes('authjs') || cookie.name.includes('next-auth')) {
+            cookieStore.delete(cookie.name)
+        }
+    })
+
     await signOut({ redirectTo: '/' })
 }
 
