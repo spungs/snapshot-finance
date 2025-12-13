@@ -7,6 +7,21 @@ import { cn } from '@/lib/utils'
 import { useLanguage } from '@/lib/i18n/context'
 import { Currency, useCurrency } from '@/lib/currency/context'
 import { CashBalanceDialog } from './cash-balance-dialog'
+import { Info } from 'lucide-react'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { useLocalStorage } from '@/lib/hooks/use-local-storage'
 
 interface PortfolioSummaryCardProps {
   totalValue: number
@@ -36,6 +51,7 @@ export function PortfolioSummaryCard({
 }: PortfolioSummaryCardProps) {
   const { t } = useLanguage()
   const { baseCurrency: contextBaseCurrency } = useCurrency()
+  const [interestRate, setInterestRate] = useLocalStorage('interestRate', 3)
 
   const currency = baseCurrency || contextBaseCurrency
 
@@ -154,10 +170,51 @@ export function PortfolioSummaryCard({
             {/* Fun Feature: Equivalent Principal at 35 Interest */}
             {isProfit && totalProfit > 0 ? (
               <div>
-                <p className="text-xs sm:text-sm text-muted-foreground mb-1">{t('interestPrincipal')}</p>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button className="text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors border-b border-dashed border-muted-foreground/50 hover:border-foreground">
+                        {t('interestPrincipal').replace('{rate}', interestRate.toString())}
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-60">
+                      <div className="grid gap-4">
+                        <div className="space-y-2">
+                          <h4 className="font-medium leading-none">{t('interestPrincipal').replace('{rate}', interestRate.toString())}</h4>
+                          <p className="text-sm text-muted-foreground">
+                            {t('interestPrincipalTooltip').replace('{rate}', interestRate.toString())}
+                          </p>
+                        </div>
+                        <div className="grid gap-2">
+                          <div className="grid grid-cols-3 items-center gap-4">
+                            <Label htmlFor="rate">Rate (%)</Label>
+                            <Input
+                              id="rate"
+                              type="number"
+                              value={interestRate}
+                              onChange={(e) => setInterestRate(Number(e.target.value))}
+                              className="col-span-2 h-8"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+
+                  <TooltipProvider>
+                    <Tooltip delayDuration={300}>
+                      <TooltipTrigger asChild>
+                        <Info className="h-3.5 w-3.5 text-muted-foreground/70 cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{t('interestPrincipalTooltip').replace('{rate}', interestRate.toString())}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
                 <div className="flex items-center gap-1.5">
                   <p className="text-lg font-semibold text-muted-foreground/80">
-                    {formatCurrency(displayProfit / 0.03, currency)}
+                    {formatCurrency(displayProfit / (interestRate / 100), currency)}
                   </p>
                 </div>
               </div>

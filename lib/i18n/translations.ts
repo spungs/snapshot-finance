@@ -141,7 +141,8 @@ export const translations = {
         addingProgress: '추가 중...',
         savingSnapshotProgress: '저장 중...',
         snapshotPrefix: '스냅샷',
-        interestPrincipal: '이자 3% 환산 원금',
+        interestPrincipal: '연 {rate}% 예금 환산액',
+        interestPrincipalTooltip: '현재 수익금을 연 이자 {rate}%로 받기 위해 필요한 예금액입니다.',
         exclCash: '예수금 제외',
         // Landing Page
         landing: {
@@ -334,7 +335,8 @@ export const translations = {
         addingProgress: 'Adding...',
         savingSnapshotProgress: 'Saving...',
         snapshotPrefix: 'Snapshot',
-        interestPrincipal: 'Principal for 3% Interest',
+        interestPrincipal: 'Equivalent Principal at {rate}% APY',
+        interestPrincipalTooltip: 'Principal required to earn this profit at {rate}% annual interest.',
         exclCash: 'Excl. Cash',
         // Landing Page
         landing: {
