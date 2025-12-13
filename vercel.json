@@ -2,7 +2,15 @@
     "crons": [
         {
             "path": "/api/cron/weekly-snapshot",
-            "schedule": "30 21 * * 5"
+            "schedule": "0 0 * * 6"
+        },
+        {
+            "path": "/api/cron/daily-snapshot",
+            "schedule": "0 0 * * 2-6"
+        },
+        {
+            "path": "/api/cron/delete-expired-users",
+            "schedule": "0 0 * * *"
         }
     ]
 }

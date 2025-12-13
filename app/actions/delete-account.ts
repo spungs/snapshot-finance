@@ -12,9 +12,12 @@ export async function deleteAccount() {
 
     try {
         // Delete user (Cascasding deletes will handle related data like Holdings, Accounts, Snapshots)
-        await prisma.user.delete({
+        await prisma.user.update({
             where: {
                 id: session.user.id,
+            },
+            data: {
+                deletedAt: new Date(),
             },
         })
 

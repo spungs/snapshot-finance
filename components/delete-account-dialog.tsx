@@ -14,6 +14,8 @@ import {
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { useLanguage } from '@/lib/i18n/context'
 import { translations } from '@/lib/i18n/translations'
 import { deleteAccount } from '@/app/actions/delete-account'
@@ -28,6 +30,7 @@ export function DeleteAccountDialog({ className, variant = 'icon' }: DeleteAccou
     const { language } = useLanguage()
     const t = translations[language]
     const [isDeleting, setIsDeleting] = useState(false)
+    const [verifyInput, setVerifyInput] = useState('')
 
     const handleDelete = async () => {
         try {
@@ -70,6 +73,21 @@ export function DeleteAccountDialog({ className, variant = 'icon' }: DeleteAccou
                         <span className="font-bold mt-2 block">{t.landing.deleteAccountWarning}</span>
                     </AlertDialogDescription>
                 </AlertDialogHeader>
+                <div className="py-4 space-y-2">
+                    <Label htmlFor="verify-delete" className="text-sm font-medium">
+                        {t.landing.deleteAccountVerifyLabel.split('**').map((part, i) =>
+                            i % 2 === 1 ? <strong key={i}>{part}</strong> : part
+                        )}
+                    </Label>
+                    <Input
+                        id="verify-delete"
+                        value={verifyInput}
+                        onChange={(e) => setVerifyInput(e.target.value)}
+                        placeholder={t.landing.deleteConfirmationPhrase}
+                        className="font-mono bg-red-50 border-red-200 focus-visible:ring-red-500"
+                        autoComplete="off"
+                    />
+                </div>
                 <AlertDialogFooter>
                     <AlertDialogCancel disabled={isDeleting}>{t.cancel}</AlertDialogCancel>
                     <AlertDialogAction
@@ -77,7 +95,7 @@ export function DeleteAccountDialog({ className, variant = 'icon' }: DeleteAccou
                             e.preventDefault()
                             handleDelete()
                         }}
-                        disabled={isDeleting}
+                        disabled={isDeleting || verifyInput !== t.landing.deleteConfirmationPhrase}
                         className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
                     >
                         {isDeleting ? t.deleting : t.delete}

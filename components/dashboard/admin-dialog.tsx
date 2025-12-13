@@ -7,169 +7,146 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
-import { AlertCircle, CheckCircle2, Loader2, RefreshCw } from 'lucide-react'
+import { AlertCircle, ArrowRight, Loader2, RefreshCw, CheckCircle2, AlertTriangle, PlusCircle, Trash2, Search } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { toast } from 'sonner'
-import { bulkImportHoldings, updateCashBalance } from '@/app/actions/admin-actions'
+import { analyzeBulkImport, executeBulkImport, AnalyzedItem, updateCashBalance } from '@/app/actions/admin-actions'
 import { useLanguage } from '@/lib/i18n/context'
 import { translations } from '@/lib/i18n/translations'
+import { Badge } from '@/components/ui/badge'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { Card, CardContent } from '@/components/ui/card'
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { FormattedNumberInput } from '@/components/ui/formatted-number-input'
 
 interface AdminDialogProps {
     open: boolean
     onOpenChange: (open: boolean) => void
 }
 
-interface ParsedHolding {
-    id: string
-    code: string // Can be name or code initially
-    qty: number
-    price: number
-    status: 'pending' | 'valid' | 'invalid'
-    error?: string
-    resolvedCode?: string
-    resolvedName?: string
-}
-
 export function AdminDialog({ open, onOpenChange }: AdminDialogProps) {
     const { language } = useLanguage()
     const t = translations[language]
 
+    // State
     const [rawText, setRawText] = useState('')
-    const [parsedHoldings, setParsedHoldings] = useState<ParsedHolding[]>([])
-    const [isParsing, setIsParsing] = useState(false)
-    const [isImporting, setIsImporting] = useState(false)
+    const [isAnalyzing, setIsAnalyzing] = useState(false)
+    const [isExecuting, setIsExecuting] = useState(false)
+    const [analysisResult, setAnalysisResult] = useState<{
+        resolved: AnalyzedItem[],
+        unresolved: AnalyzedItem[]
+    } | null>(null)
+    const [activeTab, setActiveTab] = useState('import')
+    const [reviewTab, setReviewTab] = useState('unresolved')
+    const [strategy, setStrategy] = useState<'overwrite' | 'add'>('add')
     const [cashAmount, setCashAmount] = useState('')
+    const [isUpdatingCash, setIsUpdatingCash] = useState(false)
 
-    // Smart Parser Logic
-    const parseText = () => {
-        setIsParsing(true)
+    // Handlers
+    const handleAnalyze = async () => {
+        setIsAnalyzing(true)
+        setAnalysisResult(null)
         try {
+            // 1. Client-side parse similar to before
             const lines = rawText.trim().split('\n')
-            const parsed: ParsedHolding[] = lines.map((line, index) => {
-                // Try JSON first if it looks like it
+            const items = lines.map((line) => {
+                // Try JSON
                 if (line.trim().startsWith('{')) {
                     try {
                         const json = JSON.parse(line)
                         return {
-                            id: `row-${index}`,
-                            code: json.code || json.name || 'Unknown',
-                            qty: Number(json.qty || json.quantity || 0),
-                            price: Number(json.price || json.avgPrice || 0),
-                            status: 'pending'
+                            identifier: (json.code || json.name || 'Unknown').toString().toUpperCase(),
+                            quantity: Number(json.qty || json.quantity || 0),
+                            averagePrice: Number(json.price || json.avgPrice || 0),
                         }
                     } catch (e) { }
                 }
 
-                // Split by common separators: Tab (Excel), Comma, Pipe, or multiple spaces
+                // Try Text
                 const parts = line.split(/[\t,\|]+|\s{2,}/).map(p => p.trim()).filter(Boolean)
-
-                // If parts length < 3, maybe space separated?
                 const finalParts = parts.length >= 3 ? parts : line.split(/\s+/).filter(Boolean)
 
-                if (finalParts.length < 3) {
-                    return {
-                        id: `row-${index}`,
-                        code: line,
-                        qty: 0,
-                        price: 0,
-                        status: 'invalid',
-                        error: 'Format: [Name/Code] [Qty] [Price]'
-                    }
-                }
+                if (finalParts.length < 3) return null
 
                 const priceStr = finalParts[finalParts.length - 1]
                 const qtyStr = finalParts[finalParts.length - 2]
                 const nameParts = finalParts.slice(0, finalParts.length - 2)
                 const nameOrCode = nameParts.join(' ')
 
-                const qty = Number(qtyStr.replace(/,/g, ''))
-                const price = Number(priceStr.replace(/,/g, ''))
-
-                if (isNaN(qty) || isNaN(price)) {
-                    return {
-                        id: `row-${index}`,
-                        code: nameOrCode,
-                        qty: 0,
-                        price: 0,
-                        status: 'invalid',
-                        error: 'Qty or Price is not a number'
-                    }
-                }
-
                 return {
-                    id: `row-${index}`,
-                    code: nameOrCode,
-                    qty,
-                    price,
-                    status: 'pending'
+                    identifier: nameOrCode.toUpperCase(),
+                    quantity: Number(qtyStr.replace(/,/g, '')),
+                    averagePrice: Number(priceStr.replace(/,/g, ''))
                 }
-            })
-            setParsedHoldings(parsed)
-        } catch (error) {
-            console.error(error)
-            toast.error(t.admin.parsingFailed, {
-                description: t.admin.parsingFailedDesc,
-            })
-        } finally {
-            setIsParsing(false)
-        }
-    }
+            }).filter(Boolean) as any[]
 
-    const handleImport = async () => {
-        setIsImporting(true)
-        try {
-            const itemsToImport = parsedHoldings.filter(h => h.status !== 'invalid').map(h => ({
-                identifier: h.code,
-                quantity: h.qty,
-                averagePrice: h.price
-            }))
-
-            if (itemsToImport.length === 0) {
-                toast.error(t.admin.nothingToImport, {
-                    description: t.admin.nothingToImportDesc,
-                })
-                setIsImporting(false)
+            if (items.length === 0) {
+                toast.error(t.admin.parsingFailed)
+                setIsAnalyzing(false)
                 return
             }
 
-            const result = await bulkImportHoldings(itemsToImport)
+            // 2. Server-side Analyze
+            const result = await analyzeBulkImport(items)
+
+            if (result.success) {
+                setAnalysisResult({
+                    resolved: result.resolved,
+                    unresolved: result.unresolved
+                })
+                // Auto switch to review tab
+                setReviewTab(result.unresolved.length > 0 ? 'unresolved' : 'ready')
+            } else {
+                toast.error(t.admin.failed, { description: result.error })
+            }
+
+        } catch (error) {
+            console.error(error)
+            toast.error(t.admin.failed)
+        } finally {
+            setIsAnalyzing(false)
+        }
+    }
+
+    const handleExecute = async () => {
+        if (!analysisResult) return
+        setIsExecuting(true)
+        try {
+            const validItems = analysisResult.resolved.map(item => ({
+                identifier: item.stockCode!, // We resolved it to stockCode
+                quantity: item.inputQty,
+                averagePrice: item.inputPrice
+            }))
+
+            if (validItems.length === 0) {
+                toast.error(t.admin.nothingToImport)
+                return
+            }
+
+            const result = await executeBulkImport(validItems, strategy)
 
             if (result.success) {
                 toast.success(t.admin.importSuccess, {
                     description: t.admin.importSuccessDesc.replace('{count}', String(result.count)),
                 })
                 onOpenChange(false)
+                // Reset state
                 setRawText('')
-                setParsedHoldings([])
+                setAnalysisResult(null)
             } else {
-                if (result.errors) {
-                    const newParsed = [...parsedHoldings]
-                    result.errors.forEach((err: any) => {
-                        const idx = newParsed.findIndex(p => p.code === err.identifier)
-                        if (idx !== -1) {
-                            newParsed[idx].status = 'invalid'
-                            newParsed[idx].error = err.message
-                        }
-                    })
-                    setParsedHoldings(newParsed)
-                    toast.error(t.admin.importPartial, {
-                        description: t.admin.importCheckErrors,
-                    })
-                } else {
-                    toast.error(t.admin.importFailed, {
-                        description: result.error,
-                    })
-                }
+                toast.error(t.admin.importFailed, { description: result.error })
             }
-
-        } catch (error) {
-            toast.error(t.admin.failed, {
-                description: "Failed to import holdings.",
-            })
+        } catch (e) {
+            toast.error(t.admin.failed)
         } finally {
-            setIsImporting(false)
+            setIsExecuting(false)
         }
     }
+
+    // Helper to move item from unresolved to resolved (Manual Fix simulation)
+    // Real implementation would need a stock search dialog. For now, let's allow editing the identifier and re-analyzing.
+    // Actually, re-analyzing is the easiest way.
+    // Let's implement a simple "Edit Identifier" for unresolved items in the list.
 
     const handleUpdateCash = async () => {
         const amount = Number(cashAmount.replace(/,/g, ''))
@@ -178,18 +155,25 @@ export function AdminDialog({ open, onOpenChange }: AdminDialogProps) {
             return
         }
 
-        const result = await updateCashBalance(amount)
-        if (result.success) {
-            toast.success(t.admin.cashUpdated)
-            setCashAmount('')
-        } else {
-            toast.error(t.admin.failed, { description: result.error })
+        setIsUpdatingCash(true)
+        try {
+            const result = await updateCashBalance(amount)
+            if (result.success) {
+                toast.success(t.admin.cashUpdated)
+                setCashAmount('')
+            } else {
+                toast.error(t.admin.failed, { description: result.error })
+            }
+        } catch (e) {
+            toast.error(t.admin.failed)
+        } finally {
+            setIsUpdatingCash(false)
         }
     }
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
                 <DialogHeader>
                     <DialogTitle>{t.admin.title}</DialogTitle>
                     <DialogDescription>
@@ -197,91 +181,205 @@ export function AdminDialog({ open, onOpenChange }: AdminDialogProps) {
                     </DialogDescription>
                 </DialogHeader>
 
-                <Tabs defaultValue="import" className="w-full">
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden flex flex-col">
                     <TabsList className="grid w-full grid-cols-2">
                         <TabsTrigger value="import">{t.admin.bulkImport}</TabsTrigger>
                         <TabsTrigger value="cash">{t.admin.cashBalance}</TabsTrigger>
                     </TabsList>
 
-                    <TabsContent value="import" className="space-y-4">
-                        <Alert>
-                            <AlertCircle className="h-4 w-4" />
-                            <AlertTitle>{t.admin.formatInstructions}</AlertTitle>
-                            <AlertDescription className="whitespace-pre-wrap">
-                                {t.admin.formatDesc}
-                            </AlertDescription>
-                        </Alert>
+                    <TabsContent value="import" className="flex-1 flex flex-col gap-4 overflow-hidden pt-4">
+                        {!analysisResult ? (
+                            // Phase 1: Input
+                            <div className="flex-1 flex flex-col gap-4 overflow-y-auto p-1">
+                                <Alert>
+                                    <AlertCircle className="h-4 w-4" />
+                                    <AlertTitle>{t.admin.formatInstructions}</AlertTitle>
+                                    <AlertDescription className="whitespace-pre-wrap">
+                                        {t.admin.formatDesc}
+                                    </AlertDescription>
+                                </Alert>
 
-                        <div className="grid gap-2">
-                            <Label>{t.admin.rawData}</Label>
-                            <Textarea
-                                placeholder={t.admin.pastePlaceholder}
-                                className="h-32 font-mono text-sm"
-                                value={rawText}
-                                onChange={(e) => setRawText(e.target.value)}
-                            />
-                        </div>
+                                <div className="grid gap-2 flex-1">
+                                    <Label>{t.admin.rawData}</Label>
+                                    <Textarea
+                                        placeholder={t.admin.pastePlaceholder}
+                                        className="flex-1 font-mono text-sm min-h-[200px]"
+                                        value={rawText}
+                                        onChange={(e) => setRawText(e.target.value)}
+                                    />
+                                </div>
 
-                        <div className="flex justify-end gap-2">
-                            <Button variant="outline" onClick={() => setParsedHoldings([])} disabled={!parsedHoldings.length}>
-                                {t.admin.clear}
-                            </Button>
-                            <Button onClick={parseText} disabled={!rawText.trim()}>
-                                <RefreshCw className="mr-2 h-4 w-4" />
-                                {t.admin.parsePreview}
-                            </Button>
-                        </div>
+                                <div className="flex justify-end gap-2">
+                                    <Button onClick={handleAnalyze} disabled={!rawText.trim() || isAnalyzing}>
+                                        {isAnalyzing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+                                        {t.admin.parsePreview}
+                                    </Button>
+                                    <Button variant="outline" onClick={() => setRawText('')} disabled={!rawText}>
+                                        {t.admin.clear}
+                                    </Button>
+                                </div>
+                            </div>
+                        ) : (
+                            // Phase 2: Review
+                            <div className="flex-1 flex flex-col gap-4 overflow-hidden">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="font-semibold text-lg">{t.admin.analysisResult}</h3>
+                                    <Button variant="ghost" size="sm" onClick={() => setAnalysisResult(null)}>
+                                        <RefreshCw className="mr-2 h-4 w-4" />
+                                        Re-Analyze
+                                    </Button>
+                                </div>
 
-                        {parsedHoldings.length > 0 && (
-                            <div className="border rounded-md overflow-hidden">
-                                <table className="w-full text-sm text-left">
-                                    <thead className="bg-muted">
-                                        <tr>
-                                            <th className="p-2">{t.admin.nameCode}</th>
-                                            <th className="p-2 text-right">{t.quantity}</th>
-                                            <th className="p-2 text-right">{t.avgPrice}</th>
-                                            <th className="p-2 text-center">{t.admin.status}</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {parsedHoldings.map((row) => (
-                                            <tr key={row.id} className="border-t">
-                                                <td className="p-2 font-mono">{row.code}</td>
-                                                <td className="p-2 text-right">{row.qty}</td>
-                                                <td className="p-2 text-right">{row.price.toLocaleString()}</td>
-                                                <td className="p-2 text-center">
-                                                    {row.status === 'invalid' ? (
-                                                        <span className="text-destructive text-xs font-bold" title={row.error}>Error</span>
-                                                    ) : (
-                                                        <span className="text-green-600 text-xs">OK</span>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                <Tabs value={reviewTab} onValueChange={setReviewTab} className="flex-1 flex flex-col overflow-hidden">
+                                    <TabsList className="w-full justify-start">
+                                        <TabsTrigger value="unresolved" className="relative">
+                                            {t.admin.tabUnresolved.replace('{count}', String(analysisResult.unresolved.length))}
+                                            {analysisResult.unresolved.length > 0 && <span className="ml-2 w-2 h-2 rounded-full bg-red-500" />}
+                                        </TabsTrigger>
+                                        <TabsTrigger value="ready">
+                                            {t.admin.tabReady.replace('{count}', String(analysisResult.resolved.length))}
+                                            {analysisResult.resolved.length > 0 && <span className="ml-2 w-2 h-2 rounded-full bg-green-500" />}
+                                        </TabsTrigger>
+                                    </TabsList>
+
+                                    {/* Unresolved Tab */}
+                                    <TabsContent value="unresolved" className="flex-1 overflow-hidden data-[state=inactive]:hidden">
+                                        <ScrollArea className="h-full border rounded-md p-4">
+                                            {analysisResult.unresolved.length === 0 ? (
+                                                <div className="flex flex-col items-center justify-center h-40 text-muted-foreground gap-2">
+                                                    <CheckCircle2 className="h-8 w-8 text-green-500" />
+                                                    <p>{t.admin.noUnresolved}</p>
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-4">
+                                                    <Alert variant="destructive">
+                                                        <AlertTriangle className="h-4 w-4" />
+                                                        <AlertTitle>{t.admin.fixTypos}</AlertTitle>
+                                                    </Alert>
+                                                    {analysisResult.unresolved.map((item, idx) => (
+                                                        <Card key={idx}>
+                                                            <CardContent className="p-4 flex items-center gap-4">
+                                                                <div className="flex-1">
+                                                                    <div className="font-bold text-red-500">{item.identifier}</div>
+                                                                    <div className="text-sm text-muted-foreground">
+                                                                        Qty: {item.inputQty} / Price: {item.inputPrice.toLocaleString()}
+                                                                    </div>
+                                                                </div>
+                                                                <div className="flex gap-2">
+                                                                    {/* Ideally a search dialog here. For MVP, we instruct user to fix raw text */}
+                                                                    <Button variant="outline" size="sm" onClick={() => {
+                                                                        setRawText(prev => prev.replace(item.identifier, '')) // Helper? No, complex logic.
+                                                                        // Better: Just copy to clipboard or focus
+                                                                        toast.info("Please fix this typo in the raw text step.")
+                                                                        setAnalysisResult(null) // Go back
+                                                                    }}>
+                                                                        Fix in Raw View
+                                                                    </Button>
+                                                                </div>
+                                                            </CardContent>
+                                                        </Card>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </ScrollArea>
+                                    </TabsContent>
+
+                                    {/* Ready Tab */}
+                                    <TabsContent value="ready" className="flex-1 overflow-hidden data-[state=inactive]:hidden flex flex-col gap-4">
+                                        <ScrollArea className="flex-1 border rounded-md">
+                                            <table className="w-full text-sm text-left">
+                                                <thead className="bg-muted sticky top-0 z-10">
+                                                    <tr>
+                                                        <th className="p-2">{t.admin.nameCode}</th>
+                                                        <th className="p-2 text-right">{t.quantity}</th>
+                                                        <th className="p-2 text-right">{t.avgPrice}</th>
+                                                        <th className="p-2 text-center">{t.admin.diff}</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {analysisResult.resolved.map((item, idx) => {
+                                                        const isOverwrite = strategy === 'overwrite'
+                                                        const newQty = isOverwrite ? item.inputQty : (item.currentQty + item.inputQty)
+                                                        const qtyDiff = newQty - item.currentQty
+                                                        const isUpdate = item.currentQty > 0
+
+                                                        return (
+                                                            <tr key={idx} className="border-t hover:bg-muted/50">
+                                                                <td className="p-2">
+                                                                    <div className="font-medium">{item.stockName}</div>
+                                                                    <div className="text-xs text-muted-foreground font-mono flex gap-1">
+                                                                        <span>{item.stockCode}</span>
+                                                                        {item.currency && (
+                                                                            <Badge variant="outline" className="h-4 px-1 text-[10px]">
+                                                                                {item.currency}
+                                                                            </Badge>
+                                                                        )}
+                                                                    </div>
+                                                                </td>
+                                                                <td className="p-2 text-right">
+                                                                    {item.inputQty}
+                                                                </td>
+                                                                <td className="p-2 text-right">{item.inputPrice.toLocaleString()}</td>
+                                                                <td className="p-2 text-right">
+                                                                    {isUpdate ? (
+                                                                        <div className="flex flex-col items-end text-xs">
+                                                                            <span className="text-muted-foreground">{item.currentQty} → <b>{newQty}</b></span>
+                                                                            <span className={qtyDiff > 0 ? "text-green-600" : "text-red-500"}>
+                                                                                ({qtyDiff > 0 ? '+' : ''}{qtyDiff})
+                                                                            </span>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <Badge variant="secondary" className="bg-green-100 text-green-800">New</Badge>
+                                                                    )}
+                                                                </td>
+                                                            </tr>
+                                                        )
+                                                    })}
+                                                </tbody>
+                                            </table>
+                                        </ScrollArea>
+
+                                        <div className="border-t pt-4 space-y-4">
+                                            <div className="space-y-2">
+                                                <Label>{t.admin.strategy}</Label>
+                                                <RadioGroup value={strategy} onValueChange={(v: any) => setStrategy(v)} className="flex flex-col gap-2">
+                                                    <div className="flex items-center space-x-2">
+                                                        <RadioGroupItem value="add" id="st-add" />
+                                                        <Label htmlFor="st-add">{t.admin.strategyAdd}</Label>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <RadioGroupItem value="overwrite" id="st-overwrite" />
+                                                        <Label htmlFor="st-overwrite">{t.admin.strategyOverwrite}</Label>
+                                                    </div>
+                                                </RadioGroup>
+                                            </div>
+
+                                            <div className="flex justify-end pt-2">
+                                                <Button onClick={handleExecute} disabled={isExecuting || analysisResult.resolved.length === 0} className="w-full sm:w-auto">
+                                                    {isExecuting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                                    {t.admin.executeImport} ({analysisResult.resolved.length})
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </TabsContent>
+                                </Tabs>
                             </div>
                         )}
-
-                        <div className="flex justify-end pt-4">
-                            <Button onClick={handleImport} disabled={parsedHoldings.length === 0 || isImporting}>
-                                {isImporting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                {t.admin.executeImport}
-                            </Button>
-                        </div>
                     </TabsContent>
 
                     <TabsContent value="cash" className="space-y-4">
                         <div className="grid gap-2">
                             <Label>{t.admin.cashUpdateLabel}</Label>
                             <div className="flex gap-2">
-                                <Input
-                                    type="text"
+                                <FormattedNumberInput
                                     placeholder={t.admin.cashUpdatePlaceholder}
                                     value={cashAmount}
-                                    onChange={(e) => setCashAmount(e.target.value)}
+                                    onChange={setCashAmount}
                                 />
-                                <Button onClick={handleUpdateCash}>{t.admin.update}</Button>
+                                <Button onClick={handleUpdateCash} disabled={!cashAmount || isUpdatingCash}>
+                                    {isUpdatingCash && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    {t.admin.update}
+                                </Button>
                             </div>
                             <p className="text-xs text-muted-foreground">{t.admin.cashHelper}</p>
                         </div>

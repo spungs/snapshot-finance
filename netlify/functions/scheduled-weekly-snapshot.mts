@@ -22,5 +22,6 @@ export default async (req: Request) => {
 };
 
 export const config: Config = {
-    schedule: "30 21 * * 5"
+    // 00:00 UTC Sun
+    schedule: "0 0 * * 6"
 };
