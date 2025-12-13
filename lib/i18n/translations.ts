@@ -147,9 +147,12 @@ export const translations = {
         setTargetAsset: '목표 설정',
         achievementRate: '달성률',
         confirm: '확인',
-        cancel: '취소',
+        confirm: '확인',
         updateSuccess: '저장되었습니다.',
         updateFailed: '저장에 실패했습니다.',
+        goalAchieved: '목표 달성! 100% 달성을 축하합니다! 🎉',
+        setNewGoal: '새로운 목표 설정하기',
+        congratulations: '축하합니다!',
         exclCash: '예수금 제외',
         // Landing Page
         landing: {
@@ -348,9 +351,12 @@ export const translations = {
         setTargetAsset: 'Set Goal',
         achievementRate: 'Achievement',
         confirm: 'Confirm',
-        cancel: 'Cancel',
+        confirm: 'Confirm',
         updateSuccess: 'Saved successfully.',
         updateFailed: 'Failed to save.',
+        goalAchieved: 'Goal Achieved! Congratulations on reaching 100%! 🎉',
+        setNewGoal: 'Set New Goal',
+        congratulations: 'Congratulations!',
         exclCash: 'Excl. Cash',
         // Landing Page
         landing: {

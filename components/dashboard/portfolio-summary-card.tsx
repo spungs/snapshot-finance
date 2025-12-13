@@ -26,9 +26,12 @@ import { useLocalStorage } from '@/lib/hooks/use-local-storage'
 import { TargetAssetDialog } from './target-asset-dialog'
 import { Progress } from '@/components/ui/progress'
 
-// ... existing imports
+import confetti from 'canvas-confetti'
+import { useEffect, useRef } from 'react'
+import { Button } from '@/components/ui/button'
 
 interface PortfolioSummaryCardProps {
+  // ... existing props
   totalValue: number
   totalCost: number
   totalProfit: number
@@ -64,8 +67,6 @@ export function PortfolioSummaryCard({
 
   // Conversion helper
   const convert = (value: number) => {
-    // If target currency is KRW, and input is KRW (assumed), no conversion.
-    // If target is USD, divide by rate.
     if (currency === 'KRW') return value
     return value / exchangeRate
   }
@@ -78,12 +79,66 @@ export function PortfolioSummaryCard({
   const displayTarget = convert(targetAsset)
 
   const achievementRate = displayTarget > 0 ? (displayValue / displayTarget) * 100 : 0
+  const isGoalAchieved = achievementRate >= 100 && displayTarget > 0
+  const hasTriggeredRef = useRef(false)
+
+  useEffect(() => {
+    if (isGoalAchieved && !hasTriggeredRef.current) {
+      hasTriggeredRef.current = true
+      const duration = 3 * 1000
+      const animationEnd = Date.now() + duration
+      const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 }
+
+      const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min
+
+      const interval: any = setInterval(function () {
+        const timeLeft = animationEnd - Date.now()
+
+        if (timeLeft <= 0) {
+          return clearInterval(interval)
+        }
+
+        const particleCount = 50 * (timeLeft / duration)
+
+        confetti({
+          ...defaults,
+          particleCount,
+          origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 }
+        })
+        confetti({
+          ...defaults,
+          particleCount,
+          origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 }
+        })
+      }, 250)
+    }
+  }, [isGoalAchieved])
 
 
   const isProfit = totalProfit >= 0
 
   return (
     <Card>
+      {/* Goal Achieved Banner */}
+      {isGoalAchieved && (
+        <div className="bg-primary/10 text-primary px-6 py-3 text-sm font-medium flex justify-between items-center border-b border-primary/20">
+          <span className="flex items-center gap-2">
+            🎉 {t('goalAchieved')}
+          </span>
+          {isEditable && (
+            <TargetAssetDialog
+              initialTarget={targetAsset}
+              currency={currency}
+              exchangeRate={exchangeRate}
+              trigger={
+                <Button size="sm" variant="default" className="h-8 text-xs">
+                  {t('setNewGoal')}
+                </Button>
+              }
+            />
+          )}
+        </div>
+      )}
       <CardHeader>
         <CardTitle className="flex justify-between items-center">
           <span>{t('portfolioSummary')}</span>
@@ -216,7 +271,10 @@ export function PortfolioSummaryCard({
                         <div className="space-y-2">
                           <h4 className="font-medium leading-none">{t('interestPrincipal').replace('{rate}', interestRate.toString())}</h4>
                           <p className="text-sm text-muted-foreground">
-                            {t('interestPrincipalTooltip').replace('{rate}', interestRate.toString())}
+                            {t('interestPrincipalTooltip')
+                              .replace('{rate}', interestRate.toString())
+                              .replace('{profit}', formatCurrency(Math.abs(displayProfit), currency))
+                            }
                           </p>
                         </div>
                         <div className="grid gap-2">
@@ -241,7 +299,10 @@ export function PortfolioSummaryCard({
                         <Info className="h-3.5 w-3.5 text-muted-foreground/70 cursor-help" />
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>{t('interestPrincipalTooltip').replace('{rate}', interestRate.toString())}</p>
+                        <p>{t('interestPrincipalTooltip')
+                          .replace('{rate}', interestRate.toString())
+                          .replace('{profit}', formatCurrency(Math.abs(displayProfit), currency))
+                        }</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>

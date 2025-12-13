@@ -22,9 +22,10 @@ interface TargetAssetDialogProps {
     initialTarget: number
     currency?: Currency
     exchangeRate?: number
+    trigger?: React.ReactNode
 }
 
-export function TargetAssetDialog({ initialTarget, currency = 'KRW', exchangeRate = 1435 }: TargetAssetDialogProps) {
+export function TargetAssetDialog({ initialTarget, currency = 'KRW', exchangeRate = 1435, trigger }: TargetAssetDialogProps) {
     const { t } = useLanguage()
     const [open, setOpen] = useState(false)
     const [amount, setAmount] = useState('')
@@ -90,28 +91,29 @@ export function TargetAssetDialog({ initialTarget, currency = 'KRW', exchangeRat
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-4 w-4 text-muted-foreground hover:text-foreground" disabled={isBusy}>
-                    {isBusy ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                    ) : (
-                        <Edit2 className="h-3 w-3" />
-                    )}
-                </Button>
+                {trigger ? trigger : (
+                    <Button variant="ghost" size="icon" className="h-4 w-4 text-muted-foreground hover:text-foreground" disabled={isBusy}>
+                        {isBusy ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                            <Edit2 className="h-3 w-3" />
+                        )}
+                    </Button>
+                )}
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
                     <DialogTitle>{t('setTargetAsset')}</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="grid gap-4 py-4">
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="target" className="text-right whitespace-nowrap">
+                    <div className="grid gap-2">
+                        <Label htmlFor="target">
                             {t('targetAsset')} ({currency})
                         </Label>
                         <FormattedNumberInput
                             id="target"
                             value={amount}
                             onChange={(value) => setAmount(value)}
-                            className="col-span-3"
                         />
                     </div>
                     <DialogFooter>
