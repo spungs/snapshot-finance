@@ -27,8 +27,9 @@ import { TargetAssetDialog } from './target-asset-dialog'
 import { Progress } from '@/components/ui/progress'
 
 import confetti from 'canvas-confetti'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useTransition } from 'react'
 import { Button } from '@/components/ui/button'
+import { useRouter } from 'next/navigation'
 
 interface PortfolioSummaryCardProps {
   // ... existing props
@@ -62,6 +63,14 @@ export function PortfolioSummaryCard({
   const { t } = useLanguage()
   const { baseCurrency: contextBaseCurrency } = useCurrency()
   const [interestRate, setInterestRate] = useLocalStorage('interestRate', 3)
+  const [isPending, startTransition] = useTransition()
+  const router = useRouter()
+
+  const handleRefresh = () => {
+    startTransition(() => {
+      router.refresh()
+    })
+  }
 
   const currency = baseCurrency || contextBaseCurrency
 
@@ -121,7 +130,7 @@ export function PortfolioSummaryCard({
     <Card>
       {/* Goal Achieved Banner */}
       {isGoalAchieved && (
-        <div className="bg-primary/10 text-primary px-6 py-3 text-sm font-medium flex justify-between items-center border-b border-primary/20">
+        <div className="bg-primary/10 text-primary px-6 py-3 text-sm font-medium flex justify-between items-center border-b border-primary/20 -mt-6 rounded-t-xl mb-4">
           <span className="flex items-center gap-2">
             🎉 {t('goalAchieved')}
           </span>
@@ -130,6 +139,8 @@ export function PortfolioSummaryCard({
               initialTarget={targetAsset}
               currency={currency}
               exchangeRate={exchangeRate}
+              isGlobalBusy={isPending}
+              onRefresh={handleRefresh}
               trigger={
                 <Button size="sm" variant="default" className="h-8 text-xs">
                   {t('setNewGoal')}
@@ -213,6 +224,8 @@ export function PortfolioSummaryCard({
                   initialTarget={targetAsset}
                   currency={currency}
                   exchangeRate={exchangeRate}
+                  isGlobalBusy={isPending}
+                  onRefresh={handleRefresh}
                 />
               )}
             </div>

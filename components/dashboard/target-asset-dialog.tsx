@@ -1,4 +1,4 @@
-import { useState, useEffect, useTransition } from "react"
+import React, { useState, useEffect, useTransition } from "react"
 import { Button } from "@/components/ui/button"
 import {
     Dialog,
@@ -23,9 +23,18 @@ interface TargetAssetDialogProps {
     currency?: Currency
     exchangeRate?: number
     trigger?: React.ReactNode
+    isGlobalBusy?: boolean
+    onRefresh?: () => void
 }
 
-export function TargetAssetDialog({ initialTarget, currency = 'KRW', exchangeRate = 1435, trigger }: TargetAssetDialogProps) {
+export function TargetAssetDialog({
+    initialTarget,
+    currency = 'KRW',
+    exchangeRate = 1435,
+    trigger,
+    isGlobalBusy = false,
+    onRefresh
+}: TargetAssetDialogProps) {
     const { t } = useLanguage()
     const [open, setOpen] = useState(false)
     const [amount, setAmount] = useState('')
@@ -73,9 +82,13 @@ export function TargetAssetDialog({ initialTarget, currency = 'KRW', exchangeRat
             if (result.success) {
                 toast.success(t('targetUpdateSuccess') || 'Goal updated')
                 setOpen(false)
-                startTransition(() => {
-                    router.refresh()
-                })
+                if (onRefresh) {
+                    onRefresh()
+                } else {
+                    startTransition(() => {
+                        router.refresh()
+                    })
+                }
             } else {
                 toast.error(t('targetUpdateFailed') || 'Failed to update')
             }
@@ -86,12 +99,16 @@ export function TargetAssetDialog({ initialTarget, currency = 'KRW', exchangeRat
         }
     }
 
-    const isBusy = loading || isPending
+    const isBusy = loading || isPending || isGlobalBusy
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                {trigger ? trigger : (
+                {trigger && React.isValidElement(trigger) ? (
+                    React.cloneElement(trigger as React.ReactElement<{ disabled?: boolean }>, {
+                        disabled: isBusy
+                    })
+                ) : (
                     <Button variant="ghost" size="icon" className="h-4 w-4 text-muted-foreground hover:text-foreground" disabled={isBusy}>
                         {isBusy ? (
                             <Loader2 className="h-3 w-3 animate-spin" />
