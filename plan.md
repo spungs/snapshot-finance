@@ -79,40 +79,10 @@
 - [x] **이자 3% 환산 원금 툴팁**:
     - [x] 사용자가 설정 가능한 이자율(Persisted in LocalStorage)
     - [x] 수익금을 예금 원금으로 환산하여 시각화 (동기부여 요소)
-- [ ] **목표 자산 설정**: 목표 금액 설정 및 달성률 시각화
+- [x] **목표 자산 설정**: 목표 금액 설정 및 달성률 시각화
 
 ### 3. 안정성 및 테스트
 - [ ] **에러 핸들링 강화**: 사용자 친화적인 에러 메시지 및 토스트 알림
 - [ ] **단위/통합 테스트**: 주요 비즈니스 로직(수익률 계산 등) 테스트 코드 작성
 
 ---
-
-## 🚀 바로 시작하기
-
-```bash
-# 클론
-git clone https://github.com/spungs/snapshot-finance.git
-cd snapshot-finance
-
-# 의존성 설치
-npm install
-
-# 환경변수 설정
-cp .env.example .env.local
-# .env.local 파일에 DATABASE_URL, GOOGLE_CLIENT_ID, KIS API 키 등 설정
-
-# Prisma 클라이언트 생성
-npx prisma generate
-
-# 개발 서버 실행
-npm run dev
-```
-
----
-
-## 📚 참고 문서
-
-- **CLAUDE.md**: 개발 가이드 및 아키텍처
-- **Prisma Docs**: https://www.prisma.io/docs
-- **Next.js Docs**: https://nextjs.org/docs
-- **shadcn/ui**: https://ui.shadcn.com
