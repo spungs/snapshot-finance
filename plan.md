@@ -98,7 +98,7 @@
 
 ### 3. 안정성 및 테스트
 - [x] **API 호출 최적화**: 로고 클릭 시 대시보드 새로고침(Link) 차단하여 불필요한 API 비용(KIS) 절감 (PC/Mobile)
-- [x] **인증 UX 개선**: Netlify 배포 환경에서 Google 로그인 시 계정 선택창 강제 표시 (`prompt: select_account`)
+- [x] **인증 UX 개선**: Netlify 배포 환경에서 Google 로그인 시 계정 선택 및 재로그인 강제 (`prompt: login select_account`)
 - [ ] **에러 핸들링 강화**: 사용자 친화적인 에러 메시지 및 토스트 알림
 - [ ] **단위/통합 테스트**: 주요 비즈니스 로직(수익률 계산 등) 테스트 코드 작성
 

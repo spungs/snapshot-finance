@@ -14,7 +14,7 @@ export default function SignIn() {
     // Alternative: Using standard NextAuth flow for robustness
     const handleGoogleSignIn = () => {
         setIsSigningIn(true)
-        signIn('google', { callbackUrl: '/dashboard' }, { prompt: 'select_account' })
+        signIn('google', { callbackUrl: '/dashboard' }, { prompt: 'login select_account' })
     }
 
     return (
