@@ -40,6 +40,7 @@
 #### 4. 기타 유지보수
 - [x] Next.js 16 호환성 업데이트 (`middleware.ts` → `proxy.ts`)
 - [x] Vercel 배포 환경 이슈 해결 (DB 연결, 시간대, 환경변수)
+- [x] **배포 환경 이전**: Vercel -> Netlify (Next.js Runtime v5, Scheduled Functions)
 - [x] 구글 애드센스 검증 파일 추가 (`ads.txt`)
 - [x] 구글 애드센스 검증 파일 추가 (`ads.txt`)
 - [x] 구글 애드센스 검증 파일 추가 (`ads.txt`)

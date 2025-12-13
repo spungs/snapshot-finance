@@ -54,6 +54,7 @@
     "zod": "^4.1.13"
   },
   "devDependencies": {
+    "@netlify/functions": "^5.1.1",
     "@tailwindcss/postcss": "^4",
     "@types/adm-zip": "^0.5.7",
     "@types/node": "^20",

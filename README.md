@@ -29,8 +29,18 @@ To learn more about Next.js, take a look at the following resources:
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-## Deploy on Vercel
+## 배포 (Deployment)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Netlify 배포 (권장)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+이 프로젝트는 현재 Netlify 배포를 위해 구성되어 있습니다.
+
+1.  GitHub 저장소를 Netlify에 연결합니다.
+2.  **Build Command:** `npm run build`
+3.  **Publish Directory:** `.next`
+4.  **Environment Variables:** `.env` 파일의 내용(DATABASE_URL, NEXTAUTH_SECRET 등)을 Netlify Site Settings > Environment Variables에 모두 추가합니다.
+5.  **Cron Jobs:** `netlify/functions`에 정의된 스케줄 함수들이 자동으로 감지되어 매일/매주 스냅샷 작업을 수행합니다.
+
+### Vercel 배포 (참고)
+
+Vercel 배포 시 `vercel.json`의 설정을 따릅니다.
