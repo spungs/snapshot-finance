@@ -90,6 +90,7 @@ interface Summary {
     exchangeRate?: number
     cashBalance?: number
     totalStockValue?: number
+    targetAsset?: number
 }
 
 interface Props {
@@ -400,6 +401,7 @@ export function HoldingsManager({ initialData }: Props) {
                     exchangeRate={summary.exchangeRate}
                     cashBalance={summary.cashBalance}
                     totalStockValue={summary.totalStockValue}
+                    targetAsset={summary.targetAsset}
                     isEditable={true}
                 />
             )}

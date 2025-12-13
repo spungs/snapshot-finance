@@ -26,7 +26,7 @@ export default async function DashboardPage() {
       // Ensure plain objects
       priceUpdatedAt: h.priceUpdatedAt instanceof Date ? h.priceUpdatedAt.toISOString() : h.priceUpdatedAt
     })),
-    summary: data.summary || { totalCost: 0, totalValue: 0, totalProfit: 0, totalProfitRate: 0, holdingsCount: 0 }
+    summary: data.summary || { totalCost: 0, totalValue: 0, totalProfit: 0, totalProfitRate: 0, holdingsCount: 0, targetAsset: 0 }
   } : undefined
 
   return (

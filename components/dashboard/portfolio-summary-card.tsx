@@ -23,6 +23,11 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useLocalStorage } from '@/lib/hooks/use-local-storage'
 
+import { TargetAssetDialog } from './target-asset-dialog'
+import { Progress } from '@/components/ui/progress'
+
+// ... existing imports
+
 interface PortfolioSummaryCardProps {
   totalValue: number
   totalCost: number
@@ -34,6 +39,7 @@ interface PortfolioSummaryCardProps {
   exchangeRate?: number
   cashBalance?: number
   totalStockValue?: number
+  targetAsset?: number
   isEditable?: boolean
 }
 
@@ -44,9 +50,10 @@ export function PortfolioSummaryCard({
   profitRate,
   holdingsCount,
   snapshotDate,
-  baseCurrency, // Now optional in destructuring, but we need to handle default from context
+  baseCurrency,
   exchangeRate = 1435,
   isEditable = false,
+  targetAsset = 0,
   ...props
 }: PortfolioSummaryCardProps) {
   const { t } = useLanguage()
@@ -68,6 +75,10 @@ export function PortfolioSummaryCard({
   const displayCash = convert(props.cashBalance || 0)
   const displayCost = convert(totalCost)
   const displayProfit = convert(totalProfit)
+  const displayTarget = convert(targetAsset)
+
+  const achievementRate = displayTarget > 0 ? (displayValue / displayTarget) * 100 : 0
+
 
   const isProfit = totalProfit >= 0
 
@@ -129,6 +140,29 @@ export function PortfolioSummaryCard({
             <p className="text-xs text-muted-foreground mb-1">{t('holdings')}</p>
             <p className="text-lg font-semibold">{holdingsCount}{t('countUnit')}</p>
           </div>
+        </div>
+
+        {/* 목표 자산 & 달성률 */}
+        <div className="mt-6 mb-2">
+          <div className="flex justify-between items-center mb-2">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-muted-foreground">{t('achievementRate')}</span>
+              <span className="text-sm font-bold text-primary">{achievementRate.toFixed(1)}%</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">
+                {t('targetAsset')}: {formatCurrency(displayTarget, currency)}
+              </span>
+              {isEditable && (
+                <TargetAssetDialog
+                  initialTarget={targetAsset}
+                  currency={currency}
+                  exchangeRate={exchangeRate}
+                />
+              )}
+            </div>
+          </div>
+          <Progress value={Math.min(achievementRate, 100)} className="h-2" />
         </div>
 
         <div className="col-span-full border-t border-border pt-4 mt-4">
@@ -230,6 +264,7 @@ export function PortfolioSummaryCard({
             {t('appliedExchangeRate')}: 1 USD = {formatCurrency(exchangeRate, 'KRW')}
           </div>
         )}
+
       </CardContent>
     </Card>
   )
