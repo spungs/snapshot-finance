@@ -34,7 +34,7 @@ async function fetchApi<T>(
 // 스냅샷 API
 export const snapshotsApi = {
   getList: (cursor?: string) =>
-    fetchApi<any[]>(`/snapshots${cursor ? `?cursor=${cursor}` : ''}`),
+    fetchApi<any[]>(`/snapshots${cursor ? `?cursor=${cursor}` : ''}`, { cache: 'no-store' }),
 
   getDetail: (id: string) =>
     fetchApi<any>(`/snapshots/${id}`),
@@ -88,7 +88,7 @@ export const stocksApi = {
 
 // 잔고 API
 export const holdingsApi = {
-  getList: () => fetchApi<{ holdings: any[]; summary: any }>('/holdings'),
+  getList: () => fetchApi<{ holdings: any[]; summary: any }>('/holdings', { cache: 'no-store' }),
 
   create: (data: {
     stockId: string

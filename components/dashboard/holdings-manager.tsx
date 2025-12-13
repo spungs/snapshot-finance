@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -190,8 +190,8 @@ export function HoldingsManager({ initialData }: Props) {
 
     const fetchHoldings = useCallback(async () => {
         try {
-            // 초기 로딩이 아닐 때만 refreshing 표시
-            if (holdings.length > 0) setIsRefreshing(true)
+            // 초기 로딩이 아닐 때만 refreshing 표시 (데이터가 있을 때)
+            setIsRefreshing(true)
 
             const response = await holdingsApi.getList()
             if (response.success && response.data) {
@@ -206,15 +206,20 @@ export function HoldingsManager({ initialData }: Props) {
             setLoading(false)
             setIsRefreshing(false)
         }
-    }, [holdings.length])
+    }, [t])
 
+    // Initial data sync - only runs when initialData prop changes (e.g. server re-render)
+    // We use a ref to track if it's the very first mount vs subsequent updates
+    const isFirstMount = React.useRef(true)
     useEffect(() => {
-        if (!initialData) {
-            fetchHoldings()
-        } else {
+        if (initialData) {
             setHoldings(initialData.holdings)
             setSummary(initialData.summary)
+            setLoading(false)
+        } else if (isFirstMount.current) {
+            fetchHoldings()
         }
+        isFirstMount.current = false
     }, [initialData, fetchHoldings])
 
     const sensors = useSensors(
