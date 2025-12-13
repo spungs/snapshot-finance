@@ -56,7 +56,10 @@ export function StockSearchCombobox({
     const [error, setError] = React.useState<string | null>(null)
     const [hasSearched, setHasSearched] = React.useState(false)
 
-    async function searchStocks() {
+    // Timer ref for debounce
+    const debounceTimerRef = React.useRef<NodeJS.Timeout | null>(null)
+
+    const searchStocks = React.useCallback(async () => {
         if (!query) {
             setResults([])
             setError(null)
@@ -83,6 +86,34 @@ export function StockSearchCombobox({
         } finally {
             setLoading(false)
         }
+    }, [query, t])
+
+    // Debounce effect
+    React.useEffect(() => {
+        // Clear existing timer
+        if (debounceTimerRef.current) {
+            clearTimeout(debounceTimerRef.current)
+        }
+
+        // Set new timer
+        debounceTimerRef.current = setTimeout(() => {
+            searchStocks()
+        }, 2000)
+
+        // Cleanup
+        return () => {
+            if (debounceTimerRef.current) {
+                clearTimeout(debounceTimerRef.current)
+            }
+        }
+    }, [searchStocks])
+
+    const handleManualSearch = () => {
+        if (debounceTimerRef.current) {
+            clearTimeout(debounceTimerRef.current)
+            debounceTimerRef.current = null
+        }
+        searchStocks()
     }
 
     const handleSelect = async (result: SearchResult) => {
@@ -142,7 +173,7 @@ export function StockSearchCombobox({
                             onKeyDown={(e) => {
                                 if (e.key === 'Enter') {
                                     e.preventDefault() // Prevent form submission if any
-                                    searchStocks()
+                                    handleManualSearch()
                                 }
                             }}
                         />
@@ -150,7 +181,7 @@ export function StockSearchCombobox({
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 ml-1"
-                            onClick={searchStocks}
+                            onClick={handleManualSearch}
                         >
                             <Search className="h-4 w-4" />
                         </Button>

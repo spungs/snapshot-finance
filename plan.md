@@ -63,6 +63,7 @@
 - [ ] **대시보드 고도화**:
     - 자산 추이 그래프 시각화 개선
     - [x] 로딩 속도 최적화 (React Server Components 활용 및 캐싱)
+    - [x] **종목 검색 최적화**: 디바운싱(2초) 및 수동 검색 트리거(Enter/Click) 적용
     - [x] **예수금(Cash Balance) 관리**:
         - [x] Database Schema Update (User.cashBalance)
         - [x] UI: 대시보드에서 예수금 직접 수정 (천단위 포맷팅, 다국어/통화 자동 변환)
