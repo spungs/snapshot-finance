@@ -14,8 +14,28 @@ export default function PrivacyPage() {
     const [canGoBack, setCanGoBack] = useState(false)
 
     useEffect(() => {
-        // Check if there is history to go back to
-        setCanGoBack(window.history.length > 1)
+        // 1. Check internal history using base length captured at app start
+        const w = window as any
+        const baseLen = typeof w.__base_history_len === 'number' ? w.__base_history_len : 0
+        const currentLen = window.history.length
+
+        if (currentLen > baseLen) {
+            setCanGoBack(true)
+            return
+        }
+
+        // 2. Fallback: Check if referrer exists and is from the same origin (for MPA transitions or refresh scenarios)
+        if (typeof document !== 'undefined' && document.referrer) {
+            try {
+                const referrerUrl = new URL(document.referrer)
+                const currentOrigin = window.location.origin
+                setCanGoBack(referrerUrl.origin === currentOrigin)
+            } catch (e) {
+                setCanGoBack(false)
+            }
+        } else {
+            setCanGoBack(false)
+        }
     }, [])
 
     const handleBack = () => {

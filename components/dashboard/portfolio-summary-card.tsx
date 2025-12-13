@@ -210,7 +210,7 @@ export function PortfolioSummaryCard({
 
         {/* 목표 자산 & 달성률 */}
         <div className="mt-6 mb-2">
-          <div className="flex justify-between items-center mb-2">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-2">
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium text-muted-foreground">{t('achievementRate')}</span>
               <span className="text-sm font-bold text-primary">{achievementRate.toFixed(1)}%</span>

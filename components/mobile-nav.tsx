@@ -80,11 +80,6 @@ export function MobileNav({ type }: MobileNavProps) {
                                         {trans.landing.login}
                                     </Button>
                                 </Link>
-                                <Link href="/dashboard" onClick={() => setOpen(false)}>
-                                    <Button className="w-full text-lg h-12">
-                                        {trans.landing.start}
-                                    </Button>
-                                </Link>
                             </div>
                         )}
 

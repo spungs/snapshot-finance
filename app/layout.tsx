@@ -23,6 +23,8 @@ import { CurrencyProvider } from '@/lib/currency/context'
 
 
 
+import { HistoryInit } from '@/components/history-init'
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -42,6 +44,7 @@ export default function RootLayout({
           data-login_uri={`${process.env.NEXT_PUBLIC_APP_URL || ''}/api/auth/callback/google`}
           data-auto_prompt="false">
         </div>
+        <HistoryInit />
         <LanguageProvider>
           <CurrencyProvider>
             {children}

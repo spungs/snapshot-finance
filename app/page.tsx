@@ -31,9 +31,6 @@ export default function Home() {
               {t.landing.login}
             </Button>
           </Link>
-          <Link href="/dashboard">
-            <Button size="sm">{t.landing.start}</Button>
-          </Link>
         </nav>
         <MobileNav type="landing" />
       </header>

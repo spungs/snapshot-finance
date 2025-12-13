@@ -95,15 +95,14 @@ export function CashBalanceDialog({ initialBalance, currency = 'KRW', exchangeRa
                     <DialogTitle>{t('editCash')}</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="grid gap-4 py-4">
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="cash" className="text-right whitespace-nowrap">
+                    <div className="grid gap-2">
+                        <Label htmlFor="cash">
                             {t('cash')} ({currency})
                         </Label>
                         <FormattedNumberInput
                             id="cash"
                             value={balance}
                             onChange={(value) => setBalance(value)}
-                            className="col-span-3"
                         />
                     </div>
                     <DialogFooter>
@@ -113,7 +112,7 @@ export function CashBalanceDialog({ initialBalance, currency = 'KRW', exchangeRa
                             </Button>
                         </DialogClose>
                         <Button type="submit" disabled={isBusy}>
-                            {isBusy ? t('saving') : t('save')}
+                            {isBusy ? t('saving') : t('confirm')}
                         </Button>
                     </DialogFooter>
                 </form>
