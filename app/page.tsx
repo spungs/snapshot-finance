@@ -147,6 +147,9 @@ export default function Home() {
           {t.landing.copyRight}
         </p>
         <nav className="sm:ml-auto flex gap-4 sm:gap-6">
+          <Link className="text-xs hover:underline underline-offset-4 text-muted-foreground" href="/terms">
+            {t.landing.termsOfService || '이용약관'}
+          </Link>
           <Link className="text-xs hover:underline underline-offset-4 text-muted-foreground" href="/privacy">
             {t.landing.privacyPolicy}
           </Link>
