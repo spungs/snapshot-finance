@@ -90,3 +90,9 @@ next-env.d.ts
 /tmp
 
 .cursorrules
+
+ad_plan_*.md
+
+# SEO
+public/sitemap*.xml
+public/robots.txt

@@ -109,4 +109,12 @@
 - [ ] **에러 핸들링 강화**: 사용자 친화적인 에러 메시지 및 토스트 알림
 - [ ] **단위/통합 테스트**: 주요 비즈니스 로직(수익률 계산 등) 테스트 코드 작성
 
+### 4. 마케팅 및 SEO (AdSense Approval)
+- [x] **SEO 최적화**:
+    - [x] `next-sitemap` 도입 및 설정 (Sitemap/Robots.txt 자동 생성)
+    - [x] 메타데이터(Title, Description, OpenGraph, Twitter) 강화
+- [ ] **콘텐츠 마케팅**:
+    - [ ] 블로그/가이드 섹션 구현 (/guides)
+    - [ ] 필수 콘텐츠(10개 이상) 및 정적 페이지(Terms, Privacy, About) 보강
+
 ---
