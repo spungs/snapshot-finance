@@ -26,6 +26,9 @@ export default function Home() {
           <Link className="text-sm font-medium hover:underline underline-offset-4" href="#features">
             {t.landing.features}
           </Link>
+          <Link className="text-sm font-medium hover:underline underline-offset-4" href="/guides">
+            {t.landing.guides}
+          </Link>
           <Link href="/dashboard">
             <Button variant="outline" size="sm">
               {t.landing.login}
@@ -36,7 +39,7 @@ export default function Home() {
       </header>
       <main className="flex-1">
         <section className="w-full py-12 md:py-24 lg:py-32 xl:py-48 bg-gradient-to-b from-background to-muted/50">
-          <div className="container px-4 md:px-6">
+          <div className="container px-4 md:px-6 mx-auto">
             <div className="flex flex-col items-center space-y-4 text-center">
               <div className="space-y-4">
                 <div className="inline-block px-3 py-1 text-sm bg-muted rounded-full text-muted-foreground mb-2">
@@ -61,7 +64,7 @@ export default function Home() {
         </section>
 
         <section id="features" className="w-full py-12 md:py-24 lg:py-32">
-          <div className="container px-4 md:px-6">
+          <div className="container px-4 md:px-6 mx-auto">
             <div className="flex flex-col items-center justify-center space-y-4 text-center mb-12">
               <div className="space-y-2">
                 <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">
@@ -117,7 +120,7 @@ export default function Home() {
         </section>
 
         <section className="w-full py-12 md:py-24 lg:py-32 bg-muted/30 border-t">
-          <div className="container px-4 md:px-6">
+          <div className="container px-4 md:px-6 mx-auto">
             <div className="flex flex-col items-center justify-center space-y-6 text-center">
               <div className="space-y-4">
                 <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">

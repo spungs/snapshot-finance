@@ -68,7 +68,7 @@ interface Holding {
     displayOrder: number
 }
 
-type SortKey = 'custom' | 'stockName' | 'quantity' | 'averagePrice' | 'currentPrice' | 'totalCost' | 'currentValue' | 'profit' | 'profitRate'
+type SortKey = 'custom' | 'stockName' | 'quantity' | 'averagePrice' | 'currentPrice' | 'totalCost' | 'currentValue' | 'profit' | 'profitRate' | 'weight'
 type SortDirection = 'asc' | 'desc'
 
 interface SortConfig {
@@ -171,6 +171,11 @@ export function HoldingsManager({ initialData }: Props) {
 
             // Handle number comparison
             if (key !== 'stockName') {
+                if (key === 'weight') {
+                    // Sorting by weight is equivalent to sorting by normalized current value
+                    const getNormalizedVal = (h: Holding) => (h.currency === 'USD' && summary?.exchangeRate) ? h.currentValue * summary.exchangeRate : h.currentValue
+                    return (getNormalizedVal(a) - getNormalizedVal(b)) * modifier
+                }
                 return (a[key] - b[key]) * modifier
             }
 
@@ -597,6 +602,8 @@ export function HoldingsManager({ initialData }: Props) {
                                                     </div>
                                                 </div>
 
+
+
                                                 <div className="grid grid-cols-2 gap-4 border-t pt-3">
                                                     <div>
                                                         <div className="text-xs text-muted-foreground mb-1">{t('quantity')}</div>
@@ -667,6 +674,13 @@ export function HoldingsManager({ initialData }: Props) {
                                                         </div>
                                                     </div>
                                                 </div>
+
+                                                <div className="flex justify-between items-center border-t pt-3 mt-3 border-border/50">
+                                                    <div className="text-sm font-medium">{t('weight')}</div>
+                                                    <div className="font-bold text-primary">
+                                                        {formatNumber(summary?.totalValue ? ((holding.currency === 'USD' && summary?.exchangeRate ? holding.currentValue * summary.exchangeRate : holding.currentValue) / summary.totalValue) * 100 : 0, 1)}%
+                                                    </div>
+                                                </div>
                                             </div>
                                         )
                                     })}
@@ -691,6 +705,7 @@ export function HoldingsManager({ initialData }: Props) {
                                                             currentSort={sortConfig}
                                                             onSort={handleSort}
                                                         />
+
                                                         <SortableHeader
                                                             label={t('quantity')}
                                                             sortKey="quantity"
@@ -740,6 +755,13 @@ export function HoldingsManager({ initialData }: Props) {
                                                             currentSort={sortConfig}
                                                             onSort={handleSort}
                                                         />
+                                                        <SortableHeader
+                                                            label={t('weight')}
+                                                            sortKey="weight"
+                                                            align="right"
+                                                            currentSort={sortConfig}
+                                                            onSort={handleSort}
+                                                        />
                                                         <TableHead className="text-right">{t('actions')}</TableHead>
                                                     </TableRow>
                                                 </TableHeader>
@@ -764,6 +786,7 @@ export function HoldingsManager({ initialData }: Props) {
                                                                             <p className="text-sm text-muted-foreground">{holding.stockCode}</p>
                                                                         </div>
                                                                     </TableCell>
+
                                                                     <TableCell className="text-right">
                                                                         {isEditing ? (
                                                                             <FormattedNumberInput
@@ -849,6 +872,11 @@ export function HoldingsManager({ initialData }: Props) {
                                                                         )}
                                                                     >
                                                                         {formatProfitRate(holding.profitRate)}
+                                                                    </TableCell>
+                                                                    <TableCell className="text-right font-medium">
+                                                                        <span className="inline-block bg-muted/50 rounded px-2 py-0.5 text-xs">
+                                                                            {formatNumber(summary?.totalValue ? ((holding.currency === 'USD' && summary?.exchangeRate ? holding.currentValue * summary.exchangeRate : holding.currentValue) / summary.totalValue) * 100 : 0, 1)}%
+                                                                        </span>
                                                                     </TableCell>
                                                                     <TableCell className="text-right">
                                                                         <div className="flex justify-end gap-1">

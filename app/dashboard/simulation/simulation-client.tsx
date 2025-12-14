@@ -42,6 +42,7 @@ interface SimulationResult {
         gainRate: number
         gainKRW?: number
         gainRateKRW?: number
+        simulatedValueKRW?: number
         currency: string
         error?: string
     }[]
@@ -366,7 +367,7 @@ export default function SimulationClient({ initialSnapshots }: SimulationClientP
                                                 </div>
                                             </div>
 
-                                            <div className="grid grid-cols-2 gap-4 border-t pt-3">
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 border-t pt-3">
                                                 <div>
                                                     <div className="text-xs text-muted-foreground mb-1">{t('quantity')}</div>
                                                     <div className="font-medium">{formatNumber(item.quantity)}{t('countUnit')}</div>
@@ -381,6 +382,12 @@ export default function SimulationClient({ initialSnapshots }: SimulationClientP
                                                             ({formatProfitRate(item.gainRateKRW)})
                                                         </div>
                                                     )}
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="text-xs text-muted-foreground mb-1">{t('weight')}</div>
+                                                    <div className="font-medium">
+                                                        {formatNumber(((item.simulatedValueKRW || 0) / result.totalSimulatedValue) * 100, 1)}%
+                                                    </div>
                                                 </div>
                                                 <div>
                                                     <div className="text-xs text-muted-foreground mb-1">{t('avgPrice')}</div>
@@ -413,6 +420,7 @@ export default function SimulationClient({ initialSnapshots }: SimulationClientP
                                                 <TableHead className="text-right">{t('currentPrice')}</TableHead>
                                                 <TableHead className="text-right">{t('pl')}</TableHead>
                                                 <TableHead className="text-right">{t('returnRate')}</TableHead>
+                                                <TableHead className="text-right">{t('weight')}</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
@@ -499,6 +507,9 @@ export default function SimulationClient({ initialSnapshots }: SimulationClientP
                                                                     ({formatProfitRate(item.gainRateKRW)})
                                                                 </div>
                                                             )}
+                                                        </TableCell>
+                                                        <TableCell className="text-right">
+                                                            {formatNumber(((item.simulatedValueKRW || 0) / result.totalSimulatedValue) * 100, 1)}%
                                                         </TableCell>
                                                     </TableRow>
                                                 )

@@ -55,12 +55,13 @@ interface Holding {
 interface HoldingsTableProps {
   holdings: Holding[]
   exchangeRate?: number
+  totalValue?: number
 }
 
 // Removed duplicate useLanguage import if it exists below, but looking at file content it was at line 36.
 // Merged into top block.
 
-export function HoldingsTable({ holdings, exchangeRate }: HoldingsTableProps) {
+export function HoldingsTable({ holdings, exchangeRate, totalValue: propTotalValue }: HoldingsTableProps) {
   const { t, language } = useLanguage()
 
   // State
@@ -112,13 +113,17 @@ export function HoldingsTable({ holdings, exchangeRate }: HoldingsTableProps) {
         }
 
         // Numeric sort
-        // @ts-ignore - dynamic key access
-        return (Number(a[key]) - Number(b[key])) * modifier
+        const valA = Number(a[key as keyof Holding] || 0)
+        const valB = Number(b[key as keyof Holding] || 0)
+        return (valA - valB) * modifier
       })
     }
 
     return result
   }, [holdings, filterConfig, sortConfig])
+
+  // Calculate Total Value if not provided (fallback)
+  const totalValue = propTotalValue || holdings.reduce((sum, h) => sum + Number(h.currentValue), 0)
 
   return (
     <Card>
@@ -211,6 +216,8 @@ export function HoldingsTable({ holdings, exchangeRate }: HoldingsTableProps) {
                       </div>
                     </div>
 
+
+
                     <div className="grid grid-cols-2 gap-4 border-t pt-3">
                       <div>
                         <div className="text-xs text-muted-foreground mb-1">{t('avgPrice')}</div>
@@ -281,6 +288,13 @@ export function HoldingsTable({ holdings, exchangeRate }: HoldingsTableProps) {
                         </div>
                       </div>
                     </div>
+
+                    <div className="flex justify-between items-center border-t pt-3 mt-3 border-border/50">
+                      <div className="text-sm font-medium">{t('weight')}</div>
+                      <div className="font-bold text-primary">
+                        {formatNumber(totalValue ? ((holding.currency === 'USD' && exchangeRate ? Number(holding.currentValue) * exchangeRate : Number(holding.currentValue)) / totalValue) * 100 : 0, 1)}%
+                      </div>
+                    </div>
                   </div>
                 )
               })}
@@ -293,6 +307,7 @@ export function HoldingsTable({ holdings, exchangeRate }: HoldingsTableProps) {
                   <TableHeader>
                     <TableRow>
                       <SortableHeader label={t('stockName')} sortKey="stockName" currentSort={sortConfig} onSort={handleSort} />
+
                       <SortableHeader label={t('quantity')} sortKey="quantity" align="right" currentSort={sortConfig} onSort={handleSort} />
                       <SortableHeader label={t('avgPrice')} sortKey="averagePrice" align="right" currentSort={sortConfig} onSort={handleSort} />
                       <SortableHeader label={t('currentPrice')} sortKey="currentPrice" align="right" currentSort={sortConfig} onSort={handleSort} />
@@ -300,6 +315,7 @@ export function HoldingsTable({ holdings, exchangeRate }: HoldingsTableProps) {
                       <SortableHeader label={t('evaluatedValue')} sortKey="currentValue" align="right" currentSort={sortConfig} onSort={handleSort} />
                       <SortableHeader label={t('pl')} sortKey="profit" align="right" currentSort={sortConfig} onSort={handleSort} />
                       <SortableHeader label={t('returnRate')} sortKey="profitRate" align="right" currentSort={sortConfig} onSort={handleSort} />
+                      <TableHead className="text-right">{t('weight')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -316,6 +332,7 @@ export function HoldingsTable({ holdings, exchangeRate }: HoldingsTableProps) {
                               </p>
                             </div>
                           </TableCell>
+
                           <TableCell className="text-right">
                             {formatNumber(holding.quantity)}{t('countUnit')}
                           </TableCell>
@@ -382,6 +399,11 @@ export function HoldingsTable({ holdings, exchangeRate }: HoldingsTableProps) {
                             )}
                           >
                             {formatProfitRate(Number(holding.profitRate))}
+                          </TableCell>
+                          <TableCell className="text-right font-medium">
+                            <span className="inline-block bg-muted/50 rounded px-2 py-0.5 text-xs">
+                              {formatNumber(totalValue ? ((holding.currency === 'USD' && exchangeRate ? Number(holding.currentValue) * exchangeRate : Number(holding.currentValue)) / totalValue) * 100 : 0, 1)}%
+                            </span>
                           </TableCell>
                         </TableRow>
                       )

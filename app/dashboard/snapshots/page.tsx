@@ -5,6 +5,8 @@ import { SnapshotsClient } from './snapshots-client'
 
 export const dynamic = 'force-dynamic'
 
+import { prisma } from '@/lib/prisma'
+
 export default async function SnapshotsPage() {
   const session = await auth()
   if (!session?.user?.id) {
@@ -13,7 +15,20 @@ export default async function SnapshotsPage() {
 
   const { data: snapshots } = await snapshotService.getList(session.user.id)
 
-  // Serialize dates and decimals for client component
+  // Fetch current holdings for comparison
+  const currentHoldingsRaw = await prisma.holding.findMany({
+    where: { userId: session.user.id },
+    include: { stock: true }
+  })
+
+  const currentHoldings = currentHoldingsRaw.map(h => ({
+    id: h.id,
+    stockId: h.stockId,
+    stockCode: h.stock.stockCode,
+    stockName: h.stock.stockName,
+    quantity: h.quantity,
+  }))
+
   // Serialize dates and decimals for client component
   const serializedSnapshots = snapshots?.map((snapshot: any) => ({
     ...snapshot,
@@ -27,12 +42,20 @@ export default async function SnapshotsPage() {
     note: snapshot.note || null,
     holdings: snapshot.holdings.map((h: any) => ({
       id: h.id,
-      stock: { stockName: h.stock.stockName },
+      stockId: h.stockId,
+      quantity: h.quantity,
+      stock: {
+        stockName: h.stock.stockName,
+        stockCode: h.stock.stockCode
+      },
     })),
   })) || []
 
   return (
-    <SnapshotsClient initialSnapshots={serializedSnapshots} />
+    <SnapshotsClient
+      initialSnapshots={serializedSnapshots}
+      currentHoldings={currentHoldings}
+    />
   )
 }
 

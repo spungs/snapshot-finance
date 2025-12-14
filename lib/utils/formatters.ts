@@ -14,10 +14,11 @@ export function formatCurrency(value: number | string, currency: string = 'KRW')
 /**
  * 숫자 포맷팅 (예: 12,345,678)
  */
-export function formatNumber(value: number | string): string {
+export function formatNumber(value: number | string, decimals?: number): string {
   if (!value && value !== 0) return ''
   return new Intl.NumberFormat('ko-KR', {
-    maximumFractionDigits: 6,
+    maximumFractionDigits: decimals !== undefined ? decimals : 6,
+    minimumFractionDigits: decimals !== undefined ? decimals : 0,
   }).format(Number(value))
 }
 

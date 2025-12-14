@@ -92,7 +92,11 @@ export default function SnapshotDetailClient({ snapshot }: SnapshotDetailClientP
                 exchangeRate={snapshot.exchangeRate}
             />
 
-            <HoldingsTable holdings={snapshot.holdings} exchangeRate={snapshot.exchangeRate} />
+            <HoldingsTable
+                holdings={snapshot.holdings}
+                exchangeRate={snapshot.exchangeRate}
+                totalValue={Number(snapshot.totalValue)}
+            />
         </div>
     )
 }

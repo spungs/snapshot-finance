@@ -16,6 +16,7 @@ import { snapshotsApi } from '@/lib/api/client'
 import { formatCurrency, formatDate, formatProfitRate } from '@/lib/utils/formatters'
 import { cn } from '@/lib/utils'
 import { useLanguage } from '@/lib/i18n/context'
+import { SnapshotDiff } from '@/components/dashboard/snapshots/snapshot-diff'
 
 interface Snapshot {
     id: string
@@ -35,12 +36,29 @@ interface Snapshot {
 
 interface SnapshotsClientProps {
     initialSnapshots: Snapshot[]
+    currentHoldings: any[] // passed from server
 }
 
-export function SnapshotsClient({ initialSnapshots }: SnapshotsClientProps) {
+export function SnapshotsClient({ initialSnapshots, currentHoldings }: SnapshotsClientProps) {
     const { t, language } = useLanguage()
     const [snapshots, setSnapshots] = useState<Snapshot[]>(initialSnapshots)
     const [deleting, setDeleting] = useState<string | null>(null)
+    const [selectedIds, setSelectedIds] = useState<string[]>([])
+
+    const handleSelect = (id: string) => {
+        setSelectedIds(prev => {
+            if (prev.includes(id)) {
+                return prev.filter(pid => pid !== id)
+            } else {
+                if (prev.length >= 2) {
+                    // Allow selecting a 3rd one? Logic says show "Select Only Two".
+                    // So we allow it, and SnapshotDiff will complain.
+                    return [...prev, id]
+                }
+                return [...prev, id]
+            }
+        })
+    }
 
     async function handleDelete(id: string) {
         if (!confirm(t('confirmDelete'))) return
@@ -105,14 +123,22 @@ export function SnapshotsClient({ initialSnapshots }: SnapshotsClientProps) {
                                     return (
                                         <div key={snapshot.id} className="bg-muted/40 rounded-lg p-4 border space-y-3">
                                             <div className="flex justify-between items-start">
-                                                <div className="flex flex-col">
-                                                    <Link
-                                                        href={`/dashboard/snapshots/${snapshot.id}`}
-                                                        className="font-semibold text-blue-600 hover:underline text-lg"
-                                                    >
-                                                        <span suppressHydrationWarning>{formatDate(snapshot.snapshotDate)}</span>
-                                                    </Link>
-                                                    <span className="text-sm text-muted-foreground mt-1">{snapshot.holdings.length}{t('countUnit')}</span>
+                                                <div className="flex items-start gap-3">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedIds.includes(snapshot.id)}
+                                                        onChange={() => handleSelect(snapshot.id)}
+                                                        className="mt-1.5 w-4 h-4 accent-primary cursor-pointer"
+                                                    />
+                                                    <div className="flex flex-col">
+                                                        <Link
+                                                            href={`/dashboard/snapshots/${snapshot.id}`}
+                                                            className="font-semibold text-blue-600 hover:underline text-lg"
+                                                        >
+                                                            <span suppressHydrationWarning>{formatDate(snapshot.snapshotDate)}</span>
+                                                        </Link>
+                                                        <span className="text-sm text-muted-foreground mt-1">{snapshot.holdings.length}{t('countUnit')}</span>
+                                                    </div>
                                                 </div>
                                                 <div className="flex gap-2">
                                                     <Link href={`/dashboard/snapshots/${snapshot.id}`}>
@@ -173,6 +199,15 @@ export function SnapshotsClient({ initialSnapshots }: SnapshotsClientProps) {
                                     <Table>
                                         <TableHeader>
                                             <TableRow>
+                                                <TableHead className="w-[50px] text-center p-0">
+                                                    <button
+                                                        onClick={() => setSelectedIds([])}
+                                                        className="text-xs text-muted-foreground hover:text-foreground transition-colors w-full h-full"
+                                                        title={t('deselect')}
+                                                    >
+                                                        {t('deselect')}
+                                                    </button>
+                                                </TableHead>
                                                 <TableHead>{t('date')}</TableHead>
                                                 <TableHead className="text-right">{t('totalValue')}</TableHead>
                                                 <TableHead className="text-right">{t('pl')}</TableHead>
@@ -201,6 +236,14 @@ export function SnapshotsClient({ initialSnapshots }: SnapshotsClientProps) {
 
                                                 return (
                                                     <TableRow key={snapshot.id}>
+                                                        <TableCell>
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={selectedIds.includes(snapshot.id)}
+                                                                onChange={() => handleSelect(snapshot.id)}
+                                                                className="w-4 h-4 accent-primary cursor-pointer"
+                                                            />
+                                                        </TableCell>
                                                         <TableCell>
                                                             <Link
                                                                 href={`/dashboard/snapshots/${snapshot.id}`}
@@ -262,6 +305,8 @@ export function SnapshotsClient({ initialSnapshots }: SnapshotsClientProps) {
                     </CardContent>
                 </Card>
             )}
+
+            <SnapshotDiff currentHoldings={currentHoldings} snapshots={snapshots} selectedIds={selectedIds} />
         </div>
     )
 }
