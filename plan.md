@@ -1,7 +1,7 @@
 # Snapshot Finance 개발 실행 계획
 
 **작성일:** 2025-11-25  
-**최종 업데이트:** 2025-12-14 (Comparison & Simulation Enhancements)  
+**최종 업데이트:** 2025-12-15 (Guide Content Corrections)  
 **목표:** 개인용 주식 잔고 관리 MVP (무료 플랜)
 
 ---
@@ -41,7 +41,10 @@
 - [x] Next.js 16 호환성 업데이트 (`middleware.ts` → `proxy.ts`)
 - [x] Vercel 배포 환경 이슈 해결 (DB 연결, 시간대, 환경변수)
 - [x] **배포 환경 이전**: Vercel -> Netlify (Next.js Runtime v5, Scheduled Functions)
-- [x] **Cron 표준화**: 모든 배포 환경(UTC) 및 크론 스케줄(00:00) 표준화 (Daily/Weekly Snapshot, Delete Expired Users)
+- [x] **Cron 표준화**: (Vercel) `vercel.json` 크론 1개(`daily-snapshot`)로 완전 통합 - *Free Plan 최적화*
+- [x] **Snapshot 로직 고도화**: 단순 복사 -> **매일 실시간 시세 조회(Fetch)** 방식으로 업그레이드
+- [x] **스케줄링**: 월~금(UTC) 스냅샷 생성 / 매일 유저 정리 자동화
+- [x] **Weekly Snapshot 최적화**: 금요일 22:30 UTC (토요일 07:30 KST) 실행 및 중복 방지 로직 추가
 - [x] 구글 애드센스 검증 파일 추가 (`ads.txt`)
 - [x] 구글 애드센스 검증 파일 추가 (`ads.txt`)
 - [x] 구글 애드센스 검증 파일 추가 (`ads.txt`)
@@ -50,6 +53,7 @@
 - [x] [UX] Delete Holding: Disable row and show loading state during deletion)
 - [x] [Fix] Build Error: Fix type mismatch in i18n context (`t` function)
 - [x] [Fix] KIS API Token 자동 갱신: 토큰 만료 시 자동으로 재발급 및 재시도 로직 구현
+- [x] [Docs] 가이드 콘텐츠 수정: 수익률 표 순수익 기준 변경 및 양도소득세 공제 내용 추가
 
 ---
 
