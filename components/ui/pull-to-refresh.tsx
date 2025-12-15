@@ -12,71 +12,97 @@ interface PullToRefreshProps {
 }
 
 export function PullToRefresh({ children, onRefresh, className }: PullToRefreshProps) {
-    const [startY, setStartY] = useState(0)
-    const [currentY, setCurrentY] = useState(0)
+    const containerRef = useRef<HTMLDivElement>(null)
     const [refreshing, setRefreshing] = useState(false)
-    const [pulling, setPulling] = useState(false)
-    const contentRef = useRef<HTMLDivElement>(null)
-    const threshold = 80 // Pull threshold in pixels
+    const [currentY, setCurrentY] = useState(0)
 
-    // Touch Start
-    const handleTouchStart = (e: React.TouchEvent) => {
-        if (window.scrollY === 0 && !refreshing) {
-            setStartY(e.touches[0].clientY)
-            setPulling(true)
-        }
-    }
+    // Use refs for gesture state to avoid stale closures in event listeners
+    const stateRef = useRef({
+        startY: 0,
+        isPulling: false,
+        currentY: 0
+    })
 
-    // Touch Move
-    const handleTouchMove = (e: React.TouchEvent) => {
-        if (!pulling || refreshing) return
+    const threshold = 80
 
-        const y = e.touches[0].clientY
-        const diff = y - startY
+    useEffect(() => {
+        const container = containerRef.current
+        if (!container) return
 
-        // Only allow pulling down when at the top
-        if (diff > 0 && window.scrollY === 0) {
-            // Add resistance
-            const damped = Math.min(diff * 0.5, threshold * 1.5)
-            setCurrentY(damped)
-
-            // Prevent default browser refresh only if we are actively pulling
-            if (e.cancelable && diff > 10) {
-                // Note: preventing default on passive listeners is tricky in modern browsers
-                // usually we rely on "overscroll-behavior-y: contain" in CSS
+        const handleTouchStart = (e: TouchEvent) => {
+            if (window.scrollY === 0 && !refreshing) {
+                stateRef.current.startY = e.touches[0].clientY
+                stateRef.current.isPulling = true
+            } else {
+                stateRef.current.isPulling = false
             }
-        } else {
-            setCurrentY(0)
         }
-    }
 
-    // Touch End
-    const handleTouchEnd = async () => {
-        if (!pulling || refreshing) return
+        const handleTouchMove = (e: TouchEvent) => {
+            if (!stateRef.current.isPulling || refreshing) return
 
-        setPulling(false)
+            const y = e.touches[0].clientY
+            const diff = y - stateRef.current.startY
 
-        if (currentY >= threshold) {
-            setRefreshing(true)
-            setCurrentY(threshold - 10) // Snap to loading position
+            if (diff > 0 && window.scrollY <= 0) { // Allow slight tolerance or exact 0
+                // Logic to support nested scrolling if needed, but for now strict top check
 
-            try {
-                await onRefresh()
-            } finally {
-                setRefreshing(false)
+                if (e.cancelable) {
+                    e.preventDefault() // Key to preventing native scroll/overscroll
+                }
+
+                // Add resistance
+                const damped = Math.min(diff * 0.5, threshold * 1.5)
+                stateRef.current.currentY = damped
+                setCurrentY(damped)
+            } else {
+                // If we scroll back up (negative diff) or user scrolled down content
+                stateRef.current.isPulling = false
                 setCurrentY(0)
             }
-        } else {
-            setCurrentY(0) // Snap back
         }
-    }
+
+        const handleTouchEnd = async () => {
+            if (!stateRef.current.isPulling || refreshing) return
+
+            stateRef.current.isPulling = false
+            const finalY = stateRef.current.currentY
+
+            if (finalY >= threshold) {
+                setRefreshing(true)
+                setCurrentY(threshold - 10)
+
+                try {
+                    await onRefresh()
+                } finally {
+                    setRefreshing(false)
+                    setCurrentY(0)
+                    stateRef.current.currentY = 0
+                }
+            } else {
+                setCurrentY(0)
+                stateRef.current.currentY = 0
+            }
+        }
+
+        // Attach non-passive listener for touchmove to allow preventing default
+        container.addEventListener('touchstart', handleTouchStart, { passive: true })
+        container.addEventListener('touchmove', handleTouchMove, { passive: false })
+        container.addEventListener('touchend', handleTouchEnd)
+        container.addEventListener('touchcancel', handleTouchEnd)
+
+        return () => {
+            container.removeEventListener('touchstart', handleTouchStart)
+            container.removeEventListener('touchmove', handleTouchMove)
+            container.removeEventListener('touchend', handleTouchEnd)
+            container.removeEventListener('touchcancel', handleTouchEnd)
+        }
+    }, [refreshing, onRefresh, threshold])
 
     return (
         <div
+            ref={containerRef}
             className={cn("relative min-h-[50vh]", className)}
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
         >
             {/* Loading Indicator */}
             <div
@@ -97,10 +123,9 @@ export function PullToRefresh({ children, onRefresh, className }: PullToRefreshP
 
             {/* Content Container */}
             <div
-                ref={contentRef}
                 style={{
                     transform: `translateY(${currentY}px)`,
-                    transition: pulling ? 'none' : 'transform 0.3s ease-out'
+                    transition: stateRef.current.isPulling ? 'none' : 'transform 0.3s ease-out'
                 }}
             >
                 {children}
