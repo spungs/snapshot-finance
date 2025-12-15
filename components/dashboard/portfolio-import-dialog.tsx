@@ -268,7 +268,7 @@ export function PortfolioImportDialog({ open, onOpenChange, currentCash = 0, cur
                                                                 <div className="flex-1">
                                                                     <div className="font-bold text-red-500">{item.identifier}</div>
                                                                     <div className="text-sm text-muted-foreground">
-                                                                        Qty: {item.inputQty} / Price: {item.inputPrice.toLocaleString()}
+                                                                        {t.quantity}: {item.inputQty} / {t.avgPrice}: {item.inputPrice.toLocaleString()}
                                                                     </div>
                                                                 </div>
                                                                 <div className="flex gap-2">
