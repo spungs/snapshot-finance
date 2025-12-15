@@ -42,8 +42,8 @@ export default function Home() {
           <div className="container px-4 md:px-6 mx-auto">
             <div className="flex flex-col items-center space-y-4 text-center">
               <div className="space-y-4">
-                <div className="inline-block px-3 py-1 text-sm bg-muted rounded-full text-muted-foreground mb-2">
-                  {t.landing.onePersonProject}
+                <div className="inline-block rounded-full bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary mb-6">
+                  {t.landing.projectBuiltForSelf}
                 </div>
                 <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl/none whitespace-pre-line">
                   {t.landing.heroTitle}
