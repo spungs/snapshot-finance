@@ -188,7 +188,7 @@ Investing is a marathon. To objectively evaluate your investments from a long-te
 평가손익은 **미실현 수익**입니다. 실제로 매도하기 전까지는 확정된 수익이 아닙니다.
 
 ### 2. 세금과 수수료
-실제 수익률은 거래 수수료와 세금을 고려해야 합니다. 미국 주식의 경우 양도소득세(22%)를 고려해야 실제 손익을 알 수 있습니다.
+실제 수익률은 거래 수수료와 세금을 고려해야 합니다. 미국 주식의 경우 양도소득세(22%, 연 250만원 기본공제)를 고려해야 실제 손익을 알 수 있습니다.
 
 ### 3. 환율 영향
 해외 주식의 경우 환율 변동이 수익률에 큰 영향을 미칩니다. 달러 강세 시 원화 환산 수익률이 높아지고, 달러 약세 시 낮아집니다.
@@ -199,9 +199,9 @@ Investing is a marathon. To objectively evaluate your investments from a long-te
 
 | 기간 | 연 10% 단리 | 연 10% 복리 |
 |------|------------|------------|
-| 10년 | 200% | 259% |
-| 20년 | 300% | 673% |
-| 30년 | 400% | 1,745% |
+| 10년 | 100% | 159% |
+| 20년 | 200% | 573% |
+| 30년 | 300% | 1,645% |
 
 복리 효과를 최대화하려면 장기 투자와 배당 재투자가 중요합니다.
 
@@ -232,7 +232,7 @@ The ratio of profit to principal investment.
 Profit/Loss is an **unrealized gain**. It's not a confirmed profit until you actually sell.
 
 ### 2. Taxes and Fees
-Actual returns should consider trading fees and taxes. For US stocks, you need to consider capital gains tax (22% in Korea) to know the real profit.
+Actual returns should consider trading fees and taxes. For US stocks, you need to consider capital gains tax (22% in Korea, after 2.5M KRW basic deduction) to know the real profit.
 
 ### 3. Exchange Rate Impact
 For foreign stocks, exchange rate fluctuations significantly affect returns. When the dollar strengthens, KRW-converted returns increase, and vice versa.
@@ -243,9 +243,9 @@ The most important concept in long-term investing is **compound interest**.
 
 | Period | 10% Simple Interest | 10% Compound Interest |
 |--------|--------------------|-----------------------|
-| 10 years | 200% | 259% |
-| 20 years | 300% | 673% |
-| 30 years | 400% | 1,745% |
+| 10 years | 100% | 159% |
+| 20 years | 200% | 573% |
+| 30 years | 300% | 1,645% |
 
 To maximize compound effects, long-term investing and dividend reinvestment are crucial.
 
