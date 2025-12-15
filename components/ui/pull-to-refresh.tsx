@@ -9,12 +9,16 @@ interface PullToRefreshProps {
     children: ReactNode
     onRefresh: () => Promise<void>
     className?: string
+    isRefreshing?: boolean
 }
 
-export function PullToRefresh({ children, onRefresh, className }: PullToRefreshProps) {
+export function PullToRefresh({ children, onRefresh, className, isRefreshing: externalRefreshing }: PullToRefreshProps) {
     const containerRef = useRef<HTMLDivElement>(null)
-    const [refreshing, setRefreshing] = useState(false)
+    const [internalRefreshing, setInternalRefreshing] = useState(false)
     const [currentY, setCurrentY] = useState(0)
+
+    // Determine effective refreshing state
+    const refreshing = externalRefreshing !== undefined ? externalRefreshing : internalRefreshing
 
     // Use refs for gesture state to avoid stale closures in event listeners
     const stateRef = useRef({
@@ -24,6 +28,15 @@ export function PullToRefresh({ children, onRefresh, className }: PullToRefreshP
     })
 
     const threshold = 80
+
+    // Effect to handle external refreshing state changes (specifically completion)
+    useEffect(() => {
+        if (!refreshing && stateRef.current.currentY > 0) {
+            // Reset to 0 when refreshing finishes
+            setCurrentY(0)
+            stateRef.current.currentY = 0
+        }
+    }, [refreshing])
 
     useEffect(() => {
         const container = containerRef.current
@@ -69,15 +82,24 @@ export function PullToRefresh({ children, onRefresh, className }: PullToRefreshP
             const finalY = stateRef.current.currentY
 
             if (finalY >= threshold) {
-                setRefreshing(true)
-                setCurrentY(threshold - 10)
+                // If external control is used, don't set internal state unless necessary?
+                // Actually we just call onRefresh.
+                if (externalRefreshing === undefined) {
+                    setInternalRefreshing(true)
+                }
+
+                setCurrentY(threshold - 10) // Snap to loading
 
                 try {
                     await onRefresh()
                 } finally {
-                    setRefreshing(false)
-                    setCurrentY(0)
-                    stateRef.current.currentY = 0
+                    // Only manage state if internal
+                    if (externalRefreshing === undefined) {
+                        setInternalRefreshing(false)
+                        setCurrentY(0)
+                        stateRef.current.currentY = 0
+                    }
+                    // If external, we let the prop change trigger the reset effect
                 }
             } else {
                 setCurrentY(0)
@@ -97,7 +119,7 @@ export function PullToRefresh({ children, onRefresh, className }: PullToRefreshP
             container.removeEventListener('touchend', handleTouchEnd)
             container.removeEventListener('touchcancel', handleTouchEnd)
         }
-    }, [refreshing, onRefresh, threshold])
+    }, [refreshing, onRefresh, threshold, externalRefreshing])
 
     return (
         <div
