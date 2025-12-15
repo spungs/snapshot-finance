@@ -10,7 +10,7 @@ import { useLanguage } from '@/lib/i18n/context'
 import { logout } from '@/app/actions'
 import { translations } from '@/lib/i18n/translations'
 import { DeleteAccountDialog } from '@/components/delete-account-dialog'
-import { AdminTrigger } from '@/components/dashboard/admin-trigger'
+
 
 interface MobileNavProps {
     type: 'landing' | 'dashboard'
@@ -49,12 +49,16 @@ export function MobileNav({ type }: MobileNavProps) {
                     <DialogTitle className="sr-only">Navigation Menu</DialogTitle>
                     <div className="flex items-center justify-between p-4 border-b">
                         {type === 'dashboard' ? (
-                            <AdminTrigger>
+                            <Link
+                                href="/dashboard"
+                                className="flex items-center font-bold text-xl"
+                                onClick={() => setOpen(false)}
+                            >
                                 <div className="flex items-center font-bold text-xl">
                                     <Camera className="mr-2 h-6 w-6" />
                                     Snapshot Finance
                                 </div>
-                            </AdminTrigger>
+                            </Link>
                         ) : (
                             <Link
                                 href="/"

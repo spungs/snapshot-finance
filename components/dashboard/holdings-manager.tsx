@@ -16,11 +16,13 @@ import { holdingsApi, snapshotsApi } from '@/lib/api/client'
 import { formatCurrency, formatProfitRate, formatNumber } from '@/lib/utils/formatters'
 import { cn } from '@/lib/utils'
 import { useLanguage } from '@/lib/i18n/context'
+import { useCurrency } from '@/lib/currency/context'
+import { translations } from '@/lib/i18n/translations'
 import { StockSearchCombobox } from '@/components/dashboard/stock-search-combobox'
 import { PortfolioSummaryCard } from '@/components/dashboard/portfolio-summary-card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { FormattedNumberInput } from '@/components/ui/formatted-number-input'
-import { Plus, Trash2, Camera, Edit2, Check, X, Loader2 } from 'lucide-react'
+import { Plus, Trash2, Camera, Edit2, Check, X, Loader2, ListCheck } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
@@ -49,6 +51,7 @@ import {
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { SortableTableRow } from './sortable-table-row'
+import { PortfolioImportDialog } from '@/components/dashboard/portfolio-import-dialog'
 
 interface Holding {
     id: string
@@ -93,18 +96,19 @@ interface Summary {
     targetAsset?: number
 }
 
-interface Props {
-    initialData?: {
-        holdings: Holding[]
-        summary: Summary
-    }
+interface HoldingsManagerProps {
+    initialHoldings: Holding[]
+    summary: Summary
+    triggerRefresh: () => void
 }
 
-export function HoldingsManager({ initialData }: Props) {
+export function HoldingsManager({ initialHoldings, summary, triggerRefresh }: HoldingsManagerProps) {
     const { t, language } = useLanguage()
-    const [holdings, setHoldings] = useState<Holding[]>(initialData?.holdings || [])
-    const [summary, setSummary] = useState<Summary | null>(initialData?.summary || null)
-    const [loading, setLoading] = useState(!initialData)
+    const { baseCurrency } = useCurrency()
+    const trans = translations[language]
+    const [holdings, setHoldings] = useState<Holding[]>(initialHoldings)
+    const [currentSummary, setCurrentSummary] = useState<Summary | null>(summary)
+    const [loading, setLoading] = useState(false)
     const [isRefreshing, setIsRefreshing] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [adding, setAdding] = useState(false)
@@ -128,6 +132,7 @@ export function HoldingsManager({ initialData }: Props) {
     const [newAveragePrice, setNewAveragePrice] = useState('')
 
     const [isMerge, setIsMerge] = useState(false)
+    const [isImportOpen, setIsImportOpen] = useState(false)
 
     // 정렬 및 필터 상태
     const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'custom', direction: 'asc' })
@@ -201,7 +206,7 @@ export function HoldingsManager({ initialData }: Props) {
             const response = await holdingsApi.getList()
             if (response.success && response.data) {
                 setHoldings(response.data.holdings)
-                setSummary(response.data.summary)
+                setCurrentSummary(response.data.summary)
             } else {
                 setError(response.error?.message || t('fetchBalanceFailed'))
             }
@@ -216,16 +221,12 @@ export function HoldingsManager({ initialData }: Props) {
     // Initial data sync - only runs when initialData prop changes (e.g. server re-render)
     // We use a ref to track if it's the very first mount vs subsequent updates
     const isFirstMount = React.useRef(true)
+    // Initial data sync - only runs when props change
     useEffect(() => {
-        if (initialData) {
-            setHoldings(initialData.holdings)
-            setSummary(initialData.summary)
-            setLoading(false)
-        } else if (isFirstMount.current) {
-            fetchHoldings()
-        }
-        isFirstMount.current = false
-    }, [initialData, fetchHoldings])
+        setHoldings(initialHoldings)
+        setCurrentSummary(summary)
+        setLoading(false)
+    }, [initialHoldings, summary])
 
     const sensors = useSensors(
         useSensor(PointerSensor),
@@ -400,29 +401,33 @@ export function HoldingsManager({ initialData }: Props) {
 
     return (
         <div className="space-y-6">
+            <PortfolioImportDialog
+                open={isImportOpen}
+                onOpenChange={setIsImportOpen}
+                currentCash={currentSummary?.cashBalance}
+                currency={baseCurrency}
+                onUpdate={triggerRefresh}
+            />
             {/* 요약 카드 */}
-            {summary && (
+            {currentSummary && (
                 <PortfolioSummaryCard
-                    totalValue={summary.totalValue}
-                    totalCost={summary.totalCost}
-                    totalProfit={summary.totalProfit}
-                    profitRate={summary.totalProfitRate}
-                    holdingsCount={summary.holdingsCount}
-                    exchangeRate={summary.exchangeRate}
-                    cashBalance={summary.cashBalance}
-                    totalStockValue={summary.totalStockValue}
-                    targetAsset={summary.targetAsset}
+                    {...currentSummary}
+                    profitRate={currentSummary.totalProfitRate}
                     isEditable={true}
                 />
             )}
 
             {/* 종목 추가 */}
             <Card>
-                <CardHeader className="pb-2">
+                <CardHeader className="pb-2 flex flex-row items-center justify-between">
                     <CardTitle className="text-lg flex items-center gap-2">
                         <Plus className="w-5 h-5" />
                         {t('addStock')}
                     </CardTitle>
+                    <Button variant="ghost" size="sm" className="h-8 text-muted-foreground" onClick={() => setIsImportOpen(true)}>
+                        <ListCheck className="h-4 w-4 mr-2" />
+                        {trans.portfolioManage.bulkImport}
+                    </Button>
                 </CardHeader>
                 <CardContent>
                     <div className="flex flex-col sm:flex-row gap-4">

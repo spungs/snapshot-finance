@@ -1,5 +1,7 @@
 'use client'
 
+import { formatCurrency } from '@/lib/utils/formatters'
+import { Currency } from '@/lib/currency/context'
 import { useState } from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -19,12 +21,15 @@ import { Card, CardContent } from '@/components/ui/card'
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { FormattedNumberInput } from '@/components/ui/formatted-number-input'
 
-interface AdminDialogProps {
+interface PortfolioImportDialogProps {
     open: boolean
     onOpenChange: (open: boolean) => void
+    currentCash?: number
+    currency?: Currency
+    onUpdate?: () => void
 }
 
-export function AdminDialog({ open, onOpenChange }: AdminDialogProps) {
+export function PortfolioImportDialog({ open, onOpenChange, currentCash = 0, currency = 'KRW', onUpdate }: PortfolioImportDialogProps) {
     const { language } = useLanguage()
     const t = translations[language]
 
@@ -81,7 +86,7 @@ export function AdminDialog({ open, onOpenChange }: AdminDialogProps) {
             }).filter(Boolean) as any[]
 
             if (items.length === 0) {
-                toast.error(t.admin.parsingFailed)
+                toast.error(t.portfolioManage.parsingFailed)
                 setIsAnalyzing(false)
                 return
             }
@@ -97,12 +102,12 @@ export function AdminDialog({ open, onOpenChange }: AdminDialogProps) {
                 // Auto switch to review tab
                 setReviewTab(result.unresolved.length > 0 ? 'unresolved' : 'ready')
             } else {
-                toast.error(t.admin.failed, { description: result.error })
+                toast.error(t.portfolioManage.failed, { description: result.error })
             }
 
         } catch (error) {
             console.error(error)
-            toast.error(t.admin.failed)
+            toast.error(t.portfolioManage.failed)
         } finally {
             setIsAnalyzing(false)
         }
@@ -119,25 +124,25 @@ export function AdminDialog({ open, onOpenChange }: AdminDialogProps) {
             }))
 
             if (validItems.length === 0) {
-                toast.error(t.admin.nothingToImport)
+                toast.error(t.portfolioManage.nothingToImport)
                 return
             }
 
             const result = await executeBulkImport(validItems, strategy)
 
             if (result.success) {
-                toast.success(t.admin.importSuccess, {
-                    description: t.admin.importSuccessDesc.replace('{count}', String(result.count)),
+                toast.success(t.portfolioManage.importSuccess, {
+                    description: t.portfolioManage.importSuccessDesc.replace('{count}', String(result.count)),
                 })
                 onOpenChange(false)
                 // Reset state
                 setRawText('')
                 setAnalysisResult(null)
             } else {
-                toast.error(t.admin.importFailed, { description: result.error })
+                toast.error(t.portfolioManage.importFailed, { description: result.error })
             }
         } catch (e) {
-            toast.error(t.admin.failed)
+            toast.error(t.portfolioManage.failed)
         } finally {
             setIsExecuting(false)
         }
@@ -151,7 +156,7 @@ export function AdminDialog({ open, onOpenChange }: AdminDialogProps) {
     const handleUpdateCash = async () => {
         const amount = Number(cashAmount.replace(/,/g, ''))
         if (isNaN(amount)) {
-            toast.error(t.admin.invalidAmount)
+            toast.error(t.portfolioManage.invalidAmount)
             return
         }
 
@@ -159,13 +164,14 @@ export function AdminDialog({ open, onOpenChange }: AdminDialogProps) {
         try {
             const result = await updateCashBalance(amount)
             if (result.success) {
-                toast.success(t.admin.cashUpdated)
+                toast.success(t.portfolioManage.cashUpdated)
                 setCashAmount('')
+                onUpdate?.()
             } else {
-                toast.error(t.admin.failed, { description: result.error })
+                toast.error(t.portfolioManage.failed, { description: result.error })
             }
         } catch (e) {
-            toast.error(t.admin.failed)
+            toast.error(t.portfolioManage.failed)
         } finally {
             setIsUpdatingCash(false)
         }
@@ -175,16 +181,16 @@ export function AdminDialog({ open, onOpenChange }: AdminDialogProps) {
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
                 <DialogHeader>
-                    <DialogTitle>{t.admin.title}</DialogTitle>
+                    <DialogTitle>{t.portfolioManage.title}</DialogTitle>
                     <DialogDescription>
-                        {t.admin.desc}
+                        {t.portfolioManage.desc}
                     </DialogDescription>
                 </DialogHeader>
 
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden flex flex-col">
                     <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="import">{t.admin.bulkImport}</TabsTrigger>
-                        <TabsTrigger value="cash">{t.admin.cashBalance}</TabsTrigger>
+                        <TabsTrigger value="import">{t.portfolioManage.bulkImport}</TabsTrigger>
+                        <TabsTrigger value="cash">{t.portfolioManage.cashBalance}</TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="import" className="flex-1 flex flex-col gap-4 overflow-hidden pt-4">
@@ -193,16 +199,16 @@ export function AdminDialog({ open, onOpenChange }: AdminDialogProps) {
                             <div className="flex-1 flex flex-col gap-4 overflow-y-auto p-1">
                                 <Alert>
                                     <AlertCircle className="h-4 w-4" />
-                                    <AlertTitle>{t.admin.formatInstructions}</AlertTitle>
+                                    <AlertTitle>{t.portfolioManage.formatInstructions}</AlertTitle>
                                     <AlertDescription className="whitespace-pre-wrap">
-                                        {t.admin.formatDesc}
+                                        {t.portfolioManage.formatDesc}
                                     </AlertDescription>
                                 </Alert>
 
                                 <div className="grid gap-2 flex-1">
-                                    <Label>{t.admin.rawData}</Label>
+                                    <Label>{t.portfolioManage.rawData}</Label>
                                     <Textarea
-                                        placeholder={t.admin.pastePlaceholder}
+                                        placeholder={t.portfolioManage.pastePlaceholder}
                                         className="flex-1 font-mono text-sm min-h-[200px]"
                                         value={rawText}
                                         onChange={(e) => setRawText(e.target.value)}
@@ -212,10 +218,10 @@ export function AdminDialog({ open, onOpenChange }: AdminDialogProps) {
                                 <div className="flex justify-end gap-2">
                                     <Button onClick={handleAnalyze} disabled={!rawText.trim() || isAnalyzing}>
                                         {isAnalyzing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-                                        {t.admin.parsePreview}
+                                        {t.portfolioManage.parsePreview}
                                     </Button>
                                     <Button variant="outline" onClick={() => setRawText('')} disabled={!rawText}>
-                                        {t.admin.clear}
+                                        {t.portfolioManage.clear}
                                     </Button>
                                 </div>
                             </div>
@@ -223,21 +229,21 @@ export function AdminDialog({ open, onOpenChange }: AdminDialogProps) {
                             // Phase 2: Review
                             <div className="flex-1 flex flex-col gap-4 overflow-hidden">
                                 <div className="flex items-center justify-between">
-                                    <h3 className="font-semibold text-lg">{t.admin.analysisResult}</h3>
+                                    <h3 className="font-semibold text-lg">{t.portfolioManage.analysisResult}</h3>
                                     <Button variant="ghost" size="sm" onClick={() => setAnalysisResult(null)}>
                                         <RefreshCw className="mr-2 h-4 w-4" />
-                                        Re-Analyze
+                                        {t.portfolioManage.rewrite}
                                     </Button>
                                 </div>
 
                                 <Tabs value={reviewTab} onValueChange={setReviewTab} className="flex-1 flex flex-col overflow-hidden">
                                     <TabsList className="w-full justify-start">
                                         <TabsTrigger value="unresolved" className="relative">
-                                            {t.admin.tabUnresolved.replace('{count}', String(analysisResult.unresolved.length))}
+                                            {t.portfolioManage.tabUnresolved.replace('{count}', String(analysisResult.unresolved.length))}
                                             {analysisResult.unresolved.length > 0 && <span className="ml-2 w-2 h-2 rounded-full bg-red-500" />}
                                         </TabsTrigger>
                                         <TabsTrigger value="ready">
-                                            {t.admin.tabReady.replace('{count}', String(analysisResult.resolved.length))}
+                                            {t.portfolioManage.tabReady.replace('{count}', String(analysisResult.resolved.length))}
                                             {analysisResult.resolved.length > 0 && <span className="ml-2 w-2 h-2 rounded-full bg-green-500" />}
                                         </TabsTrigger>
                                     </TabsList>
@@ -248,13 +254,13 @@ export function AdminDialog({ open, onOpenChange }: AdminDialogProps) {
                                             {analysisResult.unresolved.length === 0 ? (
                                                 <div className="flex flex-col items-center justify-center h-40 text-muted-foreground gap-2">
                                                     <CheckCircle2 className="h-8 w-8 text-green-500" />
-                                                    <p>{t.admin.noUnresolved}</p>
+                                                    <p>{t.portfolioManage.noUnresolved}</p>
                                                 </div>
                                             ) : (
                                                 <div className="space-y-4">
-                                                    <Alert variant="destructive">
+                                                    <Alert variant="destructive" className="flex items-center gap-3 [&>svg]:relative [&>svg]:top-auto [&>svg]:left-auto [&>svg]:transform-none py-3 px-4 [&>svg~*]:pl-0">
                                                         <AlertTriangle className="h-4 w-4" />
-                                                        <AlertTitle>{t.admin.fixTypos}</AlertTitle>
+                                                        <AlertTitle className="mb-0">{t.portfolioManage.fixTypos}</AlertTitle>
                                                     </Alert>
                                                     {analysisResult.unresolved.map((item, idx) => (
                                                         <Card key={idx}>
@@ -273,7 +279,7 @@ export function AdminDialog({ open, onOpenChange }: AdminDialogProps) {
                                                                         toast.info("Please fix this typo in the raw text step.")
                                                                         setAnalysisResult(null) // Go back
                                                                     }}>
-                                                                        Fix in Raw View
+                                                                        {t.portfolioManage.fixInRawView}
                                                                     </Button>
                                                                 </div>
                                                             </CardContent>
@@ -290,10 +296,10 @@ export function AdminDialog({ open, onOpenChange }: AdminDialogProps) {
                                             <table className="w-full text-sm text-left">
                                                 <thead className="bg-muted sticky top-0 z-10">
                                                     <tr>
-                                                        <th className="p-2">{t.admin.nameCode}</th>
+                                                        <th className="p-2">{t.portfolioManage.nameCode}</th>
                                                         <th className="p-2 text-right">{t.quantity}</th>
                                                         <th className="p-2 text-right">{t.avgPrice}</th>
-                                                        <th className="p-2 text-center">{t.admin.diff}</th>
+                                                        <th className="p-2 text-center">{t.portfolioManage.diff}</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -341,15 +347,15 @@ export function AdminDialog({ open, onOpenChange }: AdminDialogProps) {
 
                                         <div className="border-t pt-4 space-y-4">
                                             <div className="space-y-2">
-                                                <Label>{t.admin.strategy}</Label>
+                                                <Label>{t.portfolioManage.strategy}</Label>
                                                 <RadioGroup value={strategy} onValueChange={(v: any) => setStrategy(v)} className="flex flex-col gap-2">
                                                     <div className="flex items-center space-x-2">
                                                         <RadioGroupItem value="add" id="st-add" />
-                                                        <Label htmlFor="st-add">{t.admin.strategyAdd}</Label>
+                                                        <Label htmlFor="st-add">{t.portfolioManage.strategyAdd}</Label>
                                                     </div>
                                                     <div className="flex items-center space-x-2">
                                                         <RadioGroupItem value="overwrite" id="st-overwrite" />
-                                                        <Label htmlFor="st-overwrite">{t.admin.strategyOverwrite}</Label>
+                                                        <Label htmlFor="st-overwrite">{t.portfolioManage.strategyOverwrite}</Label>
                                                     </div>
                                                 </RadioGroup>
                                             </div>
@@ -357,7 +363,7 @@ export function AdminDialog({ open, onOpenChange }: AdminDialogProps) {
                                             <div className="flex justify-end pt-2">
                                                 <Button onClick={handleExecute} disabled={isExecuting || analysisResult.resolved.length === 0} className="w-full sm:w-auto">
                                                     {isExecuting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                                    {t.admin.executeImport} ({analysisResult.resolved.length})
+                                                    {t.portfolioManage.executeImport} ({analysisResult.resolved.length})
                                                 </Button>
                                             </div>
                                         </div>
@@ -368,20 +374,27 @@ export function AdminDialog({ open, onOpenChange }: AdminDialogProps) {
                     </TabsContent>
 
                     <TabsContent value="cash" className="space-y-4">
-                        <div className="grid gap-2">
-                            <Label>{t.admin.cashUpdateLabel}</Label>
-                            <div className="flex gap-2">
-                                <FormattedNumberInput
-                                    placeholder={t.admin.cashUpdatePlaceholder}
-                                    value={cashAmount}
-                                    onChange={setCashAmount}
-                                />
-                                <Button onClick={handleUpdateCash} disabled={!cashAmount || isUpdatingCash}>
-                                    {isUpdatingCash && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                    {t.admin.update}
-                                </Button>
+                        <div className="space-y-4">
+                            <div className="p-4 rounded-lg bg-muted/50 border flex justify-between items-center">
+                                <span className="text-sm font-medium text-muted-foreground">{t.portfolioManage.currentCash}</span>
+                                <span className="text-lg font-bold">{formatCurrency(currentCash, currency)}</span>
                             </div>
-                            <p className="text-xs text-muted-foreground">{t.admin.cashHelper}</p>
+
+                            <div className="grid gap-2">
+                                <Label>{t.portfolioManage.cashUpdateLabel}</Label>
+                                <div className="flex gap-2">
+                                    <FormattedNumberInput
+                                        placeholder={t.portfolioManage.cashUpdatePlaceholder}
+                                        value={cashAmount}
+                                        onChange={setCashAmount}
+                                    />
+                                    <Button onClick={handleUpdateCash} disabled={!cashAmount || isUpdatingCash}>
+                                        {isUpdatingCash && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                        {t.portfolioManage.update}
+                                    </Button>
+                                </div>
+                            </div>
+                            <p className="text-xs text-muted-foreground">{t.portfolioManage.cashHelper}</p>
                         </div>
                     </TabsContent>
                 </Tabs>
