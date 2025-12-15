@@ -20,7 +20,6 @@ import { useCurrency } from '@/lib/currency/context'
 import { translations } from '@/lib/i18n/translations'
 import { StockSearchCombobox } from '@/components/dashboard/stock-search-combobox'
 import { PortfolioSummaryCard } from '@/components/dashboard/portfolio-summary-card'
-import { PullToRefresh } from '@/components/ui/pull-to-refresh'
 import { Skeleton } from '@/components/ui/skeleton'
 import { FormattedNumberInput } from '@/components/ui/formatted-number-input'
 import { Plus, Trash2, Camera, Edit2, Check, X, Loader2, ListCheck } from 'lucide-react'
@@ -401,7 +400,7 @@ export function HoldingsManager({ initialHoldings, summary, triggerRefresh }: Ho
     }
 
     return (
-        <PullToRefresh onRefresh={fetchHoldings} className="min-h-screen pb-20">
+        <div className="min-h-screen pb-20">
             <div className="space-y-6">
                 <PortfolioImportDialog
                     open={isImportOpen}
@@ -951,7 +950,7 @@ export function HoldingsManager({ initialHoldings, summary, triggerRefresh }: Ho
                     </CardContent>
                 </Card>
             </div>
-        </PullToRefresh>
+        </div>
     )
 }
 

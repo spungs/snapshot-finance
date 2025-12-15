@@ -4,6 +4,7 @@ import { Camera } from 'lucide-react'
 
 import { SiteFooter } from '@/components/site-footer'
 import Link from 'next/link'
+import { GlobalPullToRefresh } from '@/components/global-pull-to-refresh'
 
 export default function DashboardLayout({
   children,
@@ -31,9 +32,11 @@ export default function DashboardLayout({
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8 flex-1">
-        {children}
-      </main>
+      <GlobalPullToRefresh>
+        <main className="max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8 flex-1">
+          {children}
+        </main>
+      </GlobalPullToRefresh>
 
       <SiteFooter />
     </div>
