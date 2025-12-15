@@ -67,6 +67,7 @@ export class KisClient {
                         appkey: APP_KEY,
                         appsecret: APP_SECRET,
                     }),
+                    cache: 'no-store', // Token requests should always be fresh
                 })
 
                 if (!response.ok) {
@@ -124,6 +125,7 @@ export class KisClient {
                     appsecret: APP_SECRET!,
                     tr_id: tr_id,
                 },
+                cache: 'no-store', // Real-time price must not be cached
             })
 
             if (!response.ok) {
@@ -199,6 +201,7 @@ export class KisClient {
                     appsecret: APP_SECRET!,
                     tr_id: tr_id,
                 },
+                cache: 'no-store', // Daily price should be fresh just in case
             })
 
             if (!response.ok) {
