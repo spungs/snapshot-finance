@@ -7,10 +7,6 @@
         {
             "path": "/api/cron/weekly-snapshot",
             "schedule": "30 22 * * 5"
-        },
-        {
-            "path": "/api/cron/delete-expired-users",
-            "schedule": "0 0 * * *"
         }
     ]
 }
