@@ -364,7 +364,7 @@ export function HoldingsManager({ initialHoldings, summary, triggerRefresh }: Ho
                     currency: h.currency,
                     purchaseRate: h.purchaseRate,
                 })),
-                cashBalance: summary?.cashBalance || 0,
+                cashBalance: currentSummary?.cashBalance ?? summary?.cashBalance ?? 0,
                 note: `${t('snapshotPrefix')} - ${new Date().toLocaleDateString(language === 'ko' ? 'ko-KR' : 'en-US')}`,
             })
             if (response.success) {
