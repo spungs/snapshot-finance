@@ -173,7 +173,7 @@ export function SnapshotDiff({ currentHoldings, snapshots, selectedIds }: Props)
                                             <span className="font-medium">
                                                 {item.name} <span className="text-muted-foreground font-normal text-xs">({item.code})</span>
                                             </span>
-                                            <span className="text-muted-foreground">{formatNumber(item.quantity)}{t('quantity')}</span>
+                                            <span className="text-muted-foreground">{formatNumber(item.quantity)}{t('countUnit')}</span>
                                         </div>
                                     ))}
                                 </div>
@@ -198,7 +198,7 @@ export function SnapshotDiff({ currentHoldings, snapshots, selectedIds }: Props)
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-muted-foreground line-through text-xs">{formatNumber(item.oldQty)}</span>
                                                     <ArrowRight className="w-3 h-3 text-muted-foreground" />
-                                                    <span className="font-bold">{formatNumber(item.newQty)}{t('quantity')}</span>
+                                                    <span className="font-bold">{formatNumber(item.newQty)}{t('countUnit')}</span>
                                                     <Badge variant="outline" className={isPos ? "text-red-500 border-red-200 ml-1" : "text-blue-500 border-blue-200 ml-1"}>
                                                         {isPos ? '+' : ''}{formatNumber(diffVal)}
                                                     </Badge>
@@ -222,7 +222,7 @@ export function SnapshotDiff({ currentHoldings, snapshots, selectedIds }: Props)
                                             <span className="font-medium">
                                                 {item.name} <span className="text-muted-foreground font-normal text-xs">({item.code})</span>
                                             </span>
-                                            <span className="text-muted-foreground line-through">{formatNumber(item.quantity)}{t('quantity')}</span>
+                                            <span className="text-muted-foreground line-through">{formatNumber(item.quantity)}{t('countUnit')}</span>
                                         </div>
                                     ))}
                                 </div>
