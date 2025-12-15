@@ -128,7 +128,7 @@ export function SnapshotDiff({ currentHoldings, snapshots, selectedIds }: Props)
         return (
             <Card className="border-l-4 border-l-green-500/70 mt-8 mb-8 shadow-sm">
                 <CardHeader className="pb-3 border-b bg-muted/20">
-                    <CardTitle className="text-lg flex items-center gap-3">
+                    <CardTitle className="text-lg flex flex-col sm:flex-row sm:items-center gap-3">
                         <ArrowRightLeft className="w-5 h-5 text-primary" />
                         {t('portfolioComparison')}
                         <Badge variant="secondary" className="font-normal">{rightTitle} vs {leftTitle}</Badge>

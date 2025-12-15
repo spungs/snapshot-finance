@@ -2,21 +2,21 @@
 
 import { useRouter } from 'next/navigation'
 import { PullToRefresh } from '@/components/ui/pull-to-refresh'
-import { ReactNode } from 'react'
+import { ReactNode, useTransition } from 'react'
 
 export function GlobalPullToRefresh({ children }: { children: ReactNode }) {
     const router = useRouter()
+    const [isPending, startTransition] = useTransition()
 
     const handleRefresh = async () => {
-        router.refresh()
-        // wait a bit to simulate network delay if router.refresh is too fast, 
-        // or just return. router.refresh returns void but triggers a re-fetch.
-        // We can wait a small amount of time to ensure the spinner is visible.
-        await new Promise(resolve => setTimeout(resolve, 500))
+        // Wrap router.refresh() in a transition to track its pending state
+        startTransition(() => {
+            router.refresh()
+        })
     }
 
     return (
-        <PullToRefresh onRefresh={handleRefresh}>
+        <PullToRefresh onRefresh={handleRefresh} isRefreshing={isPending}>
             {children}
         </PullToRefresh>
     )
