@@ -100,6 +100,12 @@ export default function SimulationClient({ initialSnapshots }: SimulationClientP
         }
     }
 
+    const handleSnapshotChange = (id: string) => {
+        setSelectedSnapshotId(id)
+        setResult(null)
+        setError(null)
+    }
+
     const runSimulation = () => {
         if (!selectedSnapshotId) return
         executeSimulation(selectedSnapshotId)
@@ -124,7 +130,7 @@ export default function SimulationClient({ initialSnapshots }: SimulationClientP
                 <CardContent>
                     <div className="flex flex-col sm:flex-row gap-2 items-end sm:items-center">
                         <div className="w-full sm:w-auto sm:min-w-[320px]">
-                            <Select value={selectedSnapshotId} onValueChange={setSelectedSnapshotId}>
+                            <Select value={selectedSnapshotId} onValueChange={handleSnapshotChange}>
                                 <SelectTrigger>
                                     <SelectValue placeholder={t('selectSnapshotPlaceholder')} />
                                 </SelectTrigger>
