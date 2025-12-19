@@ -584,26 +584,53 @@ export function HoldingsManager({ initialHoldings, summary, triggerRefresh }: Ho
                                                         </div>
                                                         <div className="text-right">
                                                             <div className="flex justify-end gap-1">
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="icon"
-                                                                    onClick={() => handleStartEdit(holding)}
-                                                                    disabled={isRefreshing || savingSnapshot || deletingId === holding.id}
-                                                                >
-                                                                    <Edit2 className="w-4 h-4" />
-                                                                </Button>
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="icon"
-                                                                    onClick={() => handleDeleteHolding(holding.id)}
-                                                                    disabled={isRefreshing || savingSnapshot || deletingId === holding.id}
-                                                                >
-                                                                    {deletingId === holding.id ? (
-                                                                        <Loader2 className="w-4 h-4 animate-spin text-destructive" />
-                                                                    ) : (
-                                                                        <Trash2 className="w-4 h-4 text-destructive" />
-                                                                    )}
-                                                                </Button>
+                                                                {editingId === holding.id ? (
+                                                                    <>
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="icon"
+                                                                            onClick={() => handleSaveEdit(holding.id)}
+                                                                            disabled={isRefreshing || savingSnapshot || savingRowId !== null}
+                                                                        >
+                                                                            {savingRowId === holding.id ? (
+                                                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                                                            ) : (
+                                                                                <Check className="w-4 h-4 text-green-600" />
+                                                                            )}
+                                                                        </Button>
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="icon"
+                                                                            onClick={handleCancelEdit}
+                                                                            disabled={isRefreshing || savingSnapshot || savingRowId !== null}
+                                                                        >
+                                                                            <X className="w-4 h-4 text-muted-foreground" />
+                                                                        </Button>
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="icon"
+                                                                            onClick={() => handleStartEdit(holding)}
+                                                                            disabled={isRefreshing || savingSnapshot || deletingId === holding.id || !!editingId}
+                                                                        >
+                                                                            <Edit2 className="w-4 h-4" />
+                                                                        </Button>
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="icon"
+                                                                            onClick={() => handleDeleteHolding(holding.id)}
+                                                                            disabled={isRefreshing || savingSnapshot || deletingId === holding.id || !!editingId}
+                                                                        >
+                                                                            {deletingId === holding.id ? (
+                                                                                <Loader2 className="w-4 h-4 animate-spin text-destructive" />
+                                                                            ) : (
+                                                                                <Trash2 className="w-4 h-4 text-destructive" />
+                                                                            )}
+                                                                        </Button>
+                                                                    </>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     </div>
@@ -613,11 +640,29 @@ export function HoldingsManager({ initialHoldings, summary, triggerRefresh }: Ho
                                                     <div className="grid grid-cols-2 gap-4 border-t pt-3">
                                                         <div>
                                                             <div className="text-xs text-muted-foreground mb-1">{t('quantity')}</div>
-                                                            <div className="font-medium">{formatNumber(holding.quantity)}{t('countUnit')}</div>
+                                                            {editingId === holding.id ? (
+                                                                <FormattedNumberInput
+                                                                    value={editValues.quantity}
+                                                                    onChange={(val) => setEditValues((prev) => ({ ...prev, quantity: val }))}
+                                                                    className="h-8 text-sm"
+                                                                    disabled={savingRowId !== null}
+                                                                />
+                                                            ) : (
+                                                                <div className="font-medium">{formatNumber(holding.quantity)}{t('countUnit')}</div>
+                                                            )}
                                                         </div>
                                                         <div className="text-right">
                                                             <div className="text-xs text-muted-foreground mb-1">{t('avgPrice')}</div>
-                                                            <div className="font-medium">{formatCurrency(holding.averagePrice, currency)}</div>
+                                                            {editingId === holding.id ? (
+                                                                <FormattedNumberInput
+                                                                    value={editValues.averagePrice}
+                                                                    onChange={(val) => setEditValues((prev) => ({ ...prev, averagePrice: val }))}
+                                                                    className="h-8 text-sm text-right"
+                                                                    disabled={savingRowId !== null}
+                                                                />
+                                                            ) : (
+                                                                <div className="font-medium">{formatCurrency(holding.averagePrice, currency)}</div>
+                                                            )}
                                                         </div>
 
                                                         <div>

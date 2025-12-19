@@ -1,7 +1,7 @@
 # Snapshot Finance 개발 실행 계획
 
 **작성일:** 2025-11-25  
-**최종 업데이트:** 2025-12-15 (Mobile UX & Localization)  
+**최종 업데이트:** 2025-12-19 (Mobile Stock Edit)  
 **목표:** 개인용 주식 잔고 관리 MVP (무료 플랜)
 
 ---
@@ -110,6 +110,7 @@
     - [x] 당겨서 새로고침(Pull-to-Refresh) 구현: 모바일 웹에서의 새로고침 편의성 증대 (`PullToRefresh.tsx`)
     - [x] 오버스크롤 방지: Native Pull-to-Refresh와 커스텀 로직 충돌 방지 (`overscroll-behavior-y: none`)
     - [x] 다국어 누락 수정: 'Qty', 'Price' 라벨 번역 적용
+    - [x] **모바일 종목 수정 UI 구현**: 모바일 카드 뷰에서 인라인 수정 기능 추가 및 버튼 가시성 버그 해결
 
 ### 3. 안정성 및 테스트
 - [x] **API 호출 최적화**: 로고 클릭 시 대시보드 새로고침(Link) 차단하여 불필요한 API 비용(KIS) 절감 (PC/Mobile)
