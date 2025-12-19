@@ -17,6 +17,7 @@ import { formatCurrency, formatDate, formatProfitRate } from '@/lib/utils/format
 import { cn } from '@/lib/utils'
 import { useLanguage } from '@/lib/i18n/context'
 import { SnapshotDiff } from '@/components/dashboard/snapshots/snapshot-diff'
+import { Play } from 'lucide-react'
 
 interface Snapshot {
     id: string
@@ -188,6 +189,15 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings }: Snapshots
                                                     {snapshot.note}
                                                 </div>
                                             )}
+
+                                            <div className="pt-1">
+                                                <Link href={`/dashboard/simulation?snapshotId=${snapshot.id}`} className="block">
+                                                    <Button variant="outline" size="sm" className="w-full border-primary text-primary hover:bg-primary/10 h-9 font-medium">
+                                                        <Play className="h-3.5 w-3.5 mr-2 fill-current" />
+                                                        {t('runSimulation')}
+                                                    </Button>
+                                                </Link>
+                                            </div>
                                         </div>
                                     )
                                 })}
@@ -282,6 +292,12 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings }: Snapshots
                                                                 <Link href={`/dashboard/snapshots/${snapshot.id}`}>
                                                                     <Button variant="outline" size="sm">
                                                                         {t('details')}
+                                                                    </Button>
+                                                                </Link>
+                                                                <Link href={`/dashboard/simulation?snapshotId=${snapshot.id}`}>
+                                                                    <Button variant="outline" size="sm" className="border-primary text-primary hover:bg-primary/10">
+                                                                        <Play className="h-3 w-3 mr-1 fill-current" />
+                                                                        {t('runSimulation')}
                                                                     </Button>
                                                                 </Link>
                                                                 <Button

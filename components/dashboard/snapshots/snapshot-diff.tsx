@@ -169,11 +169,11 @@ export function SnapshotDiff({ currentHoldings, snapshots, selectedIds }: Props)
                                 </h4>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                     {added.map((item: any) => (
-                                        <div key={item.code} className="bg-blue-50/50 dark:bg-blue-900/10 p-2 rounded flex justify-between items-center text-sm border border-blue-100 dark:border-blue-900/30">
-                                            <span className="font-medium">
-                                                {item.name} <span className="text-muted-foreground font-normal text-xs">({item.code})</span>
+                                        <div key={item.code} className="bg-blue-50/50 dark:bg-blue-900/10 p-2.5 rounded flex justify-between items-start text-sm border border-blue-100 dark:border-blue-900/30 gap-4">
+                                            <span className="font-medium flex-1 min-w-0 break-words pt-0.5">
+                                                {item.name} <span className="text-muted-foreground font-normal text-xs block sm:inline">({item.code})</span>
                                             </span>
-                                            <span className="text-muted-foreground">{formatNumber(item.quantity)}{t('countUnit')}</span>
+                                            <span className="text-muted-foreground whitespace-nowrap shrink-0 pt-0.5 font-medium">{formatNumber(item.quantity)}{t('countUnit')}</span>
                                         </div>
                                     ))}
                                 </div>
@@ -191,15 +191,15 @@ export function SnapshotDiff({ currentHoldings, snapshots, selectedIds }: Props)
                                         const diffVal = item.newQty - item.oldQty
                                         const isPos = diffVal > 0
                                         return (
-                                            <div key={item.code} className="bg-amber-50/50 dark:bg-amber-900/10 p-2 rounded flex justify-between items-center text-sm border border-amber-100 dark:border-amber-900/30">
-                                                <span className="font-medium">
-                                                    {item.name} <span className="text-muted-foreground font-normal text-xs">({item.code})</span>
+                                            <div key={item.code} className="bg-amber-50/50 dark:bg-amber-900/10 p-2.5 rounded flex justify-between items-start text-sm border border-amber-100 dark:border-amber-900/30 gap-4">
+                                                <span className="font-medium flex-1 min-w-0 break-words pt-0.5">
+                                                    {item.name} <span className="text-muted-foreground font-normal text-xs block sm:inline">({item.code})</span>
                                                 </span>
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-muted-foreground line-through text-xs">{formatNumber(item.oldQty)}</span>
-                                                    <ArrowRight className="w-3 h-3 text-muted-foreground" />
+                                                <div className="flex items-center gap-2 whitespace-nowrap shrink-0 pt-0.5">
+                                                    <span className="text-muted-foreground line-through text-xs font-normal">{formatNumber(item.oldQty)}</span>
+                                                    <ArrowRight className="w-3 h-3 text-muted-foreground opacity-50" />
                                                     <span className="font-bold">{formatNumber(item.newQty)}{t('countUnit')}</span>
-                                                    <Badge variant="outline" className={isPos ? "text-red-500 border-red-200 ml-1" : "text-blue-500 border-blue-200 ml-1"}>
+                                                    <Badge variant="outline" className={isPos ? "text-red-500 border-red-200 ml-1 px-1 h-5 text-[10px]" : "text-blue-500 border-blue-200 ml-1 px-1 h-5 text-[10px]"}>
                                                         {isPos ? '+' : ''}{formatNumber(diffVal)}
                                                     </Badge>
                                                 </div>
@@ -218,11 +218,11 @@ export function SnapshotDiff({ currentHoldings, snapshots, selectedIds }: Props)
                                 </h4>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                     {removed.map((item: any) => (
-                                        <div key={item.code} className="bg-red-50/50 dark:bg-red-900/10 p-2 rounded flex justify-between items-center text-sm border border-red-100 dark:border-red-900/30">
-                                            <span className="font-medium">
-                                                {item.name} <span className="text-muted-foreground font-normal text-xs">({item.code})</span>
+                                        <div key={item.code} className="bg-red-50/50 dark:bg-red-900/10 p-2.5 rounded flex justify-between items-start text-sm border border-red-100 dark:border-red-900/30 gap-4">
+                                            <span className="font-medium flex-1 min-w-0 break-words pt-0.5">
+                                                {item.name} <span className="text-muted-foreground font-normal text-xs block sm:inline">({item.code})</span>
                                             </span>
-                                            <span className="text-muted-foreground line-through">{formatNumber(item.quantity)}{t('countUnit')}</span>
+                                            <span className="text-muted-foreground line-through whitespace-nowrap shrink-0 pt-0.5 font-medium">{formatNumber(item.quantity)}{t('countUnit')}</span>
                                         </div>
                                     ))}
                                 </div>
