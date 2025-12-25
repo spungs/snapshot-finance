@@ -214,9 +214,9 @@ export function StockSearchCombobox({
                                             value === result.symbol ? "opacity-100" : "opacity-0"
                                         )}
                                     />
-                                    <div className="flex flex-col">
-                                        <span>{result.name}</span>
-                                        <span className="text-xs text-muted-foreground">
+                                    <div className="flex flex-col truncate w-full">
+                                        <span className="truncate" title={result.name}>{result.name}</span>
+                                        <span className="text-xs text-muted-foreground truncate">
                                             {result.symbol} | {result.market}
                                         </span>
                                     </div>
