@@ -206,7 +206,7 @@ export function StockSearchCombobox({
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
             <Dialog open={open} onOpenChange={setOpen}>
-                <DialogContent className="p-0 overflow-hidden gap-0 top-[10%] translate-y-0 sm:translate-y-[-50%] sm:top-[50%]">
+                <DialogContent showCloseButton={false} className="p-0 overflow-hidden gap-0 top-[10%] translate-y-0 sm:translate-y-[-50%] sm:top-[50%]">
                     <DialogTitle className="sr-only">{t('selectStock')}</DialogTitle>
                     <DialogDescription className="sr-only">{t('searchPlaceholder')}</DialogDescription>
                     <Command shouldFilter={false} className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-2 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5">
