@@ -33,6 +33,7 @@ export function MobileNav({ type }: MobileNavProps) {
         { href: '/dashboard', label: t('dashboard') },
         { href: '/dashboard/snapshots', label: t('snapshots') },
         { href: '/dashboard/simulation', label: t('simulation') },
+        { href: '/dashboard/what-if', label: t('whatIf') },
     ]
 
     const links = type === 'landing' ? landingLinks : dashboardLinks

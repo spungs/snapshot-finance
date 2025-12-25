@@ -183,12 +183,13 @@ export class KisClient {
 
         // Domestic Stock
         if (market === 'KOSPI' || market === 'KOSDAQ') {
+            const cleanSymbol = symbol.split('.')[0]
             const path = '/uapi/domestic-stock/v1/quotations/inquire-daily-price'
             const tr_id = 'FHKST01010400'
 
             const params = new URLSearchParams({
                 FID_COND_MRKT_DIV_CODE: 'J',
-                FID_INPUT_ISCD: symbol,
+                FID_INPUT_ISCD: cleanSymbol,
                 FID_PERIOD_DIV_CODE: 'D', // Daily
                 FID_ORG_ADJ_PRC: '1', // Adjusted price
             })
@@ -287,6 +288,45 @@ export class KisClient {
                 console.error(`Yahoo Finance Daily Price Error for ${symbol}:`, error)
                 return null
             }
+        }
+    }
+
+    async getDailyPriceRange(symbol: string, market: 'KOSPI' | 'KOSDAQ' | 'US', startDate: string, endDate: string): Promise<any[]> {
+        try {
+            // For historical chart data, we use Yahoo Finance for all markets.
+            // Yahoo Finance handles long ranges and Korean stocks well if suffixes are correct.
+
+            let yahooSymbol = symbol
+            if (market === 'KOSPI' && !yahooSymbol.endsWith('.KS')) {
+                yahooSymbol = `${yahooSymbol.split('.')[0]}.KS`
+            } else if (market === 'KOSDAQ' && !yahooSymbol.endsWith('.KQ')) {
+                yahooSymbol = `${yahooSymbol.split('.')[0]}.KQ`
+            }
+
+            // For Yahoo Finance, period2 is exclusive, so we add 1 day to include endDate
+            const end = new Date(endDate)
+            end.setDate(end.getDate() + 1)
+            const period2 = end.toISOString().split('T')[0]
+
+            const result = await yahooFinance.historical(yahooSymbol, {
+                period1: startDate,
+                period2: period2,
+                interval: '1d',
+            })
+
+            return result.map((item) => ({
+                date: item.date.toISOString().split('T')[0],
+                // User Feedback: Use raw close price instead of adjusted close to match Naver Finance/MTS history.
+                // 2021-01-08 Samsung Electronics: Close 88,800 vs Adj Close 80,270
+                close: item.close || item.adjClose,
+                open: item.open,
+                high: item.high,
+                low: item.low,
+                volume: item.volume,
+            }))
+        } catch (error) {
+            console.error(`History Fetch Error for ${symbol}:`, error)
+            return []
         }
     }
 }

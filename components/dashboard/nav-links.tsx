@@ -16,6 +16,7 @@ export function NavLinks() {
         { href: '/dashboard', label: t('dashboard') },
         { href: '/dashboard/snapshots', label: t('snapshots') },
         { href: '/dashboard/simulation', label: t('simulation') },
+        { href: '/dashboard/what-if', label: t('whatIf') },
     ]
 
     return (
