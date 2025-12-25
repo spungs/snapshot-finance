@@ -17,7 +17,14 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from '@/components/ui/popover'
+import {
+    Drawer,
+    DrawerContent,
+    DrawerTrigger,
+} from "@/components/ui/drawer"
 import { useDebounce } from '@/lib/hooks/use-debounce'
+import { useMediaQuery } from "@/lib/hooks/use-media-query"
+import { useLanguage } from '@/lib/i18n/context'
 
 interface Stock {
     id: string
@@ -40,8 +47,6 @@ interface StockSearchComboboxProps {
     disabled?: boolean
 }
 
-import { useLanguage } from '@/lib/i18n/context'
-
 export function StockSearchCombobox({
     value,
     onSelect,
@@ -55,6 +60,7 @@ export function StockSearchCombobox({
     const [selectingLoading, setSelectingLoading] = React.useState(false)
     const [error, setError] = React.useState<string | null>(null)
     const [hasSearched, setHasSearched] = React.useState(false)
+    const isDesktop = useMediaQuery("(min-width: 768px)")
 
     // Timer ref for debounce
     const debounceTimerRef = React.useRef<NodeJS.Timeout | null>(null)
@@ -146,9 +152,44 @@ export function StockSearchCombobox({
         }
     }
 
+    if (isDesktop) {
+        return (
+            <Popover open={open} onOpenChange={setOpen}>
+                <PopoverTrigger asChild>
+                    <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={open}
+                        className="w-full justify-between"
+                        disabled={disabled}
+                    >
+                        {value
+                            ? value
+                            : t('selectStock')}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[300px] p-0" align="start">
+                    <StockList
+                        query={query}
+                        setQuery={setQuery}
+                        handleManualSearch={handleManualSearch}
+                        loading={loading}
+                        error={error}
+                        results={results}
+                        hasSearched={hasSearched}
+                        value={value}
+                        handleSelect={handleSelect}
+                        t={t}
+                    />
+                </PopoverContent>
+            </Popover>
+        )
+    }
+
     return (
-        <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger asChild>
+        <Drawer open={open} onOpenChange={setOpen}>
+            <DrawerTrigger asChild>
                 <Button
                     variant="outline"
                     role="combobox"
@@ -161,71 +202,113 @@ export function StockSearchCombobox({
                         : t('selectStock')}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[300px] p-0">
-                <Command shouldFilter={false}>
-                    <div className="flex items-center border-b px-3" cmdk-input-wrapper="">
-                        <input
-                            className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
-                            placeholder={t('searchPlaceholder')}
-                            value={query}
-                            onChange={(e) => setQuery(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                    e.preventDefault() // Prevent form submission if any
-                                    handleManualSearch()
-                                }
-                            }}
-                        />
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 ml-1"
-                            onClick={handleManualSearch}
-                        >
-                            <Search className="h-4 w-4" />
-                        </Button>
+            </DrawerTrigger>
+            <DrawerContent>
+                <div className="mt-4 border-t p-4 pb-10">
+                    <StockList
+                        query={query}
+                        setQuery={setQuery}
+                        handleManualSearch={handleManualSearch}
+                        loading={loading}
+                        error={error}
+                        results={results}
+                        hasSearched={hasSearched}
+                        value={value}
+                        handleSelect={handleSelect}
+                        t={t}
+                    />
+                </div>
+            </DrawerContent>
+        </Drawer>
+    )
+}
+
+function StockList({
+    query,
+    setQuery,
+    handleManualSearch,
+    loading,
+    error,
+    results,
+    hasSearched,
+    value,
+    handleSelect,
+    t
+}: {
+    query: string
+    setQuery: (val: string) => void
+    handleManualSearch: () => void
+    loading: boolean
+    error: string | null
+    results: SearchResult[]
+    hasSearched: boolean
+    value: string
+    handleSelect: (result: SearchResult) => void
+    t: (key: any) => string
+}) {
+    return (
+        <Command shouldFilter={false} className="h-full">
+            <div className="flex items-center border-b px-3" cmdk-input-wrapper="">
+                <input
+                    className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                    placeholder={t('searchPlaceholder')}
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault() // Prevent form submission if any
+                            handleManualSearch()
+                        }
+                    }}
+                />
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 ml-1"
+                    onClick={handleManualSearch}
+                >
+                    <Search className="h-4 w-4" />
+                </Button>
+            </div>
+            <CommandList className="max-h-[300px] overflow-y-auto">
+                {loading && (
+                    <div className="py-6 text-center text-sm text-muted-foreground">
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin inline" />
+                        {t('searchSearching')}
                     </div>
-                    <CommandList>
-                        {loading && (
-                            <div className="py-6 text-center text-sm text-muted-foreground">
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin inline" />
-                                {t('searchSearching')}
+                )}
+                {error && (
+                    <div className="py-6 text-center text-sm text-destructive px-4 whitespace-pre-wrap">
+                        {error}
+                    </div>
+                )}
+                {!loading && !error && results.length === 0 && hasSearched && (
+                    <CommandEmpty>{t('searchEmpty')}</CommandEmpty>
+                )}
+                <CommandGroup>
+                    {results.map((result, index) => (
+                        <CommandItem
+                            key={`${result.symbol}-${result.exchange}-${index}`}
+                            value={`${result.symbol}-${result.exchange}`}
+                            onSelect={() => handleSelect(result)}
+                            className="py-3"
+                        >
+                            <Check
+                                className={cn(
+                                    "mr-2 h-4 w-4",
+                                    value === result.symbol ? "opacity-100" : "opacity-0"
+                                )}
+                            />
+                            <div className="flex flex-col truncate w-full">
+                                <span className="truncate text-base font-medium" title={result.name}>{result.name}</span>
+                                <span className="text-xs text-muted-foreground truncate">
+                                    {result.symbol} | {result.market}
+                                </span>
                             </div>
-                        )}
-                        {error && (
-                            <div className="py-6 text-center text-sm text-destructive px-4 whitespace-pre-wrap">
-                                {error}
-                            </div>
-                        )}
-                        {!loading && !error && results.length === 0 && hasSearched && (
-                            <CommandEmpty>{t('searchEmpty')}</CommandEmpty>
-                        )}
-                        <CommandGroup>
-                            {results.map((result, index) => (
-                                <CommandItem
-                                    key={`${result.symbol}-${result.exchange}-${index}`}
-                                    value={`${result.symbol}-${result.exchange}`}
-                                    onSelect={() => handleSelect(result)}
-                                >
-                                    <Check
-                                        className={cn(
-                                            "mr-2 h-4 w-4",
-                                            value === result.symbol ? "opacity-100" : "opacity-0"
-                                        )}
-                                    />
-                                    <div className="flex flex-col truncate w-full">
-                                        <span className="truncate" title={result.name}>{result.name}</span>
-                                        <span className="text-xs text-muted-foreground truncate">
-                                            {result.symbol} | {result.market}
-                                        </span>
-                                    </div>
-                                </CommandItem>
-                            ))}
-                        </CommandGroup>
-                    </CommandList>
-                </Command>
-            </PopoverContent>
-        </Popover>
+                        </CommandItem>
+                    ))}
+                </CommandGroup>
+            </CommandList>
+        </Command>
     )
 }
