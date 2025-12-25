@@ -98,7 +98,7 @@ export function StockSearchCombobox({
         // Set new timer
         debounceTimerRef.current = setTimeout(() => {
             searchStocks()
-        }, 2000)
+        }, 1200)
 
         // Cleanup
         return () => {

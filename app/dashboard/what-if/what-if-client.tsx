@@ -285,6 +285,7 @@ export function WhatIfClient() {
                                                 fontSize={12}
                                                 tickLine={false}
                                                 axisLine={false}
+                                                minTickGap={30}
                                             />
                                             <YAxis
                                                 domain={['auto', 'auto']}
