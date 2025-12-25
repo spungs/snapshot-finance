@@ -18,10 +18,11 @@ import {
     PopoverTrigger,
 } from '@/components/ui/popover'
 import {
-    Drawer,
-    DrawerContent,
-    DrawerTrigger,
-} from "@/components/ui/drawer"
+    Dialog,
+    DialogContent,
+    DialogTitle,
+    DialogDescription,
+} from "@/components/ui/dialog"
 import { useDebounce } from '@/lib/hooks/use-debounce'
 import { useMediaQuery } from "@/lib/hooks/use-media-query"
 import { useLanguage } from '@/lib/i18n/context'
@@ -170,60 +171,65 @@ export function StockSearchCombobox({
                     </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[300px] p-0" align="start">
-                    <StockList
-                        query={query}
-                        setQuery={setQuery}
-                        handleManualSearch={handleManualSearch}
-                        loading={loading}
-                        error={error}
-                        results={results}
-                        hasSearched={hasSearched}
-                        value={value}
-                        handleSelect={handleSelect}
-                        t={t}
-                    />
+                    <Command shouldFilter={false} className="h-full">
+                        <StockSearchContent
+                            query={query}
+                            setQuery={setQuery}
+                            handleManualSearch={handleManualSearch}
+                            loading={loading}
+                            error={error}
+                            results={results}
+                            hasSearched={hasSearched}
+                            value={value}
+                            handleSelect={handleSelect}
+                            t={t}
+                        />
+                    </Command>
                 </PopoverContent>
             </Popover>
         )
     }
 
     return (
-        <Drawer open={open} onOpenChange={setOpen}>
-            <DrawerTrigger asChild>
-                <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={open}
-                    className="w-full justify-between"
-                    disabled={disabled}
-                >
-                    {value
-                        ? value
-                        : t('selectStock')}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-            </DrawerTrigger>
-            <DrawerContent>
-                <div className="mt-4 border-t p-4 pb-10">
-                    <StockList
-                        query={query}
-                        setQuery={setQuery}
-                        handleManualSearch={handleManualSearch}
-                        loading={loading}
-                        error={error}
-                        results={results}
-                        hasSearched={hasSearched}
-                        value={value}
-                        handleSelect={handleSelect}
-                        t={t}
-                    />
-                </div>
-            </DrawerContent>
-        </Drawer>
+        <>
+            <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={open}
+                className="w-full justify-between"
+                disabled={disabled}
+                onClick={() => setOpen(true)}
+            >
+                {value
+                    ? value
+                    : t('selectStock')}
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+            <Dialog open={open} onOpenChange={setOpen}>
+                <DialogContent className="p-0 overflow-hidden gap-0 top-[10%] translate-y-0 sm:translate-y-[-50%] sm:top-[50%]">
+                    <DialogTitle className="sr-only">{t('selectStock')}</DialogTitle>
+                    <DialogDescription className="sr-only">{t('searchPlaceholder')}</DialogDescription>
+                    <Command shouldFilter={false} className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-2 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5">
+                        <StockSearchContent
+                            query={query}
+                            setQuery={setQuery}
+                            handleManualSearch={handleManualSearch}
+                            loading={loading}
+                            error={error}
+                            results={results}
+                            hasSearched={hasSearched}
+                            value={value}
+                            handleSelect={handleSelect}
+                            t={t}
+                        />
+                    </Command>
+                </DialogContent>
+            </Dialog>
+        </>
     )
 }
 
-function StockList({
+function StockSearchContent({
     query,
     setQuery,
     handleManualSearch,
@@ -247,7 +253,7 @@ function StockList({
     t: (key: any) => string
 }) {
     return (
-        <Command shouldFilter={false} className="h-full">
+        <>
             <div className="flex items-center border-b px-3" cmdk-input-wrapper="">
                 <input
                     className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
@@ -260,6 +266,7 @@ function StockList({
                             handleManualSearch()
                         }
                     }}
+                    autoFocus
                 />
                 <Button
                     variant="ghost"
@@ -309,6 +316,6 @@ function StockList({
                     ))}
                 </CommandGroup>
             </CommandList>
-        </Command>
+        </>
     )
 }
