@@ -182,8 +182,8 @@ export function WhatIfClient() {
             <div className="grid gap-4 md:grid-cols-[280px_1fr]">
                 {/* Controls */}
                 <div className="space-y-4">
-                    <Card>
-                        <CardContent className="p-3 space-y-2">
+                    <Card className="py-2">
+                        <CardContent className="px-3 py-1 space-y-2">
                             <div className="space-y-1">
                                 <label className="text-sm font-medium">{t('stock')}</label>
                                 <StockSearchCombobox
@@ -209,8 +209,8 @@ export function WhatIfClient() {
 
                     {/* Result Summary Card (Only show if data exists) */}
                     {!loading && chartData.length > 0 && (
-                        <Card className={cn("border-l-4", isProfit ? "border-l-red-500" : "border-l-blue-500")}>
-                            <CardHeader className="pb-2">
+                        <Card className={cn("border-l-4 py-3", isProfit ? "border-l-red-500" : "border-l-blue-500")}>
+                            <CardHeader className="py-0 pb-1 px-4">
                                 <CardDescription>{language === 'ko' ? '만약 그때 샀다면 현재...' : 'If you bought it then...'}</CardDescription>
                                 <CardTitle className={cn("text-2xl", isProfit ? "text-red-600" : "text-blue-600")}>
                                     {profitRate > 0 ? '+' : ''}{profitRate.toFixed(2)}%
