@@ -17,7 +17,7 @@ export const authConfig = {
         }),
     ],
     pages: {
-        signIn: '/auth/signin',
+        signIn: '/',
     },
     callbacks: {
         authorized({ auth, request: { nextUrl } }) {

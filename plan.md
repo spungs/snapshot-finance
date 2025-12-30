@@ -1,7 +1,7 @@
 # Snapshot Finance 개발 실행 계획
 
 **작성일:** 2025-11-25  
-**최종 업데이트:** 2025-12-31 (User Profile Dropdown & Auto-Snapshot Settings)  
+**최종 업데이트:** 2025-12-31 (Sticky Footer Fix, Cron Price/Currency Normalization, User Account Nav Refinement)  
 **목표:** 개인용 주식 잔고 관리 MVP (무료 플랜)
 
 ---

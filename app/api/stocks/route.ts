@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { auth } from '@/lib/auth'
 
 // GET /api/stocks - 종목 목록 조회
 export async function GET() {
   try {
+    const session = await auth()
+    if (!session?.user?.id) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+    }
+
     const stocks = await prisma.stock.findMany({
       orderBy: { stockName: 'asc' },
     })
@@ -27,6 +33,11 @@ export async function GET() {
 // POST /api/stocks - 종목 추가
 export async function POST(request: NextRequest) {
   try {
+    const session = await auth()
+    if (!session?.user?.id) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+    }
+
     const body = await request.json()
     const { stockCode, stockName, market, sector } = body
 
