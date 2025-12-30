@@ -2,6 +2,7 @@ export type Language = 'ko' | 'en'
 
 export const translations = {
     ko: {
+        home: '홈',
         dashboard: '대시보드',
         snapshots: '스냅샷',
         simulation: '시뮬레이션',
@@ -311,6 +312,7 @@ export const translations = {
         deselect: '해제',
     },
     en: {
+        home: 'Home',
         "dashboard": "Dashboard",
         "snapshots": "Snapshots",
         "simulation": "Simulation",

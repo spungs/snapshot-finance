@@ -38,9 +38,14 @@ export function MobileNav({ type, user }: MobileNavProps) {
         { href: '/dashboard/what-if', label: t('whatIf'), protected: false },
     ]
 
+    const guestDashboardLinks = [
+        { href: '/', label: t('home') },
+        ...allDashboardLinks.filter(link => !link.protected)
+    ]
+
     const dashboardLinks = user
         ? allDashboardLinks
-        : allDashboardLinks.filter(link => !link.protected)
+        : guestDashboardLinks
 
     const links = type === 'landing' ? landingLinks : dashboardLinks
 
