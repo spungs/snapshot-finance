@@ -72,25 +72,6 @@ export async function GET(request: NextRequest) {
                         continue
                     }
 
-                    // Idempotency: Check if snapshot already exists for today
-                    const today = new Date()
-                    const startOfDay = new Date(today.setHours(0, 0, 0, 0))
-                    const endOfDay = new Date(today.setHours(23, 59, 59, 999))
-
-                    const existingToday = await prisma.portfolioSnapshot.findFirst({
-                        where: {
-                            userId: user.id,
-                            snapshotDate: {
-                                gte: startOfDay,
-                                lte: endOfDay,
-                            },
-                        },
-                    })
-                    if (existingToday) {
-                        results.push({ userId: user.id, status: 'skipped', reason: 'Already exists for today' })
-                        continue
-                    }
-
                     // Fetch prices and calculate values (Real-time)
                     let totalValue = 0
                     let totalCost = 0
