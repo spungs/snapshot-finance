@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { kisClient } from '@/lib/api/kis-client'
+import { getUsdExchangeRate } from '@/lib/api/exchange-rate'
 
 // Unified Cron Job: Daily Snapshot + User Maintenance
 // Schedule: 22:30 UTC Daily (07:30 KST Daily)
@@ -47,7 +48,7 @@ export async function GET(request: NextRequest) {
         if (isSnapshotDay) {
             console.log(`[Cron] Start Daily Snapshot (Day: ${dayOfWeek})`)
 
-            // Get users with holdings
+            // Get users with holdings (Sorted by displayOrder)
             const users = await prisma.user.findMany({
                 where: {
                     isAutoSnapshotEnabled: true,
@@ -55,11 +56,14 @@ export async function GET(request: NextRequest) {
                 include: {
                     holdings: {
                         include: { stock: true },
+                        orderBy: { displayOrder: 'asc' }
                     },
                 },
             })
 
             console.log(`[Cron] Found ${users.length} users for snapshot.`)
+            const usdRate = await getUsdExchangeRate()
+            console.log(`[Cron] Using USD Rate: ${usdRate}`)
 
             for (const user of users) {
                 try {
@@ -100,8 +104,12 @@ export async function GET(request: NextRequest) {
                             const val = currentPrice * quantity
                             const cost = avgPrice * quantity
 
-                            totalValue += val
-                            totalCost += cost
+                            // Normalize values to KRW for portfolio total
+                            const krwValue = holding.currency === 'USD' ? val * usdRate : val
+                            const krwCost = holding.currency === 'USD' ? cost * usdRate : cost
+
+                            totalValue += krwValue
+                            totalCost += krwCost
 
                             // Per holding profit
                             const hProfit = val - cost
@@ -135,7 +143,7 @@ export async function GET(request: NextRequest) {
                             totalProfit,
                             profitRate,
                             cashBalance: user.cashBalance || 0, // Capture current cash balance
-                            exchangeRate: 1400, // TODO: Fetch real exchange rate if needed, currently static or fixed
+                            exchangeRate: usdRate,
                             note: `Auto Snapshot (${new Date().toLocaleDateString('ko-KR')})`,
                             holdings: {
                                 create: snapshotHoldingsData,
