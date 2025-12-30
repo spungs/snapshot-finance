@@ -4,7 +4,8 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ArrowRight, Camera, LineChart, ShieldCheck, TrendingUp } from 'lucide-react'
-import { MobileNav } from '@/components/mobile-nav'
+import { SiteHeader } from '@/components/site-header'
+import { SiteFooter } from '@/components/site-footer'
 import { useLanguage } from '@/lib/i18n/context'
 import { translations } from '@/lib/i18n/translations'
 
@@ -14,32 +15,7 @@ export default function Home() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="px-4 lg:px-6 h-14 flex items-center border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50 justify-between">
-        <Link className="flex items-center justify-center font-bold text-xl" href="#">
-          <Camera className="mr-2 h-6 w-6" />
-          Snapshot Finance
-        </Link>
-        <nav className="hidden sm:flex ml-auto gap-4 sm:gap-6 items-center">
-          <Link className="text-sm font-medium hover:underline underline-offset-4" href="#about">
-            {t.landing.about}
-          </Link>
-          <Link className="text-sm font-medium hover:underline underline-offset-4" href="#features">
-            {t.landing.features}
-          </Link>
-          <Link className="text-sm font-medium hover:underline underline-offset-4" href="/guides">
-            {t.landing.guides}
-          </Link>
-          <Link className="text-sm font-medium hover:underline underline-offset-4" href="/dashboard/what-if">
-            {(t as any).whatIf}
-          </Link>
-          <Link href="/dashboard">
-            <Button variant="outline" size="sm">
-              {t.landing.login}
-            </Button>
-          </Link>
-        </nav>
-        <MobileNav type="landing" />
-      </header>
+      <SiteHeader />
       <main className="flex-1">
         <section className="w-full py-12 md:py-24 lg:py-32 xl:py-48 bg-gradient-to-b from-background to-muted/50">
           <div className="container px-4 md:px-6 mx-auto">
@@ -161,19 +137,7 @@ export default function Home() {
           </div>
         </section>
       </main>
-      <footer className="flex flex-col gap-2 sm:flex-row py-6 w-full shrink-0 items-center px-4 md:px-6 border-t">
-        <p className="text-xs text-muted-foreground">
-          {t.landing.copyRight}
-        </p>
-        <nav className="sm:ml-auto flex gap-4 sm:gap-6">
-          <Link className="text-xs hover:underline underline-offset-4 text-muted-foreground" href="/terms">
-            {t.landing.termsOfService || '이용약관'}
-          </Link>
-          <Link className="text-xs hover:underline underline-offset-4 text-muted-foreground" href="/privacy">
-            {t.landing.privacyPolicy}
-          </Link>
-        </nav>
-      </footer>
+      <SiteFooter />
     </div>
   )
 }

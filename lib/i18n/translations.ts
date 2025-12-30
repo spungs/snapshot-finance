@@ -207,6 +207,7 @@ export const translations = {
             guide4Desc: '"만약에" 기능으로 과거 스냅샷을 현재 시점으로 재평가해보세요. "그때 팔지 않았다면 지금 얼마였을까?"같은 가상 시나리오를 테스트하고 투자 전략을 검증할 수 있습니다.',
             guide5Title: '포트폴리오 리밸런싱 가이드',
             guide5Desc: '자산 배분을 재조정하는 리밸런싱의 개념과 실행 방법을 설명합니다. 언제 리밸런싱을 해야 하는지, 어떻게 하면 효과적인지 실전 예시와 함께 알려드립니다.',
+            investmentDisclaimer: '본 가이드의 내용은 참고용이며, 투자의 책임은 사용자 본인에게 있습니다.',
         },
         privacy: {
             title: '개인정보처리방침',
@@ -522,6 +523,7 @@ export const translations = {
             guide4Desc: "Test 'What If' scenarios.",
             guide5Title: "Rebalancing",
             guide5Desc: "How to rebalance your portfolio.",
+            investmentDisclaimer: "The content of this guide is for reference only, and the user is solely responsible for investment decisions.",
         },
         privacy: {
             title: "Privacy Policy",

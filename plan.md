@@ -1,7 +1,7 @@
 # Snapshot Finance 개발 실행 계획
 
 **작성일:** 2025-11-25  
-**최종 업데이트:** 2025-12-19 (Snapshot UI Improvements)  
+**최종 업데이트:** 2025-12-30 (Header/Footer Refactoring & Investment Disclaimer)  
 **목표:** 개인용 주식 잔고 관리 MVP (무료 플랜)
 
 ---
@@ -134,7 +134,9 @@
     - [x] `next-sitemap` 도입 및 설정 (Sitemap/Robots.txt 자동 생성)
     - [x] 메타데이터(Title, Description, OpenGraph, Twitter) 강화
 - [ ] **콘텐츠 마케팅**:
-    - [ ] 블로그/가이드 섹션 구현 (/guides)
-    - [ ] 필수 콘텐츠(10개 이상) 및 정적 페이지(Terms, Privacy, About) 보강
+    - [x] 블로그/가이드 섹션 구현 (/guides)
+    - [x] 필수 콘텐츠(10개 이상) 및 정적 페이지(Terms, Privacy, About) 보강
+    - [x] 가이드 상세 페이지 투자 유의사항(Investment Disclaimer) 추가 및 다국어 지원
+    - [x] 전역 헤더(`SiteHeader`) 및 푸터(`SiteFooter`) 컴포넌트화 및 적용
 
 ---

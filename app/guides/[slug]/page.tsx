@@ -3,7 +3,9 @@
 import Link from 'next/link'
 import { notFound, useParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Camera, BookOpen } from 'lucide-react'
+import { ArrowLeft, BookOpen } from 'lucide-react'
+import { SiteHeader } from '@/components/site-header'
+import { SiteFooter } from '@/components/site-footer'
 import { useLanguage } from '@/lib/i18n/context'
 import { translations } from '@/lib/i18n/translations'
 import { getGuideBySlug, getGuideContent, guides } from '@/lib/guides/content'
@@ -29,29 +31,7 @@ export default function GuideDetailPage() {
 
     return (
         <div className="flex min-h-screen flex-col">
-            <header className="px-4 lg:px-6 h-14 flex items-center border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50 justify-between">
-                <Link className="flex items-center justify-center font-bold text-xl" href="/">
-                    <Camera className="mr-2 h-6 w-6" />
-                    Snapshot Finance
-                </Link>
-                <nav className="hidden sm:flex ml-auto gap-4 sm:gap-6 items-center">
-                    <Link className="text-sm font-medium hover:underline underline-offset-4" href="/#about">
-                        {t.landing.about}
-                    </Link>
-                    <Link className="text-sm font-medium hover:underline underline-offset-4" href="/#features">
-                        {t.landing.features}
-                    </Link>
-                    <Link className="text-sm font-medium hover:underline underline-offset-4 text-primary" href="/guides">
-                        {t.landing.guides}
-                    </Link>
-                    <Link href="/dashboard">
-                        <Button variant="outline" size="sm">
-                            {t.landing.login}
-                        </Button>
-                    </Link>
-                </nav>
-            </header>
-
+            <SiteHeader />
             <main className="flex-1">
                 <article className="container max-w-3xl px-4 md:px-6 py-12 md:py-16 mx-auto">
                     <div className="mb-8">
@@ -143,8 +123,13 @@ export default function GuideDetailPage() {
                         })}
                     </div>
 
+                    {/* Disclaimer */}
+                    <div className="mt-12 p-4 bg-muted/50 rounded-lg text-sm text-muted-foreground text-center break-keep">
+                        {t.landing.investmentDisclaimer}
+                    </div>
+
                     {/* Navigation */}
-                    <div className="mt-12 pt-8 border-t flex flex-col sm:flex-row justify-between gap-4">
+                    <div className="mt-8 pt-8 border-t flex flex-col sm:flex-row justify-between gap-4">
                         {prevGuide ? (
                             <Link href={`/guides/${prevGuide.slug}`} className="flex-1">
                                 <Button variant="outline" className="w-full justify-start gap-2">
@@ -164,20 +149,7 @@ export default function GuideDetailPage() {
                     </div>
                 </article>
             </main>
-
-            <footer className="flex flex-col gap-2 sm:flex-row py-6 w-full shrink-0 items-center px-4 md:px-6 border-t">
-                <p className="text-xs text-muted-foreground">
-                    {t.landing.copyRight}
-                </p>
-                <nav className="sm:ml-auto flex gap-4 sm:gap-6">
-                    <Link className="text-xs hover:underline underline-offset-4 text-muted-foreground" href="/terms">
-                        {t.landing.termsOfService}
-                    </Link>
-                    <Link className="text-xs hover:underline underline-offset-4 text-muted-foreground" href="/privacy">
-                        {t.landing.privacyPolicy}
-                    </Link>
-                </nav>
-            </footer>
-        </div>
+            <SiteFooter />
+        </div >
     )
 }
