@@ -2,15 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { kisClient } from '@/lib/api/kis-client'
 import { getUsdExchangeRate } from '@/lib/api/exchange-rate'
-import { auth } from '@/lib/auth'
 
 export async function POST(request: NextRequest) {
     try {
-        const session = await auth()
-        if (!session?.user?.id) {
-            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
-        }
-
         const body = await request.json()
         const { snapshotId } = body
 
@@ -23,10 +17,7 @@ export async function POST(request: NextRequest) {
 
         // 1. Fetch snapshot with holdings and stock info
         const snapshot = await prisma.portfolioSnapshot.findUnique({
-            where: {
-                id: snapshotId,
-                userId: session.user.id // Ensure ownership
-            },
+            where: { id: snapshotId },
             include: {
                 holdings: {
                     include: {
