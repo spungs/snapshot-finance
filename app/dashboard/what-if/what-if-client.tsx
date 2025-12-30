@@ -183,8 +183,8 @@ export function WhatIfClient() {
                 {/* Controls */}
                 <div className="space-y-4">
                     <Card>
-                        <CardContent className="p-4 space-y-3">
-                            <div className="space-y-2">
+                        <CardContent className="p-3 space-y-2">
+                            <div className="space-y-1">
                                 <label className="text-sm font-medium">{t('stock')}</label>
                                 <StockSearchCombobox
                                     value={selectedStock ? selectedStock.stockName : ''}
@@ -192,7 +192,7 @@ export function WhatIfClient() {
                                 />
                             </div>
 
-                            <div className="space-y-2">
+                            <div className="space-y-1">
                                 <label className="text-sm font-medium">{language === 'ko' ? '매수 시점' : 'Buy Date'}</label>
                                 <div className="relative">
                                     <input

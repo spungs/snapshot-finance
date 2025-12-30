@@ -164,9 +164,11 @@ export function StockSearchCombobox({
                         className="w-full justify-between"
                         disabled={disabled}
                     >
-                        {value
-                            ? value
-                            : t('selectStock')}
+                        <span className="truncate flex-1 text-left">
+                            {value
+                                ? value
+                                : t('selectStock')}
+                        </span>
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                 </PopoverTrigger>
@@ -200,9 +202,11 @@ export function StockSearchCombobox({
                 disabled={disabled}
                 onClick={() => setOpen(true)}
             >
-                {value
-                    ? value
-                    : t('selectStock')}
+                <span className="truncate flex-1 text-left">
+                    {value
+                        ? value
+                        : t('selectStock')}
+                </span>
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
             <Dialog open={open} onOpenChange={setOpen}>
