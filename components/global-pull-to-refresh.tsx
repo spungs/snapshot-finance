@@ -16,7 +16,7 @@ export function GlobalPullToRefresh({ children }: { children: ReactNode }) {
     }
 
     return (
-        <PullToRefresh onRefresh={handleRefresh} isRefreshing={isPending}>
+        <PullToRefresh onRefresh={handleRefresh} isRefreshing={isPending} className="flex-1 flex flex-col">
             {children}
         </PullToRefresh>
     )

@@ -124,7 +124,7 @@ export function PullToRefresh({ children, onRefresh, className, isRefreshing: ex
     return (
         <div
             ref={containerRef}
-            className={cn("relative min-h-[50vh]", className)}
+            className={cn("relative min-h-0 flex-1 flex flex-col", className)}
         >
             {/* Loading Indicator */}
             <div
@@ -145,6 +145,7 @@ export function PullToRefresh({ children, onRefresh, className, isRefreshing: ex
 
             {/* Content Container */}
             <div
+                className="flex-1 flex flex-col"
                 style={{
                     transform: `translateY(${currentY}px)`,
                     transition: stateRef.current.isPulling ? 'none' : 'transform 0.3s ease-out'
