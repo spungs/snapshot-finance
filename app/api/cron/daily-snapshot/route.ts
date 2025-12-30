@@ -1,23 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import yahooFinance from 'yahoo-finance2'
+import { kisClient } from '@/lib/api/kis-client'
 
 // Unified Cron Job: Daily Snapshot + User Maintenance
 // Schedule: 22:30 UTC Daily (07:30 KST Daily)
-// Logic:
-// 1. Snapshot: Runs Mon-Fri UTC (Tue-Sat KST) - Market Days
-//    - Fetches REAL-TIME prices from Yahoo Finance
-//    - Creates snapshot based on current holdings
-// 2. Cleanup: Runs Every Day
-//    - Deletes soft-deleted users older than 30 days
 
 // Helper function to fetch price with retry
-async function getStockPrice(symbol: string): Promise<number> {
+async function getStockPrice(symbol: string, market: string): Promise<number> {
     try {
-        const quote = await yahooFinance.quote(symbol) as { regularMarketPrice?: number }
-        return quote.regularMarketPrice || 0
+        // Map market for KIS Client
+        let marketType: 'KOSPI' | 'KOSDAQ' | 'US' = 'KOSPI'
+        if (market === 'US' || market === 'NAS' || market === 'NYS' || market === 'AMS') {
+            marketType = 'US'
+        } else if (market === 'KOSDAQ' || market === 'KQ') {
+            marketType = 'KOSDAQ'
+        }
+
+        const priceData = await kisClient.getCurrentPrice(symbol, marketType)
+        return priceData.price
     } catch (error) {
-        console.warn(`[Cron] Failed to fetch price for ${symbol}, using 0.`)
+        console.warn(`[Cron] Failed to fetch price for ${symbol} (${market}), using 0. Error:`, error)
         return 0
     }
 }
@@ -91,7 +93,7 @@ export async function GET(request: NextRequest) {
 
                     const snapshotHoldingsData = await Promise.all(
                         user.holdings.map(async (holding) => {
-                            const currentPrice = await getStockPrice(holding.stock.stockCode)
+                            const currentPrice = await getStockPrice(holding.stock.stockCode, holding.stock.market)
                             const quantity = holding.quantity
                             const avgPrice = Number(holding.averagePrice)
 
