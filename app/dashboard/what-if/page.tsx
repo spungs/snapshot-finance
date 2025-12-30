@@ -9,11 +9,5 @@ export const metadata: Metadata = {
 }
 
 export default async function WhatIfPage() {
-    const session = await auth()
-
-    if (!session) {
-        redirect('/')
-    }
-
     return <WhatIfClient />
 }

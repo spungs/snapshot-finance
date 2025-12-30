@@ -8,16 +8,25 @@ import { LogOut } from 'lucide-react'
 import { logout } from '@/app/actions'
 import { DeleteAccountDialog } from '@/components/delete-account-dialog'
 
-export function NavLinks() {
+interface NavLinksProps {
+    user?: any
+}
+
+export function NavLinks({ user }: NavLinksProps) {
     const pathname = usePathname()
     const { t } = useLanguage()
 
-    const links = [
-        { href: '/dashboard', label: t('dashboard') },
-        { href: '/dashboard/snapshots', label: t('snapshots') },
-        { href: '/dashboard/simulation', label: t('simulation') },
-        { href: '/dashboard/what-if', label: t('whatIf') },
+    // Filter links based on auth status
+    const allLinks = [
+        { href: '/dashboard', label: t('dashboard'), protected: true },
+        { href: '/dashboard/snapshots', label: t('snapshots'), protected: true },
+        { href: '/dashboard/simulation', label: t('simulation'), protected: true },
+        { href: '/dashboard/what-if', label: t('whatIf'), protected: false },
     ]
+
+    const links = user
+        ? allLinks
+        : allLinks.filter(link => !link.protected)
 
     return (
         <nav className="flex space-x-1 sm:space-x-4 overflow-x-auto max-w-full pb-1 sm:pb-0 scrollbar-hide items-center">
@@ -37,14 +46,26 @@ export function NavLinks() {
                     </Link>
                 )
             })}
-            <button
-                onClick={() => logout()}
-                className="px-2 sm:px-3 py-2 rounded-md text-gray-900 hover:bg-gray-100 flex items-center"
-                title={t('logout') || 'Logout'}
-            >
-                <LogOut className="w-4 h-4 sm:w-5 sm:h-5" />
-            </button>
-            <DeleteAccountDialog />
+
+            {user ? (
+                <>
+                    <button
+                        onClick={() => logout()}
+                        className="px-2 sm:px-3 py-2 rounded-md text-gray-900 hover:bg-gray-100 flex items-center"
+                        title={t('logout') || 'Logout'}
+                    >
+                        <LogOut className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </button>
+                    <DeleteAccountDialog />
+                </>
+            ) : (
+                <Link
+                    href="/dashboard"
+                    className="px-2 sm:px-3 py-2 rounded-md text-gray-900 hover:bg-gray-100 text-xs sm:text-sm font-medium"
+                >
+                    {t.landing?.login || 'Login'}
+                </Link>
+            )}
         </nav>
     )
 }

@@ -14,9 +14,10 @@ import { DeleteAccountDialog } from '@/components/delete-account-dialog'
 
 interface MobileNavProps {
     type: 'landing' | 'dashboard'
+    user?: any
 }
 
-export function MobileNav({ type }: MobileNavProps) {
+export function MobileNav({ type, user }: MobileNavProps) {
     const [open, setOpen] = useState(false)
     const { language } = useLanguage()
     const { t } = useLanguage()
@@ -26,15 +27,20 @@ export function MobileNav({ type }: MobileNavProps) {
     const landingLinks = [
         { href: '#about', label: trans.landing.about },
         { href: '#features', label: trans.landing.features },
+        { href: '/dashboard/what-if', label: t('whatIf') },
     ]
 
     // Dashboard links
-    const dashboardLinks = [
-        { href: '/dashboard', label: t('dashboard') },
-        { href: '/dashboard/snapshots', label: t('snapshots') },
-        { href: '/dashboard/simulation', label: t('simulation') },
-        { href: '/dashboard/what-if', label: t('whatIf') },
+    const allDashboardLinks = [
+        { href: '/dashboard', label: t('dashboard'), protected: true },
+        { href: '/dashboard/snapshots', label: t('snapshots'), protected: true },
+        { href: '/dashboard/simulation', label: t('simulation'), protected: true },
+        { href: '/dashboard/what-if', label: t('whatIf'), protected: false },
     ]
+
+    const dashboardLinks = user
+        ? allDashboardLinks
+        : allDashboardLinks.filter(link => !link.protected)
 
     const links = type === 'landing' ? landingLinks : dashboardLinks
 
@@ -100,17 +106,27 @@ export function MobileNav({ type }: MobileNavProps) {
 
                         {type === 'dashboard' && (
                             <>
-                                <button
-                                    onClick={() => {
-                                        setOpen(false)
-                                        logout()
-                                    }}
-                                    className="flex items-center gap-2 text-red-600 hover:text-red-700 py-2 border-b border-border/50 text-left"
-                                >
-                                    <LogOut className="h-5 w-5" />
-                                    {t('logout') || 'Logout'}
-                                </button>
-                                <DeleteAccountDialog variant="item" />
+                                {user ? (
+                                    <>
+                                        <button
+                                            onClick={() => {
+                                                setOpen(false)
+                                                logout()
+                                            }}
+                                            className="flex items-center gap-2 text-red-600 hover:text-red-700 py-2 border-b border-border/50 text-left"
+                                        >
+                                            <LogOut className="h-5 w-5" />
+                                            {t('logout') || 'Logout'}
+                                        </button>
+                                        <DeleteAccountDialog variant="item" />
+                                    </>
+                                ) : (
+                                    <Link href="/dashboard" onClick={() => setOpen(false)}>
+                                        <Button variant="outline" className="w-full text-lg h-12">
+                                            {trans.landing.login || 'Login'}
+                                        </Button>
+                                    </Link>
+                                )}
                             </>
                         )}
                     </nav>

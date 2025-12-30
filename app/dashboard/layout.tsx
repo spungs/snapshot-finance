@@ -1,16 +1,18 @@
 import { NavLinks } from '@/components/dashboard/nav-links'
 import { MobileNav } from '@/components/mobile-nav'
 import { Camera } from 'lucide-react'
+import { auth } from '@/lib/auth'
 
 import { SiteFooter } from '@/components/site-footer'
 import Link from 'next/link'
 import { GlobalPullToRefresh } from '@/components/global-pull-to-refresh'
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const session = await auth()
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
@@ -24,9 +26,9 @@ export default function DashboardLayout({
               </div>
             </Link>
             <div className="hidden sm:block">
-              <NavLinks />
+              <NavLinks user={session?.user} />
             </div>
-            <MobileNav type="dashboard" />
+            <MobileNav type="dashboard" user={session?.user} />
           </div>
         </div>
       </header>

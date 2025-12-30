@@ -4,10 +4,7 @@ import { auth } from '@/lib/auth'
 
 export async function GET(request: NextRequest) {
     try {
-        const session = await auth()
-        if (!session) {
-            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
-        }
+        // Allow public access for AdSense content and guest users
 
         const { searchParams } = new URL(request.url)
         const symbol = searchParams.get('symbol')

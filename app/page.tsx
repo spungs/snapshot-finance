@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { ArrowRight, Camera, LineChart, ShieldCheck } from 'lucide-react'
+import { ArrowRight, Camera, LineChart, ShieldCheck, TrendingUp } from 'lucide-react'
 import { MobileNav } from '@/components/mobile-nav'
 import { useLanguage } from '@/lib/i18n/context'
 import { translations } from '@/lib/i18n/translations'
@@ -28,6 +28,9 @@ export default function Home() {
           </Link>
           <Link className="text-sm font-medium hover:underline underline-offset-4" href="/guides">
             {t.landing.guides}
+          </Link>
+          <Link className="text-sm font-medium hover:underline underline-offset-4" href="/dashboard/what-if">
+            {(t as any).whatIf}
           </Link>
           <Link href="/dashboard">
             <Button variant="outline" size="sm">
@@ -75,7 +78,7 @@ export default function Home() {
                 </p>
               </div>
             </div>
-            <div className="mx-auto grid max-w-5xl grid-cols-1 gap-6 md:grid-cols-3 lg:gap-12">
+            <div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4 lg:gap-8">
               <Card className="flex flex-col items-center text-center p-6 border-none shadow-lg bg-card/50 backdrop-blur-sm transition-all hover:scale-105">
                 <CardHeader className="p-0 pb-4 flex flex-col items-center">
                   <div className="p-3 rounded-full bg-blue-100 dark:bg-blue-900/30">
@@ -99,6 +102,19 @@ export default function Home() {
                   <CardTitle>{t.landing.feature2Title}</CardTitle>
                   <CardDescription className="text-base pt-2 whitespace-pre-line">
                     {t.landing.feature2Desc}
+                  </CardDescription>
+                </CardContent>
+              </Card>
+              <Card className="flex flex-col items-center text-center p-6 border-none shadow-lg bg-card/50 backdrop-blur-sm transition-all hover:scale-105">
+                <CardHeader className="p-0 pb-4 flex flex-col items-center">
+                  <div className="p-3 rounded-full bg-orange-100 dark:bg-orange-900/30">
+                    <TrendingUp className="h-8 w-8 text-orange-600 dark:text-orange-400" />
+                  </div>
+                </CardHeader>
+                <CardContent className="p-0 space-y-2">
+                  <CardTitle>{t.whatIf}</CardTitle>
+                  <CardDescription className="text-base pt-2 whitespace-pre-line">
+                    {t.landing.guide4Desc}
                   </CardDescription>
                 </CardContent>
               </Card>
