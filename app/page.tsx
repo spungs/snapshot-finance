@@ -48,10 +48,10 @@ export default function Home() {
                 <div className="inline-block rounded-full bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary mb-6">
                   {t.landing.projectBuiltForSelf}
                 </div>
-                <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl/none text-balance">
+                <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl/none text-balance break-keep">
                   {t.landing.heroTitle}
                 </h1>
-                <p className="mx-auto max-w-[700px] text-muted-foreground md:text-xl leading-relaxed text-balance">
+                <p className="mx-auto max-w-[700px] text-muted-foreground md:text-xl leading-relaxed text-balance break-keep">
                   {t.landing.heroDesc}
                 </p>
               </div>
@@ -73,7 +73,7 @@ export default function Home() {
                 <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">
                   {t.landing.essentialFeatures}
                 </h2>
-                <p className="max-w-[700px] text-muted-foreground md:text-lg text-balance">
+                <p className="max-w-[700px] text-muted-foreground md:text-lg text-balance break-keep">
                   {t.landing.simpleDesc}
                 </p>
               </div>
@@ -87,7 +87,7 @@ export default function Home() {
                 </CardHeader>
                 <CardContent className="p-0 space-y-2">
                   <CardTitle>{t.landing.feature1Title}</CardTitle>
-                  <CardDescription className="text-base pt-2 text-balance">
+                  <CardDescription className="text-base pt-2 text-balance break-keep">
                     {t.landing.feature1Desc}
                   </CardDescription>
                 </CardContent>
@@ -100,7 +100,7 @@ export default function Home() {
                 </CardHeader>
                 <CardContent className="p-0 space-y-2">
                   <CardTitle>{t.landing.feature2Title}</CardTitle>
-                  <CardDescription className="text-base pt-2 text-balance">
+                  <CardDescription className="text-base pt-2 text-balance break-keep">
                     {t.landing.feature2Desc}
                   </CardDescription>
                 </CardContent>
@@ -113,7 +113,7 @@ export default function Home() {
                 </CardHeader>
                 <CardContent className="p-0 space-y-2">
                   <CardTitle>{t.whatIf}</CardTitle>
-                  <CardDescription className="text-base pt-2 text-balance">
+                  <CardDescription className="text-base pt-2 text-balance break-keep">
                     {t.landing.guide4Desc}
                   </CardDescription>
                 </CardContent>
@@ -126,7 +126,7 @@ export default function Home() {
                 </CardHeader>
                 <CardContent className="p-0 space-y-2">
                   <CardTitle>{t.landing.feature3Title}</CardTitle>
-                  <CardDescription className="text-base pt-2 text-balance">
+                  <CardDescription className="text-base pt-2 text-balance break-keep">
                     {t.landing.feature3Desc}
                   </CardDescription>
                 </CardContent>
@@ -142,7 +142,7 @@ export default function Home() {
                 <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">
                   {t.landing.tryNow}
                 </h2>
-                <p className="mx-auto max-w-[600px] text-muted-foreground md:text-lg text-balance">
+                <p className="mx-auto max-w-[600px] text-muted-foreground md:text-lg text-balance break-keep">
                   {t.landing.freeDesc}
                 </p>
               </div>
@@ -154,7 +154,7 @@ export default function Home() {
                 </Link>
               </div>
 
-              <div className="pt-8 max-w-[600px] text-sm text-balance text-muted-foreground/80">
+              <div className="pt-8 max-w-[600px] text-sm text-balance break-keep text-muted-foreground/80">
                 <p dangerouslySetInnerHTML={{ __html: t.landing.feedbackNote.replace('email', '<a href="mailto:spungs.dev@gmail.com" class="underline hover:text-foreground">email</a>').replace('이메일', '<a href="mailto:spungs.dev@gmail.com" class="underline hover:text-foreground">이메일</a>') }} />
               </div>
             </div>
