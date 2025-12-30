@@ -1,7 +1,7 @@
 # Snapshot Finance 개발 실행 계획
 
 **작성일:** 2025-11-25  
-**최종 업데이트:** 2025-12-30 (Header/Footer Refactoring & Investment Disclaimer)  
+**최종 업데이트:** 2025-12-31 (User Profile Dropdown & Auto-Snapshot Settings)  
 **목표:** 개인용 주식 잔고 관리 MVP (무료 플랜)
 
 ---
@@ -23,6 +23,7 @@
 - [x] **로그인 기능 구현** (NextAuth.js v5 - Google)
 - [x] 기존 하드코딩 `TEST_ACCOUNT_ID` 제거 및 세션 연동
 - [x] 로그아웃 기능 구현
+- [x] **사용자 프로필 드롭다운 메뉴**: 자동 스냅샷 설정 토글, 로그아웃, 탈퇴 기능 통합
 
 #### 3. 데이터베이스 리팩토링 및 최적화
 - [x] **사용자 모델 단일화**: `SecuritiesAccount` 모델 제거 및 `User` 모델로 통합

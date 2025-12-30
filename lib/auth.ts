@@ -20,8 +20,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 // Check if user is soft-deleted
                 const user = await prisma.user.findUnique({
                     where: { id: token.sub },
-                    select: { deletedAt: true }
+                    select: {
+                        deletedAt: true,
+                        isAutoSnapshotEnabled: true
+                    }
                 })
+
+                if (user) {
+                    session.user.isAutoSnapshotEnabled = user.isAutoSnapshotEnabled
+                }
 
                 if (user?.deletedAt) {
                     // Restore account on login

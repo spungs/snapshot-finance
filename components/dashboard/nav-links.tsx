@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 import { LogOut } from 'lucide-react'
 import { logout } from '@/app/actions'
 import { DeleteAccountDialog } from '@/components/delete-account-dialog'
+import { UserAccountNav } from './user-account-nav'
 
 interface NavLinksProps {
     user?: any
@@ -54,18 +55,12 @@ export function NavLinks({ user }: NavLinksProps) {
                 )
             })}
 
-            {user ? (
-                <>
-                    <button
-                        onClick={() => logout()}
-                        className="px-2 sm:px-3 py-2 rounded-md text-gray-900 hover:bg-gray-100 flex items-center"
-                        title={t.logout || 'Logout'}
-                    >
-                        <LogOut className="w-4 h-4 sm:w-5 sm:h-5" />
-                    </button>
-                    <DeleteAccountDialog />
-                </>
-            ) : (
+            {user && (
+                <div className="pl-2 border-l ml-2">
+                    <UserAccountNav user={user} />
+                </div>
+            )}
+            {!user && (
                 <Link
                     href="/dashboard"
                     className="px-2 sm:px-3 py-2 rounded-md text-gray-900 hover:bg-gray-100 text-xs sm:text-sm font-medium"

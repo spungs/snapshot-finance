@@ -10,6 +10,8 @@ import { useLanguage } from '@/lib/i18n/context'
 import { logout } from '@/app/actions'
 import { translations } from '@/lib/i18n/translations'
 import { DeleteAccountDialog } from '@/components/delete-account-dialog'
+import { Switch } from '@/components/ui/switch'
+import { toggleAutoSnapshot } from '@/app/actions'
 
 
 interface MobileNavProps {
@@ -113,6 +115,22 @@ export function MobileNav({ type, user }: MobileNavProps) {
                             <>
                                 {user ? (
                                     <>
+                                        {/* Auto Snapshot Toggle */}
+                                        <div className="flex items-center justify-between py-4 border-b border-border/50">
+                                            <div className="flex flex-col gap-1">
+                                                <span className="font-semibold">{t('autoSnapshot')}</span>
+                                                <span className="text-xs text-muted-foreground">
+                                                    {user.isAutoSnapshotEnabled ? t('autoSnapshotOn') : t('autoSnapshotOff')}
+                                                </span>
+                                            </div>
+                                            <Switch
+                                                checked={user.isAutoSnapshotEnabled}
+                                                onCheckedChange={async (checked) => {
+                                                    await toggleAutoSnapshot(checked)
+                                                }}
+                                            />
+                                        </div>
+
                                         <button
                                             onClick={() => {
                                                 setOpen(false)

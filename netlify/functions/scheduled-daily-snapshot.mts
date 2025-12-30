@@ -8,6 +8,9 @@ export default async (req: Request) => {
         const siteUrl = process.env.URL || 'http://localhost:3000';
         const response = await fetch(`${siteUrl}/api/cron/daily-snapshot`, {
             method: "GET",
+            headers: {
+                'Authorization': `Bearer ${process.env.CRON_SECRET}`
+            }
         });
 
         console.log(`Daily snapshot trigger status: ${response.status}`);

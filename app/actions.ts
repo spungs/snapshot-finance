@@ -4,10 +4,15 @@ import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { auth } from '@/lib/auth'
 
-export async function toggleAutoSnapshot(userId: string, enabled: boolean) {
+export async function toggleAutoSnapshot(enabled: boolean) {
+    const session = await auth()
+    if (!session?.user?.id) {
+        return { success: false, error: 'Unauthorized' }
+    }
+
     try {
         await prisma.user.update({
-            where: { id: userId },
+            where: { id: session.user.id },
             data: { isAutoSnapshotEnabled: enabled },
         })
         revalidatePath('/dashboard')
