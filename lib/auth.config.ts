@@ -23,7 +23,7 @@ export const authConfig = {
         authorized({ auth, request: { nextUrl } }) {
             const isLoggedIn = !!auth?.user
             const isOnDashboard = nextUrl.pathname.startsWith('/dashboard')
-            const isPublicDashboardPage = nextUrl.pathname.startsWith('/dashboard/what-if')
+            const isPublicDashboardPage = nextUrl.pathname.startsWith('/dashboard/what-if') || nextUrl.pathname.startsWith('/dashboard/why')
 
             if (isOnDashboard && !isPublicDashboardPage) {
                 if (isLoggedIn) return true

@@ -27,6 +27,9 @@ export function SiteHeader() {
                 <Link className="text-sm font-medium hover:underline underline-offset-4" href="/guides">
                     {t.landing.guides}
                 </Link>
+                <Link className="text-sm font-medium hover:underline underline-offset-4" href="/dashboard/why">
+                    {t.whyInvest}
+                </Link>
                 <Link className="text-sm font-medium hover:underline underline-offset-4" href="/dashboard/what-if">
                     {translations[language].whatIf}
                 </Link>

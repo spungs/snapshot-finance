@@ -29,6 +29,7 @@ export function MobileNav({ type, user }: MobileNavProps) {
     const landingLinks = [
         { href: '#about', label: trans.landing.about },
         { href: '#features', label: trans.landing.features },
+        { href: '/dashboard/why', label: t('whyInvest') },
         { href: '/dashboard/what-if', label: t('whatIf') },
     ]
 

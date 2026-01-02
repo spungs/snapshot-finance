@@ -24,6 +24,7 @@ export function NavLinks({ user }: NavLinksProps) {
         { href: '/dashboard', label: t.dashboard, protected: true },
         { href: '/dashboard/snapshots', label: t.snapshots, protected: true },
         { href: '/dashboard/simulation', label: t.simulation, protected: true },
+        { href: '/dashboard/why', label: t.whyInvest, protected: false },
         { href: '/dashboard/what-if', label: t.whatIf, protected: false },
     ]
 
