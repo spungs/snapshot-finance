@@ -192,9 +192,13 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings }: Snapshots
 
                                             <div className="pt-1">
                                                 <Link href={`/dashboard/simulation?snapshotId=${snapshot.id}`} className="block">
-                                                    <Button variant="outline" size="sm" className="w-full border-primary text-primary hover:bg-primary/10 h-9 font-medium">
-                                                        <Play className="h-3.5 w-3.5 mr-2 fill-current" />
-                                                        {t('runSimulation')}
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="w-full border-primary text-primary hover:bg-primary/10 h-9 font-medium"
+                                                        title={t('runSimulation')}
+                                                    >
+                                                        <Play className="h-3.5 w-3.5 fill-current" />
                                                     </Button>
                                                 </Link>
                                             </div>
@@ -224,7 +228,7 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings }: Snapshots
                                                 <TableHead className="text-right">{t('returnRate')}</TableHead>
                                                 <TableHead className="text-right">{t('holdingsCount')}</TableHead>
                                                 <TableHead>{t('memo')}</TableHead>
-                                                <TableHead className="text-right">{t('actions')}</TableHead>
+                                                <TableHead className="text-center">{t('actions')}</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
@@ -246,7 +250,7 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings }: Snapshots
 
                                                 return (
                                                     <TableRow key={snapshot.id}>
-                                                        <TableCell>
+                                                        <TableCell className="text-center">
                                                             <input
                                                                 type="checkbox"
                                                                 checked={selectedIds.includes(snapshot.id)}
@@ -287,17 +291,21 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings }: Snapshots
                                                         <TableCell className="text-muted-foreground max-w-[200px] truncate">
                                                             {snapshot.note || '-'}
                                                         </TableCell>
-                                                        <TableCell className="text-right">
-                                                            <div className="flex justify-end gap-2">
+                                                        <TableCell className="text-center">
+                                                            <div className="flex justify-center gap-2">
                                                                 <Link href={`/dashboard/snapshots/${snapshot.id}`}>
                                                                     <Button variant="outline" size="sm">
                                                                         {t('details')}
                                                                     </Button>
                                                                 </Link>
                                                                 <Link href={`/dashboard/simulation?snapshotId=${snapshot.id}`}>
-                                                                    <Button variant="outline" size="sm" className="border-primary text-primary hover:bg-primary/10">
-                                                                        <Play className="h-3 w-3 mr-1 fill-current" />
-                                                                        {t('runSimulation')}
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        size="icon"
+                                                                        className="h-8 w-8 border-primary text-primary hover:bg-primary/10"
+                                                                        title={t('runSimulation')}
+                                                                    >
+                                                                        <Play className="h-3 w-3 fill-current" />
                                                                     </Button>
                                                                 </Link>
                                                                 <Button

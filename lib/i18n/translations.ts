@@ -6,7 +6,7 @@ export const translations = {
         dashboard: '대시보드',
         snapshots: '스냅샷',
         simulation: '시뮬레이션',
-        whatIf: '만약에 (시뮬레이션)',
+        whatIf: '만약에',
         autoSnapshot: '자동 스냅샷',
         autoSnapshotOn: '자동 스냅샷 ON',
         autoSnapshotOff: '자동 스냅샷 OFF',

@@ -845,7 +845,7 @@ export function HoldingsManager({ initialHoldings, summary, triggerRefresh }: Ho
                                                                 currentSort={sortConfig}
                                                                 onSort={handleSort}
                                                             />
-                                                            <TableHead className="text-right">{t('actions')}</TableHead>
+                                                            <TableHead className="text-center">{t('actions')}</TableHead>
                                                         </TableRow>
                                                     </TableHeader>
                                                     <TableBody>
@@ -961,8 +961,8 @@ export function HoldingsManager({ initialHoldings, summary, triggerRefresh }: Ho
                                                                                 {formatNumber(summary?.totalValue ? ((holding.currency === 'USD' && summary?.exchangeRate ? holding.currentValue * summary.exchangeRate : holding.currentValue) / summary.totalValue) * 100 : 0, 1)}%
                                                                             </span>
                                                                         </TableCell>
-                                                                        <TableCell className="text-right">
-                                                                            <div className="flex justify-end gap-1">
+                                                                        <TableCell className="text-center">
+                                                                            <div className="flex justify-center gap-1">
                                                                                 {isEditing ? (
                                                                                     <>
                                                                                         <Button

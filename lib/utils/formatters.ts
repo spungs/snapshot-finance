@@ -8,6 +8,7 @@ export function formatCurrency(value: number | string, currency: string = 'KRW')
   return new Intl.NumberFormat('ko-KR', {
     style: 'currency',
     currency: currency,
+    currencyDisplay: 'narrowSymbol',
   }).format(Number(value))
 }
 
