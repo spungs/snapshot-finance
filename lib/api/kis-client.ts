@@ -25,6 +25,16 @@ interface AccessToken {
 // Simple in-memory cache for token (Note: This resets on server restart. For production, use DB or Redis)
 let cachedToken: AccessToken | null = null
 
+// Price Cache to prevent 429 Rate Limits
+interface PriceCacheItem {
+    price: number
+    change: number
+    changeRate: number
+    timestamp: number
+}
+const priceCache: Map<string, PriceCacheItem> = new Map()
+const PRICE_CACHE_DURATION = 1000 * 60 * 2 // 2 minutes
+
 export class KisClient {
     private tokenPromise: Promise<string> | null = null
 
@@ -105,6 +115,18 @@ export class KisClient {
     }
 
     async getCurrentPrice(symbol: string, market: 'KOSPI' | 'KOSDAQ' | 'US' = 'KOSPI', retryCount = 0): Promise<{ price: number; change: number; changeRate: number }> {
+        // 1. Check Cache
+        const cacheKey = `${market}:${symbol}`
+        const cached = priceCache.get(cacheKey)
+        if (cached && (Date.now() - cached.timestamp < PRICE_CACHE_DURATION)) {
+            // console.log(`[Cache] Hit for ${symbol}`)
+            return {
+                price: cached.price,
+                change: cached.change,
+                changeRate: cached.changeRate
+            }
+        }
+
         const token = await this.getAccessToken()
 
         // Domestic Stock (KOSPI/KOSDAQ)
@@ -153,27 +175,58 @@ export class KisClient {
                 throw new Error(`KIS API Error: ${data.msg1}`)
             }
 
-            return {
+            const result = {
                 price: parseInt(data.output.stck_prpr), // Current Price
                 change: parseInt(data.output.prdy_vrss), // Change amount
                 changeRate: parseFloat(data.output.prdy_ctrt), // Change rate
             }
+            priceCache.set(cacheKey, { ...result, timestamp: Date.now() })
+            return result
         }
 
         // Overseas Stock (US)
         else {
             try {
-                // Use Yahoo Finance for US stocks to avoid exchange code issues (NAS/NYS/AMS)
-                const quote = await yahooFinance.quote(symbol)
-                return {
-                    price: quote.regularMarketPrice || 0,
-                    change: quote.regularMarketChange || 0,
-                    changeRate: quote.regularMarketChangePercent || 0,
+                // Use Finnhub for US stocks (More stable than Yahoo Finance)
+                // Docs: https://finnhub.io/docs/api/quote
+                const apiKey = process.env.FINNHUB_API_KEY
+                if (!apiKey) {
+                    throw new Error('FINNHUB_API_KEY is missing in .env')
                 }
+
+                const response = await fetch(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${apiKey}`, {
+                    cache: 'no-store'
+                })
+
+                if (!response.ok) {
+                    throw new Error(`Finnhub API error: ${response.status}`)
+                }
+
+                const data = await response.json()
+                // Response format: { c: Current price, d: Change, dp: Percent change, h: High, l: Low, o: Open, pc: Previous close }
+
+                // Check if data is valid (sometimes Finnhub returns 0 for invalid symbols)
+                if (data.c === 0 && data.pc === 0) {
+                    throw new Error(`No data found for ${symbol}`)
+                }
+
+                const price = Number(data.c)
+                const change = Number(data.d) // Finnhub provides absolute change
+                const changeRate = Number(data.dp) // Finnhub provides percentage
+
+                const result = {
+                    price,
+                    change,
+                    changeRate,
+                }
+                priceCache.set(cacheKey, { ...result, timestamp: Date.now() })
+                return result
+
             } catch (error) {
-                console.error(`Yahoo Finance Error for ${symbol}:`, error)
-                // Fallback or rethrow
-                throw error
+                // Enhance error message for logging
+                const msg = error instanceof Error ? error.message : String(error)
+                console.error(`Finnhub Error for ${symbol}:`, msg)
+                throw new Error(`Finnhub failed for ${symbol}: ${msg}`)
             }
         }
     }
@@ -327,6 +380,59 @@ export class KisClient {
         } catch (error) {
             console.error(`History Fetch Error for ${symbol}:`, error)
             return []
+        }
+    }
+
+    async getExchangeRate(): Promise<number> {
+        // Priority 2: KIS API (Specific FX requires checking balance or orderable amount to get applied rate)
+        // However, KIS doesn't have a simple public "Get USD/KRW" endpoint without account context usually.
+        // We will try to use the "Inquire Market Price" for a dollar ETF? No.
+        // Let's use the "Inquire Present Balance" for overseas stock which includes exchange rate (rprs_mrkt_rt).
+        // OR simpler: just use Finnhub as the valid backup if KIS is too complex for just FX.
+        // User requested: Yahoo -> KIS -> Finnhub.
+        // Let's implement KIS via "Inquire Executable Amount" (TTTS3031R) which returns `exch_rate`.
+
+        try {
+            const token = await this.getAccessToken()
+            // Inquire Price for US Stock Purchase Availability usually gives the provisional exchange rate
+            const path = '/uapi/overseas-stock/v1/trading/inquire-psamount'
+            const tr_id = MODE === 'REAL' ? 'TTTS3031R' : 'VTTT3012R' // Check docs for Virtual
+
+            const params = new URLSearchParams({
+                CANO: CANO!,
+                ACNT_PRDT_CD: ACNT_PRDT_CD!,
+                OVRS_EXCG_CD: 'NAS', // Nasdaq
+                OVRS_ORD_UNPR: '0',
+                ITEM_CD: 'AAPL' // Dummy
+            })
+
+            const response = await fetch(`${BASE_URL}${path}?${params}`, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    authorization: `Bearer ${token}`,
+                    appkey: APP_KEY!,
+                    appsecret: APP_SECRET!,
+                    tr_id: tr_id,
+                },
+                cache: 'no-store'
+            })
+
+            if (!response.ok) {
+                // KIS might fail if outside trading hours or maintenance.
+                throw new Error(`KIS FX fetch failed status: ${response.status}`)
+            }
+
+            const data = await response.json()
+            // output: { exrt: "1234.50", ... }
+            if (data.output && data.output.exrt) {
+                return parseFloat(data.output.exrt)
+            }
+
+            throw new Error('KIS FX data structure mismatch')
+
+        } catch (error) {
+            console.warn('KIS Exchange Rate API failed:', error)
+            throw error // Propagate to let caller try Finnhub
         }
     }
 }

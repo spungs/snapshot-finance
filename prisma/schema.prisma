@@ -151,6 +151,19 @@ model KisStockMaster {
   market    String
   updatedAt DateTime @updatedAt
 
+
   @@index([stockName])
   @@map("kis_stock_masters")
+}
+
+model CronLog {
+  id        String   @id @default(cuid())
+  jobName   String
+  status    String   // 'SUCCESS', 'FAILED', 'PARTIAL'
+  message   String?  @db.Text
+  details   Json?    // Store detailed error objects or stats
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("cron_logs")
 }

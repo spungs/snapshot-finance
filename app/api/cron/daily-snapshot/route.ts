@@ -169,6 +169,42 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ success: true, results })
     } catch (error) {
         console.error('[Cron] Job failed:', error)
+
+        // Log Critical Failure
+        try {
+            const message = error instanceof Error ? error.message : String(error)
+
+            await prisma.cronLog.create({
+                data: {
+                    jobName: 'DailySnapshot',
+                    status: 'FAILED',
+                    message: message,
+                    details: { error: error as any, results }
+                }
+            })
+        } catch (logError) {
+            console.error('[Cron] Failed to save error log to DB:', logError)
+        }
+
         return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 })
+    } finally {
+        // Log Success/Partial (if not already returned error)
+        if (results.length > 0) {
+            try {
+                const failedCount = results.filter((r: any) => r.status === 'failed').length
+                const status = failedCount > 0 ? (failedCount === results.length ? 'FAILED' : 'PARTIAL') : 'SUCCESS'
+
+                await prisma.cronLog.create({
+                    data: {
+                        jobName: 'DailySnapshot',
+                        status: status,
+                        message: `Processed ${results.length} items. Failed: ${failedCount}`,
+                        details: { results }
+                    }
+                })
+            } catch (logError) {
+                console.error('[Cron] Failed to save log to DB:', logError)
+            }
+        }
     }
 }

@@ -166,7 +166,8 @@ export const translations = {
         setNewGoal: '새로운 목표 설정하기',
         congratulations: '축하합니다!',
         exclCash: '예수금 제외',
-        // Landing Page
+        priceStaleWarning: '가격 정보가 24시간 이상 지났습니다.',
+        // Dashboard - Actionsg Page
         landing: {
             features: '기능',
             about: '소개',
@@ -484,7 +485,8 @@ export const translations = {
         "goalAchieved": "Goal Achieved! Congratulations on 100%! 🎉",
         "setNewGoal": "Set New Goal",
         "congratulations": "Congratulations!",
-        "exclCash": "Exclude Cash",
+        exclCash: "Exclude Cash",
+        priceStaleWarning: "Price data is older than 24 hours.",
         // Dashboard - Actions
         landing: {
             features: "Features",

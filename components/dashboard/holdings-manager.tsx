@@ -22,10 +22,16 @@ import { StockSearchCombobox } from '@/components/dashboard/stock-search-combobo
 import { PortfolioSummaryCard } from '@/components/dashboard/portfolio-summary-card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { FormattedNumberInput } from '@/components/ui/formatted-number-input'
-import { Plus, Trash2, Camera, Edit2, Check, X, Loader2, ListCheck } from 'lucide-react'
+import { Plus, Trash2, Camera, Edit2, Check, X, Loader2, ListCheck, AlertCircle } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { ArrowUpDown, ArrowUp, ArrowDown, Filter } from 'lucide-react'
 import {
     Select,
@@ -69,6 +75,7 @@ interface Holding {
     profit: number
     profitRate: number
     displayOrder: number
+    priceUpdatedAt?: Date | string
 }
 
 type SortKey = 'custom' | 'stockName' | 'quantity' | 'averagePrice' | 'currentPrice' | 'totalCost' | 'currentValue' | 'profit' | 'profitRate' | 'weight'
@@ -196,6 +203,14 @@ export function HoldingsManager({ initialHoldings, summary, triggerRefresh }: Ho
 
     const parseNumericValue = (value: string) => {
         return value.replace(/,/g, '')
+    }
+
+    const isPriceStale = (dateStr?: Date | string) => {
+        if (!dateStr) return true
+        const date = new Date(dateStr)
+        const now = new Date()
+        const diffHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60)
+        return diffHours > 24
     }
 
     const fetchHoldings = useCallback(async () => {
@@ -579,7 +594,21 @@ export function HoldingsManager({ initialHoldings, summary, triggerRefresh }: Ho
                                                 <div key={holding.id} className="bg-muted/40 rounded-lg p-4 border space-y-3">
                                                     <div className="flex justify-between items-start">
                                                         <div>
-                                                            <div className="font-semibold text-lg">{holding.stockName}</div>
+                                                            <div className="font-semibold text-lg flex items-center gap-2">
+                                                                {holding.stockName}
+                                                                {isPriceStale(holding.priceUpdatedAt) && (
+                                                                    <TooltipProvider>
+                                                                        <Tooltip>
+                                                                            <TooltipTrigger>
+                                                                                <AlertCircle className="w-4 h-4 text-orange-500" />
+                                                                            </TooltipTrigger>
+                                                                            <TooltipContent>
+                                                                                <p>{t('priceStaleWarning')}</p>
+                                                                            </TooltipContent>
+                                                                        </Tooltip>
+                                                                    </TooltipProvider>
+                                                                )}
+                                                            </div>
                                                             <div className="text-sm text-muted-foreground">{holding.stockCode}</div>
                                                         </div>
                                                         <div className="text-right">
@@ -667,7 +696,10 @@ export function HoldingsManager({ initialHoldings, summary, triggerRefresh }: Ho
 
                                                         <div>
                                                             <div className="text-xs text-muted-foreground mb-1">{t('currentPrice')}</div>
-                                                            <div className="font-medium">{formatCurrency(holding.currentPrice, currency)}</div>
+                                                            <div className="font-medium flex items-center gap-1">
+                                                                {formatCurrency(holding.currentPrice, currency)}
+
+                                                            </div>
                                                             {holding.currency === 'USD' && summary?.exchangeRate && language === 'ko' && (
                                                                 <div className="text-xs text-muted-foreground mt-0.5">
                                                                     {formatCurrency(holding.currentPrice * summary.exchangeRate, 'KRW')}

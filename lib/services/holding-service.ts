@@ -64,16 +64,21 @@ export const holdingService = {
                     }
                 } catch (e) {
                     console.warn(`Price fetch failed for ${holding.stock.stockName}`, e)
-                    currentPrice = Number(holding.currentPrice) || 0
+                    // Do NOT reset currentPrice to 0 here if we want to fallback
+                    // But if fetch failed, currentPrice remains 0 from initialization
                 }
 
                 // Fallback to DB price if fetch failed
-                if (currentPrice === 0 && Number(holding.currentPrice) > 0) {
-                    currentPrice = Number(holding.currentPrice)
+                let displayPrice = currentPrice
+                let priceTimestamp = new Date() // Default to now if fetched
+
+                if (displayPrice === 0 && Number(holding.currentPrice) > 0) {
+                    displayPrice = Number(holding.currentPrice)
+                    priceTimestamp = holding.priceUpdatedAt || new Date() // Use stored timestamp
                 }
 
                 const totalCost = Number(holding.averagePrice) * holding.quantity
-                const currentValue = currentPrice * holding.quantity
+                const currentValue = displayPrice * holding.quantity
                 const profit = currentValue - totalCost
                 const profitRate = totalCost > 0 ? (profit / totalCost) * 100 : 0
                 const currency = holding.currency || 'KRW'
@@ -86,10 +91,10 @@ export const holdingService = {
                     market: holding.stock.market,
                     quantity: holding.quantity,
                     averagePrice: Number(holding.averagePrice),
-                    currentPrice,
+                    currentPrice: displayPrice,
                     currency,
                     purchaseRate: Number(holding.purchaseRate),
-                    priceUpdatedAt: new Date(),
+                    priceUpdatedAt: priceTimestamp,
                     totalCost,
                     currentValue,
                     profit,
