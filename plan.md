@@ -139,5 +139,9 @@
     - [x] 필수 콘텐츠(10개 이상) 및 정적 페이지(Terms, Privacy, About) 보강
     - [x] 가이드 상세 페이지 투자 유의사항(Investment Disclaimer) 추가 및 다국어 지원
     - [x] 전역 헤더(`SiteHeader`) 및 푸터(`SiteFooter`) 컴포넌트화 및 적용
+    - [x] **M7 News (구 Big Tech News) 고도화**:
+        - [x] UI/UX 리파인: 카드 스타일, 로딩 상태, 폰트 크기 조절 기능(LocalStorage 연동)
+        - [x] **Navigation 개선**: 로그인 여부에 따른 메뉴 순서 변경(Context-Aware Header) 및 `MainNav` 통합
+        - [x] 브랜딩 변경: 'Big Tech' -> 'M7' 용어 일괄 변경 및 다국어 지원 완벽 적용
 
 ---

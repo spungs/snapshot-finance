@@ -168,7 +168,8 @@ export const translations = {
         congratulations: '축하합니다!',
         exclCash: '예수금 제외',
         priceStaleWarning: '가격 정보가 24시간 이상 지났습니다.',
-        // Dashboard - Actionsg Page
+        m7News: 'M7 News',
+        // Dashboard - Actions
         landing: {
             features: '기능',
             about: '소개',
@@ -239,6 +240,20 @@ export const translations = {
             section6Desc: '본 서비스는 위에서 명시한 광고 서비스(Google AdSense) 이용 및 법령에 따른 요구가 있는 경우를 제외하고는, 사용자의 동의 없이 개인정보를 외부에 제공하거나 공유하지 않습니다.',
             section7Title: '7. 문의처',
             section7Desc: '서비스 이용 및 개인정보 관련 문의는 아래 이메일로 연락 주시기 바랍니다.',
+        },
+        news: {
+            title: 'M7 일일 브리핑',
+            desc: 'M7(Magnificent 7) 기업의 최신 뉴스를 AI가 요약해드립니다.<br/>바쁜 투자자를 위한 맞춤형 3줄/5줄/10줄 요약 서비스를 경험해보세요.',
+            tabLabel: '종목 선택',
+            summaryLevel: '요약 상세도 설정',
+            short: '3줄 요약 (핵심)',
+            medium: '5줄 요약 (상세)',
+            long: '전체 요약 (심층)',
+            noNews: '최신 뉴스가 없습니다. 잠시 후 다시 시도해주세요.',
+            readOriginal: '원문 읽기',
+            loading: '뉴스 불러오는 중...',
+            loadingSummary: '요약을 불러오는 중...',
+            fontSize: '글자크기',
         },
         terms: {
             title: '이용약관',
@@ -542,6 +557,7 @@ export const translations = {
         "congratulations": "Congratulations!",
         exclCash: "Exclude Cash",
         priceStaleWarning: "Price data is older than 24 hours.",
+        m7News: 'M7 News',
         // Dashboard - Actions
         landing: {
             features: "Features",
@@ -736,6 +752,20 @@ export const translations = {
                 billion: 'B',
                 hundredMillion: 'B',
             }
+        },
+        news: {
+            title: 'M7 Daily Brief',
+            desc: 'AI-powered daily news summaries for Magnificent 7 stocks.<br/>Customized 3/5/10-line summaries for busy investors.',
+            tabLabel: 'Select Stock',
+            summaryLevel: 'Summary Detail',
+            short: '3-Line (Core)',
+            medium: '5-Line (Detailed)',
+            long: 'Full Summary (Deep)',
+            noNews: 'No recent news found. Please try again later.',
+            readOriginal: 'Read Original',
+            loading: 'Loading news...',
+            loadingSummary: 'Loading summary...',
+            fontSize: 'font size',
         }
     },
 }

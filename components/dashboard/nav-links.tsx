@@ -20,17 +20,22 @@ export function NavLinks({ user }: NavLinksProps) {
     const t = translations[language]
 
     // Filter links based on auth status
+    // Authenticated User Order: What If -> M7 News -> Why Invest
     const allLinks = [
         { href: '/dashboard', label: t.dashboard, protected: true },
         { href: '/dashboard/snapshots', label: t.snapshots, protected: true },
         { href: '/dashboard/simulation', label: t.simulation, protected: true },
-        { href: '/dashboard/why', label: t.whyInvest, protected: false },
         { href: '/dashboard/what-if', label: t.whatIf, protected: false },
+        { href: '/news', label: t.m7News, protected: false },
+        { href: '/dashboard/why', label: t.whyInvest, protected: false },
     ]
 
+    // Guest User Order: Why Invest -> What If -> M7 News
     const guestLinks = [
         { href: '/', label: t.home, protected: false },
-        ...allLinks.filter(link => !link.protected)
+        { href: '/dashboard/why', label: t.whyInvest, protected: false },
+        { href: '/dashboard/what-if', label: t.whatIf, protected: false },
+        { href: '/news', label: t.m7News, protected: false },
     ]
 
     const links = user
