@@ -1,7 +1,11 @@
 
 import { NextRequest, NextResponse } from 'next/server'
-import YahooFinance from 'yahoo-finance2'
+import yahooFinance from '@/lib/yahoo-finance'
 import { prisma } from '@/lib/prisma'
+
+// Simple in-memory cache to prevent rate limiting
+const SEARCH_CACHE = new Map<string, { data: any, timestamp: number }>()
+const CACHE_TTL = 1000 * 60 * 60 * 6 // 6 hours
 
 export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
@@ -52,11 +56,24 @@ export async function GET(request: NextRequest) {
 
         // 2. English Search - Use Yahoo Finance
         try {
-            const yf = new YahooFinance()
-            const results = await yf.search(query)
+            // Check Cache first
+            const now = Date.now()
+            const cacheKey = query.toLowerCase()
+            const cached = SEARCH_CACHE.get(cacheKey)
+
+            if (cached && (now - cached.timestamp < CACHE_TTL)) {
+                return NextResponse.json({ success: true, data: cached.data, source: 'cache' })
+            }
+
+            // Use singleton instance to share session/cookies and avoid rate limits
+            const results = await yahooFinance.search(query)
 
             const formattedResults = results.quotes
-                .filter((quote: any) => quote.quoteType === 'EQUITY' || quote.quoteType === 'ETF')
+                .filter((quote: any) =>
+                    quote.quoteType === 'EQUITY' ||
+                    quote.quoteType === 'ETF' ||
+                    quote.quoteType === 'ETN' // Add ETN support (e.g. FNGU)
+                )
                 .map((quote: any) => ({
                     symbol: quote.symbol,
                     name: quote.shortname || quote.longname || quote.symbol,
@@ -64,6 +81,14 @@ export async function GET(request: NextRequest) {
                     type: quote.quoteType,
                     market: quote.exchange === 'KOE' ? 'KOSPI' : quote.exchange === 'KO' ? 'KOSDAQ' : 'US',
                 }))
+
+            // Update Cache
+            // Limit cache size to prevent memory leak (simple approach)
+            if (SEARCH_CACHE.size > 1000) {
+                const firstKey = SEARCH_CACHE.keys().next().value
+                if (firstKey) SEARCH_CACHE.delete(firstKey) // Remove oldest key (insertion order in Map)
+            }
+            SEARCH_CACHE.set(cacheKey, { data: formattedResults, timestamp: now })
 
             return NextResponse.json({ success: true, data: formattedResults })
         } catch (yahooError: any) {

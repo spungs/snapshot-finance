@@ -1,11 +1,16 @@
-import YahooFinance from 'yahoo-finance2'
+import yahooFinance from '@/lib/yahoo-finance'
 import { kisClient } from '@/lib/api/kis-client'
 
-const yahooFinance = new YahooFinance()
+// Use singleton to share cookies/session
+// Removed: const yahooFinance = new YahooFinance() 
 
 // 캐시를 위한 간단한 인메모리 저장소
 let cachedRate: { price: number; timestamp: number } | null = null
 const CACHE_DURATION = 1000 * 60 * 5 // 5분
+
+declare global {
+    var yahooCircuitBreaker: number | undefined
+}
 
 export async function getUsdExchangeRate(): Promise<number> {
     const now = Date.now()
@@ -18,15 +23,29 @@ export async function getUsdExchangeRate(): Promise<number> {
     let rate = 0
     let source = ''
 
+    // Circuit Breaker for Yahoo Finance
+    const isYahooBlocked = global.yahooCircuitBreaker && (now < global.yahooCircuitBreaker)
+
     // 2. Try Yahoo Finance
-    try {
-        const result = await yahooFinance.quote('KRW=X') as any
-        if (result.regularMarketPrice) {
-            rate = result.regularMarketPrice
-            source = 'Yahoo'
+    if (!isYahooBlocked) {
+        try {
+            const result = await yahooFinance.quote('KRW=X')
+            if (result.regularMarketPrice) {
+                rate = result.regularMarketPrice
+                source = 'Yahoo'
+            }
+        } catch (e: any) {
+            const errorMsg = e instanceof Error ? e.message : String(e)
+            console.warn('Yahoo FX failed, trying KIS...', errorMsg)
+
+            // Trigger Circuit Breaker on 429
+            if (errorMsg.includes('429') || errorMsg.includes('Too Many Requests')) {
+                console.warn('[Circuit Breaker] Yahoo Finance blocked for 5 minutes due to 429.')
+                global.yahooCircuitBreaker = now + (1000 * 60 * 5)
+            }
         }
-    } catch (e) {
-        console.warn('Yahoo FX failed, trying KIS...', e instanceof Error ? e.message : e)
+    } else {
+        console.log('[Circuit Breaker] Skipping Yahoo Finance (Cooldown active)')
     }
 
     // 3. Try KIS API -> Skipped (No dedicated public FX API, embedded ones are unstable)

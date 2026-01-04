@@ -1,7 +1,5 @@
 import { prisma } from '@/lib/prisma'
-import YahooFinance from 'yahoo-finance2'
-
-const yahooFinance = new YahooFinance()
+import yahooFinance from '@/lib/yahoo-finance'
 
 const KIS_BASE_URL = {
     REAL: 'https://openapi.koreainvestment.com:9443',
