@@ -93,8 +93,59 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ success: true, data: formattedResults })
         } catch (yahooError: any) {
             console.warn('Yahoo Search Failed:', yahooError.message)
-            // If Yahoo fails (e.g. invalid query for Korean), just return empty results
-            return NextResponse.json({ success: true, data: [] })
+
+            // 3. Fallback to Finnhub Symbol Search
+            try {
+                const apiKey = process.env.FINNHUB_API_KEY
+                if (!apiKey) {
+                    console.warn('FINNHUB_API_KEY not configured, returning empty results')
+                    return NextResponse.json({ success: true, data: [] })
+                }
+
+                console.log('Trying Finnhub Symbol Search...')
+                const response = await fetch(
+                    `https://finnhub.io/api/v1/search?q=${encodeURIComponent(query)}&exchange=US&token=${apiKey}`,
+                    { cache: 'no-store' }
+                )
+
+                if (!response.ok) {
+                    throw new Error(`Finnhub API error: ${response.status}`)
+                }
+
+                const data = await response.json()
+
+                // Finnhub returns: { count, result: [{ description, displaySymbol, symbol, type }] }
+                const formattedResults = (data.result || [])
+                    .filter((item: any) =>
+                        item.type === 'Common Stock' ||
+                        item.type === 'ETP' || // ETF/ETN
+                        item.type === 'ADR'
+                    )
+                    .slice(0, 10)
+                    .map((item: any) => ({
+                        symbol: item.symbol,
+                        name: item.description || item.displaySymbol || item.symbol,
+                        exchange: 'US',
+                        type: item.type === 'Common Stock' ? 'EQUITY' : item.type === 'ETP' ? 'ETF' : 'EQUITY',
+                        market: 'US',
+                        source: 'finnhub'
+                    }))
+
+                // Cache Finnhub results too
+                const now = Date.now()
+                const cacheKey = query.toLowerCase()
+                if (SEARCH_CACHE.size > 1000) {
+                    const firstKey = SEARCH_CACHE.keys().next().value
+                    if (firstKey) SEARCH_CACHE.delete(firstKey)
+                }
+                SEARCH_CACHE.set(cacheKey, { data: formattedResults, timestamp: now })
+
+                console.log(`Finnhub Search Success: ${formattedResults.length} results`)
+                return NextResponse.json({ success: true, data: formattedResults, source: 'finnhub' })
+            } catch (finnhubError: any) {
+                console.warn('Finnhub Search Failed:', finnhubError.message)
+                return NextResponse.json({ success: true, data: [] })
+            }
         }
 
     } catch (error: any) {
