@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getBigTechNews } from '@/actions/news'
 
-// Allow up to 5 minutes for execution (for AI filtering/summarizing)
+// Allow up to 5 minutes for execution (safety net, though we aim for <10s per symbol)
 export const maxDuration = 300
 
 const BIG_TECH_SYMBOLS = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'TSLA', 'META']
@@ -14,18 +14,44 @@ export async function GET(request: NextRequest) {
     }
 
     try {
+        const { searchParams } = new URL(request.url)
+        const symbolParam = searchParams.get('symbol')
+
+        // Mode 1: Single Symbol Update (Optimized for Cron Fan-out)
+        if (symbolParam) {
+            if (!BIG_TECH_SYMBOLS.includes(symbolParam)) {
+                return NextResponse.json({ success: false, error: 'Invalid symbol' }, { status: 400 })
+            }
+
+            console.log(`[Cron] Specific update triggered for ${symbolParam}`)
+            const startTime = Date.now()
+
+            try {
+                const news = await getBigTechNews(symbolParam)
+                const duration = (Date.now() - startTime) / 1000
+                console.log(`[Cron] ${symbolParam} update complete in ${duration}s`)
+
+                return NextResponse.json({
+                    success: true,
+                    symbol: symbolParam,
+                    count: news.length,
+                    duration: `${duration}s`
+                })
+            } catch (error) {
+                console.error(`[Cron] Failed specific update for ${symbolParam}:`, error)
+                return NextResponse.json({ success: false, error: String(error) }, { status: 500 })
+            }
+        }
+
+        // Mode 2: Update All (Legacy/Fallback)
+        // Note: This might timeout on Vercel Hobby if there are many new articles.
         const results = []
+        console.log('[Cron] Updating all symbols (Legacy Mode)...')
 
         for (const symbol of BIG_TECH_SYMBOLS) {
             try {
-                // Ensure we wait a bit between requests if needed, 
-                // but getBigTechNews already has a 2s delay inside when fetching.
                 console.log(`[Cron] Updating news for ${symbol}...`)
-
-                // This function handles: Check DB -> Fetch API -> Summarize -> Save
-                // It returns the news items.
                 const news = await getBigTechNews(symbol)
-
                 results.push({ symbol, count: news.length, status: 'updated' })
             } catch (error) {
                 console.error(`[Cron] Failed to update ${symbol}:`, error)
