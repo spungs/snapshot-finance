@@ -131,7 +131,12 @@ export default function Home() {
               </div>
 
               <div className="pt-8 max-w-[600px] text-sm text-balance break-keep text-muted-foreground/80">
-                <p dangerouslySetInnerHTML={{ __html: t.landing.feedbackNote.replace('email', '<a href="mailto:spungs.dev@gmail.com" class="underline hover:text-foreground">email</a>').replace('이메일', '<a href="mailto:spungs.dev@gmail.com" class="underline hover:text-foreground">이메일</a>') }} />
+                <p>
+                  {language === 'ko'
+                    ? <>필요한 기능이 있다면 언제든 <a href="mailto:spungs.dev@gmail.com" className="underline hover:text-foreground">이메일</a>로 제안해 주세요. 모든 요청을 반영할 수는 없지만, 더 좋은 도구가 되도록 꼼꼼히 검토하겠습니다.</>
+                    : <>Feedback is welcome. Please feel free to suggest features via <a href="mailto:spungs.dev@gmail.com" className="underline hover:text-foreground">email</a>. I can't implement every request, but I review all suggestions carefully to make this tool better.</>
+                  }
+                </p>
               </div>
             </div>
           </div>
