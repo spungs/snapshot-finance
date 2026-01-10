@@ -104,7 +104,12 @@ export default function PrivacyPage() {
                         <li><strong>{t.privacy.section5Item2.split(':')[0]}:</strong> {t.privacy.section5Item2.split(':')[1]}
                             <ul className="list-circle pl-5 mt-1 text-sm text-muted-foreground">
                                 <li>{t.privacy.section5SubItem1}</li>
-                                <li dangerouslySetInnerHTML={{ __html: t.privacy.section5SubItem2.replace('Google 광고 설정', '<a href="https://policies.google.com/technologies/ads" target="_blank" rel="noopener noreferrer" class="underline hover:text-primary">Google 광고 설정</a>').replace('Google Ad Settings', '<a href="https://policies.google.com/technologies/ads" target="_blank" rel="noopener noreferrer" class="underline hover:text-primary">Google Ad Settings</a>') }} />
+                                <li>
+                                    {language === 'ko'
+                                        ? <>사용자는 브라우저 설정을 통해 쿠키 저장을 거부할 수 있으며, <a href="https://policies.google.com/technologies/ads" target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">Google 광고 설정</a>에서 맞춤형 광고를 해제할 수 있습니다.</>
+                                        : <>Users can refuse cookie storage through browser settings and opt-out of personalized ads in <a href="https://policies.google.com/technologies/ads" target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">Google Ad Settings</a>.</>
+                                    }
+                                </li>
                             </ul>
                         </li>
                     </ul>

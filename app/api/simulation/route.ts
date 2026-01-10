@@ -2,9 +2,36 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { kisClient } from '@/lib/api/kis-client'
 import { getUsdExchangeRate } from '@/lib/api/exchange-rate'
+import { auth } from '@/lib/auth'
+import { ratelimit, getIP, checkRateLimit } from '@/lib/ratelimit'
 
 export async function POST(request: NextRequest) {
     try {
+        // Rate limiting (외부 API 다수 호출하므로 엄격하게 제한)
+        const ip = getIP(request)
+        const rateLimitResult = await checkRateLimit(ratelimit.simulation, ip)
+
+        if (rateLimitResult && !rateLimitResult.success) {
+            return NextResponse.json(
+                { success: false, error: { code: 'RATE_LIMIT', message: '너무 많은 요청입니다. 잠시 후 다시 시도해주세요.' } },
+                {
+                    status: 429,
+                    headers: {
+                        'X-RateLimit-Reset': rateLimitResult.reset.toString(),
+                    }
+                }
+            )
+        }
+
+        // 인증 확인
+        const session = await auth()
+        if (!session?.user?.id) {
+            return NextResponse.json(
+                { success: false, error: { code: 'UNAUTHORIZED', message: '인증이 필요합니다.' } },
+                { status: 401 }
+            )
+        }
+
         const body = await request.json()
         const { snapshotId } = body
 
@@ -15,7 +42,7 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        // 1. Fetch snapshot with holdings and stock info
+        // 1. Fetch snapshot with holdings and stock info (소유권 검사 포함)
         const snapshot = await prisma.portfolioSnapshot.findUnique({
             where: { id: snapshotId },
             include: {
@@ -27,7 +54,8 @@ export async function POST(request: NextRequest) {
             },
         })
 
-        if (!snapshot) {
+        // 스냅샷이 없거나 본인 소유가 아닌 경우
+        if (!snapshot || snapshot.userId !== session.user.id) {
             return NextResponse.json(
                 { success: false, error: 'Snapshot not found' },
                 { status: 404 }

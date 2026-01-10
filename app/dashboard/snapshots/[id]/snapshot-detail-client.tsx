@@ -90,6 +90,8 @@ export default function SnapshotDetailClient({ snapshot }: SnapshotDetailClientP
                 profitRate={snapshot.profitRate}
                 holdingsCount={snapshot.holdings.length}
                 exchangeRate={snapshot.exchangeRate}
+                cashBalance={snapshot.cashBalance}
+                totalStockValue={snapshot.totalValue - snapshot.cashBalance}
             />
 
             <HoldingsTable

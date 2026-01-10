@@ -36,6 +36,8 @@
     "@radix-ui/react-tooltip": "^1.2.8",
     "@tanstack/react-table": "^8.21.3",
     "@types/canvas-confetti": "^1.9.0",
+    "@upstash/ratelimit": "^2.0.7",
+    "@upstash/redis": "^1.36.1",
     "adm-zip": "^0.5.16",
     "canvas-confetti": "^1.9.4",
     "class-variance-authority": "^0.7.1",

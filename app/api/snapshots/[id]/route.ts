@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import Decimal from 'decimal.js'
+import { auth } from '@/lib/auth'
 
 // GET /api/snapshots/[id] - 스냅샷 상세 조회
 export async function GET(
@@ -9,6 +10,14 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth()
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { success: false, error: { code: 'UNAUTHORIZED', message: '인증이 필요합니다.' } },
+        { status: 401 }
+      )
+    }
+
     const { id } = await params
 
     const snapshot = await prisma.portfolioSnapshot.findUnique({
@@ -22,7 +31,8 @@ export async function GET(
       },
     })
 
-    if (!snapshot) {
+    // 스냅샷이 없거나 본인 소유가 아닌 경우
+    if (!snapshot || snapshot.userId !== session.user.id) {
       return NextResponse.json(
         {
           success: false,
@@ -57,14 +67,22 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth()
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { success: false, error: { code: 'UNAUTHORIZED', message: '인증이 필요합니다.' } },
+        { status: 401 }
+      )
+    }
+
     const { id } = await params
 
-    // 스냅샷 존재 여부 확인
+    // 스냅샷 존재 및 소유권 확인
     const snapshot = await prisma.portfolioSnapshot.findUnique({
       where: { id },
     })
 
-    if (!snapshot) {
+    if (!snapshot || snapshot.userId !== session.user.id) {
       return NextResponse.json(
         {
           success: false,
@@ -107,7 +125,34 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth()
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { success: false, error: { code: 'UNAUTHORIZED', message: '인증이 필요합니다.' } },
+        { status: 401 }
+      )
+    }
+
     const { id } = await params
+
+    // 소유권 확인
+    const existingSnapshot = await prisma.portfolioSnapshot.findUnique({
+      where: { id },
+    })
+
+    if (!existingSnapshot || existingSnapshot.userId !== session.user.id) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: 'SNAPSHOT_NOT_FOUND',
+            message: '스냅샷을 찾을 수 없습니다.',
+          },
+        },
+        { status: 404 }
+      )
+    }
+
     const body = await request.json()
     const { holdings, cashBalance, note, snapshotDate, exchangeRate } = body
 

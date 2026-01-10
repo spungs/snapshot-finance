@@ -29,6 +29,7 @@ import {
 } from 'recharts'
 import { useLanguage } from '@/lib/i18n/context'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Progress } from '@/components/ui/progress'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { useDebounce } from '@/lib/hooks/use-debounce'
 
@@ -36,6 +37,7 @@ interface Stock {
     id: string
     stockCode: string
     stockName: string
+    engName?: string  // 영문명
     market?: string
 }
 
@@ -187,7 +189,11 @@ export function WhatIfClient() {
                             <div className="space-y-1">
                                 <label className="text-sm font-medium">{t('stock')}</label>
                                 <StockSearchCombobox
-                                    value={selectedStock ? selectedStock.stockName : ''}
+                                    value={selectedStock
+                                        ? (language === 'ko'
+                                            ? selectedStock.stockName
+                                            : (selectedStock.engName || selectedStock.stockName))
+                                        : ''}
                                     onSelect={setSelectedStock}
                                 />
                             </div>
@@ -237,10 +243,17 @@ export function WhatIfClient() {
                     {loading ? (
                         <Card className="h-full">
                             <CardHeader>
-                                <Skeleton className="h-8 w-[200px]" />
+                                <CardTitle>{language === 'ko' ? '차트 로딩 중...' : 'Loading chart...'}</CardTitle>
                             </CardHeader>
-                            <CardContent className="h-[400px] flex items-center justify-center">
-                                <Skeleton className="h-[350px] w-full" />
+                            <CardContent className="h-[400px] flex flex-col items-center justify-center gap-4">
+                                <div className="w-full max-w-md space-y-4">
+                                    <div className="text-sm text-center text-muted-foreground">
+                                        {language === 'ko' ? '데이터를 조회하고 있습니다...' : 'Fetching data...'}
+                                    </div>
+                                    <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
+                                        <div className="h-full bg-primary animate-indeterminate" />
+                                    </div>
+                                </div>
                             </CardContent>
                         </Card>
                     ) : error ? (
