@@ -342,41 +342,176 @@ export class KisClient {
         }
     }
 
-    async getDailyPriceRange(symbol: string, market: 'KOSPI' | 'KOSDAQ' | 'US', startDate: string, endDate: string): Promise<any[]> {
+    async getDailyPriceRange(symbol: string, market: 'KOSPI' | 'KOSDAQ' | 'US' | 'NASD' | 'NYSE' | 'AMEX', startDate: string, endDate: string): Promise<any[]> {
         try {
-            // For historical chart data, we use Yahoo Finance for all markets.
-            // Yahoo Finance handles long ranges and Korean stocks well if suffixes are correct.
+            const token = await this.getAccessToken()
+            let formattedData: any[] = []
 
-            let yahooSymbol = symbol
-            if (market === 'KOSPI' && !yahooSymbol.endsWith('.KS')) {
-                yahooSymbol = `${yahooSymbol.split('.')[0]}.KS`
-            } else if (market === 'KOSDAQ' && !yahooSymbol.endsWith('.KQ')) {
-                yahooSymbol = `${yahooSymbol.split('.')[0]}.KQ`
+            // US stocks: Use KIS Overseas Daily Price API (HHDFS76240000)
+            if (market === 'US' || market === 'NASD' || market === 'NYSE' || market === 'AMEX') {
+                const path = '/uapi/overseas-price/v1/quotations/dailyprice'
+                const tr_id = 'HHDFS76240000'
+
+                // Map market code to KIS exchange code
+                let exchangeCode = 'NAS' // default
+                if (market === 'NASD') exchangeCode = 'NAS'
+                else if (market === 'NYSE') exchangeCode = 'NYS'
+                else if (market === 'AMEX') exchangeCode = 'AMS'
+
+                let bymd = endDate.replace(/-/g, '')
+                let allData: any[] = []
+                let pageCount = 0
+                const startTime = new Date(startDate).getTime()
+
+                console.log(`[KIS] Fetching US chart for ${symbol} (${exchangeCode}, ${startDate} to ${endDate})`)
+
+                do {
+                    const params = new URLSearchParams({
+                        AUTH: '',
+                        EXCD: exchangeCode,
+                        SYMB: symbol,
+                        GUBN: '0',
+                        BYMD: bymd,
+                        MODP: '1', // 주식분할 조정
+                    })
+
+                    const response = await fetch(`${BASE_URL}${path}?${params}`, {
+                        headers: {
+                            'Content-Type': 'application/json',
+                            authorization: `Bearer ${token}`,
+                            appkey: APP_KEY!,
+                            appsecret: APP_SECRET!,
+                            tr_id: tr_id,
+                            custtype: 'P',
+                        },
+                        cache: 'no-store',
+                    })
+
+                    if (!response.ok) throw new Error(`KIS API Error: ${response.status}`)
+
+                    const data = await response.json()
+                    if (data.rt_cd !== '0' || !data.output2?.length) break
+
+                    const newItems = data.output2.filter((item: any) =>
+                        !allData.some(existing => existing.xymd === item.xymd)
+                    )
+                    allData.push(...newItems)
+                    pageCount++
+
+                    const oldestDate = allData[allData.length - 1].xymd
+                    const oldestDateStr = `${oldestDate.substring(0, 4)}-${oldestDate.substring(4, 6)}-${oldestDate.substring(6, 8)}`
+                    if (new Date(oldestDateStr).getTime() <= startTime) break
+
+                    const oldestDateObj = new Date(oldestDateStr)
+                    oldestDateObj.setDate(oldestDateObj.getDate() - 1)
+                    bymd = oldestDateObj.toISOString().split('T')[0].replace(/-/g, '')
+
+                    await new Promise(resolve => setTimeout(resolve, 100))
+                    if (data.output2.length < 50 || pageCount >= 100) break
+                } while (true)
+
+                console.log(`[KIS] US: ${allData.length} data points (${pageCount} pages)`)
+
+                const endTime = new Date(endDate).getTime()
+                formattedData = allData
+                    .filter((item: any) => {
+                        const d = `${item.xymd.substring(0, 4)}-${item.xymd.substring(4, 6)}-${item.xymd.substring(6, 8)}`
+                        const t = new Date(d).getTime()
+                        return t >= startTime && t <= endTime
+                    })
+                    .map((item: any) => ({
+                        date: `${item.xymd.substring(0, 4)}-${item.xymd.substring(4, 6)}-${item.xymd.substring(6, 8)}`,
+                        close: parseFloat(item.clos),
+                        open: parseFloat(item.open),
+                        high: parseFloat(item.high),
+                        low: parseFloat(item.low),
+                        volume: parseInt(item.tvol || 0),
+                    }))
+                    .reverse()
+            }
+            // Korean stocks: Use KIS Domestic Daily Price API (FHKST03010100)
+            else if (market === 'KOSPI' || market === 'KOSDAQ') {
+                const path = '/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice'
+                const tr_id = 'FHKST03010100'
+
+                // Remove Yahoo Finance suffix (.KS, .KQ) if present
+                const cleanSymbol = symbol.replace(/\.(KS|KQ)$/, '')
+
+                let bymd = endDate.replace(/-/g, '')
+                let allData: any[] = []
+                let pageCount = 0
+                const startTime = new Date(startDate).getTime()
+
+                console.log(`[KIS] Fetching KR chart for ${cleanSymbol} (${market}, ${startDate} to ${endDate})`)
+
+                do {
+                    const params = new URLSearchParams({
+                        FID_COND_MRKT_DIV_CODE: 'J',
+                        FID_INPUT_ISCD: cleanSymbol,
+                        FID_INPUT_DATE_1: startDate.replace(/-/g, ''),
+                        FID_INPUT_DATE_2: bymd,
+                        FID_PERIOD_DIV_CODE: 'D',
+                        FID_ORG_ADJ_PRC: '1', // 수정주가
+                    })
+
+                    const response = await fetch(`${BASE_URL}${path}?${params}`, {
+                        headers: {
+                            'Content-Type': 'application/json',
+                            authorization: `Bearer ${token}`,
+                            appkey: APP_KEY!,
+                            appsecret: APP_SECRET!,
+                            tr_id: tr_id,
+                            custtype: 'P',
+                        },
+                        cache: 'no-store',
+                    })
+
+                    if (!response.ok) throw new Error(`KIS API Error: ${response.status}`)
+
+                    const data = await response.json()
+                    if (data.rt_cd !== '0' || !data.output2?.length) break
+
+                    const newItems = data.output2.filter((item: any) =>
+                        !allData.some(existing => existing.stck_bsop_date === item.stck_bsop_date)
+                    )
+                    allData.push(...newItems)
+                    pageCount++
+
+                    const oldestDate = allData[allData.length - 1].stck_bsop_date
+                    const oldestDateStr = `${oldestDate.substring(0, 4)}-${oldestDate.substring(4, 6)}-${oldestDate.substring(6, 8)}`
+                    if (new Date(oldestDateStr).getTime() <= startTime) break
+
+                    const oldestDateObj = new Date(oldestDateStr)
+                    oldestDateObj.setDate(oldestDateObj.getDate() - 1)
+                    bymd = oldestDateObj.toISOString().split('T')[0].replace(/-/g, '')
+
+                    await new Promise(resolve => setTimeout(resolve, 100))
+                    if (data.output2.length < 50 || pageCount >= 100) break
+                } while (true)
+
+                console.log(`[KIS] KR: ${allData.length} data points (${pageCount} pages)`)
+
+                const endTime = new Date(endDate).getTime()
+                formattedData = allData
+                    .filter((item: any) => {
+                        const d = `${item.stck_bsop_date.substring(0, 4)}-${item.stck_bsop_date.substring(4, 6)}-${item.stck_bsop_date.substring(6, 8)}`
+                        const t = new Date(d).getTime()
+                        return t >= startTime && t <= endTime
+                    })
+                    .map((item: any) => ({
+                        date: `${item.stck_bsop_date.substring(0, 4)}-${item.stck_bsop_date.substring(4, 6)}-${item.stck_bsop_date.substring(6, 8)}`,
+                        close: parseFloat(item.stck_clpr),
+                        open: parseFloat(item.stck_oprc),
+                        high: parseFloat(item.stck_hgpr),
+                        low: parseFloat(item.stck_lwpr),
+                        volume: parseInt(item.acml_vol || 0),
+                    }))
+                    .reverse()
             }
 
-            // For Yahoo Finance, period2 is exclusive, so we add 1 day to include endDate
-            const end = new Date(endDate)
-            end.setDate(end.getDate() + 1)
-            const period2 = end.toISOString().split('T')[0]
-
-            const result = await yahooFinance.historical(yahooSymbol, {
-                period1: startDate,
-                period2: period2,
-                interval: '1d',
-            })
-
-            return result.map((item) => ({
-                date: item.date.toISOString().split('T')[0],
-                // User Feedback: Use raw close price instead of adjusted close to match Naver Finance/MTS history.
-                // 2021-01-08 Samsung Electronics: Close 88,800 vs Adj Close 80,270
-                close: item.close || item.adjClose,
-                open: item.open,
-                high: item.high,
-                low: item.low,
-                volume: item.volume,
-            }))
+            return formattedData
         } catch (error) {
-            console.error(`History Fetch Error for ${symbol}:`, error)
+            console.error(`KIS Chart Error for ${symbol}:`, error)
             return []
         }
     }
