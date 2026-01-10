@@ -49,7 +49,7 @@ export const holdingService = {
                 let currentPrice = 0
                 try {
                     // Fetch Real-time Price
-                    currentPrice = await fetchCurrentPrice(holding.stock.stockCode, holding.stock.market)
+                    currentPrice = await fetchCurrentPrice(holding.stock.stockCode, holding.stock.market || 'Unknown')
                     if (isNaN(currentPrice)) currentPrice = 0
 
                     // Update DB if price changed (Async side-effect)

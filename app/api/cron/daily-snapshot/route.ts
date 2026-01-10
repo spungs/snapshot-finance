@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
 
                     const snapshotHoldingsData = await Promise.all(
                         user.holdings.map(async (holding) => {
-                            const currentPrice = await getStockPrice(holding.stock.stockCode, holding.stock.market)
+                            const currentPrice = await getStockPrice(holding.stock.stockCode, holding.stock.market || 'Unknown')
                             const quantity = holding.quantity
                             const avgPrice = Number(holding.averagePrice)
 

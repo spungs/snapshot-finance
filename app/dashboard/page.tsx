@@ -23,6 +23,7 @@ export default async function DashboardPage() {
   const initialData = data ? {
     holdings: data.holdings.map(h => ({
       ...h,
+      market: h.market || 'Unknown',
       // Ensure plain objects
       priceUpdatedAt: h.priceUpdatedAt instanceof Date ? h.priceUpdatedAt.toISOString() : h.priceUpdatedAt,
       displayOrder: (h as any).displayOrder ?? 0

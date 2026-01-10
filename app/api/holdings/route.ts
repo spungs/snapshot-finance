@@ -82,13 +82,13 @@ export async function POST(request: NextRequest) {
         const stock = await prisma.stock.findUnique({ where: { id: stockId } })
         let currentPrice = 0
         if (stock) {
-            currentPrice = await fetchCurrentPrice(stock.stockCode, stock.market)
+            currentPrice = await fetchCurrentPrice(stock.stockCode, stock.market || 'Unknown')
             if (isNaN(currentPrice)) currentPrice = 0
 
             // 통화 자동 감지 (입력된 통화가 없으면 시장 정보로 판단)
             if (!currency) {
                 const usMarkets = ['US', 'NAS', 'NYS', 'AMS']
-                currency = usMarkets.includes(stock.market) ? 'USD' : 'KRW'
+                currency = usMarkets.includes(stock.market || '') ? 'USD' : 'KRW'
             }
 
             // USD인데 purchaseRate가 1(기본값)인 경우 현재 환율 적용

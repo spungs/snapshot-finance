@@ -189,7 +189,7 @@ export async function analyzeBulkImport(items: ImportItem[]): Promise<ImportAnal
                     stockId: stock.id,
                     stockName: stock.stockName,
                     stockCode: stock.stockCode,
-                    market: market,
+                    market: market ?? undefined,
                     currency,
                     inputQty: item.quantity,
                     inputPrice: item.averagePrice,
