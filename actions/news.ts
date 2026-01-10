@@ -43,36 +43,42 @@ export async function getBigTechNews(symbol: string) {
         const processPromises = newArticles.map(item =>
             limit(async () => {
                 try {
-                    // Double check (redundant but safe for race conditions if needed)
-                    // Skip detailed check for speed unless strictly necessary
+                    // Add random delay to prevent hitting API rate limits (avoid burst requests)
+                    await new Promise(resolve => setTimeout(resolve, Math.random() * 3000 + 1000))
 
                     // Generate AI Summary
-                    const summaries = await summarizeNews(item.title, item.originalSummary, item.source)
-
-                    if (summaries) {
-                        await prisma.newsArticle.create({
-                            data: {
-                                symbol,
-                                title: item.title,
-                                url: item.url,
-                                publishedAt: item.publishedAt,
-                                source: item.source,
-                                imageUrl: item.imageUrl,
-                                summaryShort: summaries.short,
-                                summaryMedium: summaries.medium,
-                                summaryLong: summaries.long
-                            }
-                        })
-                        return { status: 'success', url: item.url }
+                    // We wrap this in a nested try-catch so that if AI fails (e.g. rate limit),
+                    // we still save the news article without the AI summary.
+                    let summaries = null
+                    try {
+                        summaries = await summarizeNews(item.title, item.originalSummary, item.source)
+                    } catch (aiError) {
+                        console.warn(`[News] AI Summary failed for ${item.symbol}, saving without summary. Error: ${aiError}`)
                     }
-                    return { status: 'skipped', url: item.url, reason: 'no_summary' }
+
+                    await prisma.newsArticle.create({
+                        data: {
+                            symbol,
+                            title: item.title,
+                            url: item.url,
+                            publishedAt: item.publishedAt,
+                            source: item.source,
+                            imageUrl: item.imageUrl,
+                            // If summaries is null, these will be null.
+                            // The UI should handle null summaries gracefully (e.g. show originalSummary)
+                            summaryShort: summaries?.short || item.originalSummary, // Fallback to original summary
+                            summaryMedium: summaries?.medium || item.originalSummary,
+                            summaryLong: summaries?.long || item.originalSummary
+                        }
+                    })
+                    return { status: 'success', url: item.url, hasSummary: !!summaries }
+
                 } catch (error) {
                     console.error(`[News] Error processing article ${item.url}:`, error)
                     return { status: 'error', url: item.url, error }
                 }
             })
         )
-
         await Promise.all(processPromises)
 
         // 4. Return all news for this symbol (sorted by new)

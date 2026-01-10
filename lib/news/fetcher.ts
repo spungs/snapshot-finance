@@ -39,7 +39,9 @@ export async function fetchCompanyNews(symbol: string): Promise<NewsItem[]> {
     const url = `https://finnhub.io/api/v1/company-news?symbol=${symbol}&from=${fromDate}&to=${toDate}&token=${FINNHUB_API_KEY}`
 
     try {
-        const response = await fetch(url, { next: { revalidate: 3600 } }) // Cache for 1 hour
+        // Disable cache to ensure fresh filtering during debugging/production
+        // Ideally we want some caching but for now accuracy is priority
+        const response = await fetch(url, { cache: 'no-store' })
 
         if (!response.ok) {
             console.error(`Finnhub API error: ${response.status} ${response.statusText}`)
@@ -49,8 +51,25 @@ export async function fetchCompanyNews(symbol: string): Promise<NewsItem[]> {
         const data: FinnhubNewsItem[] = await response.json()
 
         // Filter and map
+        const symbolKeywords: Record<string, string[]> = {
+            'AAPL': ['Apple', 'AAPL', 'iPhone', 'Mac', 'iPad'],
+            'MSFT': ['Microsoft', 'MSFT', 'Windows', 'Azure', 'Office'],
+            'GOOGL': ['Google', 'Alphabet', 'GOOGL', 'GOOG', 'Android', 'YouTube'],
+            'AMZN': ['Amazon', 'AMZN', 'AWS', 'Prime'],
+            'NVDA': ['Nvidia', 'NVDA', 'GPU', 'AI chip', 'GeForce'],
+            'TSLA': ['Tesla', 'TSLA', 'Musk', 'EV'],
+            'META': ['Meta', 'Facebook', 'META', 'Zuckerberg', 'Instagram', 'WhatsApp']
+        }
+
+        const keywords = (symbolKeywords[symbol] || [symbol]).map(k => k.toLowerCase())
+
         return data
-            // .filter(item => item.language === '' || item.language === 'en') // Removed unsafe filter
+            .filter(item => {
+                const headlineLower = item.headline.toLowerCase()
+                // STRICT MODE: Headline MUST contain at least one keyword
+                // Ignoring 'related' field for now as it seems unreliable for M7 noise
+                return keywords.some(k => headlineLower.includes(k))
+            })
             .map(item => ({
                 symbol,
                 title: item.headline,
