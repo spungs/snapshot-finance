@@ -28,7 +28,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { stockCode, stockName, market, sector } = body
+    const { stockCode, stockName, engName, market, sector } = body
 
     if (!stockCode || !stockName) {
       return NextResponse.json(
@@ -39,8 +39,8 @@ export async function POST(request: NextRequest) {
 
     const stock = await prisma.stock.upsert({
       where: { stockCode },
-      update: { stockName, market, sector },
-      create: { stockCode, stockName, market, sector },
+      update: { stockName, engName, market, sector },
+      create: { stockCode, stockName, engName, market, sector },
     })
 
     return NextResponse.json({ success: true, data: stock })

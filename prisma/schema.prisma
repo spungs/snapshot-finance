@@ -99,7 +99,8 @@ model Stock {
   id           String            @id @default(cuid())
   stockCode    String            @unique
   stockName    String
-  market       String
+  engName      String?           // 영문 종목명
+  market       String?
   sector       String?
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
@@ -151,8 +152,8 @@ model KisStockMaster {
   market    String
   updatedAt DateTime @updatedAt
 
-
   @@index([stockName])
+  @@index([engName])
   @@map("kis_stock_masters")
 }
 

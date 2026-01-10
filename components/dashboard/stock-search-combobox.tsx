@@ -31,12 +31,15 @@ interface Stock {
     id: string
     stockCode: string
     stockName: string
+    engName?: string  // 영문명
     market?: string
 }
 
 interface SearchResult {
     symbol: string
     name: string
+    nameKo?: string  // 한글명
+    nameEn?: string  // 영문명
     exchange: string
     market: string
     type: string
@@ -53,7 +56,7 @@ export function StockSearchCombobox({
     onSelect,
     disabled,
 }: StockSearchComboboxProps) {
-    const { t } = useLanguage()
+    const { t, language } = useLanguage()
     const [open, setOpen] = React.useState(false)
     const [query, setQuery] = React.useState('')
     const [results, setResults] = React.useState<SearchResult[]>([])
@@ -132,7 +135,8 @@ export function StockSearchCombobox({
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     stockCode: result.symbol,
-                    stockName: result.name,
+                    stockName: result.nameKo || result.name,  // 한글명 우선
+                    engName: result.nameEn,  // 영문명
                     market: result.market,
                     sector: result.type, // Fallback for sector
                 }),
@@ -165,9 +169,7 @@ export function StockSearchCombobox({
                         disabled={disabled}
                     >
                         <span className="truncate flex-1 text-left">
-                            {value
-                                ? value
-                                : t('selectStock')}
+                            {value || t('selectStock')}
                         </span>
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
@@ -185,6 +187,7 @@ export function StockSearchCombobox({
                             value={value}
                             handleSelect={handleSelect}
                             t={t}
+                            language={language}
                         />
                     </Command>
                 </PopoverContent>
@@ -203,9 +206,7 @@ export function StockSearchCombobox({
                 onClick={() => setOpen(true)}
             >
                 <span className="truncate flex-1 text-left">
-                    {value
-                        ? value
-                        : t('selectStock')}
+                    {value || t('selectStock')}
                 </span>
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
@@ -225,6 +226,7 @@ export function StockSearchCombobox({
                             value={value}
                             handleSelect={handleSelect}
                             t={t}
+                            language={language}
                         />
                     </Command>
                 </DialogContent>
@@ -243,7 +245,8 @@ function StockSearchContent({
     hasSearched,
     value,
     handleSelect,
-    t
+    t,
+    language
 }: {
     query: string
     setQuery: (val: string) => void
@@ -255,6 +258,7 @@ function StockSearchContent({
     value: string
     handleSelect: (result: SearchResult) => void
     t: (key: any) => string
+    language: string
 }) {
     return (
         <>
@@ -297,27 +301,40 @@ function StockSearchContent({
                     <CommandEmpty>{t('searchEmpty')}</CommandEmpty>
                 )}
                 <CommandGroup>
-                    {results.map((result, index) => (
-                        <CommandItem
-                            key={`${result.symbol}-${result.exchange}-${index}`}
-                            value={`${result.symbol}-${result.exchange}`}
-                            onSelect={() => handleSelect(result)}
-                            className="py-3"
-                        >
-                            <Check
-                                className={cn(
-                                    "mr-2 h-4 w-4",
-                                    value === result.symbol ? "opacity-100" : "opacity-0"
-                                )}
-                            />
-                            <div className="flex flex-col truncate w-full">
-                                <span className="truncate text-base font-medium" title={result.name}>{result.name}</span>
-                                <span className="text-xs text-muted-foreground truncate">
-                                    {result.symbol} | {result.market}
-                                </span>
-                            </div>
-                        </CommandItem>
-                    ))}
+                    {results.map((result, index) => {
+                        // 언어에 따라 주 종목명과 부 종목명 결정
+                        const primaryName = language === 'ko'
+                            ? (result.nameKo || result.name)
+                            : (result.nameEn || result.name)
+                        const secondaryName = language === 'ko'
+                            ? result.nameEn
+                            : result.nameKo
+
+                        return (
+                            <CommandItem
+                                key={`${result.symbol}-${result.exchange}-${index}`}
+                                value={`${result.symbol}-${result.exchange}`}
+                                onSelect={() => handleSelect(result)}
+                                className="py-3"
+                            >
+                                <Check
+                                    className={cn(
+                                        "mr-2 h-4 w-4",
+                                        value === result.symbol ? "opacity-100" : "opacity-0"
+                                    )}
+                                />
+                                <div className="flex flex-col truncate w-full">
+                                    <span className="truncate text-base font-medium" title={primaryName}>
+                                        {primaryName}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground truncate">
+                                        {result.symbol} | {result.market}
+                                        {secondaryName && secondaryName !== primaryName && ` | ${secondaryName}`}
+                                    </span>
+                                </div>
+                            </CommandItem>
+                        )
+                    })}
                 </CommandGroup>
             </CommandList>
         </>
