@@ -16,7 +16,7 @@ import { snapshotsApi } from '@/lib/api/client'
 import { formatCurrency, formatDate, formatProfitRate } from '@/lib/utils/formatters'
 import { cn } from '@/lib/utils'
 import { useLanguage } from '@/lib/i18n/context'
-import { SnapshotDiff } from '@/components/dashboard/snapshots/snapshot-diff'
+import { SnapshotBottomPanel } from '@/components/dashboard/snapshots/snapshot-bottom-panel'
 import { Play } from 'lucide-react'
 
 interface Snapshot {
@@ -61,6 +61,10 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings }: Snapshots
         })
     }
 
+    const handleClearSelection = () => {
+        setSelectedIds([])
+    }
+
     async function handleDelete(id: string) {
         if (!confirm(t('confirmDelete'))) return
 
@@ -80,7 +84,7 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings }: Snapshots
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 relative pb-24">
             {/* 페이지 헤더 */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0 mb-6">
                 <h1 className="text-xl sm:text-2xl font-bold">{t('snapshotList')}</h1>
@@ -330,7 +334,13 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings }: Snapshots
                 </Card>
             )}
 
-            <SnapshotDiff currentHoldings={currentHoldings} snapshots={snapshots} selectedIds={selectedIds} />
+            {/* 바텀 슬라이드 패널 */}
+            <SnapshotBottomPanel
+                currentHoldings={currentHoldings}
+                snapshots={snapshots}
+                selectedIds={selectedIds}
+                onClearSelection={handleClearSelection}
+            />
         </div>
     )
 }

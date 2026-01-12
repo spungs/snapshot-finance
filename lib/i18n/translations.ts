@@ -384,6 +384,9 @@ export const translations = {
         comparisonGuide: '스냅샷을 선택하여 비교',
         defaultComparison: '최신 스냅샷 비교 (기본값)',
         deselect: '해제',
+        viewComparison: '비교 보기',
+        hideComparison: '비교 숨기기',
+        dragToExpand: '위로 드래그하여 펼치기',
     },
     en: {
         home: 'Home',
@@ -766,6 +769,9 @@ export const translations = {
             loading: 'Loading news...',
             loadingSummary: 'Loading summary...',
             fontSize: 'font size',
-        }
+        },
+        viewComparison: 'View Comparison',
+        hideComparison: 'Hide Comparison',
+        dragToExpand: 'Drag up to expand',
     },
 }

@@ -1,8 +1,6 @@
 'use client'
 
 import { useMemo } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 
 import { useLanguage } from '@/lib/i18n/context'
 import { formatDate, formatNumber } from '@/lib/utils/formatters'
@@ -113,11 +111,9 @@ export function SnapshotDiff({ currentHoldings, snapshots, selectedIds }: Props)
         if (diffData.status === 'select_only_two') message = t('selectOnlyTwo')
 
         return (
-            <Card className="border-l-4 border-l-muted/50 mt-8 mb-8 shadow-sm">
-                <CardContent className="p-8 text-center text-muted-foreground font-medium">
-                    {message}
-                </CardContent>
-            </Card>
+            <div className="p-8 text-center text-muted-foreground font-medium bg-muted/20 rounded-lg border">
+                {message}
+            </div>
         )
     }
 
@@ -126,111 +122,91 @@ export function SnapshotDiff({ currentHoldings, snapshots, selectedIds }: Props)
 
     if (isIdentical) {
         return (
-            <Card className="border-l-4 border-l-green-500/70 mt-8 mb-8 shadow-sm">
-                <CardHeader className="pb-3 border-b bg-muted/20">
-                    <CardTitle className="text-lg flex flex-col sm:flex-row sm:items-center gap-3">
-                        <ArrowRightLeft className="w-5 h-5 text-primary" />
-                        {t('portfolioComparison')}
-                        <Badge variant="secondary" className="font-normal">{rightTitle} vs {leftTitle}</Badge>
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="p-8 text-center text-muted-foreground font-medium">
-                    {t('comparisonIdentical')}
-                </CardContent>
-            </Card>
+            <div className="p-8 text-center bg-green-50 dark:bg-green-900/10 rounded-lg border border-green-200 dark:border-green-900/30">
+                <div className="space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-center">
+                        <ArrowRightLeft className="w-5 h-5 text-primary mx-auto sm:mx-0" />
+                        <span className="font-semibold">{t('portfolioComparison')}</span>
+                        <span className="text-sm text-muted-foreground">{rightTitle} vs {leftTitle}</span>
+                    </div>
+                    <p className="text-muted-foreground">{t('comparisonIdentical')}</p>
+                </div>
+            </div>
         )
     }
 
     return (
-        <Card className="border-l-4 border-l-primary/70 mt-8 mb-8 shadow-sm">
-            <CardHeader className="pb-3 border-b bg-muted/20">
-                <CardTitle className="text-lg flex flex-col sm:flex-row sm:items-center gap-3">
-                    <div className="flex items-center gap-2">
-                        <ArrowRightLeft className="w-5 h-5 text-primary" />
-                        {t('portfolioComparison')}
-                        {isDefault && <Badge variant="outline" className="text-xs font-normal ml-2">{t('defaultComparison')}</Badge>}
+        <div className="space-y-4">
+            {/* 변경 사항 */}
+            <div className="space-y-6">
+                {/* Added */}
+                {added.length > 0 && (
+                    <div className="space-y-2">
+                        <h4 className="text-sm font-semibold flex items-center gap-2 text-blue-600">
+                            <Plus className="w-4 h-4" /> {t('compAdded')}
+                        </h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {added.map((item: any) => (
+                                <div key={item.code} className="bg-blue-50/50 dark:bg-blue-900/10 p-2.5 rounded flex justify-between items-start text-sm border border-blue-100 dark:border-blue-900/30 gap-4">
+                                    <span className="font-medium flex-1 min-w-0 break-words pt-0.5">
+                                        {item.name} <span className="text-muted-foreground font-normal text-xs block sm:inline">({item.code})</span>
+                                    </span>
+                                    <span className="text-muted-foreground whitespace-nowrap shrink-0 pt-0.5 font-medium">{formatNumber(item.quantity)}{t('countUnit')}</span>
+                                </div>
+                            ))}
+                        </div>
                     </div>
+                )}
 
-                    <div className="flex items-center gap-2 text-sm font-normal text-muted-foreground ml-0 sm:ml-auto bg-background px-3 py-1 rounded-full border shadow-sm">
-                        <span>{rightTitle}</span>
-                        <ArrowRight className="w-4 h-4" />
-                        <span className="font-semibold text-foreground">{leftTitle}</span>
-                    </div>
-                </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-                <div className="w-full p-4">
-                    <div className="space-y-6">
-                        {/* Added */}
-                        {added.length > 0 && (
-                            <div className="space-y-2">
-                                <h4 className="text-sm font-semibold flex items-center gap-2 text-blue-600">
-                                    <Plus className="w-4 h-4" /> {t('compAdded')}
-                                </h4>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                    {added.map((item: any) => (
-                                        <div key={item.code} className="bg-blue-50/50 dark:bg-blue-900/10 p-2.5 rounded flex justify-between items-start text-sm border border-blue-100 dark:border-blue-900/30 gap-4">
-                                            <span className="font-medium flex-1 min-w-0 break-words pt-0.5">
-                                                {item.name} <span className="text-muted-foreground font-normal text-xs block sm:inline">({item.code})</span>
+                {/* Modified */}
+                {modified.length > 0 && (
+                    <div className="space-y-2">
+                        <h4 className="text-sm font-semibold flex items-center gap-2 text-amber-600">
+                            <ArrowRightLeft className="w-4 h-4" /> {t('compModified')}
+                        </h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {modified.map((item: any) => {
+                                const diffVal = item.newQty - item.oldQty
+                                const isPos = diffVal > 0
+                                return (
+                                    <div key={item.code} className="bg-amber-50/50 dark:bg-amber-900/10 p-2.5 rounded flex justify-between items-start text-sm border border-amber-100 dark:border-amber-900/30 gap-4">
+                                        <span className="font-medium flex-1 min-w-0 break-words pt-0.5">
+                                            {item.name} <span className="text-muted-foreground font-normal text-xs block sm:inline">({item.code})</span>
+                                        </span>
+                                        <div className="flex items-center gap-2 whitespace-nowrap shrink-0 pt-0.5">
+                                            <span className="text-muted-foreground line-through text-xs font-normal">{formatNumber(item.oldQty)}</span>
+                                            <ArrowRight className="w-3 h-3 text-muted-foreground opacity-50" />
+                                            <span className="font-bold">{formatNumber(item.newQty)}{t('countUnit')}</span>
+                                            <span className={isPos ? "text-red-500 border border-red-200 ml-1 px-1.5 py-0.5 rounded text-[10px] font-medium" : "text-blue-500 border border-blue-200 ml-1 px-1.5 py-0.5 rounded text-[10px] font-medium"}>
+                                                {isPos ? '+' : ''}{formatNumber(diffVal)}
                                             </span>
-                                            <span className="text-muted-foreground whitespace-nowrap shrink-0 pt-0.5 font-medium">{formatNumber(item.quantity)}{t('countUnit')}</span>
                                         </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Modified */}
-                        {modified.length > 0 && (
-                            <div className="space-y-2">
-                                <h4 className="text-sm font-semibold flex items-center gap-2 text-amber-600">
-                                    <ArrowRightLeft className="w-4 h-4" /> {t('compModified')}
-                                </h4>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                    {modified.map((item: any) => {
-                                        const diffVal = item.newQty - item.oldQty
-                                        const isPos = diffVal > 0
-                                        return (
-                                            <div key={item.code} className="bg-amber-50/50 dark:bg-amber-900/10 p-2.5 rounded flex justify-between items-start text-sm border border-amber-100 dark:border-amber-900/30 gap-4">
-                                                <span className="font-medium flex-1 min-w-0 break-words pt-0.5">
-                                                    {item.name} <span className="text-muted-foreground font-normal text-xs block sm:inline">({item.code})</span>
-                                                </span>
-                                                <div className="flex items-center gap-2 whitespace-nowrap shrink-0 pt-0.5">
-                                                    <span className="text-muted-foreground line-through text-xs font-normal">{formatNumber(item.oldQty)}</span>
-                                                    <ArrowRight className="w-3 h-3 text-muted-foreground opacity-50" />
-                                                    <span className="font-bold">{formatNumber(item.newQty)}{t('countUnit')}</span>
-                                                    <Badge variant="outline" className={isPos ? "text-red-500 border-red-200 ml-1 px-1 h-5 text-[10px]" : "text-blue-500 border-blue-200 ml-1 px-1 h-5 text-[10px]"}>
-                                                        {isPos ? '+' : ''}{formatNumber(diffVal)}
-                                                    </Badge>
-                                                </div>
-                                            </div>
-                                        )
-                                    })}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Removed */}
-                        {removed.length > 0 && (
-                            <div className="space-y-2">
-                                <h4 className="text-sm font-semibold flex items-center gap-2 text-red-600">
-                                    <Minus className="w-4 h-4" /> {t('compRemoved')}
-                                </h4>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                    {removed.map((item: any) => (
-                                        <div key={item.code} className="bg-red-50/50 dark:bg-red-900/10 p-2.5 rounded flex justify-between items-start text-sm border border-red-100 dark:border-red-900/30 gap-4">
-                                            <span className="font-medium flex-1 min-w-0 break-words pt-0.5">
-                                                {item.name} <span className="text-muted-foreground font-normal text-xs block sm:inline">({item.code})</span>
-                                            </span>
-                                            <span className="text-muted-foreground line-through whitespace-nowrap shrink-0 pt-0.5 font-medium">{formatNumber(item.quantity)}{t('countUnit')}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
+                                    </div>
+                                )
+                            })}
+                        </div>
                     </div>
-                </div>
-            </CardContent>
-        </Card>
+                )}
+
+                {/* Removed */}
+                {removed.length > 0 && (
+                    <div className="space-y-2">
+                        <h4 className="text-sm font-semibold flex items-center gap-2 text-red-600">
+                            <Minus className="w-4 h-4" /> {t('compRemoved')}
+                        </h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {removed.map((item: any) => (
+                                <div key={item.code} className="bg-red-50/50 dark:bg-red-900/10 p-2.5 rounded flex justify-between items-start text-sm border border-red-100 dark:border-red-900/30 gap-4">
+                                    <span className="font-medium flex-1 min-w-0 break-words pt-0.5">
+                                        {item.name} <span className="text-muted-foreground font-normal text-xs block sm:inline">({item.code})</span>
+                                    </span>
+                                    <span className="text-muted-foreground line-through whitespace-nowrap shrink-0 pt-0.5 font-medium">{formatNumber(item.quantity)}{t('countUnit')}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
     )
 }
