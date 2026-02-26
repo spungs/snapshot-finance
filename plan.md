@@ -1,7 +1,7 @@
-# Snapshot Finance 개발 실행 계획
+# Snapshot Finance
 
 **작성일:** 2025-11-25  
-**최종 업데이트:** 2025-12-31 (User Profile Dropdown & Auto-Snapshot Settings)  
+**최종 업데이트:** 2026-02-26 (README.md 업데이트)  
 **목표:** 개인용 주식 잔고 관리 MVP (무료 플랜)
 
 ---
@@ -47,14 +47,13 @@
 - [x] **스케줄링**: 월~금(UTC) 스냅샷 생성 / 매일 유저 정리 자동화
 - [x] **Weekly Snapshot 최적화**: 금요일 22:30 UTC (토요일 07:30 KST) 실행 및 중복 방지 로직 추가
 - [x] 구글 애드센스 검증 파일 추가 (`ads.txt`)
-- [x] 구글 애드센스 검증 파일 추가 (`ads.txt`)
-- [x] 구글 애드센스 검증 파일 추가 (`ads.txt`)
 - [x] 스냅샷 목록 버그 수정 (사용자 ID 연동)
 - [x] [Bug] Korean Search: Korean stock names not found (Result: "Invalid Search Query") -> Fixed with full KIS master seed and improved fallback
 - [x] [UX] Delete Holding: Disable row and show loading state during deletion)
 - [x] [Fix] Build Error: Fix type mismatch in i18n context (`t` function)
 - [x] [Fix] KIS API Token 자동 갱신: 토큰 만료 시 자동으로 재발급 및 재시도 로직 구현
 - [x] [Docs] 가이드 콘텐츠 수정: 수익률 표 순수익 기준 변경 및 양도소득세 공제 내용 추가
+- [x] [Docs] README.md 업데이트: 프로젝트 개요, 기술 스택, 주요 기능 및 아키텍처 정리
 
 ---
 
