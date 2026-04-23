@@ -211,7 +211,7 @@ export function AiChat({ holdings }: AiChatProps) {
         <>
             <button
                 onClick={() => setOpen(true)}
-                className="fixed bottom-6 right-6 z-40 w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 transition-colors"
+                className="fixed bottom-20 right-4 z-40 w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 transition-colors"
                 aria-label="AI 어시스턴트 열기"
             >
                 <Sparkles className="w-5 h-5" />
