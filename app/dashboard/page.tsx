@@ -6,7 +6,6 @@ import { redirect } from 'next/navigation'
 
 import { HoldingsManager } from '@/components/dashboard/holdings-manager'
 import { DashboardRefreshWrapper } from '@/components/dashboard/dashboard-refresh-wrapper'
-import { AiChat } from '@/components/dashboard/ai-chat'
 
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -32,15 +31,6 @@ export default async function DashboardPage() {
     summary: data.summary || { totalCost: 0, totalValue: 0, totalProfit: 0, totalProfitRate: 0, holdingsCount: 0, targetAsset: 0 }
   } : undefined
 
-  const aiChatHoldings = (initialData?.holdings || []).map(h => ({
-    id: h.id,
-    stockId: h.stockId,
-    stockName: h.stockName,
-    quantity: h.quantity,
-    averagePrice: h.averagePrice,
-    currency: h.currency,
-  }))
-
   return (
     <DashboardRefreshWrapper cashBalance={initialData?.summary?.cashBalance}>
       {/* 잔고 관리 */}
@@ -53,8 +43,6 @@ export default async function DashboardPage() {
           }}
         />
       </Suspense>
-
-      <AiChat holdings={aiChatHoldings} />
     </DashboardRefreshWrapper>
   )
 }

@@ -26,10 +26,11 @@ interface Message {
 }
 
 interface AiChatProps {
-    holdings: HoldingContext[]
+    isAuthenticated?: boolean
 }
 
-export function AiChat({ holdings }: AiChatProps) {
+export function AiChat({ isAuthenticated = false }: AiChatProps) {
+    const [holdings, setHoldings] = useState<HoldingContext[]>([])
     const [open, setOpen] = useState(false)
     const [messages, setMessages] = useState<Message[]>([])
     const [input, setInput] = useState('')
@@ -39,15 +40,30 @@ export function AiChat({ holdings }: AiChatProps) {
     const inputRef = useRef<HTMLInputElement>(null)
     const router = useRouter()
 
+    if (!isAuthenticated) return null
+
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
     }, [messages])
 
+    const fetchHoldingsData = useCallback(async () => {
+        try {
+            const res = await fetch('/api/holdings')
+            const data = await res.json()
+            if (data.success && data.data?.holdings) {
+                setHoldings(data.data.holdings)
+            }
+        } catch (err) {
+            console.error('Failed to fetch holdings for AI chat', err)
+        }
+    }, [])
+
     useEffect(() => {
         if (open) {
             setTimeout(() => inputRef.current?.focus(), 150)
+            fetchHoldingsData()
         }
-    }, [open])
+    }, [open, fetchHoldingsData])
 
     const sendMessage = useCallback(async () => {
         const trimmed = input.trim()
@@ -192,6 +208,7 @@ export function AiChat({ holdings }: AiChatProps) {
             setMessages(prev => prev.map((m, i) =>
                 i === msgIndex ? { ...m, actionState: 'confirmed' } : m
             ))
+            await fetchHoldingsData()
             router.refresh()
         } catch (e: unknown) {
             const message = e instanceof Error ? e.message : '실행에 실패했습니다.'
@@ -211,7 +228,7 @@ export function AiChat({ holdings }: AiChatProps) {
         <>
             <button
                 onClick={() => setOpen(true)}
-                className="fixed bottom-20 right-4 z-40 w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 transition-colors"
+                className="z-40 w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 transition-colors"
                 aria-label="AI 어시스턴트 열기"
             >
                 <Sparkles className="w-5 h-5" />

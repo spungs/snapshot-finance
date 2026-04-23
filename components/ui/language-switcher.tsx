@@ -14,7 +14,7 @@ export function LanguageSwitcher() {
     const { language, setLanguage } = useLanguage()
 
     return (
-        <div className="fixed bottom-4 right-4 z-50">
+        <div className="z-50">
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="icon" className="rounded-full h-12 w-12 shadow-lg bg-background">

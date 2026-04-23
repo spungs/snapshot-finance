@@ -40,17 +40,21 @@ export const metadata: Metadata = {
 
 import { LanguageProvider } from '@/lib/i18n/context'
 import { LanguageSwitcher } from '@/components/ui/language-switcher'
+import { AiChat } from '@/components/dashboard/ai-chat'
 import { CurrencyProvider } from '@/lib/currency/context'
+import { auth } from '@/lib/auth'
+import { FloatingContainer } from '@/components/ui/floating-container'
 
 
 
 import { HistoryInit } from '@/components/history-init'
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const session = await auth()
   return (
     <html lang="en">
       <head>
@@ -69,7 +73,10 @@ export default function RootLayout({
         <LanguageProvider>
           <CurrencyProvider>
             {children}
-            <LanguageSwitcher />
+            <FloatingContainer>
+              <AiChat isAuthenticated={!!session} />
+              <LanguageSwitcher />
+            </FloatingContainer>
           </CurrencyProvider>
         </LanguageProvider>
       </body>
