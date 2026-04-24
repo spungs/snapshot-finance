@@ -36,6 +36,7 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
+  --color-card-hover: var(--card-hover);
   --color-card: var(--card);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -47,75 +48,78 @@
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-  --profit: oklch(0.637 0.237 25.331);
-  --loss: oklch(0.546 0.245 262.88);
+  --background: hsl(210 20% 98%);
+  --foreground: hsl(222 84% 5%);
+  --card: hsl(0 0% 100%);
+  --card-hover: hsl(210 20% 96%);
+  --card-foreground: hsl(222 84% 5%);
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(222 84% 5%);
+  --primary: hsl(217 91% 60%);
+  --primary-foreground: hsl(210 40% 98%);
+  --secondary: hsl(210 40% 96.1%);
+  --secondary-foreground: hsl(215 16% 47%);
+  --muted: hsl(210 40% 96.1%);
+  --muted-foreground: hsl(215 16% 47%);
+  --accent: hsl(210 40% 96.1%);
+  --accent-foreground: hsl(222 84% 5%);
+  --destructive: hsl(0 84.2% 60.2%);
+  --border: hsl(214 32% 91%);
+  --input: hsl(214 32% 91%);
+  --ring: hsl(217 91% 60%);
+  --chart-1: hsl(12 76% 61%);
+  --chart-2: hsl(173 58% 39%);
+  --chart-3: hsl(197 37% 24%);
+  --chart-4: hsl(43 74% 66%);
+  --chart-5: hsl(27 87% 67%);
+  --sidebar: hsl(210 20% 98%);
+  --sidebar-foreground: hsl(222 84% 5%);
+  --sidebar-primary: hsl(222 84% 5%);
+  --sidebar-primary-foreground: hsl(210 40% 98%);
+  --sidebar-accent: hsl(210 40% 96.1%);
+  --sidebar-accent-foreground: hsl(222.2 47.4% 11.2%);
+  --sidebar-border: hsl(214 32% 91%);
+  --sidebar-ring: hsl(217 91% 60%);
+  --profit: #f43f5e;
+  --loss: #3b82f6;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
-  --profit: oklch(0.637 0.237 25.331);
-  --loss: oklch(0.627 0.265 303.9);
+  color-scheme: dark;
+  --background: hsl(224 71% 4%);
+  --foreground: hsl(210 40% 98%);
+  --card: hsl(224 71% 8%);
+  --card-hover: hsl(224 71% 11%);
+  --card-foreground: hsl(210 40% 98%);
+  --popover: hsl(224 71% 8%);
+  --popover-foreground: hsl(210 40% 98%);
+  --primary: hsl(217 91% 60%);
+  --primary-foreground: hsl(210 40% 98%);
+  --secondary: hsl(224 71% 11%);
+  --secondary-foreground: hsl(215 20% 65%);
+  --muted: hsl(224 71% 11%);
+  --muted-foreground: hsl(215 20% 65%);
+  --accent: hsl(224 71% 11%);
+  --accent-foreground: hsl(210 40% 98%);
+  --destructive: hsl(0 72% 51%);
+  --border: hsl(224 71% 18% / 0.7);
+  --input: hsl(224 71% 18% / 0.7);
+  --ring: hsl(217 91% 60%);
+  --chart-1: hsl(220 70% 50%);
+  --chart-2: hsl(160 60% 45%);
+  --chart-3: hsl(30 80% 55%);
+  --chart-4: hsl(280 65% 60%);
+  --chart-5: hsl(340 75% 55%);
+  --sidebar: hsl(224 71% 4%);
+  --sidebar-foreground: hsl(210 40% 98%);
+  --sidebar-primary: hsl(217 91% 60%);
+  --sidebar-primary-foreground: hsl(210 40% 98%);
+  --sidebar-accent: hsl(224 71% 11%);
+  --sidebar-accent-foreground: hsl(210 40% 98%);
+  --sidebar-border: hsl(224 71% 16% / 0.6);
+  --sidebar-ring: hsl(217 91% 60%);
+  --profit: #f43f5e;
+  --loss: #3b82f6;
 }
 
 @layer base {
@@ -127,6 +131,53 @@
   body {
     @apply bg-background text-foreground;
     overscroll-behavior-y: none;
+  }
+}
+
+@layer utilities {
+  /* 금액, 수익률 등 숫자 요소에 적용 */
+  .numeric {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+
+  /* 금융 테이블 본문 전체에 tabular-nums 전역 적용 */
+  [data-slot="table-body"] [data-slot="table-cell"] {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+
+  /* 다크 모드 카드 — 블러 없이 깊이감 구현 */
+  .card-elevated {
+    background: var(--card);
+    border-top: 1px solid var(--border);
+    box-shadow: 0 4px 24px hsl(224 71% 4% / 0.6);
+  }
+
+  /* 수익/손실 배지 글로우 */
+  .badge-profit-glow {
+    box-shadow: 0 0 10px color-mix(in srgb, var(--profit) 25%, transparent);
+  }
+
+  .badge-loss-glow {
+    box-shadow: 0 0 10px color-mix(in srgb, var(--loss) 25%, transparent);
+  }
+}
+
+@layer base {
+  /* Dark mode: 모든 카드에 Elevated Surface 효과 */
+  .dark [data-slot="card"] {
+    border-color: hsl(224 71% 22% / 0.45);
+    box-shadow:
+      inset 0 1px 0 hsl(224 71% 38% / 0.12),
+      0 4px 24px hsl(224 71% 2% / 0.65);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
   }
 }
 

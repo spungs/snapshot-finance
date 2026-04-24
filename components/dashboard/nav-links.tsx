@@ -52,8 +52,8 @@ export function NavLinks({ user }: NavLinksProps) {
                         className={cn(
                             'px-2 sm:px-3 py-2 rounded-md text-xs sm:text-sm font-medium whitespace-nowrap',
                             pathname === link.href
-                                ? 'bg-gray-900 text-white'
-                                : 'text-gray-900 hover:bg-gray-100'
+                                ? 'bg-primary text-primary-foreground'
+                                : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                         )}
                     >
                         {link.label}
@@ -69,7 +69,7 @@ export function NavLinks({ user }: NavLinksProps) {
             {!user && (
                 <Link
                     href="/dashboard"
-                    className="px-2 sm:px-3 py-2 rounded-md text-gray-900 hover:bg-gray-100 text-xs sm:text-sm font-medium"
+                    className="px-2 sm:px-3 py-2 rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground text-xs sm:text-sm font-medium"
                 >
                     {t.landing.login}
                 </Link>

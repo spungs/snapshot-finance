@@ -12,7 +12,7 @@ export default async function DashboardLayout({
 }) {
   const session = await auth()
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <MainNav user={session?.user} />
 
