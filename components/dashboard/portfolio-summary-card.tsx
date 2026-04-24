@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils'
 import { useLanguage } from '@/lib/i18n/context'
 import { Currency, useCurrency } from '@/lib/currency/context'
 import { CashBalanceDialog } from './cash-balance-dialog'
-import { Info } from 'lucide-react'
+import { Info, TrendingUp, TrendingDown } from 'lucide-react'
 import {
   Tooltip,
   TooltipContent,
@@ -161,50 +161,70 @@ export function PortfolioSummaryCard({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-          {/* 총 자산 */}
-          <div className="lg:col-span-1">
-            <p className="text-xs sm:text-sm text-muted-foreground mb-1">{t('totalValue')}</p>
-            <p className="text-xl sm:text-2xl font-bold text-primary">{formatCurrency(displayValue, currency)}</p>
+        {/* Hero: 총 자산 + 수익률 Pill */}
+        <div className="flex flex-col lg:flex-row gap-6 lg:gap-10 lg:items-end">
+          {/* 총 자산 (Hero Number) */}
+          <div className="flex-shrink-0">
+            <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium mb-2">
+              {t('totalValue')}
+            </p>
+            <p className="text-3xl sm:text-4xl font-bold text-foreground numeric leading-none">
+              {formatCurrency(displayValue, currency)}
+            </p>
+            <div className="mt-3 flex items-center gap-3 flex-wrap">
+              {/* 수익률 Pill Badge */}
+              <span className={cn(
+                "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border",
+                isProfit
+                  ? "bg-profit/10 text-profit border-profit/30"
+                  : "bg-loss/10 text-loss border-loss/30"
+              )}>
+                {isProfit ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                {isProfit ? '+' : ''}{formatProfitRate(profitRate)}
+              </span>
+              {/* 평가손익 금액 */}
+              <span className={cn(
+                "text-sm font-medium numeric",
+                isProfit ? "text-profit" : "text-loss"
+              )}>
+                {isProfit ? '+' : '-'}{formatCurrency(Math.abs(displayProfit), currency)}
+              </span>
+            </div>
           </div>
 
-          {/* 자산 구성 (주식/현금) */}
-          <div>
-            <p className="text-xs text-muted-foreground mb-1">{t('stockValue')}</p>
-            <div className="flex items-baseline gap-2">
-              <p className="text-lg font-semibold">{formatCurrency(displayStockValue, currency)}</p>
+          {/* Sub-metrics: 주식가치 / 예수금 / 종목수 */}
+          <div className="grid grid-cols-3 gap-x-6 gap-y-1 lg:ml-auto">
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">{t('stockValue')}</p>
+              <p className="text-sm font-semibold numeric">{formatCurrency(displayStockValue, currency)}</p>
               {displayValue > 0 && (
-                <span className="text-sm text-muted-foreground">
-                  ({((displayStockValue / displayValue) * 100).toFixed(1)}%)
-                </span>
+                <p className="text-xs text-muted-foreground">
+                  {((displayStockValue / displayValue) * 100).toFixed(1)}%
+                </p>
               )}
             </div>
-          </div>
-
-          <div>
-            <div className="flex items-center gap-1 mb-1">
-              <p className="text-xs text-muted-foreground">{t('cash')}</p>
-              {isEditable && (
-                <CashBalanceDialog
-                  initialBalance={props.cashBalance || 0}
-                  currency={currency}
-                  exchangeRate={exchangeRate}
-                />
-              )}
-            </div>
-            <div className="flex items-baseline gap-2">
-              <p className="text-lg font-semibold">{formatCurrency(displayCash, currency)}</p>
+            <div>
+              <div className="flex items-center gap-1 mb-1">
+                <p className="text-xs text-muted-foreground">{t('cash')}</p>
+                {isEditable && (
+                  <CashBalanceDialog
+                    initialBalance={props.cashBalance || 0}
+                    currency={currency}
+                    exchangeRate={exchangeRate}
+                  />
+                )}
+              </div>
+              <p className="text-sm font-semibold numeric">{formatCurrency(displayCash, currency)}</p>
               {displayValue > 0 && (
-                <span className="text-sm text-muted-foreground">
-                  ({((displayCash / displayValue) * 100).toFixed(1)}%)
-                </span>
+                <p className="text-xs text-muted-foreground">
+                  {((displayCash / displayValue) * 100).toFixed(1)}%
+                </p>
               )}
             </div>
-          </div>
-
-          <div>
-            <p className="text-xs text-muted-foreground mb-1">{t('holdings')}</p>
-            <p className="text-lg font-semibold">{holdingsCount}{t('countUnit')}</p>
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">{t('holdings')}</p>
+              <p className="text-sm font-semibold">{holdingsCount}{t('countUnit')}</p>
+            </div>
           </div>
         </div>
 
@@ -233,39 +253,29 @@ export function PortfolioSummaryCard({
           <Progress value={Math.min(achievementRate, 100)} className="h-2" />
         </div>
 
-        <div className="col-span-full border-t border-border pt-4 mt-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        <div className="border-t border-border/60 pt-4 mt-6">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
             {/* 총 매입금액 */}
-            <div className="lg:col-span-1">
-              <p className="text-xs sm:text-sm text-muted-foreground mb-1">{t('totalInvested')}</p>
-              <p className="text-lg font-semibold text-foreground">
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">{t('totalInvested')}</p>
+              <p className="text-sm font-semibold text-foreground numeric">
                 {formatCurrency(displayCost, currency)}
               </p>
             </div>
 
             {/* 평가손익 (투자) */}
             <div>
-              <p className="text-xs sm:text-sm text-muted-foreground mb-1">{t('plInvest')}</p>
-              <p
-                className={cn(
-                  'text-lg font-bold',
-                  isProfit ? 'text-red-600' : 'text-blue-600'
-                )}
-              >
-                {formatCurrency(Math.abs(displayProfit), currency)}
+              <p className="text-xs text-muted-foreground mb-1">{t('plInvest')}</p>
+              <p className={cn('text-sm font-bold numeric', isProfit ? 'text-profit' : 'text-loss')}>
+                {isProfit ? '+' : '-'}{formatCurrency(Math.abs(displayProfit), currency)}
               </p>
             </div>
 
             {/* 수익률 */}
             <div>
-              <p className="text-xs sm:text-sm text-muted-foreground mb-1">{t('returnRate')}</p>
-              <p
-                className={cn(
-                  'text-lg font-bold',
-                  isProfit ? 'text-red-600' : 'text-blue-600'
-                )}
-              >
-                {formatProfitRate(profitRate)}
+              <p className="text-xs text-muted-foreground mb-1">{t('returnRate')}</p>
+              <p className={cn('text-sm font-bold numeric', isProfit ? 'text-profit' : 'text-loss')}>
+                {isProfit ? '+' : ''}{formatProfitRate(profitRate)}
               </p>
             </div>
 
