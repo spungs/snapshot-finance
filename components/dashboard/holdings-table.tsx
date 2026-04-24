@@ -263,7 +263,7 @@ export function HoldingsTable({ holdings, exchangeRate, totalValue: propTotalVal
                         <div className="text-xs text-muted-foreground">{t('pl')}</div>
                         <div className={cn(
                           "font-medium",
-                          isProfit ? 'text-red-600' : 'text-blue-600'
+                          isProfit ? 'text-profit' : 'text-loss'
                         )}>
                           {formatCurrency(Math.abs(Number(holding.profit)), currency)}
                         </div>
@@ -282,7 +282,7 @@ export function HoldingsTable({ holdings, exchangeRate, totalValue: propTotalVal
                         <div className="text-xs text-muted-foreground">{t('returnRate')}</div>
                         <div className={cn(
                           "font-bold text-lg",
-                          isProfit ? 'text-red-600' : 'text-blue-600'
+                          isProfit ? 'text-profit' : 'text-loss'
                         )}>
                           {formatProfitRate(Number(holding.profitRate))}
                         </div>
@@ -322,6 +322,11 @@ export function HoldingsTable({ holdings, exchangeRate, totalValue: propTotalVal
                     {filteredHoldings.map((holding) => {
                       const isProfit = Number(holding.profit) >= 0
                       const currency = holding.currency || 'KRW'
+                      const weight = totalValue
+                        ? ((holding.currency === 'USD' && exchangeRate
+                            ? Number(holding.currentValue) * exchangeRate
+                            : Number(holding.currentValue)) / totalValue) * 100
+                        : 0
                       return (
                         <TableRow key={holding.id}>
                           <TableCell>
@@ -375,7 +380,7 @@ export function HoldingsTable({ holdings, exchangeRate, totalValue: propTotalVal
                           <TableCell
                             className={cn(
                               'text-right font-medium',
-                              isProfit ? 'text-red-600' : 'text-blue-600'
+                              isProfit ? 'text-profit' : 'text-loss'
                             )}
                           >
                             <div className="flex flex-col items-end">
@@ -395,15 +400,21 @@ export function HoldingsTable({ holdings, exchangeRate, totalValue: propTotalVal
                           <TableCell
                             className={cn(
                               'text-right font-bold',
-                              isProfit ? 'text-red-600' : 'text-blue-600'
+                              isProfit ? 'text-profit' : 'text-loss'
                             )}
                           >
                             {formatProfitRate(Number(holding.profitRate))}
                           </TableCell>
-                          <TableCell className="text-right font-medium">
-                            <span className="inline-block bg-muted/50 rounded px-2 py-0.5 text-xs">
-                              {formatNumber(totalValue ? ((holding.currency === 'USD' && exchangeRate ? Number(holding.currentValue) * exchangeRate : Number(holding.currentValue)) / totalValue) * 100 : 0, 1)}%
-                            </span>
+                          <TableCell className="text-right">
+                            <div className="flex flex-col items-end gap-1.5">
+                              <span className="text-xs numeric text-foreground">{formatNumber(weight, 1)}%</span>
+                              <div className="w-14 h-[3px] bg-muted rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-primary/70 rounded-full"
+                                  style={{ width: `${Math.min(weight, 100)}%` }}
+                                />
+                              </div>
+                            </div>
                           </TableCell>
                         </TableRow>
                       )

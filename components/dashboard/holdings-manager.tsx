@@ -22,7 +22,7 @@ import { StockSearchCombobox } from '@/components/dashboard/stock-search-combobo
 import { PortfolioSummaryCard } from '@/components/dashboard/portfolio-summary-card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { FormattedNumberInput } from '@/components/ui/formatted-number-input'
-import { Plus, Trash2, Camera, Edit2, Check, X, Loader2, ListCheck, AlertCircle } from 'lucide-react'
+import { Plus, Trash2, Camera, Edit2, Check, X, Loader2, ListCheck, AlertCircle, Info, Lock, RotateCcw, Wallet } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
@@ -183,12 +183,20 @@ export function HoldingsManager({ initialHoldings, summary, triggerRefresh }: Ho
 
             // Handle number comparison
             if (key !== 'stockName') {
-                if (key === 'weight') {
-                    // Sorting by weight is equivalent to sorting by normalized current value
-                    const getNormalizedVal = (h: Holding) => (h.currency === 'USD' && summary?.exchangeRate) ? h.currentValue * summary.exchangeRate : h.currentValue
-                    return (getNormalizedVal(a) - getNormalizedVal(b)) * modifier
+                // Fields that need currency normalization
+                const currencyFields: SortKey[] = ['averagePrice', 'currentPrice', 'totalCost', 'currentValue', 'profit', 'weight']
+
+                if (currencyFields.includes(key)) {
+                    const getNormalizedVal = (h: Holding, field: SortKey) => {
+                        // For 'weight', we sort by current value. For others, we use the field itself.
+                        const val = field === 'weight' ? h.currentValue : (h[field as keyof Holding] as number)
+                        return (h.currency === 'USD' && summary?.exchangeRate) ? val * summary.exchangeRate : val
+                    }
+                    return (getNormalizedVal(a, key) - getNormalizedVal(b, key)) * modifier
                 }
-                return (a[key] - b[key]) * modifier
+
+                // Default number comparison for non-currency fields (like profitRate, quantity)
+                return ((a[key as keyof Holding] as number) - (b[key as keyof Holding] as number)) * modifier
             }
 
             // Handle string comparison
@@ -396,9 +404,62 @@ export function HoldingsManager({ initialHoldings, summary, triggerRefresh }: Ho
 
     if (loading) {
         return (
-            <div className="space-y-4">
-                <Skeleton className="h-32 w-full" />
-                <Skeleton className="h-64 w-full" />
+            <div className="space-y-6">
+                {/* 포트폴리오 요약 카드 스켈레톤 */}
+                <Card>
+                    <CardHeader>
+                        <Skeleton className="h-5 w-32" />
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        <div className="flex flex-col lg:flex-row gap-6 lg:gap-10">
+                            <div className="space-y-3">
+                                <Skeleton className="h-3 w-20" />
+                                <Skeleton className="h-10 w-52" />
+                                <div className="flex items-center gap-3">
+                                    <Skeleton className="h-6 w-16 rounded-full" />
+                                    <Skeleton className="h-5 w-28" />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-3 gap-6 lg:ml-auto">
+                                {[0, 1, 2].map(i => (
+                                    <div key={i} className="space-y-1.5">
+                                        <Skeleton className="h-3 w-16" />
+                                        <Skeleton className="h-4 w-24" />
+                                        <Skeleton className="h-3 w-10" />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                        <Skeleton className="h-2 w-full rounded-full" />
+                    </CardContent>
+                </Card>
+
+                {/* 잔고 테이블 스켈레톤 */}
+                <Card>
+                    <CardHeader className="pb-2">
+                        <Skeleton className="h-5 w-40" />
+                    </CardHeader>
+                    <CardContent className="p-0">
+                        {[0, 1, 2, 3, 4].map(i => (
+                            <div
+                                key={i}
+                                className="flex items-center gap-4 px-4 py-3 border-b border-border/40 last:border-0"
+                            >
+                                <div className="flex-1 space-y-1.5">
+                                    <Skeleton className="h-4 w-24" />
+                                    <Skeleton className="h-3 w-14" />
+                                </div>
+                                <Skeleton className="h-4 w-12 hidden md:block" />
+                                <Skeleton className="h-4 w-20 hidden md:block" />
+                                <Skeleton className="h-4 w-20 hidden md:block" />
+                                <div className="ml-auto flex flex-col items-end gap-1.5">
+                                    <Skeleton className="h-3 w-8" />
+                                    <Skeleton className="h-[3px] w-14" />
+                                </div>
+                            </div>
+                        ))}
+                    </CardContent>
+                </Card>
             </div>
         )
     }
@@ -406,9 +467,22 @@ export function HoldingsManager({ initialHoldings, summary, triggerRefresh }: Ho
     if (error) {
         return (
             <Card>
-                <CardContent className="py-8 text-center">
-                    <p className="text-destructive mb-4">{error}</p>
-                    <Button onClick={() => fetchHoldings()}>{t('retry')}</Button>
+                <CardContent className="py-16">
+                    <div className="flex flex-col items-center gap-4 max-w-xs mx-auto text-center">
+                        <div className="rounded-full bg-destructive/10 p-4">
+                            <AlertCircle className="h-7 w-7 text-destructive" />
+                        </div>
+                        <div className="space-y-1">
+                            <p className="font-semibold">
+                                {language === 'ko' ? '데이터를 불러오지 못했습니다' : 'Failed to load data'}
+                            </p>
+                            <p className="text-sm text-muted-foreground">{error}</p>
+                        </div>
+                        <Button variant="outline" size="sm" onClick={fetchHoldings} className="gap-2">
+                            <RotateCcw className="h-3.5 w-3.5" />
+                            {t('retry')}
+                        </Button>
+                    </div>
                 </CardContent>
             </Card>
         )
@@ -550,9 +624,22 @@ export function HoldingsManager({ initialHoldings, summary, triggerRefresh }: Ho
 
                             <div className="ml-auto flex items-center gap-2">
                                 {!isDragEnabled && (
-                                    <Badge variant="destructive" className="text-[10px] h-5 px-1.5 font-normal">
-                                        {t('customSortDisabled')}
-                                    </Badge>
+                                    <TooltipProvider>
+                                        <Tooltip delayDuration={300}>
+                                            <TooltipTrigger asChild>
+                                                <Badge
+                                                    variant="secondary"
+                                                    className="bg-amber-50/50 dark:bg-amber-900/10 text-amber-600 dark:text-amber-400 border-amber-200/50 dark:border-amber-800/30 text-[10px] h-5 px-1.5 font-medium cursor-help gap-1 transition-all hover:bg-amber-100/50"
+                                                >
+                                                    <Lock className="w-2.5 h-2.5" />
+                                                    {t('customSortDisabled')}
+                                                </Badge>
+                                            </TooltipTrigger>
+                                            <TooltipContent className="max-w-[250px] text-xs">
+                                                <p>{t('customSortDisabledTooltip')}</p>
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    </TooltipProvider>
                                 )}
                                 {(filterConfig.market !== 'all' || filterConfig.profitStatus !== 'all') && (
                                     <Button
@@ -580,8 +667,37 @@ export function HoldingsManager({ initialHoldings, summary, triggerRefresh }: Ho
                     <CardContent className="p-0">
                         <div className={cn("transition-opacity duration-200", (isRefreshing || savingSnapshot) && "opacity-60 pointer-events-none")}>
                             {filteredHoldings.length === 0 ? (
-                                <div className="py-12 text-center text-muted-foreground">
-                                    {holdings.length === 0 ? t('holdingsEmpty') : t('filterEmpty')}
+                                <div className="py-16 flex flex-col items-center gap-4 text-center">
+                                    {holdings.length === 0 ? (
+                                        <>
+                                            <div className="rounded-full bg-muted p-5">
+                                                <Wallet className="h-7 w-7 text-muted-foreground" />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <p className="font-medium">{t('holdingsEmpty')}</p>
+                                                <p className="text-sm text-muted-foreground">
+                                                    {language === 'ko'
+                                                        ? '위 양식에서 첫 종목을 추가해보세요.'
+                                                        : 'Add your first stock using the form above.'}
+                                                </p>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Filter className="h-6 w-6 text-muted-foreground/40" />
+                                            <div className="space-y-1">
+                                                <p className="text-sm text-muted-foreground">{t('filterEmpty')}</p>
+                                            </div>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-7 text-xs"
+                                                onClick={() => setFilterConfig({ market: 'all', profitStatus: 'all' })}
+                                            >
+                                                {t('resetFilter')}
+                                            </Button>
+                                        </>
+                                    )}
                                 </div>
                             ) : (
                                 <>
@@ -732,7 +848,7 @@ export function HoldingsManager({ initialHoldings, summary, triggerRefresh }: Ho
                                                             <div className="text-xs text-muted-foreground">{t('pl')}</div>
                                                             <div className={cn(
                                                                 "font-medium",
-                                                                isProfit ? 'text-red-600' : 'text-blue-600'
+                                                                isProfit ? 'text-profit' : 'text-loss'
                                                             )}>
                                                                 {formatCurrency(Math.abs(holding.profit), currency)}
                                                             </div>
@@ -751,7 +867,7 @@ export function HoldingsManager({ initialHoldings, summary, triggerRefresh }: Ho
                                                             <div className="text-xs text-muted-foreground">{t('returnRate')}</div>
                                                             <div className={cn(
                                                                 "font-bold text-lg",
-                                                                isProfit ? 'text-red-600' : 'text-blue-600'
+                                                                isProfit ? 'text-profit' : 'text-loss'
                                                             )}>
                                                                 {formatProfitRate(holding.profitRate)}
                                                             </div>
@@ -856,6 +972,11 @@ export function HoldingsManager({ initialHoldings, summary, triggerRefresh }: Ho
                                                             {filteredHoldings.map((holding) => {
                                                                 const isProfit = holding.profit >= 0
                                                                 const isEditing = editingId === holding.id
+                                                                const weight = summary?.totalValue
+                                                                    ? ((holding.currency === 'USD' && summary?.exchangeRate
+                                                                        ? holding.currentValue * summary.exchangeRate
+                                                                        : holding.currentValue) / summary.totalValue) * 100
+                                                                    : 0
 
                                                                 return (
                                                                     <SortableTableRow
@@ -932,7 +1053,7 @@ export function HoldingsManager({ initialHoldings, summary, triggerRefresh }: Ho
                                                                             </div>
                                                                         </TableCell>
                                                                         <TableCell
-                                                                            className={cn('text-right', isProfit ? 'text-red-600' : 'text-blue-600')}
+                                                                            className={cn('text-right', isProfit ? 'text-profit' : 'text-loss')}
                                                                         >
                                                                             <div className="flex flex-col items-end">
                                                                                 <span>{formatCurrency(Math.abs(holding.profit), holding.currency)}</span>
@@ -951,15 +1072,21 @@ export function HoldingsManager({ initialHoldings, summary, triggerRefresh }: Ho
                                                                         <TableCell
                                                                             className={cn(
                                                                                 'text-right font-bold',
-                                                                                isProfit ? 'text-red-600' : 'text-blue-600'
+                                                                                isProfit ? 'text-profit' : 'text-loss'
                                                                             )}
                                                                         >
                                                                             {formatProfitRate(holding.profitRate)}
                                                                         </TableCell>
-                                                                        <TableCell className="text-right font-medium">
-                                                                            <span className="inline-block bg-muted/50 rounded px-2 py-0.5 text-xs">
-                                                                                {formatNumber(summary?.totalValue ? ((holding.currency === 'USD' && summary?.exchangeRate ? holding.currentValue * summary.exchangeRate : holding.currentValue) / summary.totalValue) * 100 : 0, 1)}%
-                                                                            </span>
+                                                                        <TableCell className="text-right">
+                                                                            <div className="flex flex-col items-end gap-1.5">
+                                                                                <span className="text-xs numeric text-foreground">{formatNumber(weight, 1)}%</span>
+                                                                                <div className="w-14 h-[3px] bg-muted rounded-full overflow-hidden">
+                                                                                    <div
+                                                                                        className="h-full bg-primary/70 rounded-full"
+                                                                                        style={{ width: `${Math.min(weight, 100)}%` }}
+                                                                                    />
+                                                                                </div>
+                                                                            </div>
                                                                         </TableCell>
                                                                         <TableCell className="text-center">
                                                                             <div className="flex justify-center gap-1">
