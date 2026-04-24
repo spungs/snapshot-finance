@@ -850,16 +850,16 @@ export function HoldingsManager({ initialHoldings, summary, triggerRefresh }: Ho
                                                                 "font-medium",
                                                                 isProfit ? 'text-profit' : 'text-loss'
                                                             )}>
-                                                                {formatCurrency(Math.abs(holding.profit), currency)}
+                                                                {isProfit ? '+' : ''}{formatCurrency(Number(holding.profit), currency)}
                                                             </div>
                                                             {holding.currency === 'USD' && summary?.exchangeRate && language === 'ko' && (
                                                                 <div className="text-xs text-muted-foreground mt-0.5">
-                                                                    {formatCurrency(Math.abs(holding.profit * summary.exchangeRate), 'KRW')}
+                                                                    ({isProfit ? '+' : ''}{formatCurrency(Number(holding.profit * summary.exchangeRate), 'KRW')})
                                                                 </div>
                                                             )}
                                                             {(holding.currency === 'KRW' || !holding.currency) && summary?.exchangeRate && language === 'en' && (
                                                                 <div className="text-xs text-muted-foreground mt-0.5">
-                                                                    {formatCurrency(Math.abs(holding.profit / summary.exchangeRate), 'USD')}
+                                                                    ({isProfit ? '+' : ''}{formatCurrency(Number(holding.profit / summary.exchangeRate), 'USD')})
                                                                 </div>
                                                             )}
                                                         </div>
@@ -869,14 +869,16 @@ export function HoldingsManager({ initialHoldings, summary, triggerRefresh }: Ho
                                                                 "font-bold text-lg",
                                                                 isProfit ? 'text-profit' : 'text-loss'
                                                             )}>
-                                                                {formatProfitRate(holding.profitRate)}
+                                                                <div className="flex items-center justify-end gap-1">
+                                                                    <span>{formatProfitRate(holding.profitRate, true)}</span>
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </div>
 
                                                     <div className="flex justify-between items-center border-t pt-3 mt-3 border-border/50">
                                                         <div className="text-sm font-medium">{t('weight')}</div>
-                                                        <div className="font-bold text-primary">
+                                                        <div className="font-bold text-foreground">
                                                             {formatNumber(summary?.totalValue ? ((holding.currency === 'USD' && summary?.exchangeRate ? holding.currentValue * summary.exchangeRate : holding.currentValue) / summary.totalValue) * 100 : 0, 1)}%
                                                         </div>
                                                     </div>
@@ -1056,15 +1058,15 @@ export function HoldingsManager({ initialHoldings, summary, triggerRefresh }: Ho
                                                                             className={cn('text-right', isProfit ? 'text-profit' : 'text-loss')}
                                                                         >
                                                                             <div className="flex flex-col items-end">
-                                                                                <span>{formatCurrency(Math.abs(holding.profit), holding.currency)}</span>
+                                                                                <span>{isProfit ? '+' : ''}{formatCurrency(Number(holding.profit), holding.currency)}</span>
                                                                                 {holding.currency === 'USD' && summary?.exchangeRate && language === 'ko' && (
                                                                                     <span className="text-xs opacity-80">
-                                                                                        {formatCurrency(Math.abs(holding.profit * summary.exchangeRate), 'KRW')}
+                                                                                        ({isProfit ? '+' : ''}{formatCurrency(Number(holding.profit * summary.exchangeRate), 'KRW')})
                                                                                     </span>
                                                                                 )}
                                                                                 {(holding.currency === 'KRW' || !holding.currency) && summary?.exchangeRate && language === 'en' && (
                                                                                     <span className="text-xs opacity-80">
-                                                                                        {formatCurrency(Math.abs(holding.profit / summary.exchangeRate), 'USD')}
+                                                                                        ({isProfit ? '+' : ''}{formatCurrency(Number(holding.profit / summary.exchangeRate), 'USD')})
                                                                                     </span>
                                                                                 )}
                                                                             </div>
@@ -1075,7 +1077,9 @@ export function HoldingsManager({ initialHoldings, summary, triggerRefresh }: Ho
                                                                                 isProfit ? 'text-profit' : 'text-loss'
                                                                             )}
                                                                         >
-                                                                            {formatProfitRate(holding.profitRate)}
+                                                                            <div className="flex items-center justify-end gap-1">
+                                                                                <span>{formatProfitRate(holding.profitRate, true)}</span>
+                                                                            </div>
                                                                         </TableCell>
                                                                         <TableCell className="text-right">
                                                                             <div className="flex flex-col items-end gap-1.5">

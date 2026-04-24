@@ -265,16 +265,16 @@ export function HoldingsTable({ holdings, exchangeRate, totalValue: propTotalVal
                           "font-medium",
                           isProfit ? 'text-profit' : 'text-loss'
                         )}>
-                          {formatCurrency(Math.abs(Number(holding.profit)), currency)}
+                          {isProfit ? '+' : ''}{formatCurrency(Number(holding.profit), currency)}
                         </div>
                         {currency === 'USD' && exchangeRate && language === 'ko' && (
                           <div className="text-xs text-muted-foreground mt-0.5">
-                            {formatCurrency(Math.abs(Number(holding.profit) * exchangeRate), 'KRW')}
+                            ({isProfit ? '+' : ''}{formatCurrency(Number(holding.profit) * exchangeRate, 'KRW')})
                           </div>
                         )}
                         {(currency === 'KRW' || !currency) && exchangeRate && language === 'en' && (
                           <div className="text-xs text-muted-foreground mt-0.5">
-                            {formatCurrency(Math.abs(Number(holding.profit) / exchangeRate), 'USD')}
+                            ({isProfit ? '+' : ''}{formatCurrency(Number(holding.profit) / exchangeRate, 'USD')})
                           </div>
                         )}
                       </div>
@@ -284,14 +284,16 @@ export function HoldingsTable({ holdings, exchangeRate, totalValue: propTotalVal
                           "font-bold text-lg",
                           isProfit ? 'text-profit' : 'text-loss'
                         )}>
-                          {formatProfitRate(Number(holding.profitRate))}
+                          <div className="flex items-center justify-end gap-1">
+                            <span>{formatProfitRate(Number(holding.profitRate), true)}</span>
+                          </div>
                         </div>
                       </div>
                     </div>
 
                     <div className="flex justify-between items-center border-t pt-3 mt-3 border-border/50">
                       <div className="text-sm font-medium">{t('weight')}</div>
-                      <div className="font-bold text-primary">
+                      <div className="font-bold text-foreground">
                         {formatNumber(totalValue ? ((holding.currency === 'USD' && exchangeRate ? Number(holding.currentValue) * exchangeRate : Number(holding.currentValue)) / totalValue) * 100 : 0, 1)}%
                       </div>
                     </div>
@@ -384,15 +386,15 @@ export function HoldingsTable({ holdings, exchangeRate, totalValue: propTotalVal
                             )}
                           >
                             <div className="flex flex-col items-end">
-                              <span>{formatCurrency(Math.abs(Number(holding.profit)), currency)}</span>
+                              <span>{isProfit ? '+' : ''}{formatCurrency(Number(holding.profit), currency)}</span>
                               {currency === 'USD' && exchangeRate && language === 'ko' && (
                                 <span className="text-xs opacity-80">
-                                  {formatCurrency(Math.abs(Number(holding.profit) * exchangeRate), 'KRW')}
+                                  ({isProfit ? '+' : ''}{formatCurrency(Number(holding.profit) * exchangeRate, 'KRW')})
                                 </span>
                               )}
                               {(currency === 'KRW' || !currency) && exchangeRate && language === 'en' && (
                                 <span className="text-xs opacity-80">
-                                  {formatCurrency(Math.abs(Number(holding.profit) / exchangeRate), 'USD')}
+                                  ({isProfit ? '+' : ''}{formatCurrency(Number(holding.profit) / exchangeRate, 'USD')})
                                 </span>
                               )}
                             </div>
@@ -403,7 +405,9 @@ export function HoldingsTable({ holdings, exchangeRate, totalValue: propTotalVal
                               isProfit ? 'text-profit' : 'text-loss'
                             )}
                           >
-                            {formatProfitRate(Number(holding.profitRate))}
+                            <div className="flex items-center justify-end gap-1">
+                              <span>{formatProfitRate(Number(holding.profitRate), true)}</span>
+                            </div>
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex flex-col items-end gap-1.5">
