@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -17,7 +17,8 @@ import { formatCurrency, formatDate, formatProfitRate } from '@/lib/utils/format
 import { cn } from '@/lib/utils'
 import { useLanguage } from '@/lib/i18n/context'
 import { SnapshotBottomPanel } from '@/components/dashboard/snapshots/snapshot-bottom-panel'
-import { Play } from 'lucide-react'
+import { EmptySnapshotState } from '@/components/dashboard/empty-snapshot-state'
+import { Play, Loader2 } from 'lucide-react'
 
 interface Snapshot {
     id: string
@@ -45,6 +46,63 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings }: Snapshots
     const [snapshots, setSnapshots] = useState<Snapshot[]>(initialSnapshots)
     const [deleting, setDeleting] = useState<string | null>(null)
     const [selectedIds, setSelectedIds] = useState<string[]>([])
+    
+    // 무한 스크롤을 위한 상태
+    const [nextCursor, setNextCursor] = useState<string | undefined>(undefined)
+    const [hasMore, setHasMore] = useState(initialSnapshots.length >= 20)
+    const [isLoadingMore, setIsLoadingMore] = useState(false)
+    const observerTarget = useRef<HTMLDivElement>(null)
+
+    // 초기 커서 설정 (첫 20개를 서버에서 받았으므로 마지막 아이템의 ID를 커서로 사용 가능성 확인)
+    // 하지만 API 구조상 initialSnapshots와 함께 pagination 정보를 서버에서 넘겨주는게 가장 정확함.
+    // 현재는 initialSnapshots의 마지막 ID를 활용하거나, 첫 로드 시 pagination 정보를 유추함.
+    useEffect(() => {
+        if (initialSnapshots.length > 0) {
+            setNextCursor(initialSnapshots[initialSnapshots.length - 1].id)
+        }
+    }, [initialSnapshots])
+
+    const loadMore = useCallback(async () => {
+        if (isLoadingMore || !hasMore || !nextCursor) return
+
+        setIsLoadingMore(true)
+        try {
+            const response = await snapshotsApi.getList(nextCursor)
+            if (response.success && response.data) {
+                const newSnapshots = response.data
+                setSnapshots(prev => [...prev, ...newSnapshots])
+                
+                if (response.pagination) {
+                    setNextCursor(response.pagination.cursor)
+                    setHasMore(response.pagination.hasMore)
+                } else {
+                    setHasMore(false)
+                }
+            }
+        } catch (err) {
+            console.error('Failed to load more snapshots:', err)
+        } finally {
+            setIsLoadingMore(false)
+        }
+    }, [nextCursor, hasMore, isLoadingMore])
+
+    // Intersection Observer 설정
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            entries => {
+                if (entries[0].isIntersecting && hasMore && !isLoadingMore) {
+                    loadMore()
+                }
+            },
+            { threshold: 1.0 }
+        )
+
+        if (observerTarget.current) {
+            observer.observe(observerTarget.current)
+        }
+
+        return () => observer.disconnect()
+    }, [loadMore, hasMore, isLoadingMore])
 
     const handleSelect = (id: string) => {
         setSelectedIds(prev => {
@@ -97,11 +155,8 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings }: Snapshots
 
             {snapshots.length === 0 ? (
                 <Card>
-                    <CardContent className="text-center py-12">
-                        <p className="text-muted-foreground mb-4">{t('noSnapshots')}</p>
-                        <Link href="/dashboard/snapshots/new">
-                            <Button>{t('createFirstSnapshot')}</Button>
-                        </Link>
+                    <CardContent className="p-0">
+                        <EmptySnapshotState />
                     </CardContent>
                 </Card>
             ) : (
@@ -166,13 +221,13 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings }: Snapshots
                                             <div className="grid grid-cols-2 gap-4 pt-2">
                                                 <div>
                                                     <div className="text-xs text-muted-foreground mb-1">{t('totalValue')}</div>
-                                                    <div className="font-medium text-base">{formatCurrency(displayValue, currency)}</div>
+                                                    <div className="font-medium text-base numeric">{formatCurrency(displayValue, currency)}</div>
                                                 </div>
                                                 <div className="text-right">
                                                     <div className="text-xs text-muted-foreground mb-1">{t('returnRate')}</div>
                                                     <div className={cn(
-                                                        "font-bold text-base",
-                                                        isProfit ? 'text-red-600' : 'text-blue-600'
+                                                        "font-bold text-base numeric",
+                                                        isProfit ? 'text-profit' : 'text-loss'
                                                     )}>
                                                         {formatProfitRate(Number(snapshot.profitRate))}
                                                     </div>
@@ -180,8 +235,8 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings }: Snapshots
                                                 <div className="col-span-2 flex justify-between items-center border-t pt-2 mt-1">
                                                     <span className="text-xs text-muted-foreground">{t('pl')}</span>
                                                     <span className={cn(
-                                                        "font-medium",
-                                                        isProfit ? 'text-red-600' : 'text-blue-600'
+                                                        "font-medium numeric",
+                                                        isProfit ? 'text-profit' : 'text-loss'
                                                     )}>
                                                         {formatCurrency(Math.abs(displayProfit), currency)}
                                                     </span>
@@ -239,7 +294,6 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings }: Snapshots
                                             {snapshots.map((snapshot) => {
                                                 const profit = Number(snapshot.totalProfit)
                                                 const isProfit = profit >= 0
-                                                const { t, language } = useLanguage()
 
                                                 // Calculate display values
                                                 let displayValue = Number(snapshot.totalValue)
@@ -270,24 +324,24 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings }: Snapshots
                                                                 <span suppressHydrationWarning>{formatDate(snapshot.snapshotDate)}</span>
                                                             </Link>
                                                         </TableCell>
-                                                        <TableCell className="text-right font-medium">
+                                                        <TableCell className="text-right font-medium numeric">
                                                             {formatCurrency(displayValue, currency)}
                                                         </TableCell>
                                                         <TableCell
                                                             className={cn(
-                                                                'text-right',
-                                                                isProfit ? 'text-red-600' : 'text-blue-600'
+                                                                'text-right numeric',
+                                                                isProfit ? 'text-profit' : 'text-loss'
                                                             )}
                                                         >
-                                                            {formatCurrency(Math.abs(displayProfit), currency)}
+                                                            {isProfit ? '+' : '-'}{formatCurrency(Math.abs(displayProfit), currency)}
                                                         </TableCell>
                                                         <TableCell
                                                             className={cn(
-                                                                'text-right font-bold',
-                                                                isProfit ? 'text-red-600' : 'text-blue-600'
+                                                                'text-right font-bold numeric',
+                                                                isProfit ? 'text-profit' : 'text-loss'
                                                             )}
                                                         >
-                                                            {formatProfitRate(Number(snapshot.profitRate))}
+                                                            {isProfit ? '+' : ''}{formatProfitRate(Number(snapshot.profitRate))}
                                                         </TableCell>
                                                         <TableCell className="text-right">
                                                             {snapshot.holdings.length}{t('countUnit')}
@@ -332,6 +386,27 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings }: Snapshots
                         </div>
                     </CardContent>
                 </Card>
+            )}
+
+            {/* 무한 스크롤 감지 및 로딩 표시 */}
+            {hasMore && (
+                <div 
+                    ref={observerTarget} 
+                    className="py-8 flex justify-center items-center"
+                >
+                    {isLoadingMore && (
+                        <div className="flex items-center gap-2 text-muted-foreground animate-pulse">
+                            <Loader2 className="h-5 w-5 animate-spin" />
+                            <span>{t('loadingMore')}</span>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {!hasMore && snapshots.length > 0 && (
+                <div className="py-8 text-center text-muted-foreground text-sm">
+                    {t('noMoreSnapshots')}
+                </div>
             )}
 
             {/* 바텀 슬라이드 패널 */}
