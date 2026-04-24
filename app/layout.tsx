@@ -44,8 +44,7 @@ import { AiChat } from '@/components/dashboard/ai-chat'
 import { CurrencyProvider } from '@/lib/currency/context'
 import { auth } from '@/lib/auth'
 import { FloatingContainer } from '@/components/ui/floating-container'
-
-
+import { ThemeProvider } from '@/components/theme-provider'
 
 import { HistoryInit } from '@/components/history-init'
 
@@ -56,7 +55,7 @@ export default async function RootLayout({
 }>) {
   const session = await auth()
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6002876774605337" crossOrigin="anonymous"></script>
         <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -64,21 +63,23 @@ export default async function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <div id="g_id_onload"
-          data-client_id={process.env.GOOGLE_CLIENT_ID}
-          data-login_uri={`${process.env.NEXT_PUBLIC_APP_URL || ''}/api/auth/callback/google`}
-          data-auto_prompt="false">
-        </div>
-        <HistoryInit />
-        <LanguageProvider>
-          <CurrencyProvider>
-            {children}
-            <FloatingContainer>
-              <AiChat isAuthenticated={!!session} />
-              <LanguageSwitcher />
-            </FloatingContainer>
-          </CurrencyProvider>
-        </LanguageProvider>
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
+          <div id="g_id_onload"
+            data-client_id={process.env.GOOGLE_CLIENT_ID}
+            data-login_uri={`${process.env.NEXT_PUBLIC_APP_URL || ''}/api/auth/callback/google`}
+            data-auto_prompt="false">
+          </div>
+          <HistoryInit />
+          <LanguageProvider>
+            <CurrencyProvider>
+              {children}
+              <FloatingContainer>
+                <AiChat isAuthenticated={!!session} />
+                <LanguageSwitcher />
+              </FloatingContainer>
+            </CurrencyProvider>
+          </LanguageProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
