@@ -180,14 +180,14 @@ export function PortfolioSummaryCard({
                   : "bg-loss/10 text-loss border-loss/30"
               )}>
                 {isProfit ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                {isProfit ? '+' : ''}{formatProfitRate(profitRate)}
+                {formatProfitRate(profitRate, true)}
               </span>
               {/* 평가손익 금액 */}
               <span className={cn(
                 "text-sm font-medium numeric",
                 isProfit ? "text-profit" : "text-loss"
               )}>
-                {isProfit ? '+' : '-'}{formatCurrency(Math.abs(displayProfit), currency)}
+                {isProfit ? '+' : ''}{formatCurrency(displayProfit, currency)}
               </span>
             </div>
           </div>
@@ -267,7 +267,7 @@ export function PortfolioSummaryCard({
             <div>
               <p className="text-xs text-muted-foreground mb-1">{t('plInvest')}</p>
               <p className={cn('text-sm font-bold numeric', isProfit ? 'text-profit' : 'text-loss')}>
-                {isProfit ? '+' : '-'}{formatCurrency(Math.abs(displayProfit), currency)}
+                {isProfit ? '+' : ''}{formatCurrency(displayProfit, currency)}
               </p>
             </div>
 
@@ -275,7 +275,7 @@ export function PortfolioSummaryCard({
             <div>
               <p className="text-xs text-muted-foreground mb-1">{t('returnRate')}</p>
               <p className={cn('text-sm font-bold numeric', isProfit ? 'text-profit' : 'text-loss')}>
-                {isProfit ? '+' : ''}{formatProfitRate(profitRate)}
+                {formatProfitRate(profitRate, true)}
               </p>
             </div>
 

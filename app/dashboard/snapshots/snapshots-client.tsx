@@ -229,7 +229,9 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings }: Snapshots
                                                         "font-bold text-base numeric",
                                                         isProfit ? 'text-profit' : 'text-loss'
                                                     )}>
-                                                        {formatProfitRate(Number(snapshot.profitRate))}
+                                                        <div className="flex items-center justify-end gap-1">
+                                                            <span>{formatProfitRate(Number(snapshot.profitRate), true)}</span>
+                                                        </div>
                                                     </div>
                                                 </div>
                                                 <div className="col-span-2 flex justify-between items-center border-t pt-2 mt-1">
@@ -238,7 +240,7 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings }: Snapshots
                                                         "font-medium numeric",
                                                         isProfit ? 'text-profit' : 'text-loss'
                                                     )}>
-                                                        {formatCurrency(Math.abs(displayProfit), currency)}
+                                                        {isProfit ? '+' : ''}{formatCurrency(displayProfit, currency)}
                                                     </span>
                                                 </div>
                                             </div>
@@ -333,7 +335,7 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings }: Snapshots
                                                                 isProfit ? 'text-profit' : 'text-loss'
                                                             )}
                                                         >
-                                                            {isProfit ? '+' : '-'}{formatCurrency(Math.abs(displayProfit), currency)}
+                                                            {isProfit ? '+' : ''}{formatCurrency(displayProfit, currency)}
                                                         </TableCell>
                                                         <TableCell
                                                             className={cn(
@@ -341,7 +343,9 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings }: Snapshots
                                                                 isProfit ? 'text-profit' : 'text-loss'
                                                             )}
                                                         >
-                                                            {isProfit ? '+' : ''}{formatProfitRate(Number(snapshot.profitRate))}
+                                                            <div className="flex items-center justify-end gap-1">
+                                                                <span>{formatProfitRate(Number(snapshot.profitRate), true)}</span>
+                                                            </div>
                                                         </TableCell>
                                                         <TableCell className="text-right">
                                                             {snapshot.holdings.length}{t('countUnit')}

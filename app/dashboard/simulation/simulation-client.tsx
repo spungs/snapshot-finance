@@ -295,10 +295,10 @@ export default function SimulationClient({ initialSnapshots }: SimulationClientP
                                     <CardContent>
                                         <div className={`text-2xl font-bold flex items-center ${profitDiff >= 0 ? "text-profit" : "text-loss"}`}>
                                             {profitDiff >= 0 ? <TrendingUp className="mr-2 h-6 w-6" /> : <TrendingDown className="mr-2 h-6 w-6" />}
-                                            {formatCurrency(Math.abs(profitDiff), currency)}
+                                            {profitDiff >= 0 ? '+' : ''}{formatCurrency(profitDiff, currency)}
                                         </div>
                                         <p className={`text-xs font-medium ${profitDiff >= 0 ? "text-profit" : "text-loss"}`}>
-                                            {formatProfitRate(simulationYield)}
+                                            {formatProfitRate(simulationYield, true)}
                                         </p>
 
                                         <div className="mt-4 pt-4 border-t space-y-2">
@@ -363,11 +363,11 @@ export default function SimulationClient({ initialSnapshots }: SimulationClientP
                                                 </div>
                                                 <div className="text-right">
                                                     <div className={`font-medium ${displayGain >= 0 ? 'text-profit' : 'text-loss'}`}>
-                                                        {formatCurrency(Math.abs(displayGain), displayCurrency)}
+                                                        {displayGain >= 0 ? '+' : ''}{formatCurrency(displayGain, displayCurrency)}
                                                     </div>
                                                     {displayCurrency === 'USD' && item.gainKRW !== undefined && (
                                                         <div className={`text-xs ${item.gainKRW >= 0 ? 'text-profit/70' : 'text-loss/70'} mt-0.5`}>
-                                                            ({formatCurrency(Math.abs(item.gainKRW), 'KRW')})
+                                                            ({item.gainKRW >= 0 ? '+' : ''}{formatCurrency(item.gainKRW, 'KRW')})
                                                         </div>
                                                     )}
                                                 </div>
@@ -381,11 +381,11 @@ export default function SimulationClient({ initialSnapshots }: SimulationClientP
                                                 <div className="text-right">
                                                     <div className="text-xs text-muted-foreground mb-1">{t('returnRate')}</div>
                                                     <div className={`${item.gainRate >= 0 ? 'text-profit' : 'text-loss'} font-medium`}>
-                                                        {formatProfitRate(item.gainRate)}
+                                                        {formatProfitRate(item.gainRate, true)}
                                                     </div>
                                                     {displayCurrency === 'USD' && item.gainRateKRW !== undefined && (
                                                         <div className={`text-xs ${item.gainRateKRW >= 0 ? 'text-profit/70' : 'text-loss/70'} mt-0.5`}>
-                                                            ({formatProfitRate(item.gainRateKRW)})
+                                                            ({formatProfitRate(item.gainRateKRW, true)})
                                                         </div>
                                                     )}
                                                 </div>
@@ -496,21 +496,21 @@ export default function SimulationClient({ initialSnapshots }: SimulationClientP
                                                         </TableCell>
                                                         <TableCell className="text-right">
                                                             <div className={`font-medium ${displayGain >= 0 ? 'text-profit' : 'text-loss'}`}>
-                                                                {formatCurrency(Math.abs(displayGain), displayCurrency)}
+                                                                {displayGain >= 0 ? '+' : ''}{formatCurrency(displayGain, displayCurrency)}
                                                             </div>
                                                             {displayCurrency === 'USD' && item.gainKRW !== undefined && (
                                                                 <div className={`text-xs ${item.gainKRW >= 0 ? 'text-profit/70' : 'text-loss/70'}`}>
-                                                                    ({formatCurrency(Math.abs(item.gainKRW), 'KRW')})
+                                                                    ({item.gainKRW >= 0 ? '+' : ''}{formatCurrency(item.gainKRW, 'KRW')})
                                                                 </div>
                                                             )}
                                                         </TableCell>
                                                         <TableCell className="text-right">
                                                             <div className={`${item.gainRate >= 0 ? 'text-profit' : 'text-loss'}`}>
-                                                                {formatProfitRate(item.gainRate)}
+                                                                {formatProfitRate(item.gainRate, true)}
                                                             </div>
                                                             {displayCurrency === 'USD' && item.gainRateKRW !== undefined && (
                                                                 <div className={`text-xs ${item.gainRateKRW >= 0 ? 'text-profit/70' : 'text-loss/70'}`}>
-                                                                    ({formatProfitRate(item.gainRateKRW)})
+                                                                    ({formatProfitRate(item.gainRateKRW, true)})
                                                                 </div>
                                                             )}
                                                         </TableCell>
