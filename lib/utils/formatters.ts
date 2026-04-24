@@ -24,11 +24,12 @@ export function formatNumber(value: number | string, decimals?: number): string 
 }
 
 /**
- * 수익률 포맷팅 (예: +12.34%)
+ * 수익률 포맷팅 (예: +12.34%, -5.67%)
  */
-export function formatProfitRate(value: number | string): string {
+export function formatProfitRate(value: number | string, showPlus = false): string {
   const rate = Number(value)
-  return `${Math.abs(rate).toFixed(2)}%`
+  const prefix = rate > 0 && showPlus ? '+' : ''
+  return `${prefix}${rate.toFixed(2)}%`
 }
 
 /**
