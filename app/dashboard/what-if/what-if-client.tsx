@@ -32,6 +32,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Progress } from '@/components/ui/progress'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { useDebounce } from '@/lib/hooks/use-debounce'
+import { formatCurrency, formatProfitRate } from '@/lib/utils/formatters'
 
 interface Stock {
     id: string
@@ -223,7 +224,7 @@ export function WhatIfClient() {
                             <CardHeader className="py-0 pb-1 px-4">
                                 <CardDescription>{language === 'ko' ? '만약 그때 샀다면 현재...' : 'If you bought it then...'}</CardDescription>
                                 <CardTitle className={cn("text-2xl numeric", isProfit ? "text-profit" : "text-loss")}>
-                                    {profitRate > 0 ? '+' : ''}{profitRate.toFixed(2)}%
+                                    {formatProfitRate(profitRate, true)}
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
@@ -288,8 +289,8 @@ export function WhatIfClient() {
                                         >
                                             <defs>
                                                 <linearGradient id="colorClose" x1="0" y1="0" x2="0" y2="1">
-                                                    <stop offset="0%" stopColor={areaColor} stopOpacity={0.22} />
-                                                    <stop offset="100%" stopColor={areaColor} stopOpacity={0} />
+                                                    <stop offset="0%" stopColor={areaColor} stopOpacity={0.3} />
+                                                    <stop offset="100%" stopColor={areaColor} stopOpacity={0.05} />
                                                 </linearGradient>
                                             </defs>
                                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" strokeOpacity={0.5} />
@@ -329,7 +330,7 @@ export function WhatIfClient() {
                                                 type="monotoneX"
                                                 dataKey="close"
                                                 stroke={areaColor}
-                                                strokeWidth={1.5}
+                                                strokeWidth={2}
                                                 fill="url(#colorClose)"
                                                 dot={false}
                                                 activeDot={{ r: 4, fill: areaColor, strokeWidth: 0 }}

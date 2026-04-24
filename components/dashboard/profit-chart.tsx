@@ -52,8 +52,8 @@ export function ProfitChart({ data }: ProfitChartProps) {
             <AreaChart data={formattedData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="profitGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={lineColor} stopOpacity={0.22} />
-                  <stop offset="100%" stopColor={lineColor} stopOpacity={0} />
+                  <stop offset="0%" stopColor={lineColor} stopOpacity={0.25} />
+                  <stop offset="100%" stopColor={lineColor} stopOpacity={0.05} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" strokeOpacity={0.5} />
@@ -89,7 +89,7 @@ export function ProfitChart({ data }: ProfitChartProps) {
                 type="monotoneX"
                 dataKey="profitRate"
                 stroke={lineColor}
-                strokeWidth={1.5}
+                strokeWidth={2}
                 fill="url(#profitGradient)"
                 dot={false}
                 activeDot={{ r: 4, fill: lineColor, strokeWidth: 0 }}
