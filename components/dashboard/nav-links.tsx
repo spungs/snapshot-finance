@@ -9,6 +9,7 @@ import { LogOut } from 'lucide-react'
 import { logout } from '@/app/actions'
 import { DeleteAccountDialog } from '@/components/delete-account-dialog'
 import { UserAccountNav } from './user-account-nav'
+import { ThemeToggle } from '@/components/ui/theme-toggle'
 
 interface NavLinksProps {
     user?: any
@@ -61,19 +62,19 @@ export function NavLinks({ user }: NavLinksProps) {
                 )
             })}
 
-            {user && (
-                <div className="pl-2 border-l ml-2">
+            <div className="flex items-center gap-2 pl-2 border-l ml-2">
+                <ThemeToggle />
+                {user ? (
                     <UserAccountNav user={user} />
-                </div>
-            )}
-            {!user && (
-                <Link
-                    href="/dashboard"
-                    className="px-2 sm:px-3 py-2 rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground text-xs sm:text-sm font-medium"
-                >
-                    {t.landing.login}
-                </Link>
-            )}
+                ) : (
+                    <Link
+                        href="/dashboard"
+                        className="px-2 sm:px-3 py-2 rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground text-xs sm:text-sm font-medium"
+                    >
+                        {t.landing.login}
+                    </Link>
+                )}
+            </div>
         </nav>
     )
 }

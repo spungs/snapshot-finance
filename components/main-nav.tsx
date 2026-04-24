@@ -26,7 +26,9 @@ export function MainNav({ user }: MainNavProps) {
                         <NavLinks user={user} />
                     </div>
                     <div className="flex items-center gap-1">
-                        <ThemeToggle />
+                        <div className="sm:hidden">
+                            <ThemeToggle />
+                        </div>
                         <MobileNav type={user ? "dashboard" : "landing"} user={user} />
                     </div>
                 </div>
