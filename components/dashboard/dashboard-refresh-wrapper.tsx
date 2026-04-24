@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import { useLanguage } from '@/lib/i18n/context'
 import { DashboardHeader } from '@/components/dashboard/dashboard-header'
+import { PerformanceChart } from '@/components/dashboard/performance-chart'
 
 interface DashboardRefreshWrapperProps {
     cashBalance?: number
@@ -30,6 +31,9 @@ export function DashboardRefreshWrapper({ cashBalance, children }: DashboardRefr
                 isRefreshing={isPending}
             />
 
+            {/* 성과 리포트 차트 */}
+            <PerformanceChart />
+
             <div className="relative">
                 {isPending && (
                     <div className="absolute inset-0 bg-background/50 backdrop-blur-sm z-50 flex items-start pt-20 justify-center rounded-lg">
@@ -44,3 +48,4 @@ export function DashboardRefreshWrapper({ cashBalance, children }: DashboardRefr
         </div>
     )
 }
+

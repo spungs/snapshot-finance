@@ -170,13 +170,17 @@ export function WhatIfClient() {
         }).format(value)
     }
 
+    const PROFIT_COLOR = '#f43f5e'
+    const LOSS_COLOR = '#3b82f6'
+    const areaColor = isProfit ? PROFIT_COLOR : LOSS_COLOR
+
     return (
         <div className="space-y-4">
             <div className="flex flex-col gap-1">
                 <h1 className="text-2xl font-bold tracking-tight">
                     {t('whatIf')}
                 </h1>
-                <p className="text-muted-foreground text-sm font-medium text-emerald-600">
+                <p className="text-muted-foreground text-sm">
                     {t('whatIfDesc')}
                 </p>
             </div>
@@ -215,10 +219,10 @@ export function WhatIfClient() {
 
                     {/* Result Summary Card (Only show if data exists) */}
                     {!loading && chartData.length > 0 && (
-                        <Card className={cn("border-l-4 py-3", isProfit ? "border-l-red-500" : "border-l-blue-500")}>
+                        <Card className={cn("border-l-4 py-3", isProfit ? "border-l-profit" : "border-l-loss")}>
                             <CardHeader className="py-0 pb-1 px-4">
                                 <CardDescription>{language === 'ko' ? '만약 그때 샀다면 현재...' : 'If you bought it then...'}</CardDescription>
-                                <CardTitle className={cn("text-2xl", isProfit ? "text-red-600" : "text-blue-600")}>
+                                <CardTitle className={cn("text-2xl numeric", isProfit ? "text-profit" : "text-loss")}>
                                     {profitRate > 0 ? '+' : ''}{profitRate.toFixed(2)}%
                                 </CardTitle>
                             </CardHeader>
@@ -277,48 +281,59 @@ export function WhatIfClient() {
                                             data={chartData}
                                             margin={{
                                                 top: 10,
-                                                right: 30,
+                                                right: 16,
                                                 left: 0,
                                                 bottom: 0,
                                             }}
                                         >
                                             <defs>
                                                 <linearGradient id="colorClose" x1="0" y1="0" x2="0" y2="1">
-                                                    <stop offset="5%" stopColor={isProfit ? "#ef4444" : "#3b82f6"} stopOpacity={0.8} />
-                                                    <stop offset="95%" stopColor={isProfit ? "#ef4444" : "#3b82f6"} stopOpacity={0} />
+                                                    <stop offset="0%" stopColor={areaColor} stopOpacity={0.22} />
+                                                    <stop offset="100%" stopColor={areaColor} stopOpacity={0} />
                                                 </linearGradient>
                                             </defs>
-                                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" strokeOpacity={0.5} />
                                             <XAxis
                                                 dataKey="date"
                                                 tickFormatter={(str) => {
                                                     const date = new Date(str);
                                                     return format(date, "MM.dd");
                                                 }}
-                                                fontSize={12}
+                                                tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
                                                 tickLine={false}
                                                 axisLine={false}
                                                 minTickGap={30}
                                             />
                                             <YAxis
                                                 domain={['auto', 'auto']}
-                                                fontSize={12}
+                                                tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
                                                 tickLine={false}
                                                 axisLine={false}
                                                 tickFormatter={(val) => val.toLocaleString()}
+                                                width={60}
                                             />
                                             <Tooltip
-                                                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                                labelFormatter={(label) => format(new Date(label), 'yyyy년 MM월 dd일')}
+                                                contentStyle={{
+                                                    background: 'var(--card)',
+                                                    border: '1px solid color-mix(in srgb, var(--border) 60%, transparent)',
+                                                    borderRadius: '12px',
+                                                    color: 'var(--card-foreground)',
+                                                    fontSize: '12px',
+                                                    boxShadow: '0 8px 32px hsl(224 71% 4% / 0.4)',
+                                                }}
+                                                cursor={{ stroke: 'var(--border)', strokeWidth: 1, strokeDasharray: '4 4' }}
+                                                labelFormatter={(label) => format(new Date(label), language === 'ko' ? 'yyyy년 MM월 dd일' : 'MMM dd, yyyy')}
                                                 formatter={(value: number) => [formatCurrency(value), selectedStock?.stockName]}
                                             />
                                             <Area
-                                                type="monotone"
+                                                type="monotoneX"
                                                 dataKey="close"
-                                                stroke={isProfit ? "#ef4444" : "#3b82f6"}
-                                                fillOpacity={1}
+                                                stroke={areaColor}
+                                                strokeWidth={1.5}
                                                 fill="url(#colorClose)"
-                                                animationDuration={2000}
+                                                dot={false}
+                                                activeDot={{ r: 4, fill: areaColor, strokeWidth: 0 }}
+                                                animationDuration={1200}
                                                 animationEasing="ease-in-out"
                                             />
                                         </AreaChart>
