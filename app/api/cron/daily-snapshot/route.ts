@@ -4,7 +4,7 @@ import { kisClient } from '@/lib/api/kis-client'
 import { getUsdExchangeRate } from '@/lib/api/exchange-rate'
 
 // Unified Cron Job: Daily Snapshot + User Maintenance
-// Schedule: 22:30 UTC Daily (07:30 KST Daily)
+// Schedule: 22:30 UTC Mon-Fri (07:30 KST Tue-Sat / 화~토)
 
 // Helper function to fetch price with retry
 async function getStockPrice(symbol: string, market: string): Promise<number> {
