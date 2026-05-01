@@ -1,15 +1,29 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Source_Serif_4, Noto_Serif_KR, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// JetBrains Mono — matches design
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-mono-jb",
+  weight: ["400", "500", "700"],
   subsets: ["latin"],
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+// Editorial serif for Latin glyphs (Charter alternative)
+const sourceSerif = Source_Serif_4({
+  variable: "--font-serif-latin",
+  weight: ["400", "500", "600", "700"],
   subsets: ["latin"],
+  display: "swap",
+});
+
+// Korean editorial serif (design uses system fallback; we add Noto Serif KR for richer Korean serif)
+const notoSerifKr = Noto_Serif_KR({
+  variable: "--font-serif-ko",
+  weight: ["400", "500", "600", "700"],
+  subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -57,11 +71,16 @@ export default async function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+        <link
+          rel="stylesheet"
+          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
+        />
         <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6002876774605337" crossOrigin="anonymous"></script>
         <script src="https://accounts.google.com/gsi/client" async defer></script>
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${jetbrainsMono.variable} ${sourceSerif.variable} ${notoSerifKr.variable} font-sans antialiased`}
       >
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
           <div id="g_id_onload"

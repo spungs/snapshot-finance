@@ -6,8 +6,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+  --font-mono: var(--font-mono-jb), ui-monospace, SFMono-Regular, Menlo, monospace;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -38,88 +38,113 @@
   --color-card-foreground: var(--card-foreground);
   --color-card-hover: var(--card-hover);
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
   --radius-xl: calc(var(--radius) + 4px);
   --color-profit: var(--profit);
   --color-loss: var(--loss);
+  --color-surface2: var(--surface2);
+  --color-accent-soft: var(--accent-soft);
+  --font-serif: var(--font-serif-ko), var(--font-serif-latin), Charter, "Source Serif Pro", "Iowan Old Style", Georgia, serif;
 }
 
 :root {
-  --radius: 0.625rem;
-  --background: hsl(210 20% 98%);
-  --foreground: hsl(222 84% 5%);
-  --card: hsl(0 0% 100%);
-  --card-hover: hsl(210 20% 96%);
-  --card-foreground: hsl(222 84% 5%);
-  --popover: hsl(0 0% 100%);
-  --popover-foreground: hsl(222 84% 5%);
-  --primary: hsl(217 91% 60%);
-  --primary-foreground: hsl(210 40% 98%);
-  --secondary: hsl(210 40% 96.1%);
-  --secondary-foreground: hsl(215 16% 47%);
-  --muted: hsl(210 40% 96.1%);
-  --muted-foreground: hsl(215 16% 47%);
-  --accent: hsl(210 40% 96.1%);
-  --accent-foreground: hsl(222 84% 5%);
-  --destructive: hsl(0 84.2% 60.2%);
-  --border: hsl(214 32% 91%);
-  --input: hsl(214 32% 91%);
-  --ring: hsl(217 91% 60%);
-  --chart-1: hsl(12 76% 61%);
-  --chart-2: hsl(173 58% 39%);
-  --chart-3: hsl(197 37% 24%);
-  --chart-4: hsl(43 74% 66%);
-  --chart-5: hsl(27 87% 67%);
-  --sidebar: hsl(210 20% 98%);
-  --sidebar-foreground: hsl(222 84% 5%);
-  --sidebar-primary: hsl(222 84% 5%);
-  --sidebar-primary-foreground: hsl(210 40% 98%);
-  --sidebar-accent: hsl(210 40% 96.1%);
-  --sidebar-accent-foreground: hsl(222.2 47.4% 11.2%);
-  --sidebar-border: hsl(214 32% 91%);
-  --sidebar-ring: hsl(217 91% 60%);
-  --profit: #f43f5e;
-  --loss: #3b82f6;
+  /* Editorial sharp corners — Variation B */
+  --radius: 0.25rem;
+
+  /* Surfaces (THEME_B.light) */
+  --background: #FAFAF7;
+  --foreground: #1A1A1A;
+  --card: #FFFFFF;
+  --card-hover: #F1F1ED;
+  --card-foreground: #1A1A1A;
+  --popover: #FFFFFF;
+  --popover-foreground: #1A1A1A;
+  --surface2: #F1F1ED;
+
+  /* Brand: emerald accent */
+  --primary: #0F8B5C;
+  --primary-foreground: #FFFFFF;
+  --accent: #F1F1ED;
+  --accent-foreground: #1A1A1A;
+  --accent-soft: #E1F5EC;
+
+  --secondary: #F1F1ED;
+  --secondary-foreground: #1A1A1A;
+  --muted: #F1F1ED;
+  --muted-foreground: #737373;
+
+  --destructive: #D4322F;
+  --border: rgba(0, 0, 0, 0.08);
+  --input: rgba(0, 0, 0, 0.08);
+  --ring: #0F8B5C;
+
+  /* Profit (up) = red ▲ ; Loss (down) = emerald ▼ — Korean editorial convention */
+  --profit: #D4322F;
+  --loss: #0F8B5C;
+
+  --chart-1: #0F8B5C;
+  --chart-2: #D4322F;
+  --chart-3: #A855F7;
+  --chart-4: #F59E0B;
+  --chart-5: #06B6D4;
+
+  --sidebar: #FAFAF7;
+  --sidebar-foreground: #1A1A1A;
+  --sidebar-primary: #0F8B5C;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #F1F1ED;
+  --sidebar-accent-foreground: #1A1A1A;
+  --sidebar-border: rgba(0, 0, 0, 0.08);
+  --sidebar-ring: #0F8B5C;
 }
 
 .dark {
   color-scheme: dark;
-  --background: hsl(224 71% 4%);
-  --foreground: hsl(210 40% 98%);
-  --card: hsl(224 71% 8%);
-  --card-hover: hsl(224 71% 11%);
-  --card-foreground: hsl(210 40% 98%);
-  --popover: hsl(224 71% 8%);
-  --popover-foreground: hsl(210 40% 98%);
-  --primary: hsl(217 91% 60%);
-  --primary-foreground: hsl(210 40% 98%);
-  --secondary: hsl(224 71% 11%);
-  --secondary-foreground: hsl(215 20% 65%);
-  --muted: hsl(224 71% 11%);
-  --muted-foreground: hsl(215 20% 65%);
-  --accent: hsl(224 71% 11%);
-  --accent-foreground: hsl(210 40% 98%);
-  --destructive: hsl(0 72% 51%);
-  --border: hsl(224 71% 18% / 0.7);
-  --input: hsl(224 71% 18% / 0.7);
-  --ring: hsl(217 91% 60%);
-  --chart-1: hsl(220 70% 50%);
-  --chart-2: hsl(160 60% 45%);
-  --chart-3: hsl(30 80% 55%);
-  --chart-4: hsl(280 65% 60%);
-  --chart-5: hsl(340 75% 55%);
-  --sidebar: hsl(224 71% 4%);
-  --sidebar-foreground: hsl(210 40% 98%);
-  --sidebar-primary: hsl(217 91% 60%);
-  --sidebar-primary-foreground: hsl(210 40% 98%);
-  --sidebar-accent: hsl(224 71% 11%);
-  --sidebar-accent-foreground: hsl(210 40% 98%);
-  --sidebar-border: hsl(224 71% 16% / 0.6);
-  --sidebar-ring: hsl(217 91% 60%);
-  --profit: #f43f5e;
-  --loss: #3b82f6;
+  /* Surfaces (THEME_B.dark) — warm green-black */
+  --background: #0E0F0C;
+  --foreground: #F2F1EC;
+  --card: #171814;
+  --card-hover: #1F211C;
+  --card-foreground: #F2F1EC;
+  --popover: #171814;
+  --popover-foreground: #F2F1EC;
+  --surface2: #1F211C;
+
+  --primary: #3DD68C;
+  --primary-foreground: #0E0F0C;
+  --accent: #1F211C;
+  --accent-foreground: #F2F1EC;
+  --accent-soft: rgba(61, 214, 140, 0.12);
+
+  --secondary: #1F211C;
+  --secondary-foreground: #F2F1EC;
+  --muted: #1F211C;
+  --muted-foreground: #8A8A85;
+
+  --destructive: #FF6B68;
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.08);
+  --ring: #3DD68C;
+
+  --profit: #FF6B68;
+  --loss: #3DD68C;
+
+  --chart-1: #3DD68C;
+  --chart-2: #FF6B68;
+  --chart-3: #C084FC;
+  --chart-4: #FBBF24;
+  --chart-5: #22D3EE;
+
+  --sidebar: #0E0F0C;
+  --sidebar-foreground: #F2F1EC;
+  --sidebar-primary: #3DD68C;
+  --sidebar-primary-foreground: #0E0F0C;
+  --sidebar-accent: #1F211C;
+  --sidebar-accent-foreground: #F2F1EC;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-ring: #3DD68C;
 }
 
 @layer base {
@@ -135,6 +160,44 @@
 }
 
 @layer utilities {
+  /* Editorial serif (Charter alternative — Source Serif 4 + Noto Serif KR) */
+  .font-serif {
+    font-family: var(--font-serif);
+    font-feature-settings: "kern", "liga";
+  }
+
+  /* Hero serif headline — "스냅샷", "포트폴리오" */
+  .hero-serif {
+    font-family: var(--font-serif);
+    font-weight: 500;
+    letter-spacing: -0.04em;
+    line-height: 1.0;
+  }
+
+  /* Big tabular amount display — ₩87,620,123 */
+  .amount-display {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+    letter-spacing: -0.025em;
+    font-weight: 700;
+  }
+
+  /* Editorial all-caps tracker (LATEST · 최신 / TIMELINE / TOP MOVERS) */
+  .eyebrow {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+  }
+
+  /* Italic serif quote/subtitle ("시점별 포트폴리오 기록") */
+  .serif-italic {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 400;
+  }
+
   /* 금액, 수익률 등 숫자 요소에 적용 */
   .numeric {
     font-variant-numeric: tabular-nums;
@@ -145,32 +208,6 @@
   [data-slot="table-body"] [data-slot="table-cell"] {
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum";
-  }
-
-  /* 다크 모드 카드 — 블러 없이 깊이감 구현 */
-  .card-elevated {
-    background: var(--card);
-    border-top: 1px solid var(--border);
-    box-shadow: 0 4px 24px hsl(224 71% 4% / 0.6);
-  }
-
-  /* 수익/손실 배지 글로우 */
-  .badge-profit-glow {
-    box-shadow: 0 0 10px color-mix(in srgb, var(--profit) 25%, transparent);
-  }
-
-  .badge-loss-glow {
-    box-shadow: 0 0 10px color-mix(in srgb, var(--loss) 25%, transparent);
-  }
-}
-
-@layer base {
-  /* Dark mode: 모든 카드에 Elevated Surface 효과 */
-  .dark [data-slot="card"] {
-    border-color: hsl(224 71% 22% / 0.45);
-    box-shadow:
-      inset 0 1px 0 hsl(224 71% 38% / 0.12),
-      0 4px 24px hsl(224 71% 2% / 0.65);
   }
 }
 

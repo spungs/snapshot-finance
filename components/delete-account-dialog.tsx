@@ -23,7 +23,7 @@ import { cn } from '@/lib/utils'
 
 interface DeleteAccountDialogProps {
     className?: string
-    variant?: 'icon' | 'item'
+    variant?: 'icon' | 'item' | 'settings-row'
 }
 
 export function DeleteAccountDialog({ className, variant = 'icon' }: DeleteAccountDialogProps) {
@@ -51,6 +51,18 @@ export function DeleteAccountDialog({ className, variant = 'icon' }: DeleteAccou
                         title={t.landing.deleteAccount}
                     >
                         <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </button>
+                ) : variant === 'settings-row' ? (
+                    <button
+                        className={cn(
+                            "w-full flex items-center gap-2 px-5 py-4 text-left text-destructive hover:bg-card-hover transition-colors",
+                            className,
+                        )}
+                    >
+                        <Trash2 className="w-4 h-4 shrink-0" />
+                        <span className="flex-1 text-[14px] font-semibold">
+                            {t.landing.deleteAccount}
+                        </span>
                     </button>
                 ) : (
                     <button

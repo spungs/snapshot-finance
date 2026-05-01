@@ -1,13 +1,8 @@
-
-import { Suspense } from 'react'
 import { auth } from '@/lib/auth'
-import { holdingService } from '@/lib/services/holding-service'
 import { redirect } from 'next/navigation'
-
-import { HoldingsManager } from '@/components/dashboard/holdings-manager'
-import { DashboardRefreshWrapper } from '@/components/dashboard/dashboard-refresh-wrapper'
-
-import { Skeleton } from '@/components/ui/skeleton'
+import { holdingService } from '@/lib/services/holding-service'
+import { snapshotService } from '@/lib/services/snapshot-service'
+import { HomeClient } from './home-client'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,32 +12,53 @@ export default async function DashboardPage() {
     redirect('/auth/signin')
   }
 
-  const { data } = await holdingService.getList(session.user.id)
+  const [{ data: holdingsData }, { data: snapshotsData }] = await Promise.all([
+    holdingService.getList(session.user.id),
+    snapshotService.getList(session.user.id, 30),
+  ])
 
-  // Serialize for client component
-  const initialData = data ? {
-    holdings: data.holdings.map(h => ({
-      ...h,
-      market: h.market || 'Unknown',
-      // Ensure plain objects
-      priceUpdatedAt: h.priceUpdatedAt instanceof Date ? h.priceUpdatedAt.toISOString() : h.priceUpdatedAt,
-      displayOrder: (h as any).displayOrder ?? 0
-    })),
-    summary: data.summary || { totalCost: 0, totalValue: 0, totalProfit: 0, totalProfitRate: 0, holdingsCount: 0, targetAsset: 0 }
-  } : undefined
+  const summary = holdingsData?.summary ?? {
+    totalCost: 0, totalValue: 0, totalProfit: 0, totalProfitRate: 0,
+    holdingsCount: 0, exchangeRate: 1435, cashBalance: 0,
+  }
+
+  const holdings = (holdingsData?.holdings ?? []).map(h => ({
+    id: h.id,
+    stockCode: h.stockCode,
+    stockName: h.stockName,
+    market: h.market || 'Unknown',
+    currency: h.currency,
+    currentValue: Number(h.currentValue),
+    profit: Number(h.profit),
+    profitRate: Number(h.profitRate),
+  }))
+
+  const recentSnapshots = (snapshotsData ?? []).map((s: any) => ({
+    id: s.id,
+    snapshotDate: s.snapshotDate.toISOString(),
+    totalValue: Number(s.totalValue),
+    profitRate: Number(s.profitRate),
+    exchangeRate: s.exchangeRate ? Number(s.exchangeRate) : 1435,
+  }))
+
+  const todayLabel = new Date().toLocaleDateString('ko-KR', {
+    year: 'numeric', month: '2-digit', day: '2-digit',
+  }).replace(/\. /g, '.').replace(/\.$/, '')
 
   return (
-    <DashboardRefreshWrapper cashBalance={initialData?.summary?.cashBalance}>
-      {/* 잔고 관리 */}
-      <Suspense fallback={<Skeleton className="h-96 w-full" />}>
-        <HoldingsManager
-          initialHoldings={initialData?.holdings || []}
-          summary={initialData?.summary || { totalCost: 0, totalValue: 0, totalProfit: 0, totalProfitRate: 0, holdingsCount: 0, targetAsset: 0 }}
-          triggerRefresh={async () => {
-            'use server'
-          }}
-        />
-      </Suspense>
-    </DashboardRefreshWrapper>
+    <HomeClient
+      summary={{
+        totalValue: Number(summary.totalValue),
+        totalCost: Number(summary.totalCost),
+        totalProfit: Number(summary.totalProfit),
+        totalProfitRate: Number(summary.totalProfitRate),
+        cashBalance: Number(summary.cashBalance ?? 0),
+        exchangeRate: Number(summary.exchangeRate ?? 1435),
+        holdingsCount: summary.holdingsCount,
+      }}
+      holdings={holdings}
+      recentSnapshots={recentSnapshots}
+      todayLabel={todayLabel + ' · ' + (new Date().getHours() < 12 ? '오전' : '오후')}
+    />
   )
 }

@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils'
 import { useLanguage } from '@/lib/i18n/context'
 import { Currency, useCurrency } from '@/lib/currency/context'
 import { CashBalanceDialog } from './cash-balance-dialog'
-import { Info, TrendingUp, TrendingDown } from 'lucide-react'
+import { Info } from 'lucide-react'
 import {
   Tooltip,
   TooltipContent,
@@ -150,42 +150,34 @@ export function PortfolioSummaryCard({
           )}
         </div>
       )}
-      <CardHeader>
+      <CardHeader className="pb-3">
         <CardTitle className="flex justify-between items-center">
-          <span>{t('portfolioSummary')}</span>
+          <span className="eyebrow">{t('portfolioSummary')}</span>
           {snapshotDate && (
-            <span className="text-sm font-normal text-muted-foreground">
+            <span className="text-[11px] font-normal text-muted-foreground numeric">
               {snapshotDate}
             </span>
           )}
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {/* Hero: 총 자산 + 수익률 Pill */}
+        {/* Hero — editorial serif amount + ▲▼ symbol */}
         <div className="flex flex-col lg:flex-row gap-6 lg:gap-10 lg:items-end">
-          {/* 총 자산 (Hero Number) */}
           <div className="flex-shrink-0">
-            <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium mb-2">
-              {t('totalValue')}
-            </p>
-            <p className="text-3xl sm:text-4xl font-bold text-foreground numeric leading-none">
+            <p className="hero-serif text-[40px] sm:text-5xl text-foreground">
               {formatCurrency(displayValue, currency)}
             </p>
-            <div className="mt-3 flex items-center gap-3 flex-wrap">
-              {/* 수익률 Pill Badge */}
+            <div className="mt-2.5 flex items-center gap-2 flex-wrap">
               <span className={cn(
-                "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border",
-                isProfit
-                  ? "bg-profit/10 text-profit border-profit/30"
-                  : "bg-loss/10 text-loss border-loss/30"
+                'inline-flex items-center gap-1 text-[15px] font-bold numeric tracking-tight',
+                isProfit ? 'text-profit' : 'text-loss',
               )}>
-                {isProfit ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                {formatProfitRate(profitRate, true)}
+                <span aria-hidden>{isProfit ? '▲' : '▼'}</span>
+                <span>{Math.abs(profitRate).toFixed(2)}%</span>
               </span>
-              {/* 평가손익 금액 */}
               <span className={cn(
-                "text-sm font-medium numeric",
-                isProfit ? "text-profit" : "text-loss"
+                'text-[13px] font-semibold numeric',
+                isProfit ? 'text-profit' : 'text-loss',
               )}>
                 {isProfit ? '+' : ''}{formatCurrency(displayProfit, currency)}
               </span>

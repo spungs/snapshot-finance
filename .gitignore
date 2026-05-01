@@ -96,3 +96,6 @@ ad_plan_*.md
 # SEO
 public/sitemap*.xml
 public/robots.txt
+
+# Claude Code
+.claude/
