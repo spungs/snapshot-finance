@@ -1,20 +1,13 @@
+'use client'
+
 import { useState, useEffect, useTransition } from "react"
+import { Drawer } from "vaul"
 import { Button } from "@/components/ui/button"
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-    DialogFooter,
-    DialogClose,
-} from "@/components/ui/dialog"
 import { FormattedNumberInput } from "@/components/ui/formatted-number-input"
-import { Label } from "@/components/ui/label"
 import { updateCashBalance } from "@/app/actions/cash-actions"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
-import { Edit2, Loader2 } from "lucide-react"
+import { Edit2, Loader2, X } from "lucide-react"
 import { useLanguage } from "@/lib/i18n/context"
 import { Currency } from "@/lib/currency/context"
 
@@ -22,17 +15,24 @@ interface CashBalanceDialogProps {
     initialBalance: number
     currency?: Currency
     exchangeRate?: number
+    children?: React.ReactNode
+    onSuccess?: () => void
 }
 
-export function CashBalanceDialog({ initialBalance, currency = 'KRW', exchangeRate = 1435 }: CashBalanceDialogProps) {
-    const { t } = useLanguage()
+export function CashBalanceDialog({
+    initialBalance,
+    currency = 'KRW',
+    exchangeRate = 1435,
+    children,
+    onSuccess,
+}: CashBalanceDialogProps) {
+    const { t, language } = useLanguage()
     const [open, setOpen] = useState(false)
     const [balance, setBalance] = useState('')
     const [loading, setLoading] = useState(false)
     const [isPending, startTransition] = useTransition()
     const router = useRouter()
 
-    // Initialize balance based on currency when dialog opens
     useEffect(() => {
         if (open) {
             let displayValue = initialBalance
@@ -64,13 +64,14 @@ export function CashBalanceDialog({ initialBalance, currency = 'KRW', exchangeRa
             if (result.success) {
                 toast.success(t('updateCashSuccess'))
                 setOpen(false)
+                onSuccess?.()
                 startTransition(() => {
                     router.refresh()
                 })
             } else {
                 toast.error(t('updateCashFailed'))
             }
-        } catch (error) {
+        } catch {
             toast.error(t('networkError'))
         } finally {
             setLoading(false)
@@ -78,45 +79,62 @@ export function CashBalanceDialog({ initialBalance, currency = 'KRW', exchangeRa
     }
 
     const isBusy = loading || isPending
+    const pricePrefix = currency === 'KRW' ? '₩' : '$'
 
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-4 w-4 text-muted-foreground hover:text-foreground" disabled={isBusy}>
-                    {isBusy ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                    ) : (
-                        <Edit2 className="h-3 w-3" />
-                    )}
-                </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                    <DialogTitle>{t('editCash')}</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleSubmit} className="grid gap-4 py-4">
-                    <div className="grid gap-2">
-                        <Label htmlFor="cash">
-                            {t('cash')} ({currency})
-                        </Label>
+        <Drawer.Root open={open} onOpenChange={setOpen}>
+            <Drawer.Trigger asChild>
+                {children ?? (
+                    <Button variant="ghost" size="icon" className="h-4 w-4 text-muted-foreground hover:text-foreground" disabled={isBusy}>
+                        {isBusy ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                            <Edit2 className="h-3 w-3" />
+                        )}
+                    </Button>
+                )}
+            </Drawer.Trigger>
+            <Drawer.Portal>
+                <Drawer.Overlay className="fixed inset-0 bg-black/40 z-50" />
+                <Drawer.Content className="fixed bottom-0 left-0 right-0 z-50 flex flex-col bg-background border-t rounded-t-2xl outline-none">
+                    <div className="flex justify-center pt-3 pb-1 shrink-0">
+                        <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
+                    </div>
+                    <div className="flex items-center justify-between px-4 py-2 border-b shrink-0">
+                        <Drawer.Title className="font-semibold text-sm m-0">
+                            {t('editCash')}
+                        </Drawer.Title>
+                        <Drawer.Description className="sr-only">
+                            {language === 'ko' ? '예수금 잔고를 수정합니다.' : 'Update cash balance.'}
+                        </Drawer.Description>
+                        <button
+                            type="button"
+                            onClick={() => setOpen(false)}
+                            className="text-muted-foreground hover:text-foreground p-1"
+                            aria-label={language === 'ko' ? '닫기' : 'Close'}
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
+                    </div>
+                    <form onSubmit={handleSubmit} className="p-4 space-y-3 pb-[calc(1rem+var(--safe-bottom,0px))]">
                         <FormattedNumberInput
                             id="cash"
+                            label={`${t('cash')} (${currency})`}
+                            prefix={pricePrefix}
                             value={balance}
                             onChange={(value) => setBalance(value)}
                         />
-                    </div>
-                    <DialogFooter>
-                        <DialogClose asChild>
-                            <Button type="button" variant="secondary">
-                                {t('cancel')}
-                            </Button>
-                        </DialogClose>
-                        <Button type="submit" disabled={isBusy}>
+                        <button
+                            type="submit"
+                            disabled={isBusy}
+                            className="w-full bg-primary text-primary-foreground py-3 text-sm font-bold disabled:opacity-50 hover:opacity-90 inline-flex items-center justify-center gap-2"
+                        >
+                            {isBusy && <Loader2 className="w-4 h-4 animate-spin" />}
                             {isBusy ? t('saving') : t('confirm')}
-                        </Button>
-                    </DialogFooter>
-                </form>
-            </DialogContent>
-        </Dialog>
+                        </button>
+                    </form>
+                </Drawer.Content>
+            </Drawer.Portal>
+        </Drawer.Root>
     )
 }

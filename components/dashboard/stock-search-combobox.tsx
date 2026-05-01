@@ -8,7 +8,6 @@ import {
     Command,
     CommandEmpty,
     CommandGroup,
-    CommandInput,
     CommandItem,
     CommandList,
 } from '@/components/ui/command'
@@ -17,29 +16,21 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from '@/components/ui/popover'
-import {
-    Dialog,
-    DialogContent,
-    DialogTitle,
-    DialogDescription,
-} from "@/components/ui/dialog"
-import { useDebounce } from '@/lib/hooks/use-debounce'
-import { useMediaQuery } from "@/lib/hooks/use-media-query"
 import { useLanguage } from '@/lib/i18n/context'
 
 interface Stock {
     id: string
     stockCode: string
     stockName: string
-    engName?: string  // 영문명
+    engName?: string
     market?: string
 }
 
 interface SearchResult {
     symbol: string
     name: string
-    nameKo?: string  // 한글명
-    nameEn?: string  // 영문명
+    nameKo?: string
+    nameEn?: string
     exchange: string
     market: string
     type: string
@@ -61,27 +52,43 @@ export function StockSearchCombobox({
     const [query, setQuery] = React.useState('')
     const [results, setResults] = React.useState<SearchResult[]>([])
     const [loading, setLoading] = React.useState(false)
-    const [selectingLoading, setSelectingLoading] = React.useState(false)
     const [error, setError] = React.useState<string | null>(null)
     const [hasSearched, setHasSearched] = React.useState(false)
-    const isDesktop = useMediaQuery("(min-width: 768px)")
+    const triggerRef = React.useRef<HTMLButtonElement>(null)
+    const [triggerWidth, setTriggerWidth] = React.useState<number>()
 
-    // Timer ref for debounce
-    const debounceTimerRef = React.useRef<NodeJS.Timeout | null>(null)
+    // 자동 debounce 검색은 제거 — 사용자가 Enter 또는 검색 버튼을 명시적으로 눌러야만 호출.
+    // 검색 중에 새로운 검색이 들어오면 이전 요청은 취소하고 최신 요청만 반영한다.
+    const abortRef = React.useRef<AbortController | null>(null)
 
-    const searchStocks = React.useCallback(async () => {
-        if (!query) {
+    const searchStocks = React.useCallback(async (q: string) => {
+        const trimmed = q.trim()
+
+        // 진행 중인 이전 요청은 즉시 취소
+        abortRef.current?.abort()
+
+        if (!trimmed) {
+            abortRef.current = null
             setResults([])
             setError(null)
+            setLoading(false)
             return
         }
 
+        const controller = new AbortController()
+        abortRef.current = controller
+
         setLoading(true)
         setError(null)
-        setResults([]) // Clear previous results when starting new search
+        setResults([])
         try {
-            const res = await fetch(`/api/stocks/search?query=${encodeURIComponent(query)}`)
+            const res = await fetch(`/api/stocks/search?query=${encodeURIComponent(trimmed)}`, {
+                signal: controller.signal,
+            })
+            // 응답이 도착했더라도 이미 새 요청이 시작됐다면 결과 반영하지 않음
+            if (controller.signal.aborted) return
             const data = await res.json()
+            if (controller.signal.aborted) return
             if (data.success) {
                 setResults(data.data)
                 setError(null)
@@ -91,54 +98,41 @@ export function StockSearchCombobox({
                 setError(data.error || t('searchError'))
             }
         } catch (error) {
+            if ((error as Error)?.name === 'AbortError') return
             console.error('Search failed:', error)
             setError(t('networkError'))
         } finally {
-            setLoading(false)
-        }
-    }, [query, t])
-
-    // Debounce effect
-    React.useEffect(() => {
-        // Clear existing timer
-        if (debounceTimerRef.current) {
-            clearTimeout(debounceTimerRef.current)
-        }
-
-        // Set new timer
-        debounceTimerRef.current = setTimeout(() => {
-            searchStocks()
-        }, 1200)
-
-        // Cleanup
-        return () => {
-            if (debounceTimerRef.current) {
-                clearTimeout(debounceTimerRef.current)
+            if (abortRef.current === controller) {
+                setLoading(false)
+                abortRef.current = null
             }
         }
-    }, [searchStocks])
+    }, [t])
+
+    // 언마운트 시 진행 중 요청 정리
+    React.useEffect(() => () => abortRef.current?.abort(), [])
+
+    React.useEffect(() => {
+        if (open && triggerRef.current) {
+            setTriggerWidth(triggerRef.current.offsetWidth)
+        }
+    }, [open])
 
     const handleManualSearch = () => {
-        if (debounceTimerRef.current) {
-            clearTimeout(debounceTimerRef.current)
-            debounceTimerRef.current = null
-        }
-        searchStocks()
+        searchStocks(query)
     }
 
     const handleSelect = async (result: SearchResult) => {
-        setSelectingLoading(true)
         try {
-            // Create or get stock from DB
             const res = await fetch('/api/stocks', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     stockCode: result.symbol,
-                    stockName: result.nameKo || result.name,  // 한글명 우선
-                    engName: result.nameEn,  // 영문명
+                    stockName: result.nameKo || result.name,
+                    engName: result.nameEn,
                     market: result.market,
-                    sector: result.type, // Fallback for sector
+                    sector: result.type,
                 }),
             })
             const data = await res.json()
@@ -152,191 +146,116 @@ export function StockSearchCombobox({
             }
         } catch (error) {
             console.error('Failed to select stock:', error)
-        } finally {
-            setSelectingLoading(false)
         }
     }
 
-    if (isDesktop) {
-        return (
-            <Popover open={open} onOpenChange={setOpen}>
-                <PopoverTrigger asChild>
-                    <Button
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={open}
-                        className="w-full justify-between"
-                        disabled={disabled}
-                    >
-                        <span className="truncate flex-1 text-left">
-                            {value || t('selectStock')}
-                        </span>
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[300px] p-0" align="start">
-                    <Command shouldFilter={false} className="h-full">
-                        <StockSearchContent
-                            query={query}
-                            setQuery={setQuery}
-                            handleManualSearch={handleManualSearch}
-                            loading={loading}
-                            error={error}
-                            results={results}
-                            hasSearched={hasSearched}
-                            value={value}
-                            handleSelect={handleSelect}
-                            t={t}
-                            language={language}
-                        />
-                    </Command>
-                </PopoverContent>
-            </Popover>
-        )
-    }
-
     return (
-        <>
-            <Button
-                variant="outline"
-                role="combobox"
-                aria-expanded={open}
-                className="w-full justify-between"
-                disabled={disabled}
-                onClick={() => setOpen(true)}
-            >
-                <span className="truncate flex-1 text-left">
-                    {value || t('selectStock')}
-                </span>
-                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-            </Button>
-            <Dialog open={open} onOpenChange={setOpen}>
-                <DialogContent showCloseButton={false} className="p-0 overflow-hidden gap-0 top-[10%] translate-y-0 sm:translate-y-[-50%] sm:top-[50%]">
-                    <DialogTitle className="sr-only">{t('selectStock')}</DialogTitle>
-                    <DialogDescription className="sr-only">{t('searchPlaceholder')}</DialogDescription>
-                    <Command shouldFilter={false} className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-2 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5">
-                        <StockSearchContent
-                            query={query}
-                            setQuery={setQuery}
-                            handleManualSearch={handleManualSearch}
-                            loading={loading}
-                            error={error}
-                            results={results}
-                            hasSearched={hasSearched}
-                            value={value}
-                            handleSelect={handleSelect}
-                            t={t}
-                            language={language}
-                        />
-                    </Command>
-                </DialogContent>
-            </Dialog>
-        </>
-    )
-}
-
-function StockSearchContent({
-    query,
-    setQuery,
-    handleManualSearch,
-    loading,
-    error,
-    results,
-    hasSearched,
-    value,
-    handleSelect,
-    t,
-    language
-}: {
-    query: string
-    setQuery: (val: string) => void
-    handleManualSearch: () => void
-    loading: boolean
-    error: string | null
-    results: SearchResult[]
-    hasSearched: boolean
-    value: string
-    handleSelect: (result: SearchResult) => void
-    t: (key: any) => string
-    language: string
-}) {
-    return (
-        <>
-            <div className="flex items-center border-b px-3" cmdk-input-wrapper="">
-                <input
-                    className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
-                    placeholder={t('searchPlaceholder')}
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                            e.preventDefault() // Prevent form submission if any
-                            handleManualSearch()
-                        }
-                    }}
-                    autoFocus
-                />
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
                 <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 ml-1"
-                    onClick={handleManualSearch}
+                    ref={triggerRef}
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={open}
+                    className="w-full justify-between"
+                    disabled={disabled}
                 >
-                    <Search className="h-4 w-4" />
+                    <span className="truncate flex-1 text-left">
+                        {value || t('selectStock')}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
-            </div>
-            <CommandList className="max-h-[300px] overflow-y-auto">
-                {loading && (
-                    <div className="py-6 text-center text-sm text-muted-foreground">
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin inline" />
-                        {t('searchSearching')}
-                    </div>
-                )}
-                {error && (
-                    <div className="py-6 text-center text-sm text-destructive px-4 whitespace-pre-wrap">
-                        {error}
-                    </div>
-                )}
-                {!loading && !error && results.length === 0 && hasSearched && (
-                    <CommandEmpty>{t('searchEmpty')}</CommandEmpty>
-                )}
-                <CommandGroup>
-                    {results.map((result, index) => {
-                        // 언어에 따라 주 종목명과 부 종목명 결정
-                        const primaryName = language === 'ko'
-                            ? (result.nameKo || result.name)
-                            : (result.nameEn || result.name)
-                        const secondaryName = language === 'ko'
-                            ? result.nameEn
-                            : result.nameKo
+            </PopoverTrigger>
+            <PopoverContent
+                className="p-0 flex flex-col"
+                align="start"
+                side="top"
+                sideOffset={6}
+                collisionPadding={12}
+                style={{
+                    ...(triggerWidth ? { width: triggerWidth } : {}),
+                    maxHeight: 'var(--radix-popover-content-available-height)',
+                }}
+                onOpenAutoFocus={(e) => e.preventDefault()}
+            >
+                <Command shouldFilter={false} className="flex-1 min-h-0 flex flex-col">
+                    <CommandList className="flex-1 min-h-0 overflow-y-auto order-1">
+                        {loading && (
+                            <div className="py-6 text-center text-sm text-muted-foreground">
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin inline" />
+                                {t('searchSearching')}
+                            </div>
+                        )}
+                        {error && (
+                            <div className="py-6 text-center text-sm text-destructive px-4 whitespace-pre-wrap">
+                                {error}
+                            </div>
+                        )}
+                        {!loading && !error && results.length === 0 && hasSearched && (
+                            <CommandEmpty>{t('searchEmpty')}</CommandEmpty>
+                        )}
+                        <CommandGroup>
+                            {results.map((result, index) => {
+                                const primaryName = language === 'ko'
+                                    ? (result.nameKo || result.name)
+                                    : (result.nameEn || result.name)
+                                const secondaryName = language === 'ko'
+                                    ? result.nameEn
+                                    : result.nameKo
 
-                        return (
-                            <CommandItem
-                                key={`${result.symbol}-${result.exchange}-${index}`}
-                                value={`${result.symbol}-${result.exchange}`}
-                                onSelect={() => handleSelect(result)}
-                                className="py-3"
-                            >
-                                <Check
-                                    className={cn(
-                                        "mr-2 h-4 w-4",
-                                        value === result.symbol ? "opacity-100" : "opacity-0"
-                                    )}
-                                />
-                                <div className="flex flex-col truncate w-full">
-                                    <span className="truncate text-base font-medium" title={primaryName}>
-                                        {primaryName}
-                                    </span>
-                                    <span className="text-xs text-muted-foreground truncate">
-                                        {result.symbol} | {result.market}
-                                        {secondaryName && secondaryName !== primaryName && ` | ${secondaryName}`}
-                                    </span>
-                                </div>
-                            </CommandItem>
-                        )
-                    })}
-                </CommandGroup>
-            </CommandList>
-        </>
+                                return (
+                                    <CommandItem
+                                        key={`${result.symbol}-${result.exchange}-${index}`}
+                                        value={`${result.symbol}-${result.exchange}`}
+                                        onSelect={() => handleSelect(result)}
+                                        className="py-3"
+                                    >
+                                        <Check
+                                            className={cn(
+                                                'mr-2 h-4 w-4',
+                                                value === result.symbol ? 'opacity-100' : 'opacity-0',
+                                            )}
+                                        />
+                                        <div className="flex flex-col truncate w-full">
+                                            <span className="truncate text-base font-medium" title={primaryName}>
+                                                {primaryName}
+                                            </span>
+                                            <span className="text-xs text-muted-foreground truncate">
+                                                {result.symbol} | {result.market}
+                                                {secondaryName && secondaryName !== primaryName && ` | ${secondaryName}`}
+                                            </span>
+                                        </div>
+                                    </CommandItem>
+                                )
+                            })}
+                        </CommandGroup>
+                    </CommandList>
+                    <div className="flex items-center border-t px-3 order-2 shrink-0" cmdk-input-wrapper="">
+                        <input
+                            className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                            placeholder={t('searchPlaceholder')}
+                            value={query}
+                            onChange={(e) => setQuery(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.nativeEvent.isComposing) return
+                                if (e.key === 'Enter') {
+                                    e.preventDefault()
+                                    handleManualSearch()
+                                }
+                            }}
+                            autoFocus
+                        />
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 ml-1"
+                            onClick={handleManualSearch}
+                        >
+                            <Search className="h-4 w-4" />
+                        </Button>
+                    </div>
+                </Command>
+            </PopoverContent>
+        </Popover>
     )
 }

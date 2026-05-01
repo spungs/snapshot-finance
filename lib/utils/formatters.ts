@@ -1,15 +1,68 @@
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
 
+// Thin space (U+2009) — ₩ 뒤 시각 분리에 사용 (regular space 보다 좁음)
+const THIN_SPACE = ' '
+
 /**
- * 금액 포맷팅 (예: ₩12,345,678)
+ * 금액 포맷팅 (예: ₩ 12,345,678)
+ *
+ * Pretendard ₩ 글리프의 가로선이 인접 숫자에 시각적으로 이어져 strikethrough처럼
+ * 보이는 문제를 막기 위해 ₩ 뒤에 thin space(U+2009)를 삽입한다.
+ *
+ * `compact: true`면 좁은 영역(KPI 카드 등)을 위해 임계값 이상부터 단위 축약:
+ *   KRW: 1억 미만은 풀 표시, 이상은 "1.23억"/"12.3억"/"1,234억"/"1.23조"
+ *   USD: $1M 미만은 풀, 이상은 "$1.23M"/"$1.23B"
  */
-export function formatCurrency(value: number | string, currency: string = 'KRW'): string {
-  return new Intl.NumberFormat('ko-KR', {
+export function formatCurrency(
+  value: number | string,
+  currency: string = 'KRW',
+  options: { compact?: boolean } = {},
+): string {
+  const num = Number(value)
+
+  if (options.compact) {
+    const c = formatCompact(num, currency)
+    if (c !== null) return c
+  }
+
+  const formatted = new Intl.NumberFormat('ko-KR', {
     style: 'currency',
     currency: currency,
     currencyDisplay: 'narrowSymbol',
-  }).format(Number(value))
+  }).format(num)
+  return formatted.replace(/^(-?)₩/, `$1₩${THIN_SPACE}`)
+}
+
+function formatCompact(num: number, currency: string): string | null {
+  if (!Number.isFinite(num)) return null
+  const abs = Math.abs(num)
+  const sign = num < 0 ? '-' : ''
+
+  if (currency === 'KRW') {
+    if (abs < 100_000_000) return null
+    if (abs < 1_000_000_000_000) {
+      const eok = abs / 100_000_000
+      const display = eok < 10
+        ? eok.toFixed(2)
+        : eok < 100
+          ? eok.toFixed(1)
+          : Math.round(eok).toLocaleString('ko-KR')
+      return `${sign}₩${THIN_SPACE}${display}억`
+    }
+    const jo = abs / 1_000_000_000_000
+    return `${sign}₩${THIN_SPACE}${jo.toFixed(2)}조`
+  }
+
+  if (currency === 'USD') {
+    if (abs < 1_000_000) return null
+    if (abs < 1_000_000_000) {
+      return `${sign}$${(abs / 1_000_000).toFixed(2)}M`
+    }
+    return `${sign}$${(abs / 1_000_000_000).toFixed(2)}B`
+  }
+
+  return null
 }
 
 /**

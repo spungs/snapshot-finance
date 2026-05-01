@@ -135,7 +135,7 @@ export function PerformanceChart() {
 
   const formattedData = data.map((d) => ({
     ...d,
-    dateLabel: formatDate(d.date, 'MM/dd'),
+    dateLabel: formatDate(d.date, 'MM.dd'),
     displayValue: mode === 'profitRate' ? d.profitRate : d.totalAsset / (baseCurrency === 'USD' ? exchangeRate : 1),
   }))
 
@@ -149,7 +149,7 @@ export function PerformanceChart() {
           <div className="flex items-center gap-2">
             <BarChart2 className="h-4 w-4 text-muted-foreground" />
             <CardTitle className="text-base">
-              {language === 'ko' ? '성과 리포트' : 'Performance'}
+              {language === 'ko' ? '성과 흐름' : 'Performance trend'}
             </CardTitle>
             {!loading && lastPoint && (
               <Badge variant={isUp ? 'profit' : 'loss'} className="text-xs font-semibold">
@@ -159,8 +159,8 @@ export function PerformanceChart() {
             )}
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="flex rounded-md border border-border overflow-hidden text-xs">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            <div className="flex rounded-md border border-border overflow-hidden text-xs self-start sm:self-auto">
               <button
                 onClick={() => setMode('profitRate')}
                 className={cn(
@@ -185,7 +185,7 @@ export function PerformanceChart() {
               </button>
             </div>
 
-            <div className="flex rounded-md border border-border overflow-hidden text-xs">
+            <div className="flex rounded-md border border-border overflow-hidden text-xs self-start sm:self-auto">
               {PERIODS.map((p) => (
                 <button
                   key={p}

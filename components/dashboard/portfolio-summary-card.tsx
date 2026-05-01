@@ -124,7 +124,12 @@ export function PortfolioSummaryCard({
   }, [isGoalAchieved])
 
 
-  const isProfit = totalProfit >= 0
+  // 0%(또는 ±0.005% 이내)는 무변동으로 간주해 회색으로 표시한다 — 한국 시장 컨벤션상
+  // 빨강=상승, 녹색=하락이지만 0.00% 표시도 빨강이면 사용자가 즉시 판별하기 어렵다.
+  const isFlat = Math.abs(profitRate) < 0.005
+  const isProfit = !isFlat && totalProfit >= 0
+  const directionClass = isFlat ? 'text-flat' : isProfit ? 'text-profit' : 'text-loss'
+  const directionSymbol = isFlat ? '–' : isProfit ? '▲' : '▼'
 
   return (
     <Card>
@@ -169,15 +174,15 @@ export function PortfolioSummaryCard({
             </p>
             <div className="mt-2.5 flex items-center gap-2 flex-wrap">
               <span className={cn(
-                'inline-flex items-center gap-1 text-[15px] font-bold numeric tracking-tight',
-                isProfit ? 'text-profit' : 'text-loss',
+                'inline-flex items-center gap-1 text-[19px] font-bold numeric tracking-tight',
+                directionClass,
               )}>
-                <span aria-hidden>{isProfit ? '▲' : '▼'}</span>
+                <span aria-hidden>{directionSymbol}</span>
                 <span>{Math.abs(profitRate).toFixed(2)}%</span>
               </span>
               <span className={cn(
-                'text-[13px] font-semibold numeric',
-                isProfit ? 'text-profit' : 'text-loss',
+                'text-[12px] font-semibold numeric text-muted-foreground',
+                !isFlat && (isProfit ? 'text-profit/80' : 'text-loss/80'),
               )}>
                 {isProfit ? '+' : ''}{formatCurrency(displayProfit, currency)}
               </span>

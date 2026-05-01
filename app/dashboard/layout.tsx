@@ -2,8 +2,7 @@ import { auth } from '@/lib/auth'
 import { GlobalPullToRefresh } from '@/components/global-pull-to-refresh'
 import { ScreenHeader } from '@/components/dashboard/screen-header'
 import { BottomTabBar } from '@/components/dashboard/bottom-tab-bar'
-import { ThemeToggle } from '@/components/ui/theme-toggle'
-import { UserAccountNav } from '@/components/dashboard/user-account-nav'
+import { User } from 'lucide-react'
 
 export default async function DashboardLayout({
   children,
@@ -11,20 +10,38 @@ export default async function DashboardLayout({
   children: React.ReactNode
 }) {
   const session = await auth()
+  const image = session?.user?.image
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <ScreenHeader
         right={
-          <>
-            <ThemeToggle />
-            {session?.user && <UserAccountNav user={session.user} />}
-          </>
+          session?.user ? (
+            image ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={image}
+                alt=""
+                aria-hidden
+                className="h-9 w-9 rounded-full object-cover border border-border"
+              />
+            ) : (
+              <div
+                aria-hidden
+                className="h-9 w-9 rounded-full bg-muted flex items-center justify-center border border-border"
+              >
+                <User className="h-4 w-4 text-muted-foreground" />
+              </div>
+            )
+          ) : null
         }
       />
 
       <GlobalPullToRefresh>
-        <main className="flex-1 flex flex-col pb-24">
+        <main
+          className="flex-1 flex flex-col"
+          style={{ paddingBottom: 'calc(96px + var(--safe-bottom, 0px))' }}
+        >
           {children}
         </main>
       </GlobalPullToRefresh>

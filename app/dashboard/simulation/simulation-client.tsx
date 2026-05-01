@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import { formatCurrency, formatDate, formatNumber } from '@/lib/utils/formatters'
+import { cn } from '@/lib/utils'
+import { Loader2, AlertCircle } from 'lucide-react'
+import { useLanguage } from '@/lib/i18n/context'
 import {
     Select,
     SelectContent,
@@ -11,18 +13,23 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table'
-import { formatCurrency, formatProfitRate, formatDate, formatNumber } from '@/lib/utils/formatters'
-import { Loader2, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { useLanguage } from '@/lib/i18n/context'
+
+interface SimulationHolding {
+    stockName: string
+    stockCode: string
+    quantity: number
+    snapshotPrice: number
+    currentPrice: number
+    originalValue: number
+    simulatedValue: number
+    gain: number
+    gainRate: number
+    gainKRW?: number
+    gainRateKRW?: number
+    simulatedValueKRW?: number
+    currency: string
+    error?: string
+}
 
 interface SimulationResult {
     snapshotDate: string
@@ -30,22 +37,7 @@ interface SimulationResult {
     totalSimulatedValue: number
     totalGain: number
     totalGainRate: number
-    holdings: {
-        stockName: string
-        stockCode: string
-        quantity: number
-        snapshotPrice: number
-        currentPrice: number
-        originalValue: number
-        simulatedValue: number
-        gain: number
-        gainRate: number
-        gainKRW?: number
-        gainRateKRW?: number
-        simulatedValueKRW?: number
-        currency: string
-        error?: string
-    }[]
+    holdings: SimulationHolding[]
     exchangeRate: number
     snapshotExchangeRate: number
 }
@@ -54,6 +46,21 @@ interface SimulationClientProps {
     initialSnapshots: any[]
 }
 
+function UpDown({ value, big = false }: { value: number; big?: boolean }) {
+    const isUp = value >= 0
+    return (
+        <span
+            className={cn(
+                'numeric font-bold tracking-tight inline-flex items-center gap-0.5',
+                isUp ? 'text-profit' : 'text-loss',
+                big ? 'text-[15px]' : 'text-[12.5px]',
+            )}
+        >
+            <span aria-hidden>{isUp ? '▲' : '▼'}</span>
+            <span>{Math.abs(value).toFixed(2)}%</span>
+        </span>
+    )
+}
 
 export default function SimulationClient({ initialSnapshots }: SimulationClientProps) {
     const { t, language } = useLanguage()
@@ -64,8 +71,6 @@ export default function SimulationClient({ initialSnapshots }: SimulationClientP
     const [error, setError] = useState<string | null>(null)
 
     const selectedSnapshot = initialSnapshots.find(s => s.id === selectedSnapshotId)
-    const snapshotProfit = selectedSnapshot ? Number(selectedSnapshot.totalProfit) : 0
-    const profitDiff = result ? result.totalGain - snapshotProfit : 0
 
     useEffect(() => {
         const id = searchParams.get('snapshotId')
@@ -93,7 +98,7 @@ export default function SimulationClient({ initialSnapshots }: SimulationClientP
             } else {
                 setError(data.error || t('simulationFailed'))
             }
-        } catch (err) {
+        } catch {
             setError(t('runSimulationFailed'))
         } finally {
             setLoading(false)
@@ -112,422 +117,369 @@ export default function SimulationClient({ initialSnapshots }: SimulationClientP
     }
 
     return (
-        <div className="space-y-6">
-            <div>
-                <h1 className="text-3xl font-bold tracking-tight">{t('simulationTitle')}</h1>
-                <p className="text-muted-foreground">
+        <div className="max-w-[480px] mx-auto w-full pb-8">
+            {/* Hero */}
+            <section className="px-6 pt-3 pb-4">
+                <h1 className="hero-serif text-[32px] text-foreground">
+                    {t('simulationTitle')}
+                </h1>
+                <span className="serif-italic text-xs text-muted-foreground block mt-1">
                     {t('simulationDesc')}
+                </span>
+            </section>
+
+            {/* Snapshot picker */}
+            <section className="mx-4 mb-4 bg-card border border-border p-5">
+                <div className="eyebrow mb-2">
+                    {language === 'ko' ? `STEP 01 · ${t('selectSnapshot')}` : `STEP 01 · ${t('selectSnapshot')}`}
+                </div>
+                <p className="text-[11px] text-muted-foreground mb-3">
+                    {t('selectSnapshotDesc')}
                 </p>
-            </div>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>{t('selectSnapshot')}</CardTitle>
-                    <CardDescription>
-                        {t('selectSnapshotDesc')}
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex flex-col sm:flex-row gap-2 items-end sm:items-center">
-                        <div className="w-full sm:w-auto sm:min-w-[320px]">
-                            <Select value={selectedSnapshotId} onValueChange={handleSnapshotChange}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder={t('selectSnapshotPlaceholder')} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {initialSnapshots.map((snap) => {
-                                        const isEn = language === 'en'
-                                        let displayValue = Number(snap.totalValue)
-                                        let currency = 'KRW'
+                <Select value={selectedSnapshotId} onValueChange={handleSnapshotChange}>
+                    <SelectTrigger className="w-full h-11 bg-background border-border rounded-none font-serif text-[14px]">
+                        <SelectValue placeholder={t('selectSnapshotPlaceholder')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {initialSnapshots.map((snap) => {
+                            const isEn = language === 'en'
+                            let displayValue = Number(snap.totalValue)
+                            let currency: 'KRW' | 'USD' = 'KRW'
+                            if (isEn && snap.exchangeRate) {
+                                displayValue = displayValue / snap.exchangeRate
+                                currency = 'USD'
+                            }
+                            const dateStr = formatDate(snap.snapshotDate)
+                            const assetStr = `${t('totalAssets')}: ${formatCurrency(displayValue, currency)}`
+                            const label = snap.note ? `${dateStr} | ${snap.note}` : dateStr
+                            return (
+                                <SelectItem key={snap.id} value={snap.id}>
+                                    <span className="block truncate max-w-[260px] sm:max-w-none">
+                                        {label} ({assetStr})
+                                    </span>
+                                </SelectItem>
+                            )
+                        })}
+                    </SelectContent>
+                </Select>
 
-                                        if (isEn && snap.exchangeRate) {
-                                            displayValue = displayValue / snap.exchangeRate
-                                            currency = 'USD'
-                                        }
-
-                                        const dateStr = formatDate(snap.snapshotDate)
-                                        const assetStr = `${t('totalAssets')}: ${formatCurrency(displayValue, currency)}`
-
-                                        // User Request: Show Note first if exists
-                                        const label = snap.note
-                                            ? `${dateStr} | ${snap.note}`
-                                            : dateStr
-
-                                        return (
-                                            <SelectItem key={snap.id} value={snap.id}>
-                                                <span className="block truncate max-w-[260px] sm:max-w-none">
-                                                    {label} ({assetStr})
-                                                </span>
-                                            </SelectItem>
-                                        )
-                                    })}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <Button onClick={runSimulation} disabled={!selectedSnapshotId || loading} className="w-full sm:w-auto">
-                            {loading ? (
-                                <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    {t('calculating')}
-                                </>
-                            ) : (
-                                t('runSimulation')
-                            )}
-                        </Button>
-                    </div>
-                </CardContent>
-            </Card>
+                <button
+                    type="button"
+                    onClick={runSimulation}
+                    disabled={!selectedSnapshotId || loading}
+                    className="mt-3 w-full bg-primary text-primary-foreground py-3 text-sm font-bold disabled:opacity-50 hover:opacity-90 transition-opacity inline-flex items-center justify-center gap-2"
+                >
+                    {loading ? (
+                        <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            {t('calculating')}
+                        </>
+                    ) : (
+                        t('runSimulation')
+                    )}
+                </button>
+            </section>
 
             {error && (
-                <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>{t('error')}</AlertTitle>
-                    <AlertDescription>{error}</AlertDescription>
-                </Alert>
+                <section className="mx-4 mb-4 bg-card border border-loss/40 p-4 flex gap-3">
+                    <AlertCircle className="h-4 w-4 text-loss shrink-0 mt-0.5" />
+                    <div>
+                        <div className="text-[11px] font-bold text-loss tracking-[0.5px] uppercase">{t('error')}</div>
+                        <div className="text-[13px] text-foreground mt-1">{error}</div>
+                    </div>
+                </section>
             )}
 
-            {result && (
-                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    {/* Currency Calculation */}
-                    {(() => {
-                        const isEn = language === 'en'
-                        const currency = isEn ? 'USD' : 'KRW'
+            {result && selectedSnapshot && (
+                <ResultBlock
+                    result={result}
+                    selectedSnapshot={selectedSnapshot}
+                    language={language}
+                    t={t}
+                />
+            )}
+        </div>
+    )
+}
 
-                        // Cost Basis (Total Invested)
-                        // This corresponds to the user's initial investment
-                        const totalInvested = isEn && result.snapshotExchangeRate
-                            ? result.totalOriginalValue / result.snapshotExchangeRate
-                            : result.totalOriginalValue
+function ResultBlock({
+    result, selectedSnapshot, language, t,
+}: {
+    result: SimulationResult
+    selectedSnapshot: any
+    language: string
+    t: (k: any) => string
+}) {
+    const isEn = language === 'en'
+    const currency: 'KRW' | 'USD' = isEn ? 'USD' : 'KRW'
+    const rate = result.exchangeRate || 1435
+    const snapshotRate = result.snapshotExchangeRate || 1
 
-                        // Current Value (Simulated Today)
-                        // Current Stock Value
-                        const currentStockValue = isEn && result.exchangeRate
-                            ? result.totalSimulatedValue / result.exchangeRate
-                            : result.totalSimulatedValue
+    const totalInvested = isEn && result.snapshotExchangeRate
+        ? result.totalOriginalValue / result.snapshotExchangeRate
+        : result.totalOriginalValue
 
-                        // Current Cash Value (Assuming Cash is held as is)
-                        // If EN, we convert the KRW cash to USD at CURRENT rate (buying power today)
-                        const cashBalance = selectedSnapshot ? Number(selectedSnapshot.cashBalance) : 0
-                        const currentCashValue = isEn && result.exchangeRate
-                            ? cashBalance / result.exchangeRate
-                            : cashBalance
+    const currentStockValue = isEn && result.exchangeRate
+        ? result.totalSimulatedValue / result.exchangeRate
+        : result.totalSimulatedValue
 
-                        const currentTotalValue = currentStockValue // User requested to exclude cash
+    const cashBalance = Number(selectedSnapshot.cashBalance)
+    const snapshotValuationVal = Number(selectedSnapshot.totalValue)
 
-                        // Profit is simple difference in the target currency (Holdings Only? Or Total?)
-                        // If we compare Total Assets, we should use Total gain.
-                        // totalGain (Stock Only) = CurrentStock - Cost
-                        // But for "Simulation Difference", we want TotalAssetNow - TotalAssetThen.
+    const displaySnapshotValue = isEn && result.snapshotExchangeRate
+        ? snapshotValuationVal / result.snapshotExchangeRate
+        : snapshotValuationVal
 
-                        // Snapshot Value (Value at the time of snapshot)
-                        // This includes Cash.
-                        const snapshotValuationVal = selectedSnapshot ? Number(selectedSnapshot.totalValue) : 0
-                        const displaySnapshotValue = isEn && result.snapshotExchangeRate
-                            ? snapshotValuationVal / result.snapshotExchangeRate
-                            : snapshotValuationVal
+    const snapshotCashValue = isEn && result.snapshotExchangeRate
+        ? cashBalance / result.snapshotExchangeRate
+        : cashBalance
 
-                        // Snapshot Cash Value (for display in Past Value card)
-                        const snapshotCashValue = isEn && result.snapshotExchangeRate
-                            ? cashBalance / result.snapshotExchangeRate
-                            : cashBalance
+    const currentTotalValue = currentStockValue
+    const totalGain = currentTotalValue - totalInvested
 
-                        // Profits Calculation
+    const snapshotProfitVal = Number(selectedSnapshot.totalProfit)
+    const snapshotProfit = isEn && result.snapshotExchangeRate
+        ? snapshotProfitVal / result.snapshotExchangeRate
+        : snapshotProfitVal
 
-                        // 1. Total Gain (Current Value - Cost)
-                        // Cost doesn't include cash usually. 
-                        // But Total Asset Value includes Cash.
-                        // So (Stock + Cash) - Cost = Gain.
-                        const totalGain = currentTotalValue - totalInvested
+    const profitDiff = currentTotalValue - displaySnapshotValue
+    const simulationYield = displaySnapshotValue ? (profitDiff / displaySnapshotValue) * 100 : 0
+    const isUp = profitDiff >= 0
 
-                        // 2. Snapshot Profit (Snapshot Value - Cost)
-                        const snapshotProfitVal = selectedSnapshot ? Number(selectedSnapshot.totalProfit) : 0
-                        const snapshotProfit = isEn && result.snapshotExchangeRate
-                            ? snapshotProfitVal / result.snapshotExchangeRate
-                            : snapshotProfitVal
+    return (
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {/* Result hero — accent stripe + big simulated diff */}
+            <div className="mx-4 mb-4 relative overflow-hidden border bg-card" style={{ padding: 22 }}>
+                <div
+                    className={cn(
+                        'absolute top-0 left-0 right-0 h-[3px]',
+                        isUp ? 'bg-profit' : 'bg-loss',
+                    )}
+                />
 
-                        // 3. Simulation Difference (Current Value - Snapshot Value)
-                        const profitDiff = currentTotalValue - displaySnapshotValue
+                <div className="flex items-center justify-between mb-1">
+                    <span className="eyebrow">
+                        {language === 'ko' ? `RESULT · ${t('simulationResult')}` : `RESULT · ${t('simulationResult')}`}
+                    </span>
+                    <span className="text-[11px] text-muted-foreground" suppressHydrationWarning>
+                        {formatDate(result.snapshotDate, 'yyyy.MM.dd')} {t('basedOn')}
+                    </span>
+                </div>
 
-                        // 4. Simulation Yield (Difference / Snapshot Value)
-                        const simulationYield = displaySnapshotValue ? (profitDiff / displaySnapshotValue) * 100 : 0
+                <div className="text-[11px] font-semibold text-muted-foreground tracking-[0.5px] mt-3 mb-1">
+                    {language === 'ko' ? '시뮬레이션 차이' : 'Simulation difference'}
+                </div>
+                <div
+                    className={cn(
+                        'amount-display text-[30px] leading-none numeric',
+                        isUp ? 'text-profit' : 'text-loss',
+                    )}
+                >
+                    {isUp ? '+' : ''}{formatCurrency(profitDiff, currency)}
+                </div>
 
-                        return (
-                            <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
-                                <Card>
-                                    <CardHeader className="pb-2">
-                                        <CardTitle className="text-sm font-medium">{t('pastValue')}</CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="text-xs text-muted-foreground mb-1">{t('evaluatedValue')}</div>
-                                        <div className="text-2xl font-bold">{formatCurrency(displaySnapshotValue, currency)}</div>
-                                        <p className="text-xs text-muted-foreground mt-1">
-                                            {formatDate(result.snapshotDate)} {t('basedOn')}
-                                        </p>
-                                        <p className="text-xs text-muted-foreground mt-1 border-t pt-1 w-fit">
-                                            {t('totalInvested')}: {formatCurrency(totalInvested, currency)}
-                                        </p>
-                                        <p className="text-xs text-muted-foreground mt-1 w-fit">
-                                            {t('cash')}: {formatCurrency(snapshotCashValue, currency)}
-                                        </p>
-                                    </CardContent>
-                                </Card>
+                <div className="flex gap-4 mt-3.5 items-stretch">
+                    <div>
+                        <div className="text-[10px] font-semibold text-muted-foreground tracking-[0.5px] uppercase">
+                            {language === 'ko' ? '시뮬레이션 수익률' : 'Sim. yield'}
+                        </div>
+                        <div className="mt-1"><UpDown value={simulationYield} big /></div>
+                    </div>
+                    <div className="w-px bg-border self-stretch" />
+                    <div>
+                        <div className="text-[10px] font-semibold text-muted-foreground tracking-[0.5px] uppercase">
+                            {language === 'ko' ? '평가손익 변화' : 'P/L change'}
+                        </div>
+                        <div
+                            className={cn(
+                                'text-[15px] font-bold mt-1 numeric',
+                                totalGain - snapshotProfit >= 0 ? 'text-profit' : 'text-loss',
+                            )}
+                        >
+                            {totalGain - snapshotProfit >= 0 ? '+' : ''}
+                            {formatCurrency(totalGain - snapshotProfit, currency)}
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-                                <Card>
-                                    <CardHeader className="pb-2">
-                                        <CardTitle className="text-sm font-medium">{t('currentValue')}</CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="text-xs text-muted-foreground mb-1">{t('evaluatedValue')}</div>
-                                        <div className="text-2xl font-bold">{formatCurrency(currentTotalValue, currency)}</div>
-                                        <p className="text-xs text-muted-foreground mt-1">
-                                            {t('basedOnRealtime')} <span className="text-[10px] text-muted-foreground">({t('exclCash')})</span>
-                                        </p>
-                                        <p className="text-xs text-muted-foreground mt-1 border-t pt-1 w-fit opacity-0" aria-hidden="true">
-                                            {t('totalInvested')}: {formatCurrency(totalInvested, currency)}
-                                        </p>
-                                    </CardContent>
-                                </Card>
-
-                                <Card className={profitDiff >= 0 ? "border-profit/20 bg-profit/5 dark:bg-profit/10" : "border-loss/20 bg-loss/5 dark:bg-loss/10"}>
-                                    <CardHeader className="pb-2">
-                                        <CardTitle className="text-sm font-medium">{t('simulationResult')}</CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className={`text-2xl font-bold flex items-center ${profitDiff >= 0 ? "text-profit" : "text-loss"}`}>
-                                            {profitDiff >= 0 ? <TrendingUp className="mr-2 h-6 w-6" /> : <TrendingDown className="mr-2 h-6 w-6" />}
-                                            {profitDiff >= 0 ? '+' : ''}{formatCurrency(profitDiff, currency)}
-                                        </div>
-                                        <p className={`text-xs font-medium ${profitDiff >= 0 ? "text-profit" : "text-loss"}`}>
-                                            {formatProfitRate(simulationYield, true)}
-                                        </p>
-
-                                        <div className="mt-4 pt-4 border-t space-y-2">
-                                            <div className="flex justify-between text-sm">
-                                                <span className="text-muted-foreground">
-                                                    {t('currentPL')}
-                                                </span>
-                                                <span className={totalGain >= 0 ? "text-profit" : "text-loss"}>
-                                                    {formatCurrency(totalGain, currency)}
-                                                </span>
-                                            </div>
-                                            <div className="flex justify-between text-sm">
-                                                <span className="text-muted-foreground">
-                                                    {t('snapshotPL')}
-                                                </span>
-                                                <span className={snapshotProfit >= 0 ? "text-profit" : "text-loss"}>
-                                                    {formatCurrency(snapshotProfit, currency)}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
+            {/* Two-up: 과거 가치 / 현재 가치 */}
+            <section className="mx-4 mb-2 grid grid-cols-2 gap-2">
+                <div className="p-4 bg-card border border-border">
+                    <div className="text-[10px] font-bold text-muted-foreground tracking-[1px] uppercase">
+                        {t('pastValue')}
+                    </div>
+                    <div className="font-serif text-lg font-semibold text-foreground mt-1.5 numeric">
+                        {formatCurrency(displaySnapshotValue, currency)}
+                    </div>
+                    <div className="text-[10px] text-muted-foreground tracking-[0.5px] mt-2 pt-2 border-t border-border/60">
+                        <div className="flex justify-between">
+                            <span>{t('totalInvested')}</span>
+                            <span className="numeric text-foreground">{formatCurrency(totalInvested, currency)}</span>
+                        </div>
+                        <div className="flex justify-between mt-1">
+                            <span>{language === 'ko' ? '예수금' : 'Cash'}</span>
+                            <span className="numeric text-foreground">{formatCurrency(snapshotCashValue, currency)}</span>
+                        </div>
+                    </div>
+                </div>
+                <div className="p-4 bg-card border border-border">
+                    <div className="text-[10px] font-bold text-muted-foreground tracking-[1px] uppercase">
+                        {t('currentValue')}
+                    </div>
+                    <div className="font-serif text-lg font-semibold text-foreground mt-1.5 numeric">
+                        {formatCurrency(currentTotalValue, currency)}
+                    </div>
+                    <div className="text-[10px] text-muted-foreground tracking-[0.5px] mt-2 pt-2 border-t border-border/60">
+                        <div className="flex justify-between">
+                            <span>{t('basedOnRealtime')}</span>
+                            <span className="text-[9px]">({t('exclCash')})</span>
+                        </div>
+                        {isEn && (
+                            <div className="flex justify-between mt-1">
+                                <span>Rate</span>
+                                <span className="numeric text-foreground">{formatNumber(rate, 0)}</span>
                             </div>
-                        )
-                    })()}
+                        )}
+                    </div>
+                </div>
+            </section>
 
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>{t('holdingsComparison')}</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="md:hidden space-y-4">
-                                {result.holdings.map((item, index) => {
-                                    const isEn = language === 'en'
-                                    const rate = result.exchangeRate || 1435
-                                    const snapshotRate = result.snapshotExchangeRate || 1
+            {/* P/L detail card */}
+            <section className="mx-4 mb-4 p-4 bg-card border border-border">
+                <div className="flex justify-between items-center py-1">
+                    <span className="text-[11px] text-muted-foreground tracking-[0.5px]">
+                        {t('currentPL')}
+                    </span>
+                    <span className={cn(
+                        'text-[13px] font-bold numeric',
+                        totalGain >= 0 ? 'text-profit' : 'text-loss',
+                    )}>
+                        {totalGain >= 0 ? '+' : ''}{formatCurrency(totalGain, currency)}
+                    </span>
+                </div>
+                <div className="flex justify-between items-center py-1 mt-1 pt-2 border-t border-border/60">
+                    <span className="text-[11px] text-muted-foreground tracking-[0.5px]">
+                        {t('snapshotPL')}
+                    </span>
+                    <span className={cn(
+                        'text-[13px] font-bold numeric',
+                        snapshotProfit >= 0 ? 'text-profit' : 'text-loss',
+                    )}>
+                        {snapshotProfit >= 0 ? '+' : ''}{formatCurrency(snapshotProfit, currency)}
+                    </span>
+                </div>
+            </section>
 
-                                    let displayCurrency = item.currency
-                                    let displayCurrentPrice = item.currentPrice
-                                    let displayAvgPrice = item.snapshotPrice
-                                    let displayGain = item.gain
+            {/* Holdings comparison */}
+            <div className="px-6 pb-3 flex justify-between items-center">
+                <span className="eyebrow">
+                    {language === 'ko'
+                        ? `HOLDINGS · ${result.holdings.length}`
+                        : `HOLDINGS · ${result.holdings.length}`}
+                </span>
+                <span className="text-[10px] text-muted-foreground tracking-[0.5px]">
+                    {t('holdingsComparison')}
+                </span>
+            </div>
 
-                                    if (isEn) {
-                                        displayCurrency = 'USD'
-                                        if (item.currency === 'KRW') {
-                                            displayCurrentPrice = item.currentPrice / rate
-                                        }
-                                        if (item.currency === 'KRW') {
-                                            displayAvgPrice = item.snapshotPrice / snapshotRate
-                                        }
-                                        const valNowUSD = item.currency === 'KRW' ? (item.currentPrice * item.quantity) / rate : (item.currentPrice * item.quantity)
-                                        const valThenUSD = item.currency === 'KRW' ? (item.snapshotPrice * item.quantity) / snapshotRate : (item.snapshotPrice * item.quantity)
-                                        displayGain = valNowUSD - valThenUSD
-                                    }
+            <div className="px-4 pb-4 space-y-1.5">
+                {result.holdings.map((item, index) => {
+                    let displayCurrency: 'KRW' | 'USD' = item.currency as 'KRW' | 'USD'
+                    let displayCurrentPrice = item.currentPrice
+                    let displayAvgPrice = item.snapshotPrice
+                    let displayGain = item.gain
 
-                                    return (
-                                        <div key={`mobile-${item.stockCode}-${index}`} className="bg-muted/40 rounded-lg p-4 border space-y-3">
-                                            <div className="flex justify-between items-start">
-                                                <div>
-                                                    <div className="font-semibold">{item.stockName}</div>
-                                                    <div className="text-sm text-muted-foreground">{item.stockCode}</div>
-                                                </div>
-                                                <div className="text-right">
-                                                    <div className={`font-medium ${displayGain >= 0 ? 'text-profit' : 'text-loss'}`}>
-                                                        {displayGain >= 0 ? '+' : ''}{formatCurrency(displayGain, displayCurrency)}
-                                                    </div>
-                                                    {displayCurrency === 'USD' && item.gainKRW !== undefined && (
-                                                        <div className={`text-xs ${item.gainKRW >= 0 ? 'text-profit/70' : 'text-loss/70'} mt-0.5`}>
-                                                            ({item.gainKRW >= 0 ? '+' : ''}{formatCurrency(item.gainKRW, 'KRW')})
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
+                    if (isEn) {
+                        displayCurrency = 'USD'
+                        if (item.currency === 'KRW') {
+                            displayCurrentPrice = item.currentPrice / rate
+                            displayAvgPrice = item.snapshotPrice / snapshotRate
+                        }
+                        const valNowUSD = item.currency === 'KRW'
+                            ? (item.currentPrice * item.quantity) / rate
+                            : (item.currentPrice * item.quantity)
+                        const valThenUSD = item.currency === 'KRW'
+                            ? (item.snapshotPrice * item.quantity) / snapshotRate
+                            : (item.snapshotPrice * item.quantity)
+                        displayGain = valNowUSD - valThenUSD
+                    }
 
-                                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 border-t pt-3">
-                                                <div>
-                                                    <div className="text-xs text-muted-foreground mb-1">{t('quantity')}</div>
-                                                    <div className="font-medium">{formatNumber(item.quantity)}{t('countUnit')}</div>
-                                                </div>
-                                                <div className="text-right">
-                                                    <div className="text-xs text-muted-foreground mb-1">{t('returnRate')}</div>
-                                                    <div className={`${item.gainRate >= 0 ? 'text-profit' : 'text-loss'} font-medium`}>
-                                                        {formatProfitRate(item.gainRate, true)}
-                                                    </div>
-                                                    {displayCurrency === 'USD' && item.gainRateKRW !== undefined && (
-                                                        <div className={`text-xs ${item.gainRateKRW >= 0 ? 'text-profit/70' : 'text-loss/70'} mt-0.5`}>
-                                                            ({formatProfitRate(item.gainRateKRW, true)})
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                <div className="text-right">
-                                                    <div className="text-xs text-muted-foreground mb-1">{t('weight')}</div>
-                                                    <div className="font-medium">
-                                                        {formatNumber(((item.simulatedValueKRW || 0) / result.totalSimulatedValue) * 100, 1)}%
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <div className="text-xs text-muted-foreground mb-1">{t('avgPrice')}</div>
-                                                    <div className="font-medium">{formatCurrency(displayAvgPrice, displayCurrency)}</div>
-                                                </div>
-                                                <div className="text-right">
-                                                    <div className="text-xs text-muted-foreground mb-1">{t('currentPrice')}</div>
-                                                    <div className="font-medium">
-                                                        {item.error ? (
-                                                            <span className="text-destructive text-xs">{t('fetchFailed')}</span>
-                                                        ) : (
-                                                            formatCurrency(displayCurrentPrice, displayCurrency)
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )
-                                })}
+                    const weight = ((item.simulatedValueKRW || 0) / result.totalSimulatedValue) * 100
+                    const isItemUp = displayGain >= 0
+
+                    return (
+                        <div
+                            key={`${item.stockCode}-${index}`}
+                            className="bg-card border border-border p-4"
+                            style={{
+                                borderLeftWidth: '3px',
+                                borderLeftColor: isItemUp ? 'var(--profit)' : 'var(--loss)',
+                            }}
+                        >
+                            {/* Row 1: 종목명 + 수익률 */}
+                            <div className="flex items-start justify-between gap-2">
+                                <div className="font-serif text-[15px] font-semibold text-foreground leading-snug break-keep flex-1 min-w-0">
+                                    {item.stockName}
+                                </div>
+                                <UpDown value={item.gainRate} />
                             </div>
 
-                            <div className="hidden md:block overflow-x-auto -mx-6 sm:mx-0">
-                                <div className="min-w-[800px] px-6 sm:px-0">
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>{t('stockName')}</TableHead>
-                                                <TableHead className="text-right">{t('quantity')}</TableHead>
-                                                <TableHead className="text-right">{t('avgPrice')}</TableHead>
-                                                <TableHead className="text-right">{t('currentPrice')}</TableHead>
-                                                <TableHead className="text-right">{t('pl')}</TableHead>
-                                                <TableHead className="text-right">{t('returnRate')}</TableHead>
-                                                <TableHead className="text-right">{t('weight')}</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {result.holdings.map((item, index) => {
-                                                const isEn = language === 'en'
-
-                                                // For Table:
-                                                // If EN, show converted values in USD for EVERYTHING (unified view).
-                                                // Or should we keep original currency for Price but show USD for Total Value?
-                                                // Usually users want to see "How much is this worth in my currency?".
-                                                // Let's try to be consistent with the summary.
-                                                // If En -> Show USD estimated values.
-
-                                                // Current Price (Native) -> USD
-                                                // If item.currency is USD, it is already USD.
-                                                // If item.currency is KRW, divide by Current Exchange Rate.
-
-                                                const rate = result.exchangeRate || 1435
-                                                const snapshotRate = result.snapshotExchangeRate || 1
-
-                                                // Helper to convert any native value to display currency (USD if En)
-                                                // NOTE: item.currentPrice is in item.currency. 
-                                                // If item.currency is KRW and we want USD => val / rate.
-                                                // If item.currency is USD and we want USD => val.
-
-                                                let displayCurrency = item.currency
-                                                let displayCurrentPrice = item.currentPrice
-                                                let displayAvgPrice = item.snapshotPrice // Snapshot Price (Cost)
-                                                let displayGain = item.gain
-
-                                                if (isEn) {
-                                                    displayCurrency = 'USD'
-
-                                                    // Current Price Conversion
-                                                    if (item.currency === 'KRW') {
-                                                        displayCurrentPrice = item.currentPrice / rate
-                                                    }
-
-                                                    // Avg Price (Historical) Conversion
-                                                    if (item.currency === 'KRW') {
-                                                        displayAvgPrice = item.snapshotPrice / snapshotRate
-                                                    }
-
-                                                    // Gain Conversion (Approximation using logic: ValueNow - ValueThen)
-                                                    // ValueNow(USD)
-                                                    const valNowUSD = item.currency === 'KRW' ? (item.currentPrice * item.quantity) / rate : (item.currentPrice * item.quantity)
-                                                    // ValueThen(USD)
-                                                    const valThenUSD = item.currency === 'KRW' ? (item.snapshotPrice * item.quantity) / snapshotRate : (item.snapshotPrice * item.quantity)
-
-                                                    displayGain = valNowUSD - valThenUSD
-                                                }
-
-                                                return (
-                                                    <TableRow key={`${item.stockCode}-${index}`}>
-                                                        <TableCell>
-                                                            <div className="font-medium">{item.stockName}</div>
-                                                            <div className="text-xs text-muted-foreground">{item.stockCode}</div>
-                                                        </TableCell>
-                                                        <TableCell className="text-right">{formatNumber(item.quantity)}{t('countUnit')}</TableCell>
-                                                        <TableCell className="text-right">{formatCurrency(displayAvgPrice, displayCurrency)}</TableCell>
-                                                        <TableCell className="text-right">
-                                                            {item.error ? (
-                                                                <span className="text-destructive text-xs">{t('fetchFailed')}</span>
-                                                            ) : (
-                                                                formatCurrency(displayCurrentPrice, displayCurrency)
-                                                            )}
-                                                        </TableCell>
-                                                        <TableCell className="text-right">
-                                                            <div className={`font-medium ${displayGain >= 0 ? 'text-profit' : 'text-loss'}`}>
-                                                                {displayGain >= 0 ? '+' : ''}{formatCurrency(displayGain, displayCurrency)}
-                                                            </div>
-                                                            {displayCurrency === 'USD' && item.gainKRW !== undefined && (
-                                                                <div className={`text-xs ${item.gainKRW >= 0 ? 'text-profit/70' : 'text-loss/70'}`}>
-                                                                    ({item.gainKRW >= 0 ? '+' : ''}{formatCurrency(item.gainKRW, 'KRW')})
-                                                                </div>
-                                                            )}
-                                                        </TableCell>
-                                                        <TableCell className="text-right">
-                                                            <div className={`${item.gainRate >= 0 ? 'text-profit' : 'text-loss'}`}>
-                                                                {formatProfitRate(item.gainRate, true)}
-                                                            </div>
-                                                            {displayCurrency === 'USD' && item.gainRateKRW !== undefined && (
-                                                                <div className={`text-xs ${item.gainRateKRW >= 0 ? 'text-profit/70' : 'text-loss/70'}`}>
-                                                                    ({formatProfitRate(item.gainRateKRW, true)})
-                                                                </div>
-                                                            )}
-                                                        </TableCell>
-                                                        <TableCell className="text-right">
-                                                            {formatNumber(((item.simulatedValueKRW || 0) / result.totalSimulatedValue) * 100, 1)}%
-                                                        </TableCell>
-                                                    </TableRow>
-                                                )
-                                            })}
-                                        </TableBody>
-                                    </Table>
+                            {/* Row 2: 메타 + gain */}
+                            <div className="mt-1.5 flex items-end justify-between gap-3">
+                                <div className="text-[10px] text-muted-foreground tracking-[0.5px] flex-1 min-w-0">
+                                    {item.stockCode}
+                                    {' · '}
+                                    {formatNumber(item.quantity)}{language === 'ko' ? '주' : 'shr'}
+                                    {' · '}
+                                    {language === 'ko' ? `비중 ${formatNumber(weight, 1)}%` : `${formatNumber(weight, 1)}% wt`}
+                                </div>
+                                <div className="text-right shrink-0">
+                                    <div className={cn(
+                                        'text-[14px] font-bold numeric',
+                                        isItemUp ? 'text-profit' : 'text-loss',
+                                    )}>
+                                        {isItemUp ? '+' : ''}{formatCurrency(displayGain, displayCurrency)}
+                                    </div>
+                                    {displayCurrency === 'USD' && item.gainKRW !== undefined && (
+                                        <div className={cn(
+                                            'text-[10px] mt-0.5 numeric',
+                                            item.gainKRW >= 0 ? 'text-profit/70' : 'text-loss/70',
+                                        )}>
+                                            ({item.gainKRW >= 0 ? '+' : ''}{formatCurrency(item.gainKRW, 'KRW')})
+                                        </div>
+                                    )}
                                 </div>
                             </div>
-                        </CardContent>
-                    </Card>
-                </div>
-            )}
+
+                            {/* Row 3: avg → current price */}
+                            <div className="mt-2.5 pt-2.5 border-t border-border/60 grid grid-cols-2 gap-3 text-[11px]">
+                                <div>
+                                    <div className="text-[10px] text-muted-foreground tracking-[0.5px] uppercase">
+                                        {t('pastPrice')}
+                                    </div>
+                                    <div className="font-serif text-[13px] font-semibold text-foreground mt-0.5 numeric">
+                                        {formatCurrency(displayAvgPrice, displayCurrency)}
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <div className="text-[10px] text-muted-foreground tracking-[0.5px] uppercase">
+                                        {t('currentPrice')}
+                                    </div>
+                                    <div className="font-serif text-[13px] font-semibold text-foreground mt-0.5 numeric">
+                                        {item.error ? (
+                                            <span className="text-loss text-[11px]">{t('fetchFailed')}</span>
+                                        ) : (
+                                            formatCurrency(displayCurrentPrice, displayCurrency)
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )
+                })}
+            </div>
         </div>
     )
 }

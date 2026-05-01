@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { useLanguage } from '@/lib/i18n/context'
-import { Home, PieChart, Camera, MoreHorizontal, Settings } from 'lucide-react'
+import { Home, PieChart, Camera, MoreHorizontal } from 'lucide-react'
 
 interface TabDef {
     href: string
@@ -13,12 +13,12 @@ interface TabDef {
     exact?: boolean
 }
 
+// 4탭으로 통합: 설정은 더보기 안으로 흡수 (5탭 비대칭/라벨 줄바꿈 해소)
 const TABS: TabDef[] = [
     { href: '/dashboard', labelKey: 'tabHome', icon: Home, exact: true },
     { href: '/dashboard/portfolio', labelKey: 'tabPortfolio', icon: PieChart },
     { href: '/dashboard/snapshots', labelKey: 'tabSnapshots', icon: Camera },
     { href: '/dashboard/more', labelKey: 'tabMore', icon: MoreHorizontal },
-    { href: '/dashboard/settings', labelKey: 'tabSettings', icon: Settings },
 ]
 
 export function BottomTabBar() {
@@ -45,8 +45,9 @@ export function BottomTabBar() {
                         <li key={tab.href} className="flex-1 min-w-0">
                             <Link
                                 href={tab.href}
+                                aria-current={isActive ? 'page' : undefined}
                                 className={cn(
-                                    'flex flex-col items-center justify-center gap-0.5 px-2 py-1 transition-colors',
+                                    'flex flex-col items-center justify-center gap-0.5 px-2 py-1 transition-colors min-h-[44px]',
                                     isActive ? 'text-primary' : 'text-muted-foreground',
                                 )}
                             >

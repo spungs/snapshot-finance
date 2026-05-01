@@ -228,7 +228,7 @@ export function AiChat({ isAuthenticated = false }: AiChatProps) {
         <>
             <button
                 onClick={() => setOpen(true)}
-                className="z-40 w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 transition-colors"
+                className="z-40 w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all duration-150"
                 aria-label="AI 어시스턴트 열기"
             >
                 <Sparkles className="w-5 h-5" />
@@ -243,13 +243,17 @@ export function AiChat({ isAuthenticated = false }: AiChatProps) {
                         </div>
 
                         <div className="flex items-center justify-between px-4 py-2 border-b shrink-0">
-                            <div className="flex items-center gap-2">
+                            <Drawer.Title className="flex items-center gap-2 font-semibold text-sm m-0">
                                 <Sparkles className="w-4 h-4 text-primary" />
-                                <span className="font-semibold text-sm">AI 포트폴리오 어시스턴트</span>
-                            </div>
+                                AI 포트폴리오 어시스턴트
+                            </Drawer.Title>
+                            <Drawer.Description className="sr-only">
+                                자연어로 포트폴리오를 수정할 수 있는 AI 어시스턴트
+                            </Drawer.Description>
                             <button
                                 onClick={() => setOpen(false)}
                                 className="text-muted-foreground hover:text-foreground p-1"
+                                aria-label="닫기"
                             >
                                 <X className="w-4 h-4" />
                             </button>

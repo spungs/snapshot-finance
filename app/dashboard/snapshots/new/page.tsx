@@ -3,29 +3,18 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { StockSearchCombobox } from '@/components/dashboard/stock-search-combobox'
 import { FormattedNumberInput } from '@/components/ui/formatted-number-input'
 import { snapshotsApi, holdingsApi } from '@/lib/api/client'
 import { formatCurrency } from '@/lib/utils/formatters'
 import { useLanguage } from '@/lib/i18n/context'
-import { Download, Loader2 } from 'lucide-react'
-
-const TEST_ACCOUNT_ID = 'test-account-1'
-
-interface Stock {
-  id: string
-  stockCode: string
-  stockName: string
-}
+import { cn } from '@/lib/utils'
+import { ArrowLeft, Download, Loader2, Plus, Trash2 } from 'lucide-react'
 
 interface HoldingInput {
   stockId: string
-  stockName: string // Added for display
-  stockCode: string // Added for display
+  stockName: string
+  stockCode: string
   quantity: string
   averagePrice: string
   currentPrice: string
@@ -48,7 +37,7 @@ export default function NewSnapshotPage() {
   const [summaryDisplayCurrency, setSummaryDisplayCurrency] = useState<'KRW' | 'USD'>('KRW')
   const [exchangeRate, setExchangeRate] = useState<number>(1435)
   const [updatingPrices, setUpdatingPrices] = useState(false)
-  // Sync summary currency with language
+
   useEffect(() => {
     if (language === 'en') {
       setSummaryDisplayCurrency('USD')
@@ -57,13 +46,10 @@ export default function NewSnapshotPage() {
     }
   }, [language])
 
-
-  // Fetch Exchange Rate AND Stock Prices when date changes
   useEffect(() => {
     async function updateData() {
       setUpdatingPrices(true)
       try {
-        // 1. Update Exchange Rate
         let currentRate = 1435
         if (snapshotDate === today) {
           try {
@@ -73,15 +59,12 @@ export default function NewSnapshotPage() {
               currentRate = data.rate
               setExchangeRate(currentRate)
             } else {
-              console.warn('Failed to fetch current exchange rate, using default 1435.')
               setExchangeRate(1435)
             }
           } catch (e) {
-            console.error('Failed to fetch current exchange rate', e)
             setExchangeRate(1435)
           }
         } else {
-          console.log('Fetching historical exchange rate for:', snapshotDate)
           try {
             const res = await fetch(`/api/stocks/history?symbol=KRW=X&market=FX&date=${snapshotDate}`)
             const data = await res.json()
@@ -89,16 +72,13 @@ export default function NewSnapshotPage() {
               currentRate = data.data.close || 1435
               setExchangeRate(currentRate)
             } else {
-              console.warn('Failed to fetch historical exchange rate, using default 1435.')
               setExchangeRate(1435)
             }
           } catch (e) {
-            console.error('Failed to fetch historical exchange rate', e)
             setExchangeRate(1435)
           }
         }
 
-        // 2. Update Stock Prices for existing holdings
         if (holdings.length > 0 && !(holdings.length === 1 && !holdings[0].stockId)) {
           const updatedHoldings = await Promise.all(holdings.map(async (h) => {
             if (!h.stockCode) return h
@@ -136,7 +116,7 @@ export default function NewSnapshotPage() {
 
     updateData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [snapshotDate, today]) // Intentionally omit holdings to rely on closure value at time of date change, and avoid loop
+  }, [snapshotDate, today])
 
   function addHolding() {
     setHoldings([
@@ -149,7 +129,7 @@ export default function NewSnapshotPage() {
         averagePrice: '',
         currentPrice: '',
         currency: 'KRW',
-        purchaseRate: '1'
+        purchaseRate: '1',
       },
     ])
   }
@@ -159,11 +139,7 @@ export default function NewSnapshotPage() {
     setHoldings(holdings.filter((_, i) => i !== index))
   }
 
-  function updateHolding(
-    index: number,
-    field: keyof HoldingInput,
-    value: string
-  ) {
+  function updateHolding(index: number, field: keyof HoldingInput, value: string) {
     const updated = [...holdings]
     updated[index] = { ...updated[index], [field]: value }
     setHoldings(updated)
@@ -179,18 +155,15 @@ export default function NewSnapshotPage() {
     }
     setHoldings(updated)
 
-    // Fetch price (Current or Historical)
     try {
       const market = stock.market || (isNaN(Number(stock.stockCode)) ? 'US' : 'KOSPI')
       const isToday = snapshotDate === today
 
-      // Auto-set currency based on market
       const newCurrency = market === 'US' ? 'USD' : 'KRW'
-      // For USD stocks, default purchase rate is the current exchange rate (or historical if selected)
       const newPurchaseRate = market === 'US' ? exchangeRate.toString() : '1'
 
       let price = ''
-      let res, data;
+      let res, data
 
       if (isToday) {
         res = await fetch(`/api/kis/price?symbol=${stock.stockCode}&market=${market}`)
@@ -214,14 +187,12 @@ export default function NewSnapshotPage() {
           ...current[index],
           currentPrice: price !== '' ? price : current[index].currentPrice,
           currency: newCurrency,
-          purchaseRate: newPurchaseRate
+          purchaseRate: newPurchaseRate,
         }
         return current
       })
-
     } catch (error) {
       console.error('Failed to fetch price:', error)
-      // Don't block UI, just don't fill price
     }
   }
 
@@ -233,8 +204,6 @@ export default function NewSnapshotPage() {
         if (response.success && response.data) {
           const newHoldings: HoldingInput[] = response.data.holdings.map((h: any) => {
             const currency = h.currency || 'KRW'
-            // If USD stock has no valid purchaseRate (e.g. 1 or 0), assume current exchange rate as fallback estimate
-            // to prevent total cost from being calculated as (USD_Amount * 1 KRW)
             const rawPurchaseRate = h.purchaseRate?.toString()
             let purchaseRate = rawPurchaseRate || '1'
             if (currency === 'USD' && (!rawPurchaseRate || rawPurchaseRate === '1')) {
@@ -248,8 +217,8 @@ export default function NewSnapshotPage() {
               quantity: h.quantity.toString(),
               averagePrice: h.averagePrice.toString(),
               currentPrice: h.currentPrice.toString(),
-              currency: currency,
-              purchaseRate: purchaseRate,
+              currency,
+              purchaseRate,
             }
           })
           setHoldings(newHoldings)
@@ -275,19 +244,15 @@ export default function NewSnapshotPage() {
       const pRate = parseFloat(h.purchaseRate) || 1
 
       if (displayCurrency === 'USD') {
-        // USD로 표시할 경우
         if (h.currency === 'USD') {
           totalCost += qty * avg
           totalValue += qty * curr
         } else {
-          // KRW -> USD 변환
           totalCost += (qty * avg) / exchangeRate
           totalValue += (qty * curr) / exchangeRate
         }
       } else {
-        // KRW로 표시할 경우
         if (h.currency === 'USD') {
-          // USD -> KRW 변환 (매입가는 purchaseRate 사용, 현재가는 현재환율 사용)
           totalCost += qty * avg * pRate
           totalValue += qty * curr * exchangeRate
         } else {
@@ -307,17 +272,16 @@ export default function NewSnapshotPage() {
     e.preventDefault()
     setError(null)
 
-    // 유효성 검사
     const validHoldings = holdings.filter(
       (h) =>
         h.stockId &&
         parseFloat(h.quantity) > 0 &&
         parseFloat(h.averagePrice) > 0 &&
-        parseFloat(h.currentPrice) > 0
+        parseFloat(h.currentPrice) > 0,
     )
 
     if (validHoldings.length === 0) {
-      setError(t('searchError')) // Using generic error for now, or add specific key
+      setError(t('searchError'))
       return
     }
 
@@ -325,14 +289,14 @@ export default function NewSnapshotPage() {
 
     try {
       const response = await snapshotsApi.create({
-        snapshotDate: snapshotDate, // Pass the selected date
-        exchangeRate: exchangeRate, // Pass the selected/fetched exchange rate
+        snapshotDate,
+        exchangeRate,
         holdings: validHoldings.map((h) => ({
           stockId: h.stockId,
           quantity: parseInt(h.quantity),
           averagePrice: parseFloat(h.averagePrice),
           currentPrice: parseFloat(h.currentPrice),
-          currency: h.currency, // Include currency
+          currency: h.currency,
           purchaseRate: parseFloat(h.purchaseRate),
         })),
         cashBalance: parseFloat(cashBalance) || 0,
@@ -353,252 +317,281 @@ export default function NewSnapshotPage() {
 
   const totals = calculateTotals(summaryDisplayCurrency)
   const isProfit = totals.profit >= 0
+  const isHistorical = snapshotDate !== today
 
   return (
-    <div className="space-y-6">
-      {/* 페이지 헤더 */}
-      <div>
-        <div className="flex justify-between items-start mb-2">
-          <Link
-            href="/dashboard"
-            className="text-sm text-muted-foreground hover:text-foreground inline-block"
-          >
-            ← {t('dashboard')}
-          </Link>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={loadCurrentHoldings}
-            disabled={loading || updatingPrices}
-            className="flex items-center gap-2"
-          >
-            <Download className="w-4 h-4" />
-            {t('loadCurrentHoldings')}
-          </Button>
-        </div>
-        <h1 className="text-2xl font-bold">{t('newSnapshot')}</h1>
-        <p className="text-muted-foreground">
-          {t('newSnapshotDesc')}
-        </p>
+    <div className="max-w-[420px] mx-auto w-full">
+      {/* Top nav row */}
+      <div className="px-6 pt-3 flex items-center justify-between">
+        <Link
+          href="/dashboard/snapshots"
+          className="text-[11px] font-bold tracking-[1.5px] uppercase text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+        >
+          <ArrowLeft className="w-3 h-3" />
+          {t('snapshots')}
+        </Link>
+        <button
+          type="button"
+          onClick={loadCurrentHoldings}
+          disabled={loading || updatingPrices}
+          className="inline-flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-primary px-2.5 py-1.5 hover:bg-accent-soft transition-colors disabled:opacity-50"
+        >
+          <Download className="w-3.5 h-3.5" />
+          {t('loadCurrentHoldings')}
+        </button>
       </div>
 
-      {/* 날짜 선택 */}
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('snapshotDate') || 'Snapshot Date'}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="snapshotDate">{t('date') || 'Date'}</Label>
-            <Input
-              id="snapshotDate"
-              type="date"
-              max={today}
-              value={snapshotDate}
-              onChange={(e) => setSnapshotDate(e.target.value)}
-              className="w-full md:w-1/3"
-            />
-            {snapshotDate !== today && (
-              <p className="text-sm text-primary">
-                {t('historicalMode') || '* Past date selected. Stock prices and exchange rates will be automatically fetched for this date.'}
-              </p>
-            )}
-            <p className="text-sm text-muted-foreground">
-              {t('exchangeRate')}: {formatCurrency(exchangeRate, 'KRW')} / USD
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Hero */}
+      <section className="px-6 pt-2 pb-4">
+        <h1 className="hero-serif text-[32px] text-foreground">
+          {t('newSnapshot')}
+        </h1>
+        <span className="serif-italic text-xs text-muted-foreground block mt-1">
+          {t('newSnapshotDesc')}
+        </span>
+      </section>
 
-
-      <form onSubmit={handleSubmit} className="space-y-6 relative">
-        {/* Loading Overlay */}
+      <form onSubmit={handleSubmit} className="relative">
         {loading && (
-          <div className="absolute inset-0 bg-background/50 backdrop-blur-sm z-50 flex items-center justify-center rounded-lg">
+          <div className="absolute inset-0 bg-background/60 backdrop-blur-sm z-50 flex items-center justify-center">
             <div className="flex flex-col items-center gap-3">
-              <Loader2 className="w-10 h-10 animate-spin text-primary" />
-              <p className="text-sm font-medium text-muted-foreground animate-pulse">{t('calculating') || 'Loading...'}</p>
+              <Loader2 className="w-9 h-9 animate-spin text-primary" />
+              <p className="text-xs font-bold tracking-[1px] uppercase text-muted-foreground">
+                {t('calculating') || 'Loading...'}
+              </p>
             </div>
           </div>
         )}
 
-        {/* 보유 종목 입력 */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex justify-between items-center">
-              <span>{t('holdings')}</span>
-              <Button type="button" variant="outline" onClick={addHolding}>
-                + {t('addStock')}
-              </Button>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {holdings.map((holding, index) => (
+        {/* Date card */}
+        <section className="mx-4 mb-4 p-5 bg-card border border-border relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-[3px] bg-primary" />
+          <div className="eyebrow mb-2">
+            {t('snapshotDate') || 'Snapshot Date'}
+          </div>
+          <input
+            type="date"
+            max={today}
+            value={snapshotDate}
+            onChange={(e) => setSnapshotDate(e.target.value)}
+            className="w-full bg-transparent font-serif text-[22px] font-semibold text-foreground numeric outline-none border-b border-border pb-1.5 focus:border-primary transition-colors"
+          />
+          <div className="mt-3 flex items-center justify-between gap-2">
+            <span className="text-[11px] text-muted-foreground">
+              {t('exchangeRate')}
+            </span>
+            <span className="text-[12px] font-bold text-foreground numeric">
+              {formatCurrency(exchangeRate, 'KRW')} / USD
+            </span>
+          </div>
+          {isHistorical && (
+            <div className="mt-3 pt-3 border-t border-border text-[11px] text-primary leading-relaxed">
+              {t('historicalMode') || '* Past date selected. Stock prices and exchange rates will be automatically fetched for this date.'}
+            </div>
+          )}
+        </section>
+
+        {/* Holdings header */}
+        <div className="px-6 pb-3 flex justify-between items-center gap-2">
+          <span className="eyebrow">
+            {t('holdings')} · {holdings.length}
+          </span>
+          <button
+            type="button"
+            onClick={addHolding}
+            className="inline-flex items-center gap-1 text-[11px] font-bold tracking-wide text-primary px-2 py-1 hover:bg-accent-soft transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            {t('addStock')}
+          </button>
+        </div>
+
+        {/* Holdings list */}
+        <div className="px-4 pb-4 space-y-2">
+          {holdings.map((holding, index) => {
+            const isUS = holding.currency === 'USD'
+            const priceLabel = snapshotDate === today
+              ? t('currentPrice')
+              : `${snapshotDate} ${t('closingPrice')}`
+            return (
               <div
                 key={index}
-                className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 border rounded-lg"
+                className="bg-card border border-border p-4"
+                style={{ borderLeftWidth: '3px', borderLeftColor: holding.stockId ? 'var(--primary)' : 'var(--border)' }}
               >
-                <div className="md:col-span-4 flex justify-between items-center">
-                  <span className="font-medium">{t('stock')} {index + 1}</span>
+                <div className="flex items-center justify-between mb-2.5">
+                  <span className="text-[10px] font-bold text-muted-foreground tracking-[1px] uppercase">
+                    {language === 'ko' ? `종목 ${index + 1}` : `Stock ${index + 1}`}
+                  </span>
                   {holdings.length > 1 && (
-                    <Button
+                    <button
                       type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="text-destructive hover:text-destructive"
                       onClick={() => removeHolding(index)}
+                      className="p-1 -mr-1 text-muted-foreground hover:text-destructive transition-colors"
+                      aria-label={t('delete')}
                     >
-                      {t('delete')}
-                    </Button>
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   )}
                 </div>
 
-                <div className="md:col-span-2">
-                  <Label htmlFor={`stock-${index}`}>{t('stock')}</Label>
-                  <StockSearchCombobox
-                    value={holding.stockName ? `${holding.stockName} (${holding.stockCode})` : ''}
-                    onSelect={(stock) => handleStockSelect(index, stock)}
-                  />
-                  {holding.stockCode && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {snapshotDate === today ? t('currentPrice') : `${snapshotDate} ${t('closingPrice')}`}: {formatCurrency(parseFloat(holding.currentPrice) || 0, holding.currency)}
-                    </p>
-                  )}
-                </div>
+                <StockSearchCombobox
+                  value={holding.stockName ? `${holding.stockName} (${holding.stockCode})` : ''}
+                  onSelect={(stock) => handleStockSelect(index, stock)}
+                />
 
-                <div>
-                  <Label htmlFor={`quantity-${index}`}>{t('quantity')}</Label>
+                {holding.stockCode && (
+                  <div className="mt-2 flex items-center justify-between gap-2 text-[11px]">
+                    <span className="text-muted-foreground">{priceLabel}</span>
+                    <span className="font-bold text-foreground numeric">
+                      {formatCurrency(parseFloat(holding.currentPrice) || 0, holding.currency)}
+                    </span>
+                  </div>
+                )}
+
+                <div className="mt-3 grid grid-cols-2 gap-2">
                   <FormattedNumberInput
-                    id={`quantity-${index}`}
-                    min="1"
-                    placeholder={t('quantity')}
+                    label={t('quantity')}
+                    suffix={language === 'ko' ? '주' : 'shr'}
                     value={holding.quantity}
-                    onChange={(val) =>
-                      updateHolding(index, 'quantity', val)
-                    }
+                    onChange={(val) => updateHolding(index, 'quantity', val)}
                   />
-                </div>
-
-                <div>
-                  <Label htmlFor={`avgPrice-${index}`}>
-                    {t('avgPrice')} ({holding.currency === 'USD' ? '$' : '₩'})
-                  </Label>
                   <FormattedNumberInput
-                    id={`avgPrice-${index}`}
-                    min="0"
-                    step="0.0001"
-                    placeholder={t('avgPrice')}
+                    label={t('avgPrice')}
+                    prefix={isUS ? '$' : '₩'}
                     value={holding.averagePrice}
-                    onChange={(val) =>
-                      updateHolding(index, 'averagePrice', val)
-                    }
+                    onChange={(val) => updateHolding(index, 'averagePrice', val)}
                   />
                 </div>
               </div>
-            ))}
-          </CardContent>
-        </Card>
+            )
+          })}
+        </div>
 
-        {/* 추가 정보 */}
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('additionalInfo')}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="note">{t('memo')}</Label>
-              <Input
-                id="note"
-                type="text"
-                placeholder={t('memoPlaceholder')}
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-              />
-            </div>
-          </CardContent>
-        </Card>
+        {/* Memo */}
+        <div className="px-6 pb-3">
+          <span className="eyebrow">{t('additionalInfo')}</span>
+        </div>
+        <section className="mx-4 mb-4 p-4 bg-card border border-border">
+          <label htmlFor="note" className="text-[10px] font-bold text-muted-foreground tracking-[1px] uppercase">
+            {t('memo')}
+          </label>
+          <input
+            id="note"
+            type="text"
+            placeholder={t('memoPlaceholder')}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            className="w-full mt-1.5 bg-transparent font-serif text-[15px] text-foreground outline-none border-b border-border pb-1.5 placeholder:text-muted-foreground/60 focus:border-primary transition-colors"
+          />
+        </section>
 
-        {/* 요약 미리보기 */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex justify-between items-center">
-              <span>{t('summary')}</span>
-              <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
-                <Button
-                  type="button"
-                  variant={summaryDisplayCurrency === 'KRW' ? 'default' : 'ghost'}
-                  size="sm"
-                  className="h-7 px-3"
-                  onClick={() => setSummaryDisplayCurrency('KRW')}
-                >
-                  ₩ KRW
-                </Button>
-                <Button
-                  type="button"
-                  variant={summaryDisplayCurrency === 'USD' ? 'default' : 'ghost'}
-                  size="sm"
-                  className="h-7 px-3"
-                  onClick={() => setSummaryDisplayCurrency('USD')}
-                >
-                  $ USD
-                </Button>
+        {/* Summary */}
+        <div className="px-6 pb-3 flex items-center justify-between gap-2">
+          <span className="eyebrow">{t('summary')}</span>
+          <div className="inline-flex items-center border border-border">
+            <button
+              type="button"
+              onClick={() => setSummaryDisplayCurrency('KRW')}
+              className={cn(
+                'text-[10px] font-bold tracking-wide px-2.5 py-1 transition-colors',
+                summaryDisplayCurrency === 'KRW'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              ₩ KRW
+            </button>
+            <button
+              type="button"
+              onClick={() => setSummaryDisplayCurrency('USD')}
+              className={cn(
+                'text-[10px] font-bold tracking-wide px-2.5 py-1 transition-colors',
+                summaryDisplayCurrency === 'USD'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              $ USD
+            </button>
+          </div>
+        </div>
+
+        <section className="mx-4 mb-4 p-5 bg-card border border-border">
+          <div className="text-[10px] font-bold text-muted-foreground tracking-[1px] uppercase">
+            {t('totalValue')}
+          </div>
+          <div className="amount-display text-[28px] text-foreground leading-none mt-1.5">
+            {formatCurrency(totals.totalValue, totals.currency)}
+          </div>
+
+          <div className="flex gap-4 mt-4 items-stretch">
+            <div className="flex-1">
+              <div className="text-[10px] font-bold text-muted-foreground tracking-[0.5px] uppercase">
+                {t('returnRate')}
               </div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">{t('totalInvested')}</p>
-                <p className="text-lg font-semibold">
-                  {formatCurrency(totals.totalCost, totals.currency)}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">{t('totalValue')}</p>
-                <p className="text-lg font-semibold">
-                  {formatCurrency(totals.totalValue, totals.currency)}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">{t('pl')}</p>
-                <p
-                  className={`text-lg font-semibold ${isProfit ? 'text-red-600' : 'text-blue-600'
-                    }`}
-                >
-                  {formatCurrency(Math.abs(totals.profit), totals.currency)}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">{t('returnRate')}</p>
-                <p
-                  className={`text-lg font-semibold ${isProfit ? 'text-red-600' : 'text-blue-600'
-                    }`}
-                >
-                  {(totals.profitRate > 0 ? '+' : '') + totals.profitRate.toFixed(2)}%
-                </p>
+              <div
+                className={cn(
+                  'text-[15px] font-bold mt-1 numeric inline-flex items-center gap-0.5',
+                  isProfit ? 'text-profit' : 'text-loss',
+                )}
+              >
+                <span aria-hidden>{isProfit ? '▲' : '▼'}</span>
+                <span>{Math.abs(totals.profitRate).toFixed(2)}%</span>
               </div>
             </div>
-          </CardContent>
-        </Card>
+            <div className="w-px bg-border self-stretch" />
+            <div className="flex-1">
+              <div className="text-[10px] font-bold text-muted-foreground tracking-[0.5px] uppercase">
+                {t('pl')}
+              </div>
+              <div
+                className={cn(
+                  'text-[15px] font-bold mt-1 numeric',
+                  isProfit ? 'text-profit' : 'text-loss',
+                )}
+              >
+                {isProfit ? '+' : '-'}{formatCurrency(Math.abs(totals.profit), totals.currency)}
+              </div>
+            </div>
+          </div>
 
-        {/* 에러 메시지 */}
+          <div className="mt-4 pt-4 border-t border-border flex items-center justify-between text-[11px]">
+            <span className="text-muted-foreground">{t('totalInvested')}</span>
+            <span className="font-bold text-foreground numeric">
+              {formatCurrency(totals.totalCost, totals.currency)}
+            </span>
+          </div>
+        </section>
+
+        {/* Error */}
         {error && (
-          <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-lg">
+          <div className="mx-4 mb-4 p-3 bg-destructive/10 border border-destructive/30 text-destructive text-[12px]">
             {error}
           </div>
         )}
 
-        {/* 제출 버튼 */}
-        <div className="flex gap-4">
-          <Button type="submit" disabled={loading || updatingPrices} className="flex-1">
-            {loading ? '...' : (updatingPrices ? t('calculating') || 'Calculating...' : t('save'))}
-          </Button>
-          <Link href="/dashboard" className="flex-1">
-            <Button type="button" variant="outline" className="w-full">
+        {/* Actions */}
+        <div className="px-4 pt-2 flex gap-2">
+          <Link href="/dashboard/snapshots" className="flex-1">
+            <button
+              type="button"
+              className="w-full border border-border text-foreground py-3 text-sm font-bold hover:bg-accent-soft transition-colors"
+            >
               {t('cancel')}
-            </Button>
+            </button>
           </Link>
+          <button
+            type="submit"
+            disabled={loading || updatingPrices}
+            className="flex-1 bg-primary text-primary-foreground py-3 text-sm font-bold disabled:opacity-50 hover:opacity-90 transition-opacity inline-flex items-center justify-center gap-1.5"
+          >
+            {loading
+              ? <Loader2 className="w-4 h-4 animate-spin" />
+              : updatingPrices
+                ? (t('calculating') || 'Calculating...')
+                : t('save')}
+          </button>
         </div>
       </form>
     </div>

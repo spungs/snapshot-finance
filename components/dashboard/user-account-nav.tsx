@@ -52,7 +52,11 @@ export function UserAccountNav({ user }: UserAccountNavProps) {
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-8 w-8 rounded-full focus-visible:ring-0 focus-visible:ring-offset-0">
+                <Button
+                    variant="ghost"
+                    className="relative h-11 w-11 rounded-full focus-visible:ring-0 focus-visible:ring-offset-0"
+                    aria-label="User menu"
+                >
                     <User className="h-5 w-5" />
                 </Button>
             </DropdownMenuTrigger>

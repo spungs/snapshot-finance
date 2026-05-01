@@ -24,7 +24,8 @@ export function PullToRefresh({ children, onRefresh, className, isRefreshing: ex
     const stateRef = useRef({
         startY: 0,
         isPulling: false,
-        currentY: 0
+        currentY: 0,
+        directionDecided: false,
     })
 
     const threshold = 80
@@ -43,23 +44,38 @@ export function PullToRefresh({ children, onRefresh, className, isRefreshing: ex
         if (!container) return
 
         const handleTouchStart = (e: TouchEvent) => {
-            if (window.scrollY === 0 && !refreshing) {
-                stateRef.current.startY = e.touches[0].clientY
-                stateRef.current.isPulling = true
-            } else {
-                stateRef.current.isPulling = false
-            }
+            // 시작 지점만 기록한다. isPulling은 touchmove에서 첫 의미있는 움직임의 방향이
+            // 결정된 다음에야 true로 잡는다 — 이전 구현은 touchstart에서 즉시 isPulling=true로
+            // 잡아 위로 스와이프(아래에서 위) 시 native scroll이 모바일에서 첫 frame 동안
+            // 의도치 않게 차단되는 케이스가 있었다.
+            stateRef.current.startY = e.touches[0].clientY
+            stateRef.current.isPulling = false
+            stateRef.current.directionDecided = false
         }
 
         const handleTouchMove = (e: TouchEvent) => {
-            if (!stateRef.current.isPulling || refreshing) return
+            if (refreshing) return
 
             const y = e.touches[0].clientY
             const diff = y - stateRef.current.startY
 
-            if (diff > 0 && window.scrollY <= 0) { // Allow slight tolerance or exact 0
-                // Logic to support nested scrolling if needed, but for now strict top check
+            if (!stateRef.current.directionDecided) {
+                // 의미있는 움직임이 감지되기 전까진 결정을 미룸 (작은 흔들림 무시)
+                if (Math.abs(diff) < 5) return
 
+                // 페이지 최상단에서 아래로 당기는 경우만 풀투리프레시 발동.
+                // 그 외(위로 스와이프 = 콘텐츠 보기 위한 일반 스크롤)는 native scroll에 양보.
+                if (diff > 0 && window.scrollY <= 0) {
+                    stateRef.current.isPulling = true
+                } else {
+                    stateRef.current.isPulling = false
+                }
+                stateRef.current.directionDecided = true
+            }
+
+            if (!stateRef.current.isPulling) return
+
+            if (diff > 0 && window.scrollY <= 0) {
                 if (e.cancelable) {
                     e.preventDefault() // Key to preventing native scroll/overscroll
                 }
@@ -69,7 +85,7 @@ export function PullToRefresh({ children, onRefresh, className, isRefreshing: ex
                 stateRef.current.currentY = damped
                 setCurrentY(damped)
             } else {
-                // If we scroll back up (negative diff) or user scrolled down content
+                // 사용자가 다시 위로 끌어올린 경우 풀 종료
                 stateRef.current.isPulling = false
                 setCurrentY(0)
             }
@@ -143,11 +159,17 @@ export function PullToRefresh({ children, onRefresh, className, isRefreshing: ex
                 </div>
             </div>
 
-            {/* Content Container */}
+            {/*
+              Content Container — currentY가 0이고 refreshing이 아닐 때는 transform을 아예
+              적용하지 않는다. CSS spec상 transform이 걸린 요소는 자식 position:fixed의
+              containing block이 viewport에서 자기 자신으로 바뀌므로, 항상 transform을
+              걸어두면 페이지 안의 모든 fixed 요소(예: 비교 패널, FAB)가 viewport가 아닌
+              본문 끝 기준으로 attach돼 모바일에서 스크롤 끝까지 가야 보이게 된다.
+            */}
             <div
                 className="flex-1 flex flex-col"
                 style={{
-                    transform: `translateY(${currentY}px)`,
+                    transform: currentY > 0 || refreshing ? `translateY(${currentY}px)` : undefined,
                     transition: stateRef.current.isPulling ? 'none' : 'transform 0.3s ease-out'
                 }}
             >

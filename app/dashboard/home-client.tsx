@@ -1,11 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import { Sparkline } from '@/components/dashboard/sparkline'
+import { PerformanceChart } from '@/components/dashboard/performance-chart'
 import { formatCurrency, formatDate } from '@/lib/utils/formatters'
 import { cn } from '@/lib/utils'
 import { useLanguage } from '@/lib/i18n/context'
 import { useCurrency } from '@/lib/currency/context'
+import { Wallet } from 'lucide-react'
 
 interface Holding {
     id: string
@@ -68,23 +69,17 @@ export function HomeClient({ summary, holdings, recentSnapshots, todayLabel }: H
     const displayValue = convert(summary.totalValue)
     const displayCost = convert(summary.totalCost)
     const displayProfit = convert(summary.totalProfit)
-
-    // Sparkline series — chronological order (oldest → newest)
-    const series = [...recentSnapshots]
-        .reverse()
-        .map(s => Number(s.totalValue))
+    const displayCash = convert(summary.cashBalance)
 
     const latestSnap = recentSnapshots[0]
     const latestRate = latestSnap ? Number(latestSnap.profitRate) : 0
     const diffFromLatest = latestSnap ? summary.totalProfitRate - latestRate : 0
+    const hasChart = recentSnapshots.length >= 2
 
-    // Top movers — sorted by abs(profitRate) desc, top 4
-    const topMovers = [...holdings]
-        .sort((a, b) => Math.abs(b.profitRate) - Math.abs(a.profitRate))
+    // Top returns — 평가수익률 상위 4개 (큰 순)
+    const topReturns = [...holdings]
+        .sort((a, b) => b.profitRate - a.profitRate)
         .slice(0, 4)
-
-    // Sparkline color follows trend
-    const sparkColor = isProfit ? 'var(--profit)' : 'var(--loss)'
 
     return (
         <div className="max-w-[480px] mx-auto w-full">
@@ -102,51 +97,48 @@ export function HomeClient({ summary, holdings, recentSnapshots, todayLabel }: H
                 </div>
             </section>
 
-            {/* Sparkline card — 3개월 수익률 */}
-            {series.length >= 2 && (
-                <section className="mx-4 mb-4 p-5 bg-card border border-border">
-                    <div className="flex justify-between items-center mb-2.5">
-                        <span className="eyebrow">{language === 'ko' ? '최근 추이' : 'Recent trend'}</span>
-                        <UpDown value={summary.totalProfitRate} />
-                    </div>
-                    <div style={{ color: sparkColor }}>
-                        <Sparkline data={series} width={324} height={100} fillColor={sparkColor} showZeroAxis />
-                    </div>
-                    <div className="flex justify-between text-[10px] text-muted-foreground mt-1 numeric">
-                        {recentSnapshots.length > 0 && (
-                            <>
-                                <span suppressHydrationWarning>
-                                    {formatDate(recentSnapshots[recentSnapshots.length - 1].snapshotDate, 'MM.dd')}
-                                </span>
-                                <span suppressHydrationWarning>
-                                    {formatDate(recentSnapshots[0].snapshotDate, 'MM.dd')}
-                                </span>
-                            </>
-                        )}
-                    </div>
+            {/* Performance chart — 성과 흐름 */}
+            {hasChart && (
+                <section className="mx-4 mb-4">
+                    <PerformanceChart />
                 </section>
             )}
 
-            {/* Two-up — 원금 / 누적손익 */}
-            <section className="mx-4 mb-4 grid grid-cols-2 gap-2">
+            {/* Two-up — 매입금 / 평가손익금 (1억 이상은 자동 축약) */}
+            <section className="mx-4 mb-2 grid grid-cols-2 gap-2">
                 <div className="p-4 bg-card border border-border">
                     <div className="text-[10px] font-bold text-muted-foreground tracking-[1px] uppercase">
-                        {language === 'ko' ? '원금' : 'Principal'}
+                        {language === 'ko' ? '매입금' : 'Cost'}
                     </div>
                     <div className="font-serif text-lg font-semibold text-foreground mt-1.5 numeric">
-                        {formatCurrency(displayCost, baseCurrency)}
+                        {formatCurrency(displayCost, baseCurrency, { compact: true })}
                     </div>
                 </div>
                 <div className="p-4 bg-card border border-border">
                     <div className="text-[10px] font-bold text-muted-foreground tracking-[1px] uppercase">
-                        {language === 'ko' ? '누적손익' : 'Cumulative'}
+                        {language === 'ko' ? '평가손익금' : 'Unrealized P/L'}
                     </div>
                     <div className={cn(
                         'font-serif text-lg font-semibold mt-1.5 numeric',
                         isProfit ? 'text-profit' : 'text-loss',
                     )}>
-                        {isProfit ? '+' : ''}{formatCurrency(displayProfit, baseCurrency)}
+                        {isProfit ? '+' : ''}{formatCurrency(displayProfit, baseCurrency, { compact: true })}
                     </div>
+                </div>
+            </section>
+
+            {/* 예수금 단일 행 — 보유 탭 카드와 동일 톤, display only */}
+            <section className="mx-4 mb-4 p-4 bg-card border border-border flex items-center gap-3">
+                <div className="w-9 h-9 rounded-sm bg-accent-soft flex items-center justify-center shrink-0">
+                    <Wallet className="w-4 h-4 text-primary" strokeWidth={2} />
+                </div>
+                <div className="min-w-0 flex-1">
+                    <div className="text-[10px] font-bold text-muted-foreground tracking-[1px] uppercase">
+                        {language === 'ko' ? '예수금' : 'Cash balance'}
+                    </div>
+                </div>
+                <div className="font-serif text-lg font-semibold text-foreground numeric truncate">
+                    {formatCurrency(displayCash, baseCurrency, { compact: true })}
                 </div>
             </section>
 
@@ -159,7 +151,7 @@ export function HomeClient({ summary, holdings, recentSnapshots, todayLabel }: H
                     <div className="flex items-center justify-between gap-3">
                         <div className="min-w-0">
                             <div className="font-serif text-base text-foreground" suppressHydrationWarning>
-                                {formatDate(latestSnap.snapshotDate, 'yyyy-MM-dd')}
+                                {formatDate(latestSnap.snapshotDate, 'yyyy.MM.dd')}
                             </div>
                             <div className="text-[11px] text-muted-foreground">
                                 {language === 'ko' ? '지금과 ' : 'vs now '}
@@ -179,14 +171,14 @@ export function HomeClient({ summary, holdings, recentSnapshots, todayLabel }: H
                 </section>
             )}
 
-            {/* Top movers */}
-            {topMovers.length > 0 && (
+            {/* Top returns — 수익률 상위 */}
+            {topReturns.length > 0 && (
                 <section className="px-6 mb-4">
                     <div className="eyebrow mb-3.5">
-                        Top Movers · {language === 'ko' ? '주요 변동' : 'Key changes'}
+                        {language === 'ko' ? '수익률 TOP' : 'TOP RETURNS'}
                     </div>
                     <ul className="divide-y divide-border">
-                        {topMovers.map((h, i) => {
+                        {topReturns.map((h, i) => {
                             const value = h.currency === 'USD' ? h.currentValue * exRate : h.currentValue
                             const displayHValue = baseCurrency === 'KRW' ? value : value / exRate
                             return (

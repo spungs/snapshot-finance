@@ -26,6 +26,12 @@ const notoSerifKr = Noto_Serif_KR({
   display: "swap",
 });
 
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover' as const,
+}
+
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://snapshot-finance.netlify.app'),
   title: {
@@ -53,12 +59,9 @@ export const metadata: Metadata = {
 };
 
 import { LanguageProvider } from '@/lib/i18n/context'
-import { LanguageSwitcher } from '@/components/ui/language-switcher'
-import { AiChat } from '@/components/dashboard/ai-chat'
 import { CurrencyProvider } from '@/lib/currency/context'
-import { auth } from '@/lib/auth'
-import { FloatingContainer } from '@/components/ui/floating-container'
 import { ThemeProvider } from '@/components/theme-provider'
+import { Toaster } from '@/components/ui/sonner'
 
 import { HistoryInit } from '@/components/history-init'
 
@@ -67,7 +70,6 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const session = await auth()
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -92,10 +94,7 @@ export default async function RootLayout({
           <LanguageProvider>
             <CurrencyProvider>
               {children}
-              <FloatingContainer>
-                <AiChat isAuthenticated={!!session} />
-                <LanguageSwitcher />
-              </FloatingContainer>
+              <Toaster position="top-center" />
             </CurrencyProvider>
           </LanguageProvider>
         </ThemeProvider>

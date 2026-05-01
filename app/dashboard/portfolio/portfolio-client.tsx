@@ -1,6 +1,8 @@
 'use client'
 
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
+import { createPortal } from 'react-dom'
+import { Drawer } from 'vaul'
 import { holdingsApi } from '@/lib/api/client'
 import { formatCurrency, formatNumber, formatProfitRate } from '@/lib/utils/formatters'
 import { cn } from '@/lib/utils'
@@ -9,7 +11,14 @@ import { useCurrency } from '@/lib/currency/context'
 import { StockSearchCombobox } from '@/components/dashboard/stock-search-combobox'
 import { FormattedNumberInput } from '@/components/ui/formatted-number-input'
 import { DonutChart } from '@/components/dashboard/donut-chart'
-import { Plus, Edit2, Trash2, Check, X, Loader2, ArrowUp, ArrowDown } from 'lucide-react'
+import { CashBalanceDialog } from '@/components/dashboard/cash-balance-dialog'
+import { Plus, Edit2, Trash2, Check, X, Loader2, ArrowUp, ArrowDown, MoreVertical, Wallet } from 'lucide-react'
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 const SEGMENT_COLORS = [
     '#3b82f6', '#a855f7', '#10b981', '#ef4444', '#f59e0b',
@@ -75,13 +84,28 @@ export function PortfolioClient({ initialHoldings, summary }: Props) {
     const [currentSummary, setCurrentSummary] = useState<Summary>(summary)
     const [sortKey, setSortKey] = useState<SortKey>('currentValue')
     const [sortDir, setSortDir] = useState<SortDir>('desc')
+    const [selectedSegIdx, setSelectedSegIdx] = useState<number | null>(null)
 
-    // Add form
+    // Add form (FAB + bottom drawer)
     const [newStock, setNewStock] = useState<any>(null)
     const [newQty, setNewQty] = useState('')
     const [newPrice, setNewPrice] = useState('')
     const [adding, setAdding] = useState(false)
     const [showAdd, setShowAdd] = useState(false)
+    const [mounted, setMounted] = useState(false)
+
+    useEffect(() => {
+        setMounted(true)
+    }, [])
+
+    const handleDrawerChange = (next: boolean) => {
+        if (!next) {
+            setNewStock(null)
+            setNewQty('')
+            setNewPrice('')
+        }
+        setShowAdd(next)
+    }
 
     // Edit/delete
     const [editingId, setEditingId] = useState<string | null>(null)
@@ -96,6 +120,7 @@ export function PortfolioClient({ initialHoldings, summary }: Props) {
         if (res.success && res.data) {
             setHoldings(res.data.holdings)
             setCurrentSummary(res.data.summary)
+            setSelectedSegIdx(null)
         }
     }, [])
 
@@ -224,54 +249,176 @@ export function PortfolioClient({ initialHoldings, summary }: Props) {
         <div className="max-w-[480px] sm:max-w-2xl mx-auto w-full">
             {/* Hero */}
             <section className="px-6 pt-3 pb-4">
-                <div className="eyebrow mb-1">
-                    {language === 'ko' ? '현재 보유 자산' : 'Current Holdings'}
-                </div>
                 <h1 className="hero-serif text-[32px] text-foreground">
-                    {t('tabPortfolio')}
+                    {language === 'ko' ? '현재 보유 자산' : 'Current Holdings'}
                 </h1>
             </section>
 
             {/* Donut + legend */}
-            {holdings.length > 0 && (
-                <section className="mx-4 mb-4 p-6 bg-card border border-border">
-                    <div className="flex items-center justify-center mb-3.5">
-                        <div className="relative">
-                            <DonutChart data={donutSegments} size={150} thickness={20} />
-                            <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                <div className="text-[10px] text-muted-foreground tracking-[1px] uppercase">
-                                    {t('totalValue')}
-                                </div>
-                                <div className="font-serif text-[17px] font-semibold text-foreground numeric">
-                                    {formatCurrency(displayTotal, baseCurrency)}
-                                </div>
+            {holdings.length > 0 && (() => {
+                const selectedSeg = selectedSegIdx !== null ? donutSegments[selectedSegIdx] : null
+                const selectedHolding = selectedSeg?.holding ?? null
+                const selectedWeight = selectedSeg
+                    ? (selectedSeg.value / (currentSummary.totalValue || 1)) * 100
+                    : 0
+                const selectedValueDisplay = selectedHolding
+                    ? (baseCurrency === 'KRW'
+                        ? (selectedHolding.currency === 'USD' ? selectedHolding.currentValue * exRate : selectedHolding.currentValue)
+                        : (selectedHolding.currency === 'USD' ? selectedHolding.currentValue : selectedHolding.currentValue / exRate))
+                    : 0
+
+                return (
+                    <section
+                        className="mx-4 mb-4 p-5 bg-card border border-border"
+                        onClick={(e) => {
+                            // 카드 빈 영역 탭 시 선택 해제 (레전드/도넛 path 클릭은 stopPropagation 처리)
+                            if (e.target === e.currentTarget) setSelectedSegIdx(null)
+                        }}
+                    >
+                        <div className="flex items-center gap-4">
+                            <div className="shrink-0">
+                                <DonutChart
+                                    data={donutSegments}
+                                    size={130}
+                                    thickness={18}
+                                    selectedIndex={selectedSegIdx}
+                                    onSegmentSelect={setSelectedSegIdx}
+                                />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                {selectedHolding ? (
+                                    <>
+                                        <div className="flex items-center gap-1.5 mb-1">
+                                            <span
+                                                className="w-2 h-2 rounded-sm shrink-0"
+                                                style={{ background: selectedSeg!.color }}
+                                            />
+                                            <span className="text-[10px] font-bold text-muted-foreground tracking-[1px] uppercase truncate">
+                                                {selectedHolding.stockCode}
+                                            </span>
+                                        </div>
+                                        <div className="font-serif text-[18px] font-semibold text-foreground numeric leading-tight">
+                                            {formatCurrency(selectedValueDisplay, baseCurrency)}
+                                        </div>
+                                        <div className="mt-1 flex items-center gap-2 text-[11px] text-muted-foreground">
+                                            <span className="numeric font-semibold text-foreground">
+                                                {selectedWeight.toFixed(1)}%
+                                            </span>
+                                            <span>·</span>
+                                            <UpDown value={selectedHolding.profitRate} />
+                                        </div>
+                                        <div className="mt-1 text-[11px] text-muted-foreground truncate">
+                                            {selectedHolding.stockName}
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="text-[10px] font-bold text-muted-foreground tracking-[1px] uppercase">
+                                            {t('totalValue')}
+                                        </div>
+                                        <div className="font-serif text-[20px] font-semibold text-foreground numeric leading-tight mt-0.5">
+                                            {formatCurrency(displayTotal, baseCurrency)}
+                                        </div>
+                                        <div className="mt-1 text-[11px] text-muted-foreground">
+                                            {language === 'ko' ? `${holdings.length}개 종목` : `${holdings.length} holdings`}
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                        {donutSegments.slice(0, 6).map(seg => {
-                            const w = (seg.value / (currentSummary.totalValue || 1)) * 100
-                            return (
-                                <div key={seg.holding.id} className="flex items-center gap-2 min-w-0">
-                                    <span
-                                        className="w-2 h-2 rounded-sm shrink-0"
-                                        style={{ background: seg.color }}
-                                    />
-                                    <span className="text-[11px] text-muted-foreground truncate flex-1">
-                                        {seg.holding.stockCode}
-                                    </span>
-                                    <span className="text-[11px] font-bold text-foreground numeric">
-                                        {w.toFixed(1)}%
-                                    </span>
-                                </div>
-                            )
-                        })}
-                    </div>
-                </section>
-            )}
 
-            {/* Holdings header — count + add + sort */}
-            <div className="px-6 pb-3 flex justify-between items-center gap-2">
+                        <div className="mt-4 pt-4 border-t border-border grid grid-cols-2 gap-2">
+                            {donutSegments.slice(0, 6).map((seg, i) => {
+                                const w = (seg.value / (currentSummary.totalValue || 1)) * 100
+                                const isSelected = selectedSegIdx === i
+                                const isDimmed = selectedSegIdx !== null && !isSelected
+                                return (
+                                    <button
+                                        key={seg.holding.id}
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation()
+                                            setSelectedSegIdx(isSelected ? null : i)
+                                        }}
+                                        className={cn(
+                                            'flex items-center gap-2 min-w-0 transition-opacity text-left py-0.5',
+                                            isDimmed && 'opacity-30',
+                                        )}
+                                    >
+                                        <span
+                                            className="w-2 h-2 rounded-sm shrink-0"
+                                            style={{ background: seg.color }}
+                                        />
+                                        <span className="text-[11px] text-muted-foreground truncate flex-1">
+                                            {seg.holding.stockCode}
+                                        </span>
+                                        <span className="text-[11px] font-bold text-foreground numeric">
+                                            {w.toFixed(1)}%
+                                        </span>
+                                    </button>
+                                )
+                            })}
+                            {donutSegments.length > 6 && (() => {
+                                const restValue = donutSegments.slice(6).reduce((sum, s) => sum + s.value, 0)
+                                const restWeight = (restValue / (currentSummary.totalValue || 1)) * 100
+                                const restCount = donutSegments.length - 6
+                                const restSelected = selectedSegIdx !== null && selectedSegIdx >= 6
+                                const restDimmed = selectedSegIdx !== null && !restSelected
+                                return (
+                                    <div
+                                        className={cn(
+                                            'flex items-center gap-2 min-w-0 transition-opacity py-0.5',
+                                            restDimmed && 'opacity-30',
+                                        )}
+                                    >
+                                        <span className="w-2 h-2 rounded-sm shrink-0 bg-muted-foreground/40" />
+                                        <span className="text-[11px] text-muted-foreground truncate flex-1">
+                                            {language === 'ko' ? `기타 ${restCount}개` : `Others (${restCount})`}
+                                        </span>
+                                        <span className="text-[11px] font-bold text-foreground numeric">
+                                            {restWeight.toFixed(1)}%
+                                        </span>
+                                    </div>
+                                )
+                            })()}
+                        </div>
+                    </section>
+                )
+            })()}
+
+            {/* Cash balance — 예수금 (수정 트리거 포함) */}
+            <section className="mx-4 mb-4 p-4 bg-card border border-border flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 rounded-sm bg-accent-soft flex items-center justify-center shrink-0">
+                        <Wallet className="w-4 h-4 text-primary" strokeWidth={2} />
+                    </div>
+                    <div className="min-w-0">
+                        <div className="text-[10px] font-bold text-muted-foreground tracking-[1px] uppercase">
+                            {language === 'ko' ? '예수금' : 'Cash balance'}
+                        </div>
+                        <div className="font-serif text-lg font-semibold text-foreground mt-0.5 numeric truncate">
+                            {formatCurrency(convert(currentSummary.cashBalance), baseCurrency)}
+                        </div>
+                    </div>
+                </div>
+                <CashBalanceDialog
+                    initialBalance={currentSummary.cashBalance}
+                    currency={baseCurrency}
+                    exchangeRate={exRate}
+                    onSuccess={refresh}
+                >
+                    <button
+                        type="button"
+                        className="text-[11px] font-bold tracking-wide text-primary px-3 py-2 inline-flex items-center gap-1 min-h-[40px] hover:bg-accent-soft transition-colors shrink-0"
+                    >
+                        <Edit2 className="w-3.5 h-3.5" />
+                        {language === 'ko' ? '수정' : 'Edit'}
+                    </button>
+                </CashBalanceDialog>
+            </section>
+
+            {/* Holdings header — count + sort */}
+            <div className="px-6 pb-3 flex justify-between items-center gap-2 flex-wrap">
                 <span className="eyebrow">
                     {language === 'ko' ? '보유 종목' : 'Holdings'} · {holdings.length}
                 </span>
@@ -288,49 +435,8 @@ export function PortfolioClient({ initialHoldings, summary }: Props) {
                         label={language === 'ko' ? '매입금액' : 'Cost'}
                         onClick={() => handleSort('totalCost')}
                     />
-                    <button
-                        type="button"
-                        onClick={() => setShowAdd(s => !s)}
-                        className="bg-primary text-primary-foreground px-3 py-1.5 text-xs font-bold inline-flex items-center gap-1 hover:opacity-90"
-                    >
-                        <Plus className="w-3 h-3" strokeWidth={3} />
-                        {showAdd ? t('cancel') : t('add')}
-                    </button>
                 </div>
             </div>
-
-            {/* Add form */}
-            {showAdd && (
-                <div className="mx-4 mb-3 p-4 bg-card border border-border space-y-2.5">
-                    <StockSearchCombobox
-                        value={newStock?.stockName || ''}
-                        onSelect={(s: any) => setNewStock(s)}
-                        disabled={adding}
-                    />
-                    <div className="grid grid-cols-2 gap-2">
-                        <FormattedNumberInput
-                            placeholder={t('quantity')}
-                            value={newQty}
-                            onChange={setNewQty}
-                            disabled={adding}
-                        />
-                        <FormattedNumberInput
-                            placeholder={t('averagePrice')}
-                            value={newPrice}
-                            onChange={setNewPrice}
-                            disabled={adding}
-                        />
-                    </div>
-                    <button
-                        type="button"
-                        onClick={handleAdd}
-                        disabled={!newStock || !newQty || !newPrice || adding}
-                        className="w-full bg-primary text-primary-foreground py-2.5 text-sm font-bold disabled:opacity-50 hover:opacity-90"
-                    >
-                        {adding ? t('addingProgress') : t('add')}
-                    </button>
-                </div>
-            )}
 
             {/* Holdings list */}
             <div className="px-4 pb-4 space-y-1.5">
@@ -356,19 +462,52 @@ export function PortfolioClient({ initialHoldings, summary }: Props) {
                             )}
                             style={{ borderLeftWidth: '3px', borderLeftColor: h.color }}
                         >
-                            <div className="flex justify-between items-start gap-3">
-                                <div className="flex-1 min-w-0">
-                                    <div className="font-serif text-[15px] font-semibold text-foreground truncate">
-                                        {h.stockName}
-                                    </div>
-                                    <div className="text-[10px] text-muted-foreground tracking-[0.5px] mt-0.5">
-                                        {h.stockCode} · {formatNumber(h.quantity)}{language === 'ko' ? '주' : 'shr'}
-                                        {' · '}
-                                        {language === 'ko' ? '평단 ' : 'avg '}
-                                        {formatCurrency(h.averagePrice, h.currency)}
-                                        {' · '}
-                                        {h.weight.toFixed(1)}%
-                                    </div>
+                            {/* Row 1: 종목명 (full) + overflow menu */}
+                            <div className="flex items-start justify-between gap-2">
+                                <div className="font-serif text-[15px] font-semibold text-foreground leading-snug break-keep flex-1 min-w-0">
+                                    {h.stockName}
+                                </div>
+                                {!isEditing && (
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <button
+                                                type="button"
+                                                disabled={!!editingId || deletingId === h.id}
+                                                className="-mt-1 -mr-2 p-2 text-muted-foreground hover:text-foreground disabled:opacity-50 shrink-0"
+                                                aria-label={language === 'ko' ? '더보기' : 'More'}
+                                            >
+                                                {deletingId === h.id
+                                                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                                                    : <MoreVertical className="w-4 h-4" />}
+                                            </button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end" className="min-w-[140px]">
+                                            <DropdownMenuItem
+                                                onClick={() => startEdit(h)}
+                                                className="cursor-pointer"
+                                            >
+                                                <Edit2 className="w-4 h-4 mr-2" /> {t('edit')}
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem
+                                                onClick={() => handleDelete(h.id)}
+                                                className="cursor-pointer text-destructive focus:text-destructive"
+                                            >
+                                                <Trash2 className="w-4 h-4 mr-2" /> {t('delete')}
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                )}
+                            </div>
+
+                            {/* Row 2: 메타 (좌) + 평가금액·등락률 (우) */}
+                            <div className="mt-1.5 flex items-end justify-between gap-3">
+                                <div className="text-[10px] text-muted-foreground tracking-[0.5px] flex-1 min-w-0">
+                                    {h.stockCode} · {formatNumber(h.quantity)}{language === 'ko' ? '주' : 'shr'}
+                                    {' · '}
+                                    {language === 'ko' ? '평단 ' : 'avg '}
+                                    {formatCurrency(h.averagePrice, h.currency)}
+                                    {' · '}
+                                    {language === 'ko' ? `비중 ${h.weight.toFixed(1)}%` : `${h.weight.toFixed(1)}% wt`}
                                 </div>
                                 <div className="text-right shrink-0">
                                     <div className="text-[14px] font-bold text-foreground numeric">
@@ -383,11 +522,15 @@ export function PortfolioClient({ initialHoldings, summary }: Props) {
                                 <div className="mt-3 pt-3 border-t border-border space-y-2">
                                     <div className="grid grid-cols-2 gap-2">
                                         <FormattedNumberInput
+                                            label={t('quantity')}
+                                            suffix={language === 'ko' ? '주' : 'shr'}
                                             value={editValues.quantity}
                                             onChange={v => setEditValues(p => ({ ...p, quantity: v }))}
                                             disabled={savingRow !== null}
                                         />
                                         <FormattedNumberInput
+                                            label={t('averagePrice')}
+                                            prefix={h.currency === 'KRW' ? '₩' : '$'}
                                             value={editValues.averagePrice}
                                             onChange={v => setEditValues(p => ({ ...p, averagePrice: v }))}
                                             disabled={savingRow !== null}
@@ -413,35 +556,133 @@ export function PortfolioClient({ initialHoldings, summary }: Props) {
                                         </button>
                                     </div>
                                 </div>
-                            ) : (
-                                <div className="mt-2 pt-2 border-t border-border/60 flex justify-end gap-3 text-[11px]">
-                                    <button
-                                        type="button"
-                                        onClick={() => startEdit(h)}
-                                        disabled={!!editingId || deletingId === h.id}
-                                        className="text-muted-foreground hover:text-foreground disabled:opacity-50 inline-flex items-center gap-1"
-                                    >
-                                        <Edit2 className="w-3 h-3" /> {t('edit')}
-                                    </button>
-                                    <span className="text-border">|</span>
-                                    <button
-                                        type="button"
-                                        onClick={() => handleDelete(h.id)}
-                                        disabled={!!editingId || deletingId === h.id}
-                                        className="text-muted-foreground hover:text-destructive disabled:opacity-50 inline-flex items-center gap-1"
-                                    >
-                                        {deletingId === h.id
-                                            ? <Loader2 className="w-3 h-3 animate-spin" />
-                                            : <Trash2 className="w-3 h-3" />}
-                                        {t('delete')}
-                                    </button>
-                                </div>
-                            )}
+                            ) : null}
                         </div>
                     )
                 })}
             </div>
+
+            {mounted && createPortal(
+                <AddHoldingFloating
+                    open={showAdd}
+                    onOpenChange={handleDrawerChange}
+                    newStock={newStock}
+                    setNewStock={setNewStock}
+                    newQty={newQty}
+                    setNewQty={setNewQty}
+                    newPrice={newPrice}
+                    setNewPrice={setNewPrice}
+                    adding={adding}
+                    handleAdd={handleAdd}
+                    t={t}
+                    language={language}
+                />,
+                document.body,
+            )}
         </div>
+    )
+}
+
+interface AddHoldingFloatingProps {
+    open: boolean
+    onOpenChange: (next: boolean) => void
+    newStock: any
+    setNewStock: (s: any) => void
+    newQty: string
+    setNewQty: (s: string) => void
+    newPrice: string
+    setNewPrice: (s: string) => void
+    adding: boolean
+    handleAdd: () => void
+    t: (key: any) => string
+    language: 'ko' | 'en'
+}
+
+function AddHoldingFloating({
+    open, onOpenChange,
+    newStock, setNewStock,
+    newQty, setNewQty,
+    newPrice, setNewPrice,
+    adding, handleAdd,
+    t, language,
+}: AddHoldingFloatingProps) {
+    const isKR = newStock?.market === 'KOSPI' || newStock?.market === 'KOSDAQ'
+    const pricePrefix = newStock ? (isKR ? '₩' : '$') : undefined
+    const qtySuffix = language === 'ko' ? '주' : 'shr'
+
+    return (
+        <>
+            {/* FAB — AI chat 위쪽에 위치 (탭바+gap+AiChat 높이+gap) */}
+            <button
+                type="button"
+                onClick={() => onOpenChange(true)}
+                aria-label={language === 'ko' ? '종목 추가' : 'Add holding'}
+                className="fixed right-4 z-40 w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all duration-150"
+                style={{
+                    bottom: 'calc(64px + 12px + var(--safe-bottom, 0px))',
+                }}
+            >
+                <Plus className="w-5 h-5" strokeWidth={2.5} />
+            </button>
+
+            <Drawer.Root open={open} onOpenChange={onOpenChange}>
+                <Drawer.Portal>
+                    <Drawer.Overlay className="fixed inset-0 bg-black/40 z-50" />
+                    <Drawer.Content className="fixed bottom-0 left-0 right-0 z-50 flex flex-col bg-background border-t rounded-t-2xl outline-none">
+                        <div className="flex justify-center pt-3 pb-1 shrink-0">
+                            <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
+                        </div>
+                        <div className="flex items-center justify-between px-4 py-2 border-b shrink-0">
+                            <Drawer.Title className="font-semibold text-sm m-0">
+                                {language === 'ko' ? '종목 추가' : 'Add holding'}
+                            </Drawer.Title>
+                            <Drawer.Description className="sr-only">
+                                {language === 'ko' ? '검색하여 보유 종목을 추가합니다.' : 'Search and add a holding.'}
+                            </Drawer.Description>
+                            <button
+                                type="button"
+                                onClick={() => onOpenChange(false)}
+                                className="text-muted-foreground hover:text-foreground p-1"
+                                aria-label={language === 'ko' ? '닫기' : 'Close'}
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+                        <div className="p-4 space-y-2.5 pb-[calc(1rem+var(--safe-bottom,0px))]">
+                            <StockSearchCombobox
+                                value={newStock?.stockName || ''}
+                                onSelect={(s: any) => setNewStock(s)}
+                                disabled={adding}
+                            />
+                            <div className="grid grid-cols-2 gap-2">
+                                <FormattedNumberInput
+                                    label={t('quantity')}
+                                    suffix={qtySuffix}
+                                    value={newQty}
+                                    onChange={setNewQty}
+                                    disabled={adding}
+                                />
+                                <FormattedNumberInput
+                                    label={t('averagePrice')}
+                                    prefix={pricePrefix}
+                                    value={newPrice}
+                                    onChange={setNewPrice}
+                                    disabled={adding}
+                                />
+                            </div>
+                            <button
+                                type="button"
+                                onClick={handleAdd}
+                                disabled={!newStock || !newQty || !newPrice || adding}
+                                className="w-full bg-primary text-primary-foreground py-3 text-sm font-bold disabled:opacity-50 hover:opacity-90"
+                            >
+                                {adding ? t('addingProgress') : t('add')}
+                            </button>
+                        </div>
+                    </Drawer.Content>
+                </Drawer.Portal>
+            </Drawer.Root>
+        </>
     )
 }
 

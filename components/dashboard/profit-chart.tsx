@@ -29,7 +29,7 @@ const LOSS_COLOR = '#3b82f6'
 export function ProfitChart({ data }: ProfitChartProps) {
   const formattedData = data.map((d) => ({
     ...d,
-    date: formatDate(d.date, 'MM/dd'),
+    date: formatDate(d.date, 'MM.dd'),
     profitRate: Number(d.profitRate.toFixed(2)),
   }))
 

@@ -8,7 +8,15 @@ import { cn } from '@/lib/utils'
 import { useLanguage } from '@/lib/i18n/context'
 import { SnapshotBottomPanel } from '@/components/dashboard/snapshots/snapshot-bottom-panel'
 import { EmptySnapshotState } from '@/components/dashboard/empty-snapshot-state'
-import { Loader2, Camera, Bell, Plus } from 'lucide-react'
+import { Loader2, Plus, MoreVertical, Eye, TrendingUp, Trash2 } from 'lucide-react'
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 
 interface Snapshot {
     id: string
@@ -62,6 +70,7 @@ function UpDown({ value, big = false }: { value: number; big?: boolean }) {
 
 export function SnapshotsClient({ initialSnapshots, currentHoldings }: SnapshotsClientProps) {
     const { t, language } = useLanguage()
+    const router = useRouter()
     const [snapshots, setSnapshots] = useState<Snapshot[]>(initialSnapshots)
     const [deleting, setDeleting] = useState<string | null>(null)
     const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -114,7 +123,22 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings }: Snapshots
 
     const handleSelect = (id: string, e: React.MouseEvent) => {
         e.stopPropagation()
-        setSelectedIds(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id])
+        // toast/side-effect는 setState reducer 안이 아니라 바깥에서 처리한다 — React strict
+        // mode에서 reducer가 두 번 호출돼 토스트가 중복 발사되던 문제 해소.
+        if (selectedIds.includes(id)) {
+            setSelectedIds(prev => prev.filter(p => p !== id))
+            return
+        }
+        if (selectedIds.length >= 2) {
+            toast.info(
+                language === 'ko'
+                    ? '비교는 2개를 선택했을 때만 가능해요'
+                    : 'Compare works with exactly 2 snapshots',
+                { id: 'snapshot-compare-limit' },
+            )
+            return
+        }
+        setSelectedIds(prev => [...prev, id])
     }
     const handleClearSelection = () => setSelectedIds([])
 
@@ -142,8 +166,7 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings }: Snapshots
 
     if (snapshots.length === 0) {
         return (
-            <div className="max-w-[420px] mx-auto w-full pb-32">
-                <ScreenHeader />
+            <div className="max-w-[420px] mx-auto w-full pb-20">
                 <Hero t={t} />
                 <div className="mx-4 mt-5 border bg-card overflow-hidden">
                     <EmptySnapshotState />
@@ -156,8 +179,7 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings }: Snapshots
     const activeIndex = snapshots.findIndex(s => s.id === activeSnapshot.id)
 
     return (
-        <div className="max-w-[420px] mx-auto w-full pb-32 relative">
-            <ScreenHeader />
+        <div className="max-w-[420px] mx-auto w-full pb-20 relative">
             <Hero t={t} />
             <ActiveSnapshotCard
                 snapshot={activeSnapshot}
@@ -174,6 +196,7 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings }: Snapshots
                 selectedIds={selectedIds}
                 onToggleSelect={handleSelect}
                 onDelete={handleDelete}
+                onSimulate={(id) => router.push(`/dashboard/simulation?snapshotId=${id}`)}
                 deletingId={deleting}
             />
 
@@ -193,21 +216,18 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings }: Snapshots
                 </div>
             )}
 
-            {/* FAB — 56px, accent green */}
+            {/* FAB — 보유 탭의 종목 추가 FAB과 동일한 사이즈/위치 (48px round, 우하단)
+                AI chat이 위쪽 슬롯에 위치하므로 페이지 액션은 항상 아래쪽 슬롯에 둔다. */}
             <Link
                 href="/dashboard/snapshots/new"
-                className={cn(
-                    'fixed bottom-24 right-5 z-30',
-                    'w-14 h-14 rounded-full',
-                    'bg-primary text-primary-foreground',
-                    'flex items-center justify-center',
-                    'shadow-[0_8px_24px_rgba(0,0,0,0.25)]',
-                    'transition-transform hover:scale-105 active:scale-95',
-                )}
                 aria-label={t('newSnapshot')}
                 title={t('newSnapshot')}
+                className="fixed right-4 z-40 w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all duration-150"
+                style={{
+                    bottom: 'calc(64px + 12px + var(--safe-bottom, 0px))',
+                }}
             >
-                <Plus className="w-[22px] h-[22px]" strokeWidth={2.5} />
+                <Plus className="w-5 h-5" strokeWidth={2.5} />
             </Link>
 
             <SnapshotBottomPanel
@@ -220,30 +240,17 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings }: Snapshots
     )
 }
 
-/* ─── Header bar ─── */
-function ScreenHeader() {
-    return (
-        <div className="px-6 pt-3.5 pb-2 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-                <Camera className="w-5 h-5 text-primary" strokeWidth={2} />
-                <span className="text-base font-bold text-foreground tracking-tight">Snapshot</span>
-            </div>
-            <Bell className="w-5 h-5 text-muted-foreground" strokeWidth={2} />
-        </div>
-    )
-}
-
-/* ─── Hero — serif headline + italic subtitle ─── */
+/* ─── Hero — 보유 탭과 동일한 헤더 구조 (eyebrow + 32px H1) ─── */
 function Hero({ t }: { t: (k: any) => string }) {
     return (
-        <div className="px-6 pt-2 pb-1 flex items-baseline gap-2.5 flex-wrap">
-            <h1 className="hero-serif text-[36px] text-foreground m-0">
+        <section className="px-6 pt-3 pb-4">
+            <h1 className="hero-serif text-[32px] text-foreground">
                 {t('snapshots')}
             </h1>
-            <span className="serif-italic text-xs text-muted-foreground">
+            <span className="serif-italic text-xs text-muted-foreground block mt-1">
                 {t('snapshotsHeroSubtitle')}
             </span>
-        </div>
+        </section>
     )
 }
 
@@ -260,7 +267,9 @@ function ActiveSnapshotCard({
     const profitRate = Number(snapshot.profitRate)
     const isProfit = displayProfit >= 0
     const holdingsCount = snapshot.holdings.length
-    const labelKey = index === 0 ? 'LATEST · ' + t('latest') : `${index}일 전`
+    const labelKey = index === 0
+        ? (language === 'ko' ? 'LATEST · 최신' : 'LATEST')
+        : (language === 'ko' ? `${index}일 전` : `${index}d ago`)
     const sourceLabel = t('autoSnapshotLabel')
 
     return (
@@ -274,7 +283,7 @@ function ActiveSnapshotCard({
             </div>
 
             <div className="font-serif text-[22px] text-foreground mt-1.5" suppressHydrationWarning>
-                {formatDate(snapshot.snapshotDate, 'yyyy-MM-dd')}
+                {formatDate(snapshot.snapshotDate, 'yyyy.MM.dd')}
             </div>
             <div className="text-[11px] text-muted-foreground mb-[18px]">
                 <span suppressHydrationWarning>{formatDate(snapshot.snapshotDate, 'HH:mm')}</span>
@@ -312,7 +321,7 @@ function ActiveSnapshotCard({
 
 /* ─── Timeline list with vertical rail + dots ─── */
 function TimelineSection({
-    snapshots, activeId, onSelect, language, t, selectedIds, onToggleSelect, onDelete, deletingId,
+    snapshots, activeId, onSelect, language, t, selectedIds, onToggleSelect, onDelete, onSimulate, deletingId,
 }: {
     snapshots: Snapshot[]
     activeId: string
@@ -322,12 +331,15 @@ function TimelineSection({
     selectedIds: string[]
     onToggleSelect: (id: string, e: React.MouseEvent) => void
     onDelete: (id: string, e: React.MouseEvent) => void
+    onSimulate: (id: string) => void
     deletingId: string | null
 }) {
     return (
         <>
             <div className="px-6 mb-3">
-                <div className="eyebrow">Timeline · {t('timeline')}</div>
+                <div className="eyebrow">
+                    {language === 'ko' ? `TIMELINE · ${t('timeline')}` : 'TIMELINE'}
+                </div>
             </div>
             <div className="relative px-6">
                 {/* vertical rail */}
@@ -375,7 +387,7 @@ function TimelineSection({
                             >
                                 <div className="flex justify-between items-baseline">
                                     <span className="font-serif text-sm font-semibold text-foreground" suppressHydrationWarning>
-                                        {formatDate(s.snapshotDate, 'yyyy-MM-dd')}
+                                        {formatDate(s.snapshotDate, 'yyyy.MM.dd')}
                                     </span>
                                     <UpDown value={profitRate} />
                                 </div>
@@ -390,51 +402,65 @@ function TimelineSection({
                                     </span>
                                 </div>
 
-                                {/* secondary actions row */}
-                                <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/60">
-                                    <div className="flex gap-2 items-center">
-                                        <Link
-                                            href={`/dashboard/snapshots/${s.id}`}
-                                            onClick={e => e.stopPropagation()}
-                                            className="text-[11px] text-muted-foreground hover:text-foreground"
-                                        >
-                                            {t('details')}
-                                        </Link>
-                                        <span className="text-border">|</span>
-                                        <Link
-                                            href={`/dashboard/simulation?snapshotId=${s.id}`}
-                                            onClick={e => e.stopPropagation()}
-                                            className="text-[11px] text-muted-foreground hover:text-foreground"
-                                        >
-                                            {t('simulation')}
-                                        </Link>
-                                        <span className="text-border">|</span>
-                                        <button
-                                            onClick={e => onDelete(s.id, e)}
-                                            disabled={deleting}
-                                            className="text-[11px] text-muted-foreground hover:text-destructive disabled:opacity-50"
-                                        >
-                                            {deleting ? t('deleting') : t('delete')}
-                                        </button>
-                                    </div>
-                                    <button
-                                        type="button"
-                                        onClick={e => onToggleSelect(s.id, e)}
-                                        className={cn(
-                                            'w-4 h-4 border-2 flex items-center justify-center transition-colors',
-                                            isSelected
-                                                ? 'border-primary bg-primary'
-                                                : 'border-muted-foreground/30 hover:border-muted-foreground',
-                                        )}
-                                        aria-pressed={isSelected}
-                                        aria-label="select"
+                                {/* actions row — primary CTA + overflow menu + selection */}
+                                <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/60 gap-2">
+                                    <Link
+                                        href={`/dashboard/snapshots/${s.id}`}
+                                        onClick={e => e.stopPropagation()}
+                                        className="text-[11px] font-semibold text-primary hover:underline inline-flex items-center gap-1"
                                     >
-                                        {isSelected && (
-                                            <svg viewBox="0 0 12 12" className="w-2.5 h-2.5 text-primary-foreground" fill="none" stroke="currentColor" strokeWidth="2.5">
-                                                <path d="M2.5 6.5l2.5 2.5 4.5-5" strokeLinecap="round" strokeLinejoin="round" />
-                                            </svg>
-                                        )}
-                                    </button>
+                                        <Eye className="w-3 h-3" /> {t('details')}
+                                    </Link>
+                                    <div className="flex items-center gap-1">
+                                        <button
+                                            type="button"
+                                            onClick={e => onToggleSelect(s.id, e)}
+                                            className={cn(
+                                                'inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium border transition-colors',
+                                                isSelected
+                                                    ? 'border-primary bg-primary text-primary-foreground'
+                                                    : 'border-border text-muted-foreground hover:text-foreground hover:border-foreground',
+                                            )}
+                                            aria-pressed={isSelected}
+                                            aria-label={language === 'ko' ? '비교 선택' : 'Compare select'}
+                                        >
+                                            {isSelected && (
+                                                <svg viewBox="0 0 12 12" className="w-2.5 h-2.5" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                                    <path d="M2.5 6.5l2.5 2.5 4.5-5" strokeLinecap="round" strokeLinejoin="round" />
+                                                </svg>
+                                            )}
+                                            {language === 'ko' ? '비교' : 'Compare'}
+                                        </button>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <button
+                                                    type="button"
+                                                    onClick={e => e.stopPropagation()}
+                                                    disabled={deleting}
+                                                    className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-50"
+                                                    aria-label={language === 'ko' ? '더보기' : 'More'}
+                                                >
+                                                    {deleting
+                                                        ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                        : <MoreVertical className="w-3.5 h-3.5" />}
+                                                </button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end" className="min-w-[140px]" onClick={e => e.stopPropagation()}>
+                                                <DropdownMenuItem
+                                                    onClick={() => onSimulate(s.id)}
+                                                    className="cursor-pointer"
+                                                >
+                                                    <TrendingUp className="w-4 h-4 mr-2" /> {t('simulation')}
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem
+                                                    onClick={(e: any) => onDelete(s.id, e)}
+                                                    className="cursor-pointer text-destructive focus:text-destructive"
+                                                >
+                                                    <Trash2 className="w-4 h-4 mr-2" /> {t('delete')}
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </div>
                                 </div>
                             </div>
                         </div>

@@ -2,6 +2,8 @@ import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { holdingService } from '@/lib/services/holding-service'
 import { PortfolioClient } from './portfolio-client'
+import { AiChat } from '@/components/dashboard/ai-chat'
+import { FloatingContainer } from '@/components/ui/floating-container'
 
 export const dynamic = 'force-dynamic'
 
@@ -40,5 +42,13 @@ export default async function PortfolioPage() {
     profitRate: Number(h.profitRate),
   }))
 
-  return <PortfolioClient initialHoldings={holdings} summary={summary} />
+  return (
+    <>
+      <PortfolioClient initialHoldings={holdings} summary={summary} />
+      {/* AI 챗 FAB은 보유 페이지에서만, 그것도 page 데이터 로드 완료 후에만 표시. */}
+      <FloatingContainer>
+        <AiChat isAuthenticated />
+      </FloatingContainer>
+    </>
+  )
 }

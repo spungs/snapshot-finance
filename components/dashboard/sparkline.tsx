@@ -1,5 +1,7 @@
 'use client'
 
+import { useId } from 'react'
+
 interface SparklineProps {
     data: number[]
     width?: number
@@ -17,6 +19,8 @@ export function Sparkline({
     fillColor,
     showZeroAxis = false,
 }: SparklineProps) {
+    // useId는 서버/클라이언트에서 동일한 값을 보장 — Math.random() 사용 시 hydration mismatch 발생
+    const reactId = useId()
     if (!data.length) return null
 
     const min = Math.min(...data)
@@ -29,7 +33,7 @@ export function Sparkline({
     const areaPath = `${path} L ${width} ${height} L 0 ${height} Z`
 
     const zeroY = max > 0 && min < 0 ? height - ((0 - min) / range) * height : null
-    const gradId = `spark-grad-${Math.random().toString(36).slice(2, 8)}`
+    const gradId = `spark-grad-${reactId.replace(/:/g, '')}`
 
     return (
         <svg
