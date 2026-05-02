@@ -121,6 +121,10 @@ export function AiChat({ isAuthenticated = false }: AiChatProps) {
         if (open) {
             setTimeout(() => inputRef.current?.focus(), 150)
             fetchHoldingsData()
+        } else {
+            // 닫을 때마다 대화 상태 초기화 — 다시 열면 빈 상태로 시작
+            setMessages([])
+            setInput('')
         }
     }, [open, fetchHoldingsData])
 
@@ -326,7 +330,7 @@ export function AiChat({ isAuthenticated = false }: AiChatProps) {
             </button>
 
             <Dialog open={open} onOpenChange={setOpen}>
-                <DialogContent className="!flex !flex-col !gap-0 !p-0 sm:max-w-md h-[min(420px,60dvh)] overflow-hidden">
+                <DialogContent className="!flex !flex-col !gap-0 !p-0 sm:max-w-md h-[min(380px,55dvh)] overflow-hidden">
                     <div className="flex items-center px-4 py-3 border-b shrink-0">
                         <DialogTitle className="flex items-center gap-2 font-semibold text-sm m-0">
                             <Sparkles className="w-4 h-4 text-primary" />
