@@ -119,12 +119,8 @@ export function AiChat({ isAuthenticated = false }: AiChatProps) {
 
     useEffect(() => {
         if (open) {
-            // 터치 디바이스(모바일)에서 자동 포커스 시 iOS가 모달 reposition을 끝내기 전에
-            // 키보드를 띄워 input이 가려지는 현상이 발생. 데스크톱(마우스)에서만 자동 포커스.
-            const isTouchDevice = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
-            if (!isTouchDevice) {
-                setTimeout(() => inputRef.current?.focus(), 150)
-            }
+            // 자동 포커스는 모바일에서 키보드가 모달 reposition보다 먼저 떠 input을
+            // 가리는 문제가 있어 의도적으로 제거. 사용자가 input을 직접 탭해야 함.
             fetchHoldingsData()
         } else {
             // 닫을 때마다 대화 상태 초기화 — 다시 열면 빈 상태로 시작
