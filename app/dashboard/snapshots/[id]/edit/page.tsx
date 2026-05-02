@@ -337,7 +337,7 @@ export default function EditSnapshotPage() {
     if (loading) {
         return (
             <div className="max-w-[420px] md:max-w-2xl mx-auto w-full">
-                <div className="flex h-[calc(100vh-4rem)] w-full flex-col items-center justify-center gap-4">
+                <div className="flex h-[calc(100dvh-4rem)] w-full flex-col items-center justify-center gap-4">
                     <div className="w-64 max-w-full">
                         <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
                             <div className="h-full bg-primary animate-indeterminate rounded-full" />

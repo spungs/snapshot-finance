@@ -489,7 +489,7 @@ export function HoldingsManager({ initialHoldings, summary, triggerRefresh }: Ho
     }
 
     return (
-        <div className="min-h-screen pb-20">
+        <div className="min-h-[100dvh] pb-20">
             <div className="space-y-6">
                 <PortfolioImportDialog
                     open={isImportOpen}

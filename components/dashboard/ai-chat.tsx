@@ -328,7 +328,7 @@ export function AiChat({ isAuthenticated = false }: AiChatProps) {
             <Drawer.Root open={open} onOpenChange={setOpen} direction="bottom">
                 <Drawer.Portal>
                     <Drawer.Overlay className="fixed inset-0 bg-black/40 z-50" />
-                    <Drawer.Content className="fixed bottom-0 left-0 right-0 z-50 flex flex-col bg-background border-t rounded-t-2xl h-[min(560px,80vh)] outline-none">
+                    <Drawer.Content className="fixed bottom-0 left-0 right-0 z-50 flex flex-col bg-background border-t rounded-t-2xl h-[min(560px,85dvh)] outline-none">
                         <div className="flex justify-center pt-3 pb-1 shrink-0">
                             <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
                         </div>

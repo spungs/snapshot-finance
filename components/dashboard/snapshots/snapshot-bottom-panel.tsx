@@ -55,7 +55,7 @@ export function SnapshotBottomPanel({ currentHoldings, snapshots, selectedIds, o
                 className={cn(
                     'fixed bottom-0 left-0 right-0 z-50',
                     'flex flex-col bg-background border-t shadow-lg',
-                    'max-h-[85vh] md:max-h-[70vh]',
+                    'max-h-[85dvh] md:max-h-[70dvh]',
                     'rounded-t-[1.5rem] md:rounded-t-xl',
                     'transition-transform duration-300 ease-out',
                 )}

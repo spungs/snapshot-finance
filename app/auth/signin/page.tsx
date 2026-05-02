@@ -18,7 +18,7 @@ export default function SignIn() {
     }
 
     return (
-        <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900 p-4 relative">
+        <div className="flex items-center justify-center min-h-[100dvh] bg-gray-100 dark:bg-gray-900 p-4 relative">
             <Link href="/" className="absolute top-4 left-4">
                 <Button variant="ghost" size="sm" className="gap-2">
                     <ArrowLeft className="h-4 w-4" />

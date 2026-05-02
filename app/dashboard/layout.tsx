@@ -12,7 +12,7 @@ export default async function DashboardLayout({
   const image = session?.user?.image
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-[100dvh] bg-background flex flex-col">
       <ScreenHeader
         right={
           session?.user ? (
