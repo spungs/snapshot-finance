@@ -140,10 +140,17 @@ export function AiChat({ isAuthenticated = false }: AiChatProps) {
                 currency: h.currency,
             }))
 
+            // 직전 메시지의 화면 가이드(disambiguation 안내문 등)는 모델에 보낼 필요가 없으므로 텍스트만 추림.
+            // 토큰 절약을 위해 최근 10개로 제한.
+            const history = messages.slice(-10).map(m => ({
+                role: m.role,
+                content: m.content,
+            }))
+
             const res = await fetch('/api/ai/portfolio', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: trimmed, holdingsContext }),
+                body: JSON.stringify({ message: trimmed, holdingsContext, history }),
             })
 
             const data = await res.json()
@@ -169,7 +176,7 @@ export function AiChat({ isAuthenticated = false }: AiChatProps) {
         } finally {
             setLoading(false)
         }
-    }, [input, loading, holdings])
+    }, [input, loading, holdings, messages])
 
     // resolvedHoldingId: 사용자가 disambiguation에서 특정 보유 종목을 선택한 경우 매칭을 우회.
     const executeAction = useCallback(async (action: ParsedAction, msgIndex: number, resolvedHoldingId?: string) => {
@@ -321,7 +328,7 @@ export function AiChat({ isAuthenticated = false }: AiChatProps) {
             <Drawer.Root open={open} onOpenChange={setOpen} direction="bottom">
                 <Drawer.Portal>
                     <Drawer.Overlay className="fixed inset-0 bg-black/40 z-50" />
-                    <Drawer.Content className="fixed bottom-0 left-0 right-0 z-50 flex flex-col bg-background border-t rounded-t-2xl max-h-[80vh] outline-none">
+                    <Drawer.Content className="fixed bottom-0 left-0 right-0 z-50 flex flex-col bg-background border-t rounded-t-2xl h-[min(560px,80vh)] outline-none">
                         <div className="flex justify-center pt-3 pb-1 shrink-0">
                             <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
                         </div>
