@@ -326,7 +326,7 @@ export function AiChat({ isAuthenticated = false }: AiChatProps) {
             </button>
 
             <Dialog open={open} onOpenChange={setOpen}>
-                <DialogContent className="!flex !flex-col !gap-0 !p-0 sm:max-w-md h-[min(640px,90dvh)] overflow-hidden">
+                <DialogContent className="!flex !flex-col !gap-0 !p-0 sm:max-w-md h-[min(420px,60dvh)] overflow-hidden">
                     <div className="flex items-center px-4 py-3 border-b shrink-0">
                         <DialogTitle className="flex items-center gap-2 font-semibold text-sm m-0">
                             <Sparkles className="w-4 h-4 text-primary" />
