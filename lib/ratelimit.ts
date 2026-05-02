@@ -52,7 +52,7 @@ export const ratelimit = {
 
 // IP 주소 추출 헬퍼
 export function getIP(request: Request): string {
-    // Vercel/Netlify 헤더 확인
+    // Vercel 프록시 헤더 확인
     const forwardedFor = request.headers.get('x-forwarded-for')
     const realIp = request.headers.get('x-real-ip')
 

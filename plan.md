@@ -41,7 +41,6 @@
 #### 4. 기타 유지보수
 - [x] Next.js 16 호환성 업데이트 (`middleware.ts` → `proxy.ts`)
 - [x] Vercel 배포 환경 이슈 해결 (DB 연결, 시간대, 환경변수)
-- [x] **배포 환경 이전**: Vercel -> Netlify (Next.js Runtime v5, Scheduled Functions)
 - [x] **Cron 표준화**: (Vercel) `vercel.json` 크론 1개(`daily-snapshot`)로 완전 통합 - *Free Plan 최적화*
 - [x] **Snapshot 로직 고도화**: 단순 복사 -> **매일 실시간 시세 조회(Fetch)** 방식으로 업그레이드
 - [x] **스케줄링**: 월~금(UTC) 스냅샷 생성 / 매일 유저 정리 자동화
@@ -118,8 +117,8 @@
 
 ### 3. 안정성 및 테스트
 - [x] **API 호출 최적화**: 로고 클릭 시 대시보드 새로고침(Link) 차단하여 불필요한 API 비용(KIS) 절감 (PC/Mobile)
-- [x] **인증 UX 개선**: Netlify 배포 환경에서 Google 로그인 시 계정 선택 및 재로그인 강제 (`prompt: login select_account`)
-- [x] **로그아웃 안정성**: Netlify 환경에서 세션 쿠키가 삭제되지 않는 문제(Zombie Session) 해결 (서버 액션에서 강제 삭제)
+- [x] **인증 UX 개선**: Google 로그인 시 계정 선택 및 재로그인 강제 (`prompt: login select_account`)
+- [x] **로그아웃 안정성**: 세션 쿠키가 삭제되지 않는 문제(Zombie Session) 해결 (서버 액션에서 강제 삭제)
 - [x] **포트폴리오 비교 개선**:
     - [x] 스냅샷 목록 'Clear'(해제) 버튼 추가 및 선택 로직 개선
     - [x] 비교 화면 종목명 표시 형식 변경: '종목명 (티커)'

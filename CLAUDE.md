@@ -25,7 +25,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **시세 API:** KIS (한국투자증권) Open API, Yahoo Finance (yahoo-finance2)
 - **AI:** Google Generative AI (뉴스 요약)
 - **Rate Limiting:** Upstash Redis (`@upstash/ratelimit`)
-- **배포:** Vercel (호스팅) / Netlify (대체) + Supabase
+- **배포:** Vercel + Supabase
 
 ## 주요 명령어
 

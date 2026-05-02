@@ -18,7 +18,7 @@
 - **인증:** NextAuth.js v5 (Google 로그인 제공)
 - **데이터베이스:** PostgreSQL + Prisma ORM (Supabase 운영)
 - **외부 API:** KIS (한국투자증권) Open API (시세 조회)
-- **배포:** Vercel / Netlify
+- **배포:** Vercel
 
 ## 시작하기 (Getting Started)
 

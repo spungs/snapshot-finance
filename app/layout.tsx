@@ -33,7 +33,7 @@ export const viewport = {
 }
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://snapshot-finance.netlify.app'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://snapshot-finance.vercel.app'),
   title: {
     default: "Snapshot Finance - 주식 포트폴리오 스냅샷 및 시뮬레이션",
     template: "%s | Snapshot Finance",
