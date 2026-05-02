@@ -80,12 +80,12 @@ export const FormattedNumberInput = React.forwardRef<HTMLInputElement, Formatted
                     </span>
                 )}
                 {prefix && isFloated && (
-                    <span className="pointer-events-none absolute left-3 bottom-1.5 text-sm text-muted-foreground numeric">
+                    <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center pt-5 pb-1.5 text-base md:text-sm text-muted-foreground numeric">
                         {prefix}
                     </span>
                 )}
                 {suffix && isFloated && (
-                    <span className="pointer-events-none absolute right-3 bottom-1.5 text-sm text-muted-foreground">
+                    <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center pt-5 pb-1.5 text-base md:text-sm text-muted-foreground">
                         {suffix}
                     </span>
                 )}

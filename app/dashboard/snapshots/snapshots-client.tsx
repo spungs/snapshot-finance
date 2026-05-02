@@ -168,7 +168,7 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings }: Snapshots
         return (
             <div className="max-w-[420px] mx-auto w-full pb-20">
                 <Hero t={t} />
-                <div className="mx-4 mt-5 border bg-card overflow-hidden">
+                <div className="mx-4 border bg-card overflow-hidden">
                     <EmptySnapshotState />
                 </div>
             </div>
@@ -179,7 +179,7 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings }: Snapshots
     const activeIndex = snapshots.findIndex(s => s.id === activeSnapshot.id)
 
     return (
-        <div className="max-w-[420px] mx-auto w-full pb-20 relative">
+        <div className="max-w-[420px] mx-auto w-full pb-4 relative">
             <Hero t={t} />
             <ActiveSnapshotCard
                 snapshot={activeSnapshot}
@@ -211,7 +211,7 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings }: Snapshots
                 </div>
             )}
             {!hasMore && snapshots.length > 0 && (
-                <div className="py-8 text-center text-muted-foreground text-xs tracking-wider">
+                <div className="py-4 text-center text-muted-foreground text-xs tracking-wider">
                     — {t('noMoreSnapshots')} —
                 </div>
             )}
@@ -273,7 +273,7 @@ function ActiveSnapshotCard({
     const sourceLabel = t('autoSnapshotLabel')
 
     return (
-        <div className="mx-4 mt-5 mb-4 relative overflow-hidden border bg-card" style={{ padding: 22 }}>
+        <div className="mx-4 mb-4 relative overflow-hidden border bg-card" style={{ padding: 22 }}>
             {/* 3px accent stripe at top */}
             <div className="absolute top-0 left-0 right-0 h-[3px] bg-primary" />
 

@@ -108,7 +108,10 @@ export const holdingService = {
 
             holdingsWithPrice.forEach(h => {
                 if (h.currency === 'USD') {
-                    totalCostKRW += h.totalCost * exchangeRate
+                    // 매입금액은 매입 시점 환율로 동결 (시간이 지나도 변하지 않아야 함)
+                    // purchaseRate 누락/legacy(1)면 현재 환율로 폴백
+                    const effectivePurchaseRate = h.purchaseRate && h.purchaseRate !== 1 ? h.purchaseRate : exchangeRate
+                    totalCostKRW += h.totalCost * effectivePurchaseRate
                     totalStockValueKRW += h.currentValue * exchangeRate
                 } else {
                     totalCostKRW += h.totalCost

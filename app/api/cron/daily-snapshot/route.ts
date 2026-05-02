@@ -86,8 +86,12 @@ export async function GET(request: NextRequest) {
                             const cost = avgPrice * quantity
 
                             // Normalize values to KRW for portfolio total
+                            // 매입금액은 매입 시점 환율(purchaseRate)로 동결 — 환율 변동만으로 매입금액이 출렁이지 않게 함
+                            // purchaseRate 누락/legacy(1)면 현재 환율로 폴백
+                            const purchaseRate = Number(holding.purchaseRate)
+                            const effectivePurchaseRate = purchaseRate && purchaseRate !== 1 ? purchaseRate : usdRate
                             const krwValue = holding.currency === 'USD' ? val * usdRate : val
-                            const krwCost = holding.currency === 'USD' ? cost * usdRate : cost
+                            const krwCost = holding.currency === 'USD' ? cost * effectivePurchaseRate : cost
 
                             totalValue += krwValue
                             totalCost += krwCost

@@ -171,9 +171,3 @@ const profitRate = new Decimal(currentValue)
 - `SecuritiesAccount` 제거 → `User`로 통합
 - `StockHolding` → `SnapshotHolding` 리네이밍
 - 로그인/로그아웃 구현 완료
-
-
-### 다음 작업들(개인 기록용, AI는 몰라도됨)
-1. 변경된 파일들 모두 분석해서 커밋메세지 만들고 커밋해.
-2. 스냅샷 메뉴 맨 하단에 빈 공간 여전히 있음. 캡쳐
-3. 

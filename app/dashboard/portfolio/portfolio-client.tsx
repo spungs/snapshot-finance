@@ -53,7 +53,7 @@ interface Summary {
     cashBalance: number
 }
 
-type SortKey = 'currentValue' | 'totalCost'
+type SortKey = 'currentValue' | 'totalCost' | 'profit'
 type SortDir = 'desc' | 'asc'
 
 interface Props {
@@ -422,18 +422,24 @@ export function PortfolioClient({ initialHoldings, summary }: Props) {
                 <span className="eyebrow">
                     {language === 'ko' ? '보유 종목' : 'Holdings'} · {holdings.length}
                 </span>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                     <SortToggle
                         active={sortKey === 'currentValue'}
                         dir={sortDir}
-                        label={language === 'ko' ? '평가금액' : 'Value'}
+                        label={language === 'ko' ? '평가금' : 'Value'}
                         onClick={() => handleSort('currentValue')}
                     />
                     <SortToggle
                         active={sortKey === 'totalCost'}
                         dir={sortDir}
-                        label={language === 'ko' ? '매입금액' : 'Cost'}
+                        label={language === 'ko' ? '매입금' : 'Cost'}
                         onClick={() => handleSort('totalCost')}
+                    />
+                    <SortToggle
+                        active={sortKey === 'profit'}
+                        dir={sortDir}
+                        label={language === 'ko' ? '수익금' : 'P/L'}
+                        onClick={() => handleSort('profit')}
                     />
                 </div>
             </div>
@@ -449,9 +455,15 @@ export function PortfolioClient({ initialHoldings, summary }: Props) {
                 ) : holdingsWithWeight.map(h => {
                     const isProfit = h.profit >= 0
                     const isEditing = editingId === h.id
-                    const valueDisplay = baseCurrency === 'KRW'
-                        ? (h.currency === 'USD' ? h.currentValue * exRate : h.currentValue)
-                        : (h.currency === 'USD' ? h.currentValue : h.currentValue / exRate)
+                    const toBase = (v: number) => baseCurrency === 'KRW'
+                        ? (h.currency === 'USD' ? v * exRate : v)
+                        : (h.currency === 'USD' ? v : v / exRate)
+                    const valueDisplay = toBase(h.currentValue)
+                    const costDisplay = toBase(h.totalCost)
+                    const profitDisplay = toBase(h.profit)
+                    const profitText = profitDisplay >= 0
+                        ? `+${formatCurrency(profitDisplay, baseCurrency)}`
+                        : formatCurrency(profitDisplay, baseCurrency)
 
                     return (
                         <div
@@ -501,19 +513,33 @@ export function PortfolioClient({ initialHoldings, summary }: Props) {
 
                             {/* Row 2: 메타 (좌) + 평가금액·등락률 (우) */}
                             <div className="mt-1.5 flex items-end justify-between gap-3">
-                                <div className="text-[10px] text-muted-foreground tracking-[0.5px] flex-1 min-w-0">
-                                    {h.stockCode} · {formatNumber(h.quantity)}{language === 'ko' ? '주' : 'shr'}
-                                    {' · '}
-                                    {language === 'ko' ? '평단 ' : 'avg '}
-                                    {formatCurrency(h.averagePrice, h.currency)}
-                                    {' · '}
-                                    {language === 'ko' ? `비중 ${h.weight.toFixed(1)}%` : `${h.weight.toFixed(1)}% wt`}
+                                <div className="text-[10px] text-muted-foreground tracking-[0.5px] flex-1 min-w-0 space-y-0.5">
+                                    <div>
+                                        {h.stockCode} · {formatNumber(h.quantity)}{language === 'ko' ? '주' : 'shr'}
+                                        {' · '}
+                                        {language === 'ko' ? '평단 ' : 'avg '}
+                                        {formatCurrency(h.averagePrice, h.currency)}
+                                    </div>
+                                    <div>
+                                        {language === 'ko' ? `비중 ${h.weight.toFixed(1)}%` : `${h.weight.toFixed(1)}% wt`}
+                                    </div>
                                 </div>
                                 <div className="text-right shrink-0">
-                                    <div className="text-[14px] font-bold text-foreground numeric">
+                                    <div className="text-[10px] text-muted-foreground tracking-[0.5px] numeric">
+                                        {language === 'ko' ? '매입' : 'Cost'} {formatCurrency(costDisplay, baseCurrency)}
+                                    </div>
+                                    <div className="text-[14px] font-bold text-foreground numeric mt-0.5">
                                         {formatCurrency(valueDisplay, baseCurrency)}
                                     </div>
-                                    <div className="mt-0.5"><UpDown value={h.profitRate} /></div>
+                                    <div className="mt-0.5 flex items-center justify-end gap-1.5">
+                                        <UpDown value={h.profitRate} />
+                                        <span className={cn(
+                                            'text-[11px] font-semibold numeric',
+                                            h.profit >= 0 ? 'text-profit' : 'text-loss',
+                                        )}>
+                                            {profitText}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
 
