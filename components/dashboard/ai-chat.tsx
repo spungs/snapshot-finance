@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { Drawer } from 'vaul'
-import { Sparkles, SendHorizonal, X, Loader2, Check } from 'lucide-react'
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
+import { Sparkles, SendHorizonal, Loader2, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
@@ -325,32 +325,19 @@ export function AiChat({ isAuthenticated = false }: AiChatProps) {
                 <Sparkles className="w-5 h-5" />
             </button>
 
-            <Drawer.Root open={open} onOpenChange={setOpen} direction="bottom">
-                <Drawer.Portal>
-                    <Drawer.Overlay className="fixed inset-0 bg-black/40 z-50" />
-                    <Drawer.Content className="fixed bottom-0 left-0 right-0 z-50 flex flex-col bg-background border-t rounded-t-2xl h-[min(560px,85dvh)] outline-none">
-                        <div className="flex justify-center pt-3 pb-1 shrink-0">
-                            <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
-                        </div>
+            <Dialog open={open} onOpenChange={setOpen}>
+                <DialogContent className="!flex !flex-col !gap-0 !p-0 sm:max-w-md h-[min(640px,90dvh)] overflow-hidden">
+                    <div className="flex items-center px-4 py-3 border-b shrink-0">
+                        <DialogTitle className="flex items-center gap-2 font-semibold text-sm m-0">
+                            <Sparkles className="w-4 h-4 text-primary" />
+                            AI 포트폴리오 어시스턴트
+                        </DialogTitle>
+                        <DialogDescription className="sr-only">
+                            자연어로 포트폴리오를 수정할 수 있는 AI 어시스턴트
+                        </DialogDescription>
+                    </div>
 
-                        <div className="flex items-center justify-between px-4 py-2 border-b shrink-0">
-                            <Drawer.Title className="flex items-center gap-2 font-semibold text-sm m-0">
-                                <Sparkles className="w-4 h-4 text-primary" />
-                                AI 포트폴리오 어시스턴트
-                            </Drawer.Title>
-                            <Drawer.Description className="sr-only">
-                                자연어로 포트폴리오를 수정할 수 있는 AI 어시스턴트
-                            </Drawer.Description>
-                            <button
-                                onClick={() => setOpen(false)}
-                                className="text-muted-foreground hover:text-foreground p-1"
-                                aria-label="닫기"
-                            >
-                                <X className="w-4 h-4" />
-                            </button>
-                        </div>
-
-                        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 min-h-0">
+                    <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 min-h-0">
                             {messages.length === 0 && (
                                 <div className="text-center text-sm text-muted-foreground py-8 space-y-1">
                                     <Sparkles className="w-8 h-8 mx-auto mb-3 opacity-20" />
@@ -473,9 +460,8 @@ export function AiChat({ isAuthenticated = false }: AiChatProps) {
                                 <SendHorizonal className="w-4 h-4" />
                             </Button>
                         </div>
-                    </Drawer.Content>
-                </Drawer.Portal>
-            </Drawer.Root>
+                </DialogContent>
+            </Dialog>
         </>
     )
 }
