@@ -232,7 +232,7 @@ export function StockSearchCombobox({
                     </CommandList>
                     <div className="flex items-center border-t px-3 order-2 shrink-0" cmdk-input-wrapper="">
                         <input
-                            className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                            className="flex h-11 w-full rounded-md bg-transparent py-3 text-base md:text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
                             placeholder={t('searchPlaceholder')}
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}

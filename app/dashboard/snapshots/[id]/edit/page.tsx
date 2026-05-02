@@ -512,7 +512,7 @@ export default function EditSnapshotPage() {
                         value={note}
                         disabled={saving}
                         onChange={(e) => setNote(e.target.value)}
-                        className="w-full bg-transparent font-serif text-[14px] text-foreground outline-none placeholder:text-muted-foreground/60"
+                        className="w-full bg-transparent font-serif text-base md:text-[14px] text-foreground outline-none placeholder:text-muted-foreground/60"
                     />
                 </section>
 

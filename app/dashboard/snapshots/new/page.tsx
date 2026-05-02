@@ -519,7 +519,7 @@ export default function NewSnapshotPage() {
             placeholder={t('memoPlaceholder')}
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            className="w-full mt-1.5 bg-transparent font-serif text-[15px] text-foreground outline-none border-b border-border pb-1.5 placeholder:text-muted-foreground/60 focus:border-primary transition-colors"
+            className="w-full mt-1.5 bg-transparent font-serif text-base md:text-[15px] text-foreground outline-none border-b border-border pb-1.5 placeholder:text-muted-foreground/60 focus:border-primary transition-colors"
           />
         </section>
 

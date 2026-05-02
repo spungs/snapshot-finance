@@ -461,7 +461,7 @@ export function AiChat({ isAuthenticated = false }: AiChatProps) {
                                     }
                                 }}
                                 placeholder="포트폴리오 수정 요청을 입력하세요..."
-                                className="flex-1 text-sm bg-muted rounded-xl px-3 py-2 outline-none focus:ring-1 focus:ring-primary"
+                                className="flex-1 text-base md:text-sm bg-muted rounded-xl px-3 py-2 outline-none focus:ring-1 focus:ring-primary"
                                 disabled={loading}
                             />
                             <Button

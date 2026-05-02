@@ -290,7 +290,7 @@ export function WhatIfClient() {
                         </label>
                         <input
                             type="date"
-                            className="flex h-10 w-full border border-border bg-background px-3 py-2 text-sm font-serif numeric focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            className="flex h-10 w-full border border-border bg-background px-3 py-2 text-base md:text-sm font-serif numeric focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                             value={dateInput}
                             onChange={(e) => setDateInput(e.target.value)}
                             max={new Date().toISOString().split('T')[0]}
@@ -315,7 +315,7 @@ export function WhatIfClient() {
                                     ? (language === 'ko' ? '예: 1,000,000' : 'e.g. 1,000,000')
                                     : (language === 'ko' ? '예: 1,000' : 'e.g. 1,000')
                             }
-                            className="flex h-10 w-full border border-border bg-background px-3 py-2 text-sm font-serif numeric placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            className="flex h-10 w-full border border-border bg-background px-3 py-2 text-base md:text-sm font-serif numeric placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                             value={amountInput}
                             onChange={(e) => setAmountInput(formatAmountInput(e.target.value))}
                         />
