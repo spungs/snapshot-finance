@@ -41,14 +41,31 @@ export default function EditSnapshotPage() {
     const [exchangeRate, setExchangeRate] = useState<number>(1435)
     const loadedDateRef = useRef<string | null>(null)
 
+    // Abort controllers — cancel in-flight fetches on unmount (e.g., tab nav) and on supersession
+    const initialFetchAbortRef = useRef<AbortController | null>(null)
+    const dateChangeAbortRef = useRef<AbortController | null>(null)
+    const stockSelectAbortsRef = useRef<Set<AbortController>>(new Set())
+
+    useEffect(() => () => {
+        initialFetchAbortRef.current?.abort()
+        dateChangeAbortRef.current?.abort()
+        stockSelectAbortsRef.current.forEach(c => c.abort())
+        stockSelectAbortsRef.current.clear()
+    }, [])
+
     useEffect(() => {
         setSummaryDisplayCurrency(language === 'en' ? 'USD' : 'KRW')
     }, [language])
 
     useEffect(() => {
+        if (!params.id) return
+        const controller = new AbortController()
+        initialFetchAbortRef.current = controller
+
         async function fetchSnapshot() {
             try {
-                const response = await snapshotsApi.getDetail(params.id as string)
+                const response = await snapshotsApi.getDetail(params.id as string, controller.signal)
+                if (controller.signal.aborted) return
                 if (response.success && response.data) {
                     const snapshot = response.data
                     setCashBalance(snapshot.cashBalance.toString())
@@ -91,30 +108,38 @@ export default function EditSnapshotPage() {
                 } else {
                     setError(response.error?.message || t('loadFailed'))
                 }
-            } catch {
+            } catch (e) {
+                if ((e as Error).name === 'AbortError') return
                 setError(t('networkError'))
             } finally {
-                setLoading(false)
+                if (!controller.signal.aborted) setLoading(false)
             }
         }
 
-        if (params.id) fetchSnapshot()
+        fetchSnapshot()
     }, [params.id, today, t])
 
     useEffect(() => {
         if (snapshotDate === loadedDateRef.current) return
 
+        // Cancel any previous in-flight date-change refresh
+        dateChangeAbortRef.current?.abort()
+        const controller = new AbortController()
+        dateChangeAbortRef.current = controller
+
         async function updateData() {
             setUpdatingPrices(true)
             try {
                 if (snapshotDate === today) {
-                    setExchangeRate(1435)
+                    if (!controller.signal.aborted) setExchangeRate(1435)
                 } else {
                     try {
-                        const res = await fetch(`/api/stocks/history?symbol=KRW=X&market=FX&date=${snapshotDate}`)
+                        const res = await fetch(`/api/stocks/history?symbol=KRW=X&market=FX&date=${snapshotDate}`, { signal: controller.signal })
                         const data = await res.json()
+                        if (controller.signal.aborted) return
                         setExchangeRate(data?.success && data?.data?.close ? data.data.close : 1435)
-                    } catch {
+                    } catch (e) {
+                        if ((e as Error).name === 'AbortError') return
                         setExchangeRate(1435)
                     }
                 }
@@ -126,23 +151,25 @@ export default function EditSnapshotPage() {
                         let price = h.currentPrice
                         try {
                             if (snapshotDate === today) {
-                                const res = await fetch(`/api/kis/price?symbol=${h.stockCode}&market=${market}`)
+                                const res = await fetch(`/api/kis/price?symbol=${h.stockCode}&market=${market}`, { signal: controller.signal })
                                 const data = await res.json()
                                 if (data?.success && data?.data?.price) price = data.data.price.toString()
                             } else {
-                                const res = await fetch(`/api/stocks/history?symbol=${h.stockCode}&market=${market}&date=${snapshotDate}`)
+                                const res = await fetch(`/api/stocks/history?symbol=${h.stockCode}&market=${market}&date=${snapshotDate}`, { signal: controller.signal })
                                 const data = await res.json()
                                 if (data?.success && data?.data?.close) price = data.data.close.toString()
                             }
                         } catch (e) {
+                            if ((e as Error).name === 'AbortError') return h
                             console.error(`Failed to update price for ${h.stockCode}`, e)
                         }
                         return { ...h, currentPrice: price }
                     }))
+                    if (controller.signal.aborted) return
                     setHoldings(updatedHoldings)
                 }
             } finally {
-                setUpdatingPrices(false)
+                if (!controller.signal.aborted) setUpdatingPrices(false)
             }
         }
 
@@ -190,6 +217,9 @@ export default function EditSnapshotPage() {
         }
         setHoldings(updated)
 
+        const controller = new AbortController()
+        stockSelectAbortsRef.current.add(controller)
+
         try {
             const market = stock.market || (isNaN(Number(stock.stockCode)) ? 'US' : 'KOSPI')
             const newCurrency = market === 'US' ? 'USD' : 'KRW'
@@ -197,14 +227,16 @@ export default function EditSnapshotPage() {
 
             let price = '0'
             if (snapshotDate === today) {
-                const res = await fetch(`/api/kis/price?symbol=${stock.stockCode}&market=${market}`)
+                const res = await fetch(`/api/kis/price?symbol=${stock.stockCode}&market=${market}`, { signal: controller.signal })
                 const data = await res.json()
                 if (data?.success && data?.data?.price) price = data.data.price.toString()
             } else {
-                const res = await fetch(`/api/stocks/history?symbol=${stock.stockCode}&market=${market}&date=${snapshotDate}`)
+                const res = await fetch(`/api/stocks/history?symbol=${stock.stockCode}&market=${market}&date=${snapshotDate}`, { signal: controller.signal })
                 const data = await res.json()
                 if (data?.success && data?.data?.close) price = data.data.close.toString()
             }
+
+            if (controller.signal.aborted) return
 
             setHoldings((prev) => {
                 const current = [...prev]
@@ -218,7 +250,10 @@ export default function EditSnapshotPage() {
                 return current
             })
         } catch (e) {
+            if ((e as Error).name === 'AbortError') return
             console.error('Failed to fetch price:', e)
+        } finally {
+            stockSelectAbortsRef.current.delete(controller)
         }
     }
 
@@ -301,7 +336,7 @@ export default function EditSnapshotPage() {
 
     if (loading) {
         return (
-            <div className="max-w-[420px] mx-auto w-full">
+            <div className="max-w-[420px] md:max-w-2xl mx-auto w-full">
                 <div className="flex h-[calc(100vh-4rem)] w-full flex-col items-center justify-center gap-4">
                     <div className="w-64 max-w-full">
                         <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
@@ -315,7 +350,7 @@ export default function EditSnapshotPage() {
 
     if (error && !holdings.length) {
         return (
-            <div className="max-w-[420px] mx-auto w-full px-6 pt-12 text-center">
+            <div className="max-w-[420px] md:max-w-2xl mx-auto w-full px-6 pt-12 text-center">
                 <p className="text-loss text-[13px] mb-4">{error}</p>
                 <Link
                     href="/dashboard/snapshots"
@@ -333,7 +368,7 @@ export default function EditSnapshotPage() {
     const isHistorical = snapshotDate !== today
 
     return (
-        <div className="max-w-[420px] mx-auto w-full pb-8">
+        <div className="max-w-[420px] md:max-w-2xl mx-auto w-full pb-8">
             <form onSubmit={handleSubmit} className="relative">
                 {saving && (
                     <div className="absolute inset-0 bg-background/60 backdrop-blur-sm z-50 flex items-center justify-center">

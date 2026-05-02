@@ -1,13 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getBigTechNews } from '@/actions/news'
+import { getStockNews } from '@/actions/news'
+import { M7_SYMBOLS, isLikelyEtf } from '@/lib/news/m7'
+import { prisma } from '@/lib/prisma'
 
 // Allow up to 5 minutes for execution (safety net, though we aim for <10s per symbol)
 export const maxDuration = 300
 
-const BIG_TECH_SYMBOLS = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'TSLA', 'META']
+const US_MARKETS = ['US', 'NAS', 'NYS', 'AMS']
+
+interface TargetStock {
+    symbol: string
+    keywords?: string[]
+}
+
+async function getTargetStocks(): Promise<TargetStock[]> {
+    const heldUsStocks = await prisma.stock.findMany({
+        where: {
+            market: { in: US_MARKETS },
+            liveHoldings: { some: {} },
+        },
+        select: { stockCode: true, stockName: true, engName: true },
+    })
+
+    const map = new Map<string, TargetStock>()
+    for (const stock of heldUsStocks) {
+        if (isLikelyEtf(stock.stockName, stock.engName)) continue
+        map.set(stock.stockCode, {
+            symbol: stock.stockCode,
+            keywords: stock.engName ? [stock.engName, stock.stockCode] : undefined,
+        })
+    }
+    for (const symbol of M7_SYMBOLS) {
+        if (!map.has(symbol)) map.set(symbol, { symbol })
+    }
+    return Array.from(map.values())
+}
 
 export async function GET(request: NextRequest) {
-    // 1. Authentication
     const authHeader = request.headers.get('authorization')
     if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
         return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
@@ -17,17 +46,21 @@ export async function GET(request: NextRequest) {
         const { searchParams } = new URL(request.url)
         const symbolParam = searchParams.get('symbol')
 
+        const targets = await getTargetStocks()
+        const targetMap = new Map(targets.map(t => [t.symbol, t]))
+
         // Mode 1: Single Symbol Update (Optimized for Cron Fan-out)
         if (symbolParam) {
-            if (!BIG_TECH_SYMBOLS.includes(symbolParam)) {
-                return NextResponse.json({ success: false, error: 'Invalid symbol' }, { status: 400 })
+            const target = targetMap.get(symbolParam)
+            if (!target) {
+                return NextResponse.json({ success: false, error: 'Invalid or unheld symbol' }, { status: 400 })
             }
 
             console.log(`[Cron] Specific update triggered for ${symbolParam}`)
             const startTime = Date.now()
 
             try {
-                const news = await getBigTechNews(symbolParam)
+                const news = await getStockNews(target.symbol, target.keywords)
                 const duration = (Date.now() - startTime) / 1000
                 console.log(`[Cron] ${symbolParam} update complete in ${duration}s`)
 
@@ -35,7 +68,7 @@ export async function GET(request: NextRequest) {
                     success: true,
                     symbol: symbolParam,
                     count: news.length,
-                    duration: `${duration}s`
+                    duration: `${duration}s`,
                 })
             } catch (error) {
                 console.error(`[Cron] Failed specific update for ${symbolParam}:`, error)
@@ -44,18 +77,17 @@ export async function GET(request: NextRequest) {
         }
 
         // Mode 2: Update All (Legacy/Fallback)
-        // Note: This might timeout on Vercel Hobby if there are many new articles.
         const results = []
-        console.log('[Cron] Updating all symbols (Legacy Mode)...')
+        console.log(`[Cron] Updating all symbols (${targets.length} total)...`)
 
-        for (const symbol of BIG_TECH_SYMBOLS) {
+        for (const target of targets) {
             try {
-                console.log(`[Cron] Updating news for ${symbol}...`)
-                const news = await getBigTechNews(symbol)
-                results.push({ symbol, count: news.length, status: 'updated' })
+                console.log(`[Cron] Updating news for ${target.symbol}...`)
+                const news = await getStockNews(target.symbol, target.keywords)
+                results.push({ symbol: target.symbol, count: news.length, status: 'updated' })
             } catch (error) {
-                console.error(`[Cron] Failed to update ${symbol}:`, error)
-                results.push({ symbol, status: 'failed', error: String(error) })
+                console.error(`[Cron] Failed to update ${target.symbol}:`, error)
+                results.push({ symbol: target.symbol, status: 'failed', error: String(error) })
             }
         }
 

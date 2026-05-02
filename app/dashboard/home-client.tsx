@@ -82,7 +82,7 @@ export function HomeClient({ summary, holdings, recentSnapshots, todayLabel }: H
         .slice(0, 4)
 
     return (
-        <div className="max-w-[480px] mx-auto w-full">
+        <div className="max-w-[480px] md:max-w-2xl mx-auto w-full">
             {/* Hero — Big serif amount + ▲ rate */}
             <section className="px-6 pt-3 pb-6">
                 <div className="eyebrow mb-2">{todayLabel}</div>

@@ -20,8 +20,47 @@ async function fetchCurrentPrice(stockCode: string, market: string): Promise<num
     }
 }
 
+// In-memory TTL cache for getList — same userId hitting home/portfolio in quick
+// succession (e.g., tab switching) reuses the result instead of re-running KIS calls.
+// Stored value is the full success response; mutations call invalidate() below.
+const HOLDINGS_CACHE_TTL_MS = 10_000
+type HoldingsListResult = Awaited<ReturnType<typeof computeList>>
+const holdingsCache = new Map<string, { data: HoldingsListResult; expiresAt: number }>()
+
+async function computeList(userId: string) {
+    return holdingServiceInternal._compute(userId)
+}
+
 export const holdingService = {
+    /** Drop the cached holdings result for a user. Call after any mutation that
+     *  affects holdings, cashBalance, or targetAsset so the next read reflects it. */
+    invalidate(userId: string) {
+        holdingsCache.delete(userId)
+    },
+
     async getList(userId: string) {
+        const cached = holdingsCache.get(userId)
+        if (cached && cached.expiresAt > Date.now()) {
+            return cached.data
+        }
+
+        const result = await computeList(userId)
+
+        // Only cache successful responses; failures should retry on next request
+        if (result?.success) {
+            holdingsCache.set(userId, {
+                data: result,
+                expiresAt: Date.now() + HOLDINGS_CACHE_TTL_MS,
+            })
+        }
+
+        return result
+    },
+}
+
+// Internal compute fn split out so the cache wrapper above stays minimal.
+const holdingServiceInternal = {
+    async _compute(userId: string) {
         try {
             const holdings = await prisma.holding.findMany({
                 where: { userId },
@@ -38,17 +77,16 @@ export const holdingService = {
             const cashBalance = user?.cashBalance ? Number(user.cashBalance) : 0
             const targetAsset = user?.targetAsset ? Number(user.targetAsset) : 0
 
-            // Fetch Exchange Rate and ensure KIS connection in parallel
-            const [exchangeRate] = await Promise.all([
-                getUsdExchangeRate(),
-                kisClient.ensureConnection()
-            ])
+            // Fetch FX rate and per-stock prices in a single parallel batch.
+            // — `getCurrentPrice` already de-dupes the KIS token fetch via tokenPromise,
+            //   so a separate `ensureConnection()` priming step is redundant.
+            // — FX call is independent of stock prices, so running them serially
+            //   (the previous structure) just stacked latency.
+            const fxPromise = getUsdExchangeRate()
 
-            // Fetch Real-time Prices and Calculate Summary
-            const holdingsWithPrice = await Promise.all(holdings.map(async (holding) => {
+            const pricesPromise = Promise.all(holdings.map(async (holding) => {
                 let currentPrice = 0
                 try {
-                    // Fetch Real-time Price
                     currentPrice = await fetchCurrentPrice(holding.stock.stockCode, holding.stock.market || 'Unknown')
                     if (isNaN(currentPrice)) currentPrice = 0
 
@@ -101,6 +139,8 @@ export const holdingService = {
                     profitRate,
                 }
             }))
+
+            const [exchangeRate, holdingsWithPrice] = await Promise.all([fxPromise, pricesPromise])
 
             // Calculate Total Summary (KRW Base)
             let totalCostKRW = 0

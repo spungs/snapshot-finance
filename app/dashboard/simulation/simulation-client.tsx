@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { formatCurrency, formatDate, formatNumber } from '@/lib/utils/formatters'
 import { cn } from '@/lib/utils'
@@ -69,6 +69,7 @@ export default function SimulationClient({ initialSnapshots }: SimulationClientP
     const [result, setResult] = useState<SimulationResult | null>(null)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const abortRef = useRef<AbortController | null>(null)
 
     const selectedSnapshot = initialSnapshots.find(s => s.id === selectedSnapshotId)
 
@@ -80,7 +81,15 @@ export default function SimulationClient({ initialSnapshots }: SimulationClientP
         }
     }, [searchParams])
 
+    // Abort any in-flight simulation when the component unmounts
+    useEffect(() => () => abortRef.current?.abort(), [])
+
     const executeSimulation = async (id: string) => {
+        // Cancel any previous in-flight request so a stale response can't overwrite a newer one
+        abortRef.current?.abort()
+        const controller = new AbortController()
+        abortRef.current = controller
+
         setLoading(true)
         setError(null)
         setResult(null)
@@ -90,18 +99,22 @@ export default function SimulationClient({ initialSnapshots }: SimulationClientP
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ snapshotId: id }),
+                signal: controller.signal,
             })
             const data = await res.json()
+
+            if (controller.signal.aborted) return
 
             if (data.success) {
                 setResult(data.data)
             } else {
                 setError(data.error || t('simulationFailed'))
             }
-        } catch {
+        } catch (e) {
+            if ((e as Error).name === 'AbortError') return
             setError(t('runSimulationFailed'))
         } finally {
-            setLoading(false)
+            if (!controller.signal.aborted) setLoading(false)
         }
     }
 
@@ -117,7 +130,7 @@ export default function SimulationClient({ initialSnapshots }: SimulationClientP
     }
 
     return (
-        <div className="max-w-[480px] mx-auto w-full pb-8">
+        <div className="max-w-[480px] md:max-w-2xl mx-auto w-full pb-8">
             {/* Hero */}
             <section className="px-6 pt-3 pb-4">
                 <h1 className="hero-serif text-[32px] text-foreground">

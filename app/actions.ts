@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { auth } from '@/lib/auth'
+import { holdingService } from '@/lib/services/holding-service'
 
 export async function toggleAutoSnapshot(enabled: boolean) {
     const session = await auth()
@@ -54,6 +55,7 @@ export async function updateTargetAsset(amount: number) {
             where: { id: session.user.id },
             data: { targetAsset: amount },
         })
+        holdingService.invalidate(session.user.id)
         revalidatePath('/dashboard')
         return { success: true }
     } catch (error) {

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
+import { holdingService } from '@/lib/services/holding-service'
+import { validateQuantity, validateAveragePrice, validateCurrency } from '@/lib/validation/portfolio-input'
 
 // PATCH /api/holdings/[id] - 종목 수정
 export async function PATCH(
@@ -19,6 +21,29 @@ export async function PATCH(
         const { id } = await params
         const body = await request.json()
         const { quantity, averagePrice, currency, purchaseRate } = body
+
+        // 입력값 sanity check (전달된 필드만 검증)
+        if (quantity !== undefined) {
+            const r = validateQuantity(quantity)
+            if (!r.ok) return NextResponse.json(
+                { success: false, error: { code: 'INVALID_INPUT', message: r.error } },
+                { status: 400 }
+            )
+        }
+        if (averagePrice !== undefined) {
+            const r = validateAveragePrice(averagePrice)
+            if (!r.ok) return NextResponse.json(
+                { success: false, error: { code: 'INVALID_INPUT', message: r.error } },
+                { status: 400 }
+            )
+        }
+        if (currency !== undefined) {
+            const r = validateCurrency(currency)
+            if (!r.ok) return NextResponse.json(
+                { success: false, error: { code: 'INVALID_INPUT', message: r.error } },
+                { status: 400 }
+            )
+        }
 
         // 소유권 확인
         const holding = await prisma.holding.findUnique({
@@ -43,6 +68,7 @@ export async function PATCH(
             include: { stock: true },
         })
 
+        holdingService.invalidate(session.user.id)
         return NextResponse.json({ success: true, data: updated })
     } catch (error) {
         console.error('Holding update error:', error)
@@ -83,6 +109,7 @@ export async function DELETE(
 
         await prisma.holding.delete({ where: { id } })
 
+        holdingService.invalidate(session.user.id)
         return NextResponse.json({ success: true, message: '종목이 삭제되었습니다.' })
     } catch (error) {
         console.error('Holding delete error:', error)

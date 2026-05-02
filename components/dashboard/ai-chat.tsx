@@ -23,11 +23,72 @@ interface Message {
     content: string
     action?: ParsedAction
     actionState?: 'pending' | 'confirmed' | 'rejected'
+    // update/delete 시 보유 종목에 부분 일치하는 후보가 여러 개일 때 사용자에게 선택받기 위한 후보 목록.
+    disambiguationCandidates?: HoldingContext[]
 }
 
 interface AiChatProps {
     isAuthenticated?: boolean
 }
+
+// KIS 마스터 검색 결과의 symbol은 `005930.KS` 형태이지만 Stock.stockCode는 raw 6자리로 저장됨.
+// 한국 시장이면 suffix를 제거해 기존 Stock 레코드와 매칭되도록 정규화.
+function normalizeStockCode(symbol: string, market?: string): string {
+    if (market === 'KOSPI' || market === 'KOSDAQ') {
+        return symbol.replace(/\.(KS|KQ)$/i, '')
+    }
+    return symbol
+}
+
+// 보유 종목 목록에서 양방향 부분 일치하는 모든 후보를 반환.
+// 정확 일치(대소문자 무시)가 있으면 그것만 우선 반환해 모호성을 제거한다.
+function findHoldingMatches(holdings: HoldingContext[], query: string): HoldingContext[] {
+    const q = query.trim().toLowerCase()
+    if (!q) return []
+    const exact = holdings.filter(h => h.stockName.toLowerCase() === q)
+    if (exact.length > 0) return exact
+    return holdings.filter(h => {
+        const name = h.stockName.toLowerCase()
+        return name.includes(q) || q.includes(name)
+    })
+}
+
+// API 응답 형식이 일관되지 않아(`error: '...'` vs `error: { message: '...' }`) 헬퍼로 통일.
+// res.ok와 data.success를 모두 검사하고, 실패 시 서버 메시지를 그대로 throw해 사용자 토스트에 노출한다.
+async function callApi<T = unknown>(input: RequestInfo, init?: RequestInit): Promise<T> {
+    let res: Response
+    try {
+        res = await fetch(input, init)
+    } catch {
+        throw new Error('네트워크 연결에 실패했습니다.')
+    }
+
+    let data: unknown = null
+    try {
+        data = await res.json()
+    } catch {
+        // JSON 파싱 실패 — 본문이 비었거나 HTML 응답
+    }
+
+    const successFlag = (data as { success?: boolean } | null)?.success
+    if (!res.ok || successFlag === false) {
+        const errField = (data as { error?: unknown } | null)?.error
+        let message: string | undefined
+        if (typeof errField === 'string') {
+            message = errField
+        } else if (errField && typeof errField === 'object' && 'message' in errField) {
+            const m = (errField as { message?: unknown }).message
+            if (typeof m === 'string') message = m
+        }
+        throw new Error(message || `요청이 실패했습니다 (${res.status}).`)
+    }
+
+    return data as T
+}
+
+// 포트폴리오 데이터 변경 후 portfolio-client가 자체 갱신하도록 신호.
+// portfolio-client는 useState(initialHoldings)로 로컬 상태를 들고 있어 router.refresh()만으로는 갱신되지 않는다.
+const PORTFOLIO_REFRESH_EVENT = 'portfolio:refresh'
 
 export function AiChat({ isAuthenticated = false }: AiChatProps) {
     const [holdings, setHoldings] = useState<HoldingContext[]>([])
@@ -39,8 +100,6 @@ export function AiChat({ isAuthenticated = false }: AiChatProps) {
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const inputRef = useRef<HTMLInputElement>(null)
     const router = useRouter()
-
-    if (!isAuthenticated) return null
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -112,36 +171,36 @@ export function AiChat({ isAuthenticated = false }: AiChatProps) {
         }
     }, [input, loading, holdings])
 
-    const executeAction = useCallback(async (action: ParsedAction, msgIndex: number) => {
+    // resolvedHoldingId: 사용자가 disambiguation에서 특정 보유 종목을 선택한 경우 매칭을 우회.
+    const executeAction = useCallback(async (action: ParsedAction, msgIndex: number, resolvedHoldingId?: string) => {
         setExecuting(true)
 
         try {
             switch (action.type) {
                 case 'add_holding': {
-                    const searchRes = await fetch(`/api/stocks/search?query=${encodeURIComponent(action.stockName!)}`)
-                    const searchData = await searchRes.json()
+                    const searchData = await callApi<{ success: boolean; data: { symbol: string; market: string; nameKo?: string; name: string; nameEn?: string; type?: string }[] }>(
+                        `/api/stocks/search?query=${encodeURIComponent(action.stockName!)}`
+                    )
 
-                    if (!searchData.success || searchData.data.length === 0) {
+                    if (!searchData.data || searchData.data.length === 0) {
                         throw new Error(`'${action.stockName}' 종목을 찾을 수 없습니다.`)
                     }
 
                     const stockResult = searchData.data[0]
 
-                    const stockRes = await fetch('/api/stocks', {
+                    const stockData = await callApi<{ success: boolean; data: { id: string } }>('/api/stocks', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            stockCode: stockResult.symbol,
+                            stockCode: normalizeStockCode(stockResult.symbol, stockResult.market),
                             stockName: stockResult.nameKo || stockResult.name,
                             engName: stockResult.nameEn,
                             market: stockResult.market,
                             sector: stockResult.type,
                         }),
                     })
-                    const stockData = await stockRes.json()
-                    if (!stockData.success) throw new Error('종목 등록에 실패했습니다.')
 
-                    const holdingRes = await fetch('/api/holdings', {
+                    await callApi('/api/holdings', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -151,21 +210,33 @@ export function AiChat({ isAuthenticated = false }: AiChatProps) {
                             currency: action.currency || 'KRW',
                         }),
                     })
-                    const holdingData = await holdingRes.json()
-                    if (!holdingData.success) throw new Error('종목 추가에 실패했습니다.')
 
                     toast.success(`${action.stockName} ${action.quantity}주가 추가되었습니다.`)
                     break
                 }
 
                 case 'update_holding': {
-                    const holding = holdings.find(h =>
-                        h.stockName.toLowerCase().includes(action.stockName!.toLowerCase()) ||
-                        action.stockName!.toLowerCase().includes(h.stockName.toLowerCase())
-                    )
-                    if (!holding) throw new Error(`'${action.stockName}' 보유 종목을 찾을 수 없습니다.`)
+                    let holding: HoldingContext | undefined
+                    if (resolvedHoldingId) {
+                        holding = holdings.find(h => h.id === resolvedHoldingId)
+                    } else {
+                        const matches = findHoldingMatches(holdings, action.stockName!)
+                        if (matches.length === 0) throw new Error(`'${action.stockName}' 보유 종목을 찾을 수 없습니다.`)
+                        if (matches.length > 1) {
+                            // 모호한 매칭 — 사용자에게 선택을 요청하고 실행을 보류
+                            setMessages(prev => prev.map((m, i) =>
+                                i === msgIndex
+                                    ? { ...m, content: `'${action.stockName}'에 일치하는 종목이 여러 개입니다. 어떤 종목을 수정할까요?`, disambiguationCandidates: matches }
+                                    : m
+                            ))
+                            setExecuting(false)
+                            return
+                        }
+                        holding = matches[0]
+                    }
+                    if (!holding) throw new Error('보유 종목을 찾을 수 없습니다.')
 
-                    const patchRes = await fetch(`/api/holdings/${holding.id}`, {
+                    await callApi(`/api/holdings/${holding.id}`, {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -173,56 +244,69 @@ export function AiChat({ isAuthenticated = false }: AiChatProps) {
                             ...(action.averagePrice !== undefined && { averagePrice: action.averagePrice }),
                         }),
                     })
-                    const patchData = await patchRes.json()
-                    if (!patchData.success) throw new Error('종목 수정에 실패했습니다.')
 
-                    toast.success(`${action.stockName} 정보가 수정되었습니다.`)
+                    toast.success(`${holding.stockName} 정보가 수정되었습니다.`)
                     break
                 }
 
                 case 'delete_holding': {
-                    const holding = holdings.find(h =>
-                        h.stockName.toLowerCase().includes(action.stockName!.toLowerCase()) ||
-                        action.stockName!.toLowerCase().includes(h.stockName.toLowerCase())
-                    )
-                    if (!holding) throw new Error(`'${action.stockName}' 보유 종목을 찾을 수 없습니다.`)
+                    let holding: HoldingContext | undefined
+                    if (resolvedHoldingId) {
+                        holding = holdings.find(h => h.id === resolvedHoldingId)
+                    } else {
+                        const matches = findHoldingMatches(holdings, action.stockName!)
+                        if (matches.length === 0) throw new Error(`'${action.stockName}' 보유 종목을 찾을 수 없습니다.`)
+                        if (matches.length > 1) {
+                            setMessages(prev => prev.map((m, i) =>
+                                i === msgIndex
+                                    ? { ...m, content: `'${action.stockName}'에 일치하는 종목이 여러 개입니다. 어떤 종목을 삭제할까요?`, disambiguationCandidates: matches }
+                                    : m
+                            ))
+                            setExecuting(false)
+                            return
+                        }
+                        holding = matches[0]
+                    }
+                    if (!holding) throw new Error('보유 종목을 찾을 수 없습니다.')
 
-                    const deleteRes = await fetch(`/api/holdings/${holding.id}`, {
-                        method: 'DELETE',
-                    })
-                    const deleteData = await deleteRes.json()
-                    if (!deleteData.success) throw new Error('종목 삭제에 실패했습니다.')
+                    await callApi(`/api/holdings/${holding.id}`, { method: 'DELETE' })
 
-                    toast.success(`${action.stockName}이 삭제되었습니다.`)
+                    toast.success(`${holding.stockName}이(가) 삭제되었습니다.`)
                     break
                 }
 
                 case 'update_cash_balance': {
                     const result = await updateCashBalance(action.amount!)
-                    if (!result.success) throw new Error('예수금 변경에 실패했습니다.')
+                    if (!result.success) throw new Error(result.error || '예수금 변경에 실패했습니다.')
                     toast.success(`예수금이 ${action.amount?.toLocaleString()}원으로 변경되었습니다.`)
                     break
                 }
             }
 
             setMessages(prev => prev.map((m, i) =>
-                i === msgIndex ? { ...m, actionState: 'confirmed' } : m
+                i === msgIndex ? { ...m, actionState: 'confirmed', disambiguationCandidates: undefined } : m
             ))
             await fetchHoldingsData()
             router.refresh()
+            // portfolio-client는 useState로 holdings를 들고 있어 router.refresh만으로는 갱신되지 않음 → 명시 신호.
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent(PORTFOLIO_REFRESH_EVENT))
+            }
         } catch (e: unknown) {
             const message = e instanceof Error ? e.message : '실행에 실패했습니다.'
             toast.error(message)
         } finally {
             setExecuting(false)
         }
-    }, [holdings, router])
+    }, [holdings, router, fetchHoldingsData])
 
     const rejectAction = (msgIndex: number) => {
         setMessages(prev => prev.map((m, i) =>
             i === msgIndex ? { ...m, actionState: 'rejected' } : m
         ))
     }
+
+    if (!isAuthenticated) return null
 
     return (
         <>
@@ -264,10 +348,10 @@ export function AiChat({ isAuthenticated = false }: AiChatProps) {
                                 <div className="text-center text-sm text-muted-foreground py-8 space-y-1">
                                     <Sparkles className="w-8 h-8 mx-auto mb-3 opacity-20" />
                                     <p className="font-medium">포트폴리오를 자연어로 수정해보세요</p>
-                                    <p className="text-xs opacity-60">"삼성전자 100주 추가해줘"</p>
-                                    <p className="text-xs opacity-60">"애플 평단가 190달러로 수정해줘"</p>
-                                    <p className="text-xs opacity-60">"예수금 500만원으로 변경해줘"</p>
-                                    <p className="text-xs opacity-60">"테슬라 삭제해줘"</p>
+                                    <p className="text-xs opacity-60">{'"삼성전자 100주 추가해줘"'}</p>
+                                    <p className="text-xs opacity-60">{'"애플 평단가 190달러로 수정해줘"'}</p>
+                                    <p className="text-xs opacity-60">{'"예수금 500만원으로 변경해줘"'}</p>
+                                    <p className="text-xs opacity-60">{'"테슬라 삭제해줘"'}</p>
                                 </div>
                             )}
 
@@ -284,7 +368,33 @@ export function AiChat({ isAuthenticated = false }: AiChatProps) {
                                             }}
                                         />
 
-                                        {msg.action && msg.actionState === 'pending' && (
+                                        {msg.action && msg.actionState === 'pending' && msg.disambiguationCandidates && msg.disambiguationCandidates.length > 0 && (
+                                            <div className="mt-2 flex flex-col gap-1.5">
+                                                {msg.disambiguationCandidates.map(c => (
+                                                    <Button
+                                                        key={c.id}
+                                                        size="sm"
+                                                        variant="outline"
+                                                        className="h-auto py-1.5 text-xs justify-start"
+                                                        onClick={() => executeAction(msg.action!, i, c.id)}
+                                                        disabled={executing}
+                                                    >
+                                                        {c.stockName} <span className="ml-1 opacity-60">({c.quantity}주)</span>
+                                                    </Button>
+                                                ))}
+                                                <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    className="h-7 text-xs"
+                                                    onClick={() => rejectAction(i)}
+                                                    disabled={executing}
+                                                >
+                                                    취소
+                                                </Button>
+                                            </div>
+                                        )}
+
+                                        {msg.action && msg.actionState === 'pending' && !msg.disambiguationCandidates && (
                                             <div className="mt-2 flex gap-2">
                                                 <Button
                                                     size="sm"

@@ -1,35 +1,31 @@
 'use server'
 
 import { prisma } from '@/lib/prisma'
-import { fetchCompanyNews, NewsItem } from '@/lib/news/fetcher'
+import { fetchCompanyNews } from '@/lib/news/fetcher'
 import { summarizeNews } from '@/lib/ai/summarizer'
-import { addHours } from 'date-fns'
+import { auth } from '@/lib/auth'
+import { isLikelyEtf, type NewsStock } from '@/lib/news/m7'
 import pLimit from 'p-limit'
 
 // Limit concurrent AI requests to 3 to avoid rate limits (Gemini Free: 15 RPM)
 const limit = pLimit(3)
 
-const CACHE_DURATION_HOURS = 1
+const US_MARKETS = ['US', 'NAS', 'NYS', 'AMS']
 
-export async function getBigTechNews(symbol: string) {
+export async function getStockNews(symbol: string, keywords?: string[]) {
     try {
         console.log(`[News] Starting update for ${symbol}...`)
 
-        // 1. Fetch fresh news from API
-        // We always fetch to ensure we have the latest, but we check DB before AI processing
-        const freshNews = await fetchCompanyNews(symbol)
+        const freshNews = await fetchCompanyNews(symbol, keywords)
 
         if (freshNews.length === 0) {
             console.log(`[News] No news found for ${symbol}`)
             return await getCachedNews(symbol)
         }
 
-        // 2. Bulk Check: Filter out articles that already exist in DB
         const urlsToCheck = freshNews.map(n => n.url)
         const existingArticles = await prisma.newsArticle.findMany({
-            where: {
-                url: { in: urlsToCheck }
-            },
+            where: { url: { in: urlsToCheck } },
             select: { url: true }
         })
 
@@ -38,17 +34,11 @@ export async function getBigTechNews(symbol: string) {
 
         console.log(`[News] ${symbol}: Found ${freshNews.length} items, ${newArticles.length} are new.`)
 
-        // 3. Process New Articles with Concurrency Control
-        // Use p-limit to process AI summarization in parallel but limited to 3 concurrent
         const processPromises = newArticles.map(item =>
             limit(async () => {
                 try {
-                    // Add random delay to prevent hitting API rate limits (avoid burst requests)
                     await new Promise(resolve => setTimeout(resolve, Math.random() * 3000 + 1000))
 
-                    // Generate AI Summary
-                    // We wrap this in a nested try-catch so that if AI fails (e.g. rate limit),
-                    // we still save the news article without the AI summary.
                     let summaries = null
                     try {
                         summaries = await summarizeNews(item.title, item.originalSummary, item.source)
@@ -64,15 +54,12 @@ export async function getBigTechNews(symbol: string) {
                             publishedAt: item.publishedAt,
                             source: item.source,
                             imageUrl: item.imageUrl,
-                            // If summaries is null, these will be null.
-                            // The UI should handle null summaries gracefully (e.g. show originalSummary)
-                            summaryShort: summaries?.short || item.originalSummary, // Fallback to original summary
+                            summaryShort: summaries?.short || item.originalSummary,
                             summaryMedium: summaries?.medium || item.originalSummary,
                             summaryLong: summaries?.long || item.originalSummary
                         }
                     })
                     return { status: 'success', url: item.url, hasSummary: !!summaries }
-
                 } catch (error) {
                     console.error(`[News] Error processing article ${item.url}:`, error)
                     return { status: 'error', url: item.url, error }
@@ -81,12 +68,9 @@ export async function getBigTechNews(symbol: string) {
         )
         await Promise.all(processPromises)
 
-        // 4. Return all news for this symbol (sorted by new)
         return await getCachedNews(symbol)
-
     } catch (error) {
         console.error(`[News] Failed to update ${symbol}:`, error)
-        // Return existing news even if update failed
         return await getCachedNews(symbol)
     }
 }
@@ -97,4 +81,35 @@ async function getCachedNews(symbol: string) {
         orderBy: { publishedAt: 'desc' },
         take: 20
     })
+}
+
+export async function getMyHoldingsForNews(): Promise<NewsStock[]> {
+    const session = await auth()
+    if (!session?.user?.id) return []
+
+    const holdings = await prisma.holding.findMany({
+        where: {
+            userId: session.user.id,
+            stock: { market: { in: US_MARKETS } },
+        },
+        select: {
+            stock: { select: { stockCode: true, stockName: true, engName: true } },
+        },
+        orderBy: { displayOrder: 'asc' },
+    })
+
+    const seen = new Set<string>()
+    const result: NewsStock[] = []
+    for (const h of holdings) {
+        const symbol = h.stock.stockCode
+        if (seen.has(symbol)) continue
+        if (isLikelyEtf(h.stock.stockName, h.stock.engName)) continue
+        seen.add(symbol)
+        result.push({
+            symbol,
+            name: h.stock.stockName,
+            engName: h.stock.engName,
+        })
+    }
+    return result
 }

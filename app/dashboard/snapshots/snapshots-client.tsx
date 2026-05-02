@@ -80,6 +80,7 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings }: Snapshots
     const [hasMore, setHasMore] = useState(initialSnapshots.length >= 20)
     const [isLoadingMore, setIsLoadingMore] = useState(false)
     const observerTarget = useRef<HTMLDivElement>(null)
+    const loadMoreAbortRef = useRef<AbortController | null>(null)
 
     useEffect(() => {
         if (initialSnapshots.length > 0) {
@@ -88,11 +89,20 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings }: Snapshots
         }
     }, [initialSnapshots, activeId])
 
+    // Cancel any in-flight pagination fetch when the component unmounts (e.g., tab switch)
+    useEffect(() => () => loadMoreAbortRef.current?.abort(), [])
+
     const loadMore = useCallback(async () => {
         if (isLoadingMore || !hasMore || !nextCursor) return
+
+        loadMoreAbortRef.current?.abort()
+        const controller = new AbortController()
+        loadMoreAbortRef.current = controller
+
         setIsLoadingMore(true)
         try {
-            const response = await snapshotsApi.getList(nextCursor)
+            const response = await snapshotsApi.getList(nextCursor, controller.signal)
+            if (controller.signal.aborted) return
             if (response.success && response.data) {
                 const newSnapshots = response.data
                 setSnapshots(prev => [...prev, ...newSnapshots])
@@ -104,9 +114,10 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings }: Snapshots
                 }
             }
         } catch (err) {
+            if ((err as Error).name === 'AbortError') return
             console.error('Failed to load more snapshots:', err)
         } finally {
-            setIsLoadingMore(false)
+            if (!controller.signal.aborted) setIsLoadingMore(false)
         }
     }, [nextCursor, hasMore, isLoadingMore])
 
@@ -166,7 +177,7 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings }: Snapshots
 
     if (snapshots.length === 0) {
         return (
-            <div className="max-w-[420px] mx-auto w-full pb-20">
+            <div className="max-w-[420px] md:max-w-2xl mx-auto w-full pb-20">
                 <Hero t={t} />
                 <div className="mx-4 border bg-card overflow-hidden">
                     <EmptySnapshotState />
@@ -179,7 +190,7 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings }: Snapshots
     const activeIndex = snapshots.findIndex(s => s.id === activeSnapshot.id)
 
     return (
-        <div className="max-w-[420px] mx-auto w-full pb-4 relative">
+        <div className="max-w-[420px] md:max-w-2xl mx-auto w-full pb-4 relative">
             <Hero t={t} />
             <ActiveSnapshotCard
                 snapshot={activeSnapshot}

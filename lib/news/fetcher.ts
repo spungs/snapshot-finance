@@ -1,4 +1,14 @@
-import { startOfDay, endOfDay, subDays, format } from 'date-fns'
+import { subDays, format } from 'date-fns'
+
+const M7_KEYWORDS: Record<string, string[]> = {
+    AAPL: ['Apple', 'AAPL', 'iPhone', 'Mac', 'iPad'],
+    MSFT: ['Microsoft', 'MSFT', 'Windows', 'Azure', 'Office'],
+    GOOGL: ['Google', 'Alphabet', 'GOOGL', 'GOOG', 'Android', 'YouTube'],
+    AMZN: ['Amazon', 'AMZN', 'AWS', 'Prime'],
+    NVDA: ['Nvidia', 'NVDA', 'GPU', 'AI chip', 'GeForce'],
+    TSLA: ['Tesla', 'TSLA', 'Musk', 'EV'],
+    META: ['Meta', 'Facebook', 'META', 'Zuckerberg', 'Instagram', 'WhatsApp'],
+}
 
 interface FinnhubNewsItem {
     category: string
@@ -25,7 +35,7 @@ export interface NewsItem {
 
 const FINNHUB_API_KEY = process.env.FINNHUB_API_KEY
 
-export async function fetchCompanyNews(symbol: string): Promise<NewsItem[]> {
+export async function fetchCompanyNews(symbol: string, keywords?: string[]): Promise<NewsItem[]> {
     if (!FINNHUB_API_KEY) {
         console.warn('FINNHUB_API_KEY is not set')
         return []
@@ -50,25 +60,15 @@ export async function fetchCompanyNews(symbol: string): Promise<NewsItem[]> {
 
         const data: FinnhubNewsItem[] = await response.json()
 
-        // Filter and map
-        const symbolKeywords: Record<string, string[]> = {
-            'AAPL': ['Apple', 'AAPL', 'iPhone', 'Mac', 'iPad'],
-            'MSFT': ['Microsoft', 'MSFT', 'Windows', 'Azure', 'Office'],
-            'GOOGL': ['Google', 'Alphabet', 'GOOGL', 'GOOG', 'Android', 'YouTube'],
-            'AMZN': ['Amazon', 'AMZN', 'AWS', 'Prime'],
-            'NVDA': ['Nvidia', 'NVDA', 'GPU', 'AI chip', 'GeForce'],
-            'TSLA': ['Tesla', 'TSLA', 'Musk', 'EV'],
-            'META': ['Meta', 'Facebook', 'META', 'Zuckerberg', 'Instagram', 'WhatsApp']
-        }
-
-        const keywords = (symbolKeywords[symbol] || [symbol]).map(k => k.toLowerCase())
+        const effectiveKeywords = (keywords && keywords.length > 0
+            ? keywords
+            : M7_KEYWORDS[symbol] ?? [symbol]
+        ).map(k => k.toLowerCase())
 
         return data
             .filter(item => {
                 const headlineLower = item.headline.toLowerCase()
-                // STRICT MODE: Headline MUST contain at least one keyword
-                // Ignoring 'related' field for now as it seems unreliable for M7 noise
-                return keywords.some(k => headlineLower.includes(k))
+                return effectiveKeywords.some(k => headlineLower.includes(k))
             })
             .map(item => ({
                 symbol,

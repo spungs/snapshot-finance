@@ -13,7 +13,7 @@ export function ScreenHeader({ right }: ScreenHeaderProps) {
             className="border-b border-border/50"
             style={{ paddingTop: 'calc(0.875rem + var(--safe-top, 0px))' }}
         >
-            <div className="px-6 pb-2 flex items-center justify-between max-w-[420px] mx-auto sm:max-w-[640px]">
+            <div className="px-6 pb-2 flex items-center justify-between max-w-[480px] md:max-w-2xl mx-auto">
                 <Link href="/dashboard" className="flex items-center gap-2 min-h-[44px]">
                     <Camera className="w-5 h-5 text-primary" strokeWidth={2} aria-hidden />
                     <span className="text-base font-bold text-foreground tracking-tight">

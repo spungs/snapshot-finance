@@ -8,16 +8,17 @@ export function NewsHeader() {
     const t = translations[language].news
 
     return (
-        <div className="flex flex-col items-center text-center space-y-4 mb-8">
-            <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl">
+        <header className="mb-8 border-l-[3px] border-l-primary pl-5 py-2">
+            <div className="eyebrow mb-2">{t.m7Eyebrow}</div>
+            <h1 className="hero-serif text-[32px] sm:text-[40px] text-foreground leading-tight">
                 {t.title}
             </h1>
-            <p className="max-w-[700px] text-muted-foreground text-lg">
+            <p className="mt-3 text-muted-foreground max-w-[640px] leading-relaxed">
                 {language === 'ko'
-                    ? <>M7(Magnificent 7) 기업의 최신 뉴스를 AI가 요약해드립니다.<br />바쁜 투자자를 위한 맞춤형 3줄/5줄/10줄 요약 서비스를 경험해보세요.</>
-                    : <>AI-powered daily news summaries for Magnificent 7 stocks.<br />Customized 3/5/10-line summaries for busy investors.</>
+                    ? <>보유 종목과 M7 기업의 최신 뉴스를 AI가 3줄·5줄·10줄로 요약해드립니다.</>
+                    : <>AI summarizes the latest news for your holdings and the M7 in 3, 5, or 10 lines.</>
                 }
             </p>
-        </div>
+        </header>
     )
 }

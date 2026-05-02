@@ -108,7 +108,7 @@ export default function SnapshotDetailClient({ snapshot }: Props) {
     }
 
     return (
-        <div className="max-w-[420px] mx-auto w-full pb-8">
+        <div className="max-w-[420px] md:max-w-2xl mx-auto w-full pb-8">
             {/* Hero — back link + title */}
             <section className="px-6 pt-3 pb-4">
                 <Link

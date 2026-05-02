@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { StockSearchCombobox } from '@/components/dashboard/stock-search-combobox'
@@ -38,6 +38,18 @@ export default function NewSnapshotPage() {
   const [exchangeRate, setExchangeRate] = useState<number>(1435)
   const [updatingPrices, setUpdatingPrices] = useState(false)
 
+  // Abort controllers — cancel in-flight fetches on unmount (e.g., tab nav) and on supersession
+  const dateChangeAbortRef = useRef<AbortController | null>(null)
+  const loadCurrentAbortRef = useRef<AbortController | null>(null)
+  const stockSelectAbortsRef = useRef<Set<AbortController>>(new Set())
+
+  useEffect(() => () => {
+    dateChangeAbortRef.current?.abort()
+    loadCurrentAbortRef.current?.abort()
+    stockSelectAbortsRef.current.forEach(c => c.abort())
+    stockSelectAbortsRef.current.clear()
+  }, [])
+
   useEffect(() => {
     if (language === 'en') {
       setSummaryDisplayCurrency('USD')
@@ -47,14 +59,20 @@ export default function NewSnapshotPage() {
   }, [language])
 
   useEffect(() => {
+    // Cancel any previous in-flight date-change refresh
+    dateChangeAbortRef.current?.abort()
+    const controller = new AbortController()
+    dateChangeAbortRef.current = controller
+
     async function updateData() {
       setUpdatingPrices(true)
       try {
         let currentRate = 1435
         if (snapshotDate === today) {
           try {
-            const res = await fetch('/api/exchange-rate')
+            const res = await fetch('/api/exchange-rate', { signal: controller.signal })
             const data = await res.json()
+            if (controller.signal.aborted) return
             if (data.success && data.rate) {
               currentRate = data.rate
               setExchangeRate(currentRate)
@@ -62,12 +80,14 @@ export default function NewSnapshotPage() {
               setExchangeRate(1435)
             }
           } catch (e) {
+            if ((e as Error).name === 'AbortError') return
             setExchangeRate(1435)
           }
         } else {
           try {
-            const res = await fetch(`/api/stocks/history?symbol=KRW=X&market=FX&date=${snapshotDate}`)
+            const res = await fetch(`/api/stocks/history?symbol=KRW=X&market=FX&date=${snapshotDate}`, { signal: controller.signal })
             const data = await res.json()
+            if (controller.signal.aborted) return
             if (data.success && data.data) {
               currentRate = data.data.close || 1435
               setExchangeRate(currentRate)
@@ -75,6 +95,7 @@ export default function NewSnapshotPage() {
               setExchangeRate(1435)
             }
           } catch (e) {
+            if ((e as Error).name === 'AbortError') return
             setExchangeRate(1435)
           }
         }
@@ -88,29 +109,31 @@ export default function NewSnapshotPage() {
 
             try {
               if (snapshotDate === today) {
-                const res = await fetch(`/api/kis/price?symbol=${h.stockCode}&market=${market}`)
+                const res = await fetch(`/api/kis/price?symbol=${h.stockCode}&market=${market}`, { signal: controller.signal })
                 const data = await res.json()
                 if (data.success && data.data && data.data.price) {
                   price = data.data.price.toString()
                 }
               } else {
-                const res = await fetch(`/api/stocks/history?symbol=${h.stockCode}&market=${market}&date=${snapshotDate}`)
+                const res = await fetch(`/api/stocks/history?symbol=${h.stockCode}&market=${market}&date=${snapshotDate}`, { signal: controller.signal })
                 const data = await res.json()
                 if (data.success && data.data && data.data.close) {
                   price = data.data.close.toString()
                 }
               }
             } catch (e) {
+              if ((e as Error).name === 'AbortError') return h
               console.error(`Failed to update price for ${h.stockCode}`, e)
             }
 
             return { ...h, currentPrice: price }
           }))
 
+          if (controller.signal.aborted) return
           setHoldings(updatedHoldings)
         }
       } finally {
-        setUpdatingPrices(false)
+        if (!controller.signal.aborted) setUpdatingPrices(false)
       }
     }
 
@@ -155,6 +178,9 @@ export default function NewSnapshotPage() {
     }
     setHoldings(updated)
 
+    const controller = new AbortController()
+    stockSelectAbortsRef.current.add(controller)
+
     try {
       const market = stock.market || (isNaN(Number(stock.stockCode)) ? 'US' : 'KOSPI')
       const isToday = snapshotDate === today
@@ -166,18 +192,20 @@ export default function NewSnapshotPage() {
       let res, data
 
       if (isToday) {
-        res = await fetch(`/api/kis/price?symbol=${stock.stockCode}&market=${market}`)
+        res = await fetch(`/api/kis/price?symbol=${stock.stockCode}&market=${market}`, { signal: controller.signal })
         data = await res.json()
         if (data.success && data.data && data.data.price !== undefined && data.data.price !== null) {
           price = data.data.price.toString()
         }
       } else {
-        res = await fetch(`/api/stocks/history?symbol=${stock.stockCode}&market=${market}&date=${snapshotDate}`)
+        res = await fetch(`/api/stocks/history?symbol=${stock.stockCode}&market=${market}&date=${snapshotDate}`, { signal: controller.signal })
         data = await res.json()
         if (data.success && data.data && data.data.close !== undefined && data.data.close !== null) {
           price = data.data.close.toString()
         }
       }
+
+      if (controller.signal.aborted) return
 
       setHoldings((prev) => {
         const current = [...prev]
@@ -192,15 +220,23 @@ export default function NewSnapshotPage() {
         return current
       })
     } catch (error) {
+      if ((error as Error).name === 'AbortError') return
       console.error('Failed to fetch price:', error)
+    } finally {
+      stockSelectAbortsRef.current.delete(controller)
     }
   }
 
   async function loadCurrentHoldings() {
     if (confirm(t('loadCurrentHoldingsConfirm'))) {
+      loadCurrentAbortRef.current?.abort()
+      const controller = new AbortController()
+      loadCurrentAbortRef.current = controller
+
       setLoading(true)
       try {
-        const response = await holdingsApi.getList()
+        const response = await holdingsApi.getList(controller.signal)
+        if (controller.signal.aborted) return
         if (response.success && response.data) {
           const newHoldings: HoldingInput[] = response.data.holdings.map((h: any) => {
             const currency = h.currency || 'KRW'
@@ -226,9 +262,10 @@ export default function NewSnapshotPage() {
           setError(t('loadFailed') || 'Failed to load holdings')
         }
       } catch (err) {
+        if ((err as Error).name === 'AbortError') return
         setError(t('networkError'))
       } finally {
-        setLoading(false)
+        if (!controller.signal.aborted) setLoading(false)
       }
     }
   }
@@ -320,7 +357,7 @@ export default function NewSnapshotPage() {
   const isHistorical = snapshotDate !== today
 
   return (
-    <div className="max-w-[420px] mx-auto w-full">
+    <div className="max-w-[420px] md:max-w-2xl mx-auto w-full">
       {/* Top nav row */}
       <div className="px-6 pt-3 flex items-center justify-between">
         <Link

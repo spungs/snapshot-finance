@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
+import { holdingService } from '@/lib/services/holding-service'
 
 export async function updateCashBalance(amount: number) {
     const session = await auth()
@@ -13,6 +14,7 @@ export async function updateCashBalance(amount: number) {
             where: { id: session.user.id },
             data: { cashBalance: amount }
         })
+        holdingService.invalidate(session.user.id)
         revalidatePath('/dashboard')
         return { success: true }
     } catch (error) {
@@ -343,6 +345,7 @@ export async function executeBulkImport(
             }
         }
 
+        holdingService.invalidate(userId)
         revalidatePath('/dashboard')
         return { success: true, count: successCount, errors }
 

@@ -33,11 +33,11 @@ async function fetchApi<T>(
 
 // 스냅샷 API
 export const snapshotsApi = {
-  getList: (cursor?: string) =>
-    fetchApi<any[]>(`/snapshots${cursor ? `?cursor=${cursor}` : ''}`, { cache: 'no-store' }),
+  getList: (cursor?: string, signal?: AbortSignal) =>
+    fetchApi<any[]>(`/snapshots${cursor ? `?cursor=${cursor}` : ''}`, { cache: 'no-store', signal }),
 
-  getDetail: (id: string) =>
-    fetchApi<any>(`/snapshots/${id}`),
+  getDetail: (id: string, signal?: AbortSignal) =>
+    fetchApi<any>(`/snapshots/${id}`, { signal }),
 
   create: (data: {
     snapshotDate?: string
@@ -88,7 +88,8 @@ export const stocksApi = {
 
 // 잔고 API
 export const holdingsApi = {
-  getList: () => fetchApi<{ holdings: any[]; summary: any }>('/holdings', { cache: 'no-store' }),
+  getList: (signal?: AbortSignal) =>
+    fetchApi<{ holdings: any[]; summary: any }>('/holdings', { cache: 'no-store', signal }),
 
   create: (data: {
     stockId: string

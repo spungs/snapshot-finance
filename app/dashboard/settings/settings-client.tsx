@@ -41,7 +41,7 @@ export function SettingsClient({ user }: Props) {
     const initial = (user.name?.[0] || user.email?.[0] || 'U').toUpperCase()
 
     return (
-        <div className="max-w-[480px] mx-auto w-full">
+        <div className="max-w-[480px] md:max-w-2xl mx-auto w-full">
             <section className="px-6 pt-3 pb-4">
                 <h1 className="hero-serif text-[32px] text-foreground">
                     {t.tabSettings}

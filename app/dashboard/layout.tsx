@@ -1,5 +1,4 @@
 import { auth } from '@/lib/auth'
-import { GlobalPullToRefresh } from '@/components/global-pull-to-refresh'
 import { ScreenHeader } from '@/components/dashboard/screen-header'
 import { BottomTabBar } from '@/components/dashboard/bottom-tab-bar'
 import { User } from 'lucide-react'
@@ -37,14 +36,12 @@ export default async function DashboardLayout({
         }
       />
 
-      <GlobalPullToRefresh>
-        <main
-          className="flex-1 flex flex-col"
-          style={{ paddingBottom: 'calc(96px + var(--safe-bottom, 0px))' }}
-        >
-          {children}
-        </main>
-      </GlobalPullToRefresh>
+      <main
+        className="flex-1 flex flex-col"
+        style={{ paddingBottom: 'calc(96px + var(--safe-bottom, 0px))' }}
+      >
+        {children}
+      </main>
 
       <BottomTabBar />
     </div>

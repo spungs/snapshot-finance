@@ -3,20 +3,28 @@
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
+import { holdingService } from "@/lib/services/holding-service"
+import { validateCashAmount } from "@/lib/validation/portfolio-input"
 
 export async function updateCashBalance(amount: number) {
     const session = await auth()
 
     if (!session?.user?.id) {
-        throw new Error("Unauthorized")
+        return { success: false, error: "Unauthorized" }
+    }
+
+    const validated = validateCashAmount(amount)
+    if (!validated.ok) {
+        return { success: false, error: validated.error }
     }
 
     try {
         await prisma.user.update({
             where: { id: session.user.id },
-            data: { cashBalance: amount }
+            data: { cashBalance: validated.value }
         })
 
+        holdingService.invalidate(session.user.id)
         revalidatePath('/dashboard')
         return { success: true }
     } catch (error) {

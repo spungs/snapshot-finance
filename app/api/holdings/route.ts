@@ -4,6 +4,7 @@ import { auth } from '@/lib/auth'
 import { getUsdExchangeRate } from '@/lib/api/exchange-rate'
 import { holdingService } from '@/lib/services/holding-service'
 import { kisClient } from '@/lib/api/kis-client'
+import { validateQuantity, validateAveragePrice } from '@/lib/validation/portfolio-input'
 
 
 // 현재가 조회 헬퍼 함수 (KIS API 사용)
@@ -67,16 +68,33 @@ export async function POST(request: NextRequest) {
         const userId = session.user.id
 
         const body = await request.json()
-        const { stockId, quantity, averagePrice, mode = 'overwrite' } = body
+        const { stockId, quantity: rawQuantity, averagePrice: rawAveragePrice, mode = 'overwrite' } = body
         let { purchaseRate, currency } = body
         if (!purchaseRate) purchaseRate = 1
 
-        if (!stockId || !quantity || !averagePrice) {
+        if (!stockId || !rawQuantity || !rawAveragePrice) {
             return NextResponse.json(
                 { success: false, error: { code: 'INVALID_INPUT', message: '필수 필드가 누락되었습니다.' } },
                 { status: 400 }
             )
         }
+
+        const qtyResult = validateQuantity(rawQuantity)
+        if (!qtyResult.ok) {
+            return NextResponse.json(
+                { success: false, error: { code: 'INVALID_INPUT', message: qtyResult.error } },
+                { status: 400 }
+            )
+        }
+        const priceResult = validateAveragePrice(rawAveragePrice)
+        if (!priceResult.ok) {
+            return NextResponse.json(
+                { success: false, error: { code: 'INVALID_INPUT', message: priceResult.error } },
+                { status: 400 }
+            )
+        }
+        const quantity = qtyResult.value
+        const averagePrice = priceResult.value
 
         // 현재가 조회
         const stock = await prisma.stock.findUnique({ where: { id: stockId } })
@@ -175,6 +193,7 @@ export async function POST(request: NextRequest) {
             })
         }
 
+        holdingService.invalidate(userId)
         return NextResponse.json({ success: true, data: holding })
     } catch (error) {
         console.error('Holding create error:', error)

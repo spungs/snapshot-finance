@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
+import { holdingService } from '@/lib/services/holding-service'
 
 export async function PUT(request: NextRequest) {
     try {
@@ -35,6 +36,7 @@ export async function PUT(request: NextRequest) {
             )
         )
 
+        holdingService.invalidate(session.user.id)
         return NextResponse.json({ success: true, message: '순서가 저장되었습니다.' })
     } catch (error) {
         console.error('Holding reorder error:', error)

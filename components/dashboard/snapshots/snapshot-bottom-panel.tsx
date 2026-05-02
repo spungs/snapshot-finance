@@ -37,7 +37,7 @@ export function SnapshotBottomPanel({ currentHoldings, snapshots, selectedIds, o
 
     if (!isOpen || !mounted) return null
 
-    // createPortal로 body 직접 mount — 페이지 안의 transformed 컨테이너(PullToRefresh 등)가
+    // createPortal로 body 직접 mount — 페이지 안의 transformed 컨테이너가
     // fixed positioning의 containing block을 가로채는 것을 회피한다.
     return createPortal(
         <>

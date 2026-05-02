@@ -2,43 +2,26 @@
 
 import * as React from 'react'
 import { format } from 'date-fns'
-import { Calendar as CalendarIcon, TrendingUp, TrendingDown, Info } from 'lucide-react'
+import { Info, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from '@/components/ui/popover'
 import { StockSearchCombobox } from '@/components/dashboard/stock-search-combobox'
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card'
 import {
     Area,
     AreaChart,
     CartesianGrid,
+    ReferenceDot,
     ResponsiveContainer,
     Tooltip,
     XAxis,
     YAxis,
 } from 'recharts'
 import { useLanguage } from '@/lib/i18n/context'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Progress } from '@/components/ui/progress'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { useDebounce } from '@/lib/hooks/use-debounce'
-import { formatCurrency, formatProfitRate } from '@/lib/utils/formatters'
 
 interface Stock {
     id: string
     stockCode: string
     stockName: string
-    engName?: string  // 영문명
+    engName?: string
     market?: string
 }
 
@@ -51,310 +34,707 @@ interface ChartData {
     volume: number
 }
 
+const PROFIT_COLOR = 'var(--profit)'
+const LOSS_COLOR = 'var(--loss)'
+
+function isUSMarket(market?: string) {
+    return market === 'US' || market === 'NAS' || market === 'NYS' || market === 'NASD' || market === 'NYSE' || market === 'AMEX'
+}
+
+// Strip non-numeric chars then re-insert thousand separators on the integer side.
+// Preserves a single decimal point and up to 2 decimal digits.
+function formatAmountInput(raw: string): string {
+    const cleaned = raw.replace(/[^\d.]/g, '')
+    if (!cleaned) return ''
+    const [intPart, ...decParts] = cleaned.split('.')
+    const formattedInt = (intPart || '0').replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+    if (cleaned.includes('.')) {
+        const dec = decParts.join('').slice(0, 2)
+        return formattedInt + '.' + dec
+    }
+    return formattedInt
+}
+
+function UpDown({ value, big = false }: { value: number; big?: boolean }) {
+    const isUp = value >= 0
+    return (
+        <span
+            className={cn(
+                'numeric font-bold tracking-tight inline-flex items-center gap-0.5',
+                isUp ? 'text-profit' : 'text-loss',
+                big ? 'text-[15px]' : 'text-[12.5px]',
+            )}
+        >
+            <span aria-hidden>{isUp ? '▲' : '▼'}</span>
+            <span>{Math.abs(value).toFixed(2)}%</span>
+        </span>
+    )
+}
+
 export function WhatIfClient() {
     const { t, language } = useLanguage()
 
-    // Default to 1 year ago
-    const [startDate, setStartDate] = React.useState<Date | undefined>(() => {
-        const d = new Date()
-        d.setFullYear(d.getFullYear() - 1)
-        return d
-    })
-
-    const [selectedStock, setSelectedStock] = React.useState<Stock | null>(null)
-    const [chartData, setChartData] = React.useState<ChartData[]>([])
-    const [loading, setLoading] = React.useState(false)
-    const [error, setError] = React.useState<string | null>(null)
-
-    // Debounced date input to prevent jumping while typing
-    const [dateInput, setDateInput] = React.useState<string>(() => {
+    const defaultDateStr = React.useMemo(() => {
         const d = new Date()
         d.setFullYear(d.getFullYear() - 1)
         return format(d, 'yyyy-MM-dd')
-    })
-    const debouncedDateInput = useDebounce(dateInput, 1000)
+    }, [])
 
-    // Sync dateInput when startDate changes externally (e.g. weekend fix)
+    const [selectedStock, setSelectedStock] = React.useState<Stock | null>(null)
+    const [dateInput, setDateInput] = React.useState<string>(defaultDateStr)
+    const [amountInput, setAmountInput] = React.useState<string>('')
+    const [amountCurrency, setAmountCurrency] = React.useState<'KRW' | 'USD'>('KRW')
+
+    const [chartData, setChartData] = React.useState<ChartData[]>([])
+    const [loading, setLoading] = React.useState(false)
+    const [error, setError] = React.useState<string | null>(null)
+    const [exchangeRate, setExchangeRate] = React.useState<number>(1435)
+    const [appliedQuery, setAppliedQuery] = React.useState<{
+        stock: Stock
+        startDate: string
+    } | null>(null)
+
+    // Fetch USD/KRW exchange rate once on mount
     React.useEffect(() => {
-        if (startDate) {
-            const str = format(startDate, 'yyyy-MM-dd')
-            if (str !== dateInput) {
-                setDateInput(str)
-            }
-        }
-    }, [startDate])
-
-    // Update startDate when debounced input changes and is valid
-    React.useEffect(() => {
-        if (!debouncedDateInput) return
-
-        const d = new Date(debouncedDateInput)
-        if (!isNaN(d.getTime())) {
-            // Prevent updates for incomplete years (e.g. user typed '0020' or '0202')
-            // Only update if year is reasonable (e.g. > 1900)
-            if (d.getFullYear() > 1900) {
-                if (!startDate || d.getTime() !== startDate.getTime()) {
-                    setStartDate(d)
+        let cancelled = false
+        fetch('/api/exchange-rate')
+            .then(r => r.json())
+            .then(d => {
+                if (!cancelled && d?.success && typeof d.rate === 'number') {
+                    setExchangeRate(d.rate)
                 }
-            }
-        }
-    }, [debouncedDateInput])
+            })
+            .catch(() => { /* keep default */ })
+        return () => { cancelled = true }
+    }, [])
 
-    // Derived stats
+    // Sync amount currency to stock currency when stock changes (one-time per stock)
+    React.useEffect(() => {
+        if (selectedStock) {
+            setAmountCurrency(isUSMarket(selectedStock.market) ? 'USD' : 'KRW')
+        }
+    }, [selectedStock])
+
+    const isUS = isUSMarket(selectedStock?.market)
+    const stockCurrency: 'KRW' | 'USD' = isUS ? 'USD' : 'KRW'
+
+    const fmtMoney = React.useCallback((value: number, currency: 'KRW' | 'USD', opts?: { compact?: boolean; integer?: boolean }) => {
+        const fractionDigits = opts?.integer ? 0 : (currency === 'USD' ? 2 : 0)
+        return new Intl.NumberFormat(language === 'ko' ? 'ko-KR' : 'en-US', {
+            style: 'currency',
+            currency,
+            minimumFractionDigits: fractionDigits,
+            maximumFractionDigits: fractionDigits,
+            notation: opts?.compact ? 'compact' : 'standard',
+        }).format(value)
+    }, [language])
+
+    const handleRunQuery = React.useCallback(async () => {
+        if (!selectedStock || !dateInput) return
+        const d = new Date(dateInput)
+        if (isNaN(d.getTime()) || d.getFullYear() < 1970) {
+            setError(t('whatIfNoData'))
+            return
+        }
+
+        setLoading(true)
+        setError(null)
+
+        try {
+            const endDate = new Date().toISOString().split('T')[0]
+            const query = new URLSearchParams({
+                symbol: selectedStock.stockCode,
+                market: selectedStock.market || 'KOSPI',
+                startDate: dateInput,
+                endDate: endDate,
+            })
+
+            const res = await fetch(`/api/stocks/chart?${query.toString()}`)
+            const data = await res.json()
+
+            if (data.success) {
+                if (!data.data || data.data.length === 0) {
+                    setError(t('whatIfNoData'))
+                    setChartData([])
+                    setAppliedQuery(null)
+                } else {
+                    setChartData(data.data)
+                    const actualStartDate = data.data[0].date
+                    setAppliedQuery({ stock: selectedStock, startDate: actualStartDate })
+                    if (actualStartDate !== dateInput) {
+                        setDateInput(actualStartDate)
+                    }
+                }
+            } else {
+                setError(data.error?.message || t('whatIfNoData'))
+                setChartData([])
+                setAppliedQuery(null)
+            }
+        } catch {
+            setError(t('networkError'))
+            setAppliedQuery(null)
+        } finally {
+            setLoading(false)
+        }
+    }, [selectedStock, dateInput, t])
+
     const firstPrice = chartData.length > 0 ? chartData[0].close : 0
     const lastPrice = chartData.length > 0 ? chartData[chartData.length - 1].close : 0
     const profitRate = firstPrice > 0 ? ((lastPrice - firstPrice) / firstPrice) * 100 : 0
-    const profitAmount = lastPrice - firstPrice
-    const isProfit = profitAmount >= 0
+    const isProfit = profitRate >= 0
 
-    React.useEffect(() => {
-        async function fetchData() {
-            if (!selectedStock || !startDate) return
+    const parsedAmount = React.useMemo(() => {
+        const cleaned = amountInput.replace(/[^0-9.]/g, '')
+        const n = parseFloat(cleaned)
+        return isNaN(n) || n <= 0 ? 0 : n
+    }, [amountInput])
 
-            setLoading(true)
-            setError(null)
+    // Convert input amount → stock currency for shares calculation
+    const amountInStockCurrency = React.useMemo(() => {
+        if (parsedAmount <= 0) return 0
+        if (amountCurrency === stockCurrency) return parsedAmount
+        // KRW input but USD stock → divide
+        if (amountCurrency === 'KRW' && stockCurrency === 'USD') return parsedAmount / exchangeRate
+        // USD input but KRW stock → multiply
+        return parsedAmount * exchangeRate
+    }, [parsedAmount, amountCurrency, stockCurrency, exchangeRate])
 
-            try {
-                const endDate = new Date().toISOString().split('T')[0]
-                const startStr = format(startDate, 'yyyy-MM-dd')
+    const hasAmount = amountInStockCurrency > 0 && firstPrice > 0
+    const sharesAcquired = hasAmount ? amountInStockCurrency / firstPrice : 0
+    const todayValueStock = hasAmount ? sharesAcquired * lastPrice : 0
 
-                const query = new URLSearchParams({
-                    symbol: selectedStock.stockCode,
-                    market: selectedStock.market || 'KOSPI', // Default fallback
-                    startDate: startStr,
-                    endDate: endDate,
-                })
+    // Convert results back to user's chosen amount currency for display
+    const todayValueDisplay = React.useMemo(() => {
+        if (!hasAmount) return 0
+        if (amountCurrency === stockCurrency) return todayValueStock
+        if (amountCurrency === 'KRW' && stockCurrency === 'USD') return todayValueStock * exchangeRate
+        return todayValueStock / exchangeRate
+    }, [todayValueStock, amountCurrency, stockCurrency, exchangeRate, hasAmount])
 
-                const res = await fetch(`/api/stocks/chart?${query.toString()}`)
-                const data = await res.json()
+    const absoluteProfit = hasAmount ? todayValueDisplay - parsedAmount : 0
 
-                if (data.success) {
-                    if (data.data.length === 0) {
-                        setError(language === 'ko' ? '해당 기간의 데이터가 없습니다.' : 'No data found for this period.')
-                        setChartData([])
-                    } else {
-                        setChartData(data.data)
-
-                        // If the first data point date is different from the requested startDate
-                        // (e.g., requested a Sunday, but first data point is Friday or Monday),
-                        // sync the local startDate state for UI consistency.
-                        const firstDataPointDate = new Date(data.data[0].date)
-                        const requestedDateStr = format(startDate, 'yyyy-MM-dd')
-                        const actualDateStr = data.data[0].date
-
-                        if (requestedDateStr !== actualDateStr) {
-                            setStartDate(firstDataPointDate)
-                        }
-                    }
-                } else {
-                    setError(data.error?.message || 'Failed to fetch data')
-                    setChartData([])
-                }
-            } catch (err) {
-                console.error('Failed to fetch chart data:', err)
-                setError('Network error occurred')
-            } finally {
-                setLoading(false)
+    const insights = React.useMemo(() => {
+        if (chartData.length < 2) return null
+        let bestIdx = 0
+        let worstIdx = 0
+        for (let i = 1; i < chartData.length; i++) {
+            if (chartData[i].close < chartData[bestIdx].close) bestIdx = i
+            if (chartData[i].close > chartData[worstIdx].close) worstIdx = i
+        }
+        let peak = chartData[0].close
+        let mddPct = 0
+        let mddIdx = 0
+        for (let i = 0; i < chartData.length; i++) {
+            if (chartData[i].close > peak) peak = chartData[i].close
+            const dd = (chartData[i].close - peak) / peak
+            if (dd < mddPct) {
+                mddPct = dd
+                mddIdx = i
             }
         }
+        return {
+            best: { date: chartData[bestIdx].date, price: chartData[bestIdx].close },
+            worst: { date: chartData[worstIdx].date, price: chartData[worstIdx].close },
+            mdd: { date: chartData[mddIdx].date, pct: mddPct * 100 },
+        }
+    }, [chartData])
 
-        fetchData()
-    }, [selectedStock, startDate, language])
-
-    const formatCurrency = (value: number) => {
-        if (!selectedStock) return value.toLocaleString()
-        // Simple currency detection based on market (not perfect but sufficient for now)
-        const isUS = selectedStock.market === 'US' || selectedStock.market === 'NAS' || selectedStock.market === 'NYS'
-        return new Intl.NumberFormat(language === 'ko' ? 'ko-KR' : 'en-US', {
-            style: 'currency',
-            currency: isUS ? 'USD' : 'KRW',
-        }).format(value)
-    }
-
-    const PROFIT_COLOR = '#f43f5e'
-    const LOSS_COLOR = '#3b82f6'
     const areaColor = isProfit ? PROFIT_COLOR : LOSS_COLOR
+    const stockDisplayName = selectedStock
+        ? (language === 'ko' ? selectedStock.stockName : (selectedStock.engName || selectedStock.stockName))
+        : ''
+
+    const periodLabel = chartData.length > 0
+        ? `${format(new Date(chartData[0].date), 'yyyy.MM.dd')} → ${format(new Date(chartData[chartData.length - 1].date), 'yyyy.MM.dd')}`
+        : ''
+
+    const canRunQuery = !!selectedStock && !!dateInput && !loading
+    // Detect when current inputs no longer match the last applied query
+    const isStale = appliedQuery && (
+        appliedQuery.stock.stockCode !== selectedStock?.stockCode ||
+        appliedQuery.startDate !== dateInput
+    )
 
     return (
-        <div className="space-y-4">
-            <div className="flex flex-col gap-1">
-                <h1 className="text-2xl font-bold tracking-tight">
+        <div className="max-w-[480px] md:max-w-2xl mx-auto w-full pb-8">
+            {/* Hero */}
+            <section className="px-6 pt-3 pb-4">
+                <h1 className="hero-serif text-[32px] text-foreground">
                     {t('whatIf')}
                 </h1>
-                <p className="text-muted-foreground text-sm">
+                <span className="serif-italic text-xs text-muted-foreground block mt-1">
                     {t('whatIfDesc')}
-                </p>
-            </div>
+                </span>
+            </section>
 
-            <div className="grid gap-4 md:grid-cols-[280px_1fr]">
-                {/* Controls */}
-                <div className="space-y-4">
-                    <Card className="py-2">
-                        <CardContent className="px-3 py-1 space-y-2">
-                            <div className="space-y-1">
-                                <label className="text-sm font-medium">{t('stock')}</label>
-                                <StockSearchCombobox
-                                    value={selectedStock
-                                        ? (language === 'ko'
-                                            ? selectedStock.stockName
-                                            : (selectedStock.engName || selectedStock.stockName))
-                                        : ''}
-                                    onSelect={setSelectedStock}
-                                />
-                            </div>
-
-                            <div className="space-y-1">
-                                <label className="text-sm font-medium">{language === 'ko' ? '매수 시점' : 'Buy Date'}</label>
-                                <div className="relative">
-                                    <input
-                                        type="date"
-                                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                        value={dateInput}
-                                        onChange={(e) => setDateInput(e.target.value)}
-                                        max={new Date().toISOString().split('T')[0]}
-                                    />
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* Result Summary Card (Only show if data exists) */}
-                    {!loading && chartData.length > 0 && (
-                        <Card className={cn("border-l-4 py-3", isProfit ? "border-l-profit" : "border-l-loss")}>
-                            <CardHeader className="py-0 pb-1 px-4">
-                                <CardDescription>{language === 'ko' ? '만약 그때 샀다면 현재...' : 'If you bought it then...'}</CardDescription>
-                                <CardTitle className={cn("text-2xl numeric", isProfit ? "text-profit" : "text-loss")}>
-                                    {formatProfitRate(profitRate, true)}
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-sm text-muted-foreground space-y-1">
-                                    <div className="flex justify-between">
-                                        <span>{language === 'ko' ? '당시 주가' : 'Past Price'}</span>
-                                        <span className="font-mono">{formatCurrency(firstPrice)}</span>
-                                    </div>
-                                    <div className="flex justify-between font-bold text-foreground">
-                                        <span>{language === 'ko' ? '현재 주가' : 'Current Price'}</span>
-                                        <span className="font-mono">{formatCurrency(lastPrice)}</span>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    )}
+            {/* Controls */}
+            <section className="mx-4 mb-4 bg-card border border-border p-5">
+                <div className="eyebrow mb-3">
+                    {language === 'ko' ? 'INPUT · 시뮬레이션 조건' : 'INPUT · Conditions'}
                 </div>
 
-                {/* Chart Area */}
-                <div className="min-h-[400px]">
-                    {loading ? (
-                        <Card className="h-full">
-                            <CardHeader>
-                                <CardTitle>{language === 'ko' ? '차트 로딩 중...' : 'Loading chart...'}</CardTitle>
-                            </CardHeader>
-                            <CardContent className="h-[400px] flex flex-col items-center justify-center gap-4">
-                                <div className="w-full max-w-md space-y-4">
-                                    <div className="text-sm text-center text-muted-foreground">
-                                        {language === 'ko' ? '데이터를 조회하고 있습니다...' : 'Fetching data...'}
-                                    </div>
-                                    <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
-                                        <div className="h-full bg-primary animate-indeterminate" />
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    ) : error ? (
-                        <Alert variant="destructive">
-                            <Info className="h-4 w-4" />
-                            <AlertTitle>Error</AlertTitle>
-                            <AlertDescription>{error}</AlertDescription>
-                        </Alert>
-                    ) : chartData.length > 0 ? (
-                        <Card className="h-full">
-                            <CardHeader>
-                                <CardTitle>{selectedStock?.stockName} ({selectedStock?.stockCode})</CardTitle>
-                                <CardDescription>
-                                    {format(new Date(chartData[0].date), 'yyyy.MM.dd')} - {format(new Date(chartData[chartData.length - 1].date), 'yyyy.MM.dd')}
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent className="pl-0">
-                                <div className="h-[400px] w-full">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <AreaChart
-                                            data={chartData}
-                                            margin={{
-                                                top: 10,
-                                                right: 16,
-                                                left: 0,
-                                                bottom: 0,
-                                            }}
-                                        >
-                                            <defs>
-                                                <linearGradient id="colorClose" x1="0" y1="0" x2="0" y2="1">
-                                                    <stop offset="0%" stopColor={areaColor} stopOpacity={0.3} />
-                                                    <stop offset="100%" stopColor={areaColor} stopOpacity={0.05} />
-                                                </linearGradient>
-                                            </defs>
-                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" strokeOpacity={0.5} />
-                                            <XAxis
-                                                dataKey="date"
-                                                tickFormatter={(str) => {
-                                                    const date = new Date(str);
-                                                    return format(date, "MM.dd");
-                                                }}
-                                                tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
-                                                tickLine={false}
-                                                axisLine={false}
-                                                minTickGap={30}
-                                            />
-                                            <YAxis
-                                                domain={['auto', 'auto']}
-                                                tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
-                                                tickLine={false}
-                                                axisLine={false}
-                                                tickFormatter={(val) => val.toLocaleString()}
-                                                width={60}
-                                            />
-                                            <Tooltip
-                                                contentStyle={{
-                                                    background: 'var(--card)',
-                                                    border: '1px solid color-mix(in srgb, var(--border) 60%, transparent)',
-                                                    borderRadius: '12px',
-                                                    color: 'var(--card-foreground)',
-                                                    fontSize: '12px',
-                                                    boxShadow: '0 8px 32px hsl(224 71% 4% / 0.4)',
-                                                }}
-                                                cursor={{ stroke: 'var(--border)', strokeWidth: 1, strokeDasharray: '4 4' }}
-                                                labelFormatter={(label) => format(new Date(label), language === 'ko' ? 'yyyy년 MM월 dd일' : 'MMM dd, yyyy')}
-                                                formatter={(value: number) => [formatCurrency(value), selectedStock?.stockName]}
-                                            />
-                                            <Area
-                                                type="monotoneX"
-                                                dataKey="close"
-                                                stroke={areaColor}
-                                                strokeWidth={2}
-                                                fill="url(#colorClose)"
-                                                dot={false}
-                                                activeDot={{ r: 4, fill: areaColor, strokeWidth: 0 }}
-                                                animationDuration={1200}
-                                                animationEasing="ease-in-out"
-                                            />
-                                        </AreaChart>
-                                    </ResponsiveContainer>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    ) : (
-                        <Card className="h-full flex items-center justify-center p-8 bg-muted/20 border-dashed">
-                            <div className="text-center space-y-2">
-                                <TrendingUp className="h-12 w-12 text-muted-foreground mx-auto opacity-50" />
-                                <h3 className="text-lg font-medium">{language === 'ko' ? '종목을 선택해주세요' : 'Select a stock'}</h3>
-                                <p className="text-sm text-muted-foreground max-w-xs mx-auto">
-                                    {language === 'ko'
-                                        ? '좌측 설정 패널에서 종목과 매수 시점을 선택하면 시뮬레이션 결과가 여기에 표시됩니다.'
-                                        : 'Select a stock and buy date from the settings panel to see the simulation result.'}
-                                </p>
-                            </div>
-                        </Card>
+                <div className="space-y-3">
+                    <div>
+                        <label className="text-[10px] font-bold text-muted-foreground tracking-[1px] uppercase block mb-1.5">
+                            {t('stock')}
+                        </label>
+                        <StockSearchCombobox
+                            value={stockDisplayName}
+                            onSelect={setSelectedStock}
+                        />
+                    </div>
+
+                    <div>
+                        <label className="text-[10px] font-bold text-muted-foreground tracking-[1px] uppercase block mb-1.5">
+                            {t('whatIfBuyDate')}
+                        </label>
+                        <input
+                            type="date"
+                            className="flex h-10 w-full border border-border bg-background px-3 py-2 text-sm font-serif numeric focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            value={dateInput}
+                            onChange={(e) => setDateInput(e.target.value)}
+                            max={new Date().toISOString().split('T')[0]}
+                        />
+                    </div>
+
+                    <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                            <label className="text-[10px] font-bold text-muted-foreground tracking-[1px] uppercase">
+                                {t('whatIfInvestAmount')}
+                            </label>
+                            <CurrencyToggle
+                                value={amountCurrency}
+                                onChange={setAmountCurrency}
+                            />
+                        </div>
+                        <input
+                            type="text"
+                            inputMode="numeric"
+                            placeholder={
+                                amountCurrency === 'KRW'
+                                    ? (language === 'ko' ? '예: 1,000,000' : 'e.g. 1,000,000')
+                                    : (language === 'ko' ? '예: 1,000' : 'e.g. 1,000')
+                            }
+                            className="flex h-10 w-full border border-border bg-background px-3 py-2 text-sm font-serif numeric placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            value={amountInput}
+                            onChange={(e) => setAmountInput(formatAmountInput(e.target.value))}
+                        />
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={handleRunQuery}
+                        disabled={!canRunQuery}
+                        className={cn(
+                            'mt-1 w-full py-3 text-sm font-bold inline-flex items-center justify-center gap-2 transition-opacity',
+                            'bg-primary text-primary-foreground',
+                            'disabled:opacity-50 hover:opacity-90',
+                            isStale && 'ring-2 ring-primary/40',
+                        )}
+                    >
+                        {loading ? (
+                            <>
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                {t('whatIfFetching')}
+                            </>
+                        ) : (
+                            isStale
+                                ? (language === 'ko' ? '조건 변경 · 다시 조회' : 'Re-run with new inputs')
+                                : (language === 'ko' ? '조회' : 'Run')
+                        )}
+                    </button>
+                </div>
+            </section>
+
+            {/* Error / Empty / Result */}
+            {!loading && error && (
+                <section className="mx-4 mb-4 bg-card border border-loss/40 p-4 flex gap-3">
+                    <Info className="h-4 w-4 text-loss shrink-0 mt-0.5" />
+                    <div>
+                        <div className="text-[11px] font-bold text-loss tracking-[0.5px] uppercase">
+                            {t('error')}
+                        </div>
+                        <div className="text-[13px] text-foreground mt-1">{error}</div>
+                    </div>
+                </section>
+            )}
+
+            {!loading && !error && chartData.length === 0 && (
+                <section className="mx-4 mb-4 bg-card border border-border p-10 text-center">
+                    <div className="hero-serif text-[20px] text-foreground mb-1.5">
+                        {t('whatIfSelectTitle')}
+                    </div>
+                    <p className="serif-italic text-[13px] text-muted-foreground">
+                        {t('whatIfSelectHint')}
+                    </p>
+                </section>
+            )}
+
+            {!loading && !error && selectedStock && chartData.length > 0 && (
+                <ResultBlock
+                    chartData={chartData}
+                    profitRate={profitRate}
+                    isProfit={isProfit}
+                    firstPrice={firstPrice}
+                    lastPrice={lastPrice}
+                    hasAmount={hasAmount}
+                    parsedAmount={parsedAmount}
+                    sharesAcquired={sharesAcquired}
+                    todayValueDisplay={todayValueDisplay}
+                    absoluteProfit={absoluteProfit}
+                    amountCurrency={amountCurrency}
+                    stockCurrency={stockCurrency}
+                    insights={insights}
+                    areaColor={areaColor}
+                    fmtMoney={fmtMoney}
+                    isUS={isUS}
+                    periodLabel={periodLabel}
+                    stockDisplayName={stockDisplayName}
+                    language={language}
+                    t={t}
+                />
+            )}
+        </div>
+    )
+}
+
+function CurrencyToggle({
+    value, onChange,
+}: {
+    value: 'KRW' | 'USD'
+    onChange: (v: 'KRW' | 'USD') => void
+}) {
+    return (
+        <div className="inline-flex border border-border" role="group">
+            {(['KRW', 'USD'] as const).map((c) => {
+                const active = value === c
+                return (
+                    <button
+                        key={c}
+                        type="button"
+                        onClick={() => onChange(c)}
+                        className={cn(
+                            'px-2 h-6 text-[10px] font-bold tracking-[0.5px] transition-colors',
+                            active
+                                ? 'bg-foreground text-background'
+                                : 'bg-background text-muted-foreground hover:text-foreground',
+                        )}
+                        aria-pressed={active}
+                    >
+                        {c}
+                    </button>
+                )
+            })}
+        </div>
+    )
+}
+
+interface ResultBlockProps {
+    chartData: ChartData[]
+    profitRate: number
+    isProfit: boolean
+    firstPrice: number
+    lastPrice: number
+    hasAmount: boolean
+    parsedAmount: number
+    sharesAcquired: number
+    todayValueDisplay: number
+    absoluteProfit: number
+    amountCurrency: 'KRW' | 'USD'
+    stockCurrency: 'KRW' | 'USD'
+    insights: {
+        best: { date: string; price: number }
+        worst: { date: string; price: number }
+        mdd: { date: string; pct: number }
+    } | null
+    areaColor: string
+    fmtMoney: (value: number, currency: 'KRW' | 'USD', opts?: { compact?: boolean; integer?: boolean }) => string
+    isUS: boolean
+    periodLabel: string
+    stockDisplayName: string
+    language: string
+    t: (k: any) => string
+}
+
+function ResultBlock({
+    chartData, profitRate, isProfit, firstPrice, lastPrice,
+    hasAmount, parsedAmount, sharesAcquired, todayValueDisplay, absoluteProfit,
+    amountCurrency, stockCurrency,
+    insights, areaColor, fmtMoney, isUS, periodLabel, stockDisplayName,
+    language, t,
+}: ResultBlockProps) {
+    const formatShares = (n: number) =>
+        n >= 1
+            ? n.toLocaleString(language === 'ko' ? 'ko-KR' : 'en-US', { maximumFractionDigits: 2 })
+            : n.toLocaleString(language === 'ko' ? 'ko-KR' : 'en-US', { maximumFractionDigits: 4 })
+
+    const showCompact = (v: number) =>
+        amountCurrency === 'KRW' && Math.abs(v) >= 100_000_000
+
+    return (
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {/* Result hero */}
+            <div className="mx-4 mb-4 relative overflow-hidden border bg-card" style={{ padding: 22 }}>
+                <div
+                    className={cn(
+                        'absolute top-0 left-0 right-0 h-[3px]',
+                        isProfit ? 'bg-profit' : 'bg-loss',
                     )}
+                />
+
+                <div className="flex items-center justify-between mb-1">
+                    <span className="eyebrow">
+                        {language === 'ko' ? `RESULT · ${t('whatIfIfBought')}` : 'RESULT · IF YOU BOUGHT THEN'}
+                    </span>
+                    <span className="text-[11px] text-muted-foreground" suppressHydrationWarning>
+                        {periodLabel}
+                    </span>
+                </div>
+
+                <div className="font-serif text-[16px] text-foreground mt-1.5 truncate">
+                    {stockDisplayName}
+                </div>
+
+                <div className="text-[11px] font-semibold text-muted-foreground tracking-[0.5px] mt-3.5 mb-1">
+                    {t('returnRate')}
+                </div>
+                <div
+                    className={cn(
+                        'amount-display text-[36px] leading-none numeric',
+                        isProfit ? 'text-profit' : 'text-loss',
+                    )}
+                >
+                    {isProfit ? '+' : ''}{profitRate.toFixed(2)}%
+                </div>
+
+                <div className="flex gap-4 mt-3.5 items-stretch">
+                    <div>
+                        <div className="text-[10px] font-semibold text-muted-foreground tracking-[0.5px] uppercase">
+                            {t('pastPrice')}
+                        </div>
+                        <div className="text-[14px] font-bold mt-1 numeric font-serif text-foreground">
+                            {fmtMoney(firstPrice, stockCurrency)}
+                        </div>
+                    </div>
+                    <div className="w-px bg-border self-stretch" />
+                    <div>
+                        <div className="text-[10px] font-semibold text-muted-foreground tracking-[0.5px] uppercase">
+                            {t('currentPrice')}
+                        </div>
+                        <div className="text-[14px] font-bold mt-1 numeric font-serif text-foreground">
+                            {fmtMoney(lastPrice, stockCurrency)}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Amount-based valuation */}
+            {hasAmount && (
+                <section className="mx-4 mb-4 grid grid-cols-2 gap-2">
+                    <div className="p-4 bg-card border border-border">
+                        <div className="text-[10px] font-bold text-muted-foreground tracking-[1px] uppercase">
+                            {t('whatIfTodayValue')}
+                        </div>
+                        <div className={cn(
+                            'font-serif text-lg font-semibold mt-1.5 numeric',
+                            isProfit ? 'text-profit' : 'text-loss',
+                        )}>
+                            {fmtMoney(todayValueDisplay, amountCurrency, { compact: showCompact(todayValueDisplay), integer: true })}
+                        </div>
+                        <div className="text-[10px] text-muted-foreground tracking-[0.5px] mt-2 pt-2 border-t border-border/60 flex justify-between">
+                            <span>{t('whatIfShares')}</span>
+                            <span className="numeric text-foreground">
+                                {formatShares(sharesAcquired)}{t('whatIfSharesUnit')}
+                            </span>
+                        </div>
+                    </div>
+                    <div className="p-4 bg-card border border-border">
+                        <div className="text-[10px] font-bold text-muted-foreground tracking-[1px] uppercase">
+                            {t('pl')}
+                        </div>
+                        <div className={cn(
+                            'font-serif text-lg font-semibold mt-1.5 numeric',
+                            isProfit ? 'text-profit' : 'text-loss',
+                        )}>
+                            {isProfit ? '+' : ''}{fmtMoney(absoluteProfit, amountCurrency, { compact: showCompact(absoluteProfit), integer: true })}
+                        </div>
+                        <div className="text-[10px] text-muted-foreground tracking-[0.5px] mt-2 pt-2 border-t border-border/60 flex justify-between">
+                            <span>{t('totalInvested')}</span>
+                            <span className="numeric text-foreground">
+                                {fmtMoney(parsedAmount, amountCurrency, { compact: showCompact(parsedAmount), integer: true })}
+                            </span>
+                        </div>
+                    </div>
+                </section>
+            )}
+
+            {/* Chart */}
+            <div className="px-6 pb-3 flex justify-between items-center">
+                <span className="eyebrow">
+                    {language === 'ko' ? `CHART · ${t('whatIfChartTitle')}` : 'CHART · PRICE HISTORY'}
+                </span>
+                <span className="text-[10px] text-muted-foreground tracking-[0.5px]">
+                    {chartData.length}{language === 'ko' ? '일' : 'd'}
+                </span>
+            </div>
+
+            <section className="mx-4 mb-4 bg-card border border-border p-3 pt-4">
+                <div className="h-[280px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart
+                            data={chartData}
+                            margin={{ top: 8, right: 12, left: 0, bottom: 0 }}
+                        >
+                            <defs>
+                                <linearGradient id="whatIfArea" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stopColor={areaColor} stopOpacity={0.28} />
+                                    <stop offset="100%" stopColor={areaColor} stopOpacity={0.02} />
+                                </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" strokeOpacity={0.5} />
+                            <XAxis
+                                dataKey="date"
+                                tickFormatter={(s) => format(new Date(s), 'MM.dd')}
+                                tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
+                                tickLine={false}
+                                axisLine={false}
+                                minTickGap={36}
+                            />
+                            <YAxis
+                                domain={['auto', 'auto']}
+                                tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
+                                tickLine={false}
+                                axisLine={false}
+                                tickFormatter={(v) => isUS ? v.toFixed(0) : v.toLocaleString()}
+                                width={56}
+                            />
+                            <Tooltip
+                                contentStyle={{
+                                    background: 'var(--card)',
+                                    border: '1px solid var(--border)',
+                                    borderRadius: 0,
+                                    color: 'var(--card-foreground)',
+                                    fontSize: '12px',
+                                    boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
+                                }}
+                                cursor={{ stroke: 'var(--border)', strokeWidth: 1, strokeDasharray: '4 4' }}
+                                labelFormatter={(label) => format(new Date(label), language === 'ko' ? 'yyyy년 MM월 dd일' : 'MMM dd, yyyy')}
+                                formatter={(value: number) => [fmtMoney(value, stockCurrency), stockDisplayName]}
+                            />
+                            <Area
+                                type="monotoneX"
+                                dataKey="close"
+                                stroke={areaColor}
+                                strokeWidth={1.8}
+                                fill="url(#whatIfArea)"
+                                dot={false}
+                                activeDot={{ r: 4, fill: areaColor, strokeWidth: 0 }}
+                                animationDuration={900}
+                                animationEasing="ease-in-out"
+                            />
+                            {insights && (
+                                <>
+                                    <ReferenceDot
+                                        x={insights.best.date}
+                                        y={insights.best.price}
+                                        r={4}
+                                        fill="var(--profit)"
+                                        stroke="var(--card)"
+                                        strokeWidth={2}
+                                    />
+                                    <ReferenceDot
+                                        x={insights.worst.date}
+                                        y={insights.worst.price}
+                                        r={4}
+                                        fill="var(--loss)"
+                                        stroke="var(--card)"
+                                        strokeWidth={2}
+                                    />
+                                </>
+                            )}
+                        </AreaChart>
+                    </ResponsiveContainer>
+                </div>
+            </section>
+
+            {/* Insights */}
+            {insights && (
+                <>
+                    <div className="px-6 pb-3 flex justify-between items-center">
+                        <span className="eyebrow">
+                            {language === 'ko' ? `INSIGHTS · ${t('whatIfInsights')}` : 'INSIGHTS'}
+                        </span>
+                    </div>
+
+                    <div className="mx-4 space-y-1.5">
+                        <InsightRow
+                            tone="profit"
+                            label={t('whatIfBestDay')}
+                            desc={t('whatIfBestDayDesc')}
+                            date={insights.best.date}
+                            valueLabel={fmtMoney(insights.best.price, stockCurrency)}
+                            language={language}
+                        />
+                        <InsightRow
+                            tone="loss"
+                            label={t('whatIfWorstDay')}
+                            desc={t('whatIfWorstDayDesc')}
+                            date={insights.worst.date}
+                            valueLabel={fmtMoney(insights.worst.price, stockCurrency)}
+                            language={language}
+                        />
+                        <InsightRow
+                            tone="loss"
+                            label={t('whatIfMDD')}
+                            desc={t('whatIfMDDDesc')}
+                            date={insights.mdd.date}
+                            valueLabel={`${insights.mdd.pct.toFixed(2)}%`}
+                            language={language}
+                        />
+                    </div>
+                </>
+            )}
+        </div>
+    )
+}
+
+function InsightRow({
+    tone, label, desc, date, valueLabel, language,
+}: {
+    tone: 'profit' | 'loss'
+    label: string
+    desc: string
+    date: string
+    valueLabel: string
+    language: string
+}) {
+    return (
+        <div
+            className="bg-card border border-border p-4"
+            style={{
+                borderLeftWidth: '3px',
+                borderLeftColor: tone === 'profit' ? 'var(--profit)' : 'var(--loss)',
+            }}
+        >
+            <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                    <div className="font-serif text-[14px] font-semibold text-foreground">
+                        {label}
+                    </div>
+                    <div className="text-[11px] text-muted-foreground mt-0.5">
+                        {desc}
+                    </div>
+                </div>
+                <div className="text-right shrink-0">
+                    <div className={cn(
+                        'text-[13px] font-bold numeric',
+                        tone === 'profit' ? 'text-profit' : 'text-loss',
+                    )}>
+                        {valueLabel}
+                    </div>
+                    <div className="text-[10px] text-muted-foreground tracking-[0.5px] mt-0.5 numeric" suppressHydrationWarning>
+                        {format(new Date(date), language === 'ko' ? 'yyyy.MM.dd' : 'MMM dd, yyyy')}
+                    </div>
                 </div>
             </div>
         </div>

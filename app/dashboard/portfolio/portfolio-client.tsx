@@ -124,6 +124,13 @@ export function PortfolioClient({ initialHoldings, summary }: Props) {
         }
     }, [])
 
+    // AI 챗 등 외부 컴포넌트에서 발행한 'portfolio:refresh' 이벤트를 받으면 보유 목록을 다시 가져온다.
+    useEffect(() => {
+        const handler = () => { refresh() }
+        window.addEventListener('portfolio:refresh', handler)
+        return () => window.removeEventListener('portfolio:refresh', handler)
+    }, [refresh])
+
     const sortedHoldings = useMemo(() => {
         const arr = [...holdings]
         arr.sort((a, b) => {
@@ -246,7 +253,7 @@ export function PortfolioClient({ initialHoldings, summary }: Props) {
     const displayTotal = convert(currentSummary.totalValue)
 
     return (
-        <div className="max-w-[480px] sm:max-w-2xl mx-auto w-full">
+        <div className="max-w-[480px] md:max-w-2xl mx-auto w-full">
             {/* Hero */}
             <section className="px-6 pt-3 pb-4">
                 <h1 className="hero-serif text-[32px] text-foreground">

@@ -40,6 +40,14 @@ export const ratelimit = {
         analytics: true,
         prefix: '@upstash/ratelimit/simulation',
     }),
+
+    // AI 챗 (Gemini API 호출 비용/남용 방지): 10 요청 / 60초
+    ai: new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(10, '60 s'),
+        analytics: true,
+        prefix: '@upstash/ratelimit/ai',
+    }),
 }
 
 // IP 주소 추출 헬퍼
