@@ -132,6 +132,11 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings }: Snapshots
         return () => observer.disconnect()
     }, [loadMore, hasMore, isLoadingMore])
 
+    const handleActiveSelect = useCallback((id: string) => {
+        setActiveId(id)
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+    }, [])
+
     const handleSelect = (id: string, e: React.MouseEvent) => {
         e.stopPropagation()
         // toast/side-effect는 setState reducer 안이 아니라 바깥에서 처리한다 — React strict
@@ -201,7 +206,7 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings }: Snapshots
             <TimelineSection
                 snapshots={snapshots}
                 activeId={activeSnapshot.id}
-                onSelect={setActiveId}
+                onSelect={handleActiveSelect}
                 language={language}
                 t={t}
                 selectedIds={selectedIds}

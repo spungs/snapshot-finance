@@ -288,14 +288,24 @@ function SnapshotSummaryRow({ oldSn, newSn, language }: { oldSn: any; newSn: any
                     <div className="text-[10px] font-semibold text-muted-foreground tracking-wider">
                         {item.date}
                     </div>
-                    <div className="text-sm font-bold text-foreground numeric leading-tight">
-                        {formatCurrency(item.totalValue, currency)}
+                    <div className="mt-1.5">
+                        <div className="text-[9px] text-muted-foreground uppercase tracking-widest mb-0.5">
+                            {language === 'ko' ? '평가액' : 'Value'}
+                        </div>
+                        <div className="text-sm font-bold text-foreground numeric leading-tight">
+                            {formatCurrency(item.totalValue, currency)}
+                        </div>
                     </div>
-                    <div className={cn(
-                        'text-[11px] font-semibold numeric',
-                        item.profitRate >= 0 ? 'text-profit' : 'text-loss',
-                    )}>
-                        {item.profitRate >= 0 ? '▲' : '▼'}{Math.abs(item.profitRate).toFixed(2)}%
+                    <div className="mt-1.5">
+                        <div className="text-[9px] text-muted-foreground uppercase tracking-widest mb-0.5">
+                            {language === 'ko' ? '수익률' : 'Return'}
+                        </div>
+                        <div className={cn(
+                            'text-[11px] font-semibold numeric',
+                            item.profitRate >= 0 ? 'text-profit' : 'text-loss',
+                        )}>
+                            {item.profitRate >= 0 ? '▲' : '▼'}{Math.abs(item.profitRate).toFixed(2)}%
+                        </div>
                     </div>
                 </div>
             ))}
