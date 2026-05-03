@@ -44,7 +44,7 @@ export function SnapshotDiff({ currentHoldings, snapshots, selectedIds }: Props)
         const normalize = (items: any[], totalValue: number) => {
             const map = new Map<string, any>()
             items.forEach(item => {
-                const currentValue = Number(item.currentValue)
+                const currentValue = Number(item.currentValue) || 0
                 const weight = totalValue > 0 ? (currentValue / totalValue) * 100 : 0
                 map.set(item.stock.stockCode, {
                     name: item.stock.stockName,

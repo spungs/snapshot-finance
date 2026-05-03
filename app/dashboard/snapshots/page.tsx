@@ -44,6 +44,7 @@ export default async function SnapshotsPage() {
       id: h.id,
       stockId: h.stockId,
       quantity: h.quantity,
+      currentValue: h.currentValue?.toString() ?? '0',
       stock: {
         stockName: h.stock.stockName,
         stockCode: h.stock.stockCode
