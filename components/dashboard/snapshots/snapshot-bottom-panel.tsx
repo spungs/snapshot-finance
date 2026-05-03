@@ -23,15 +23,13 @@ export function SnapshotBottomPanel({ currentHoldings, snapshots, selectedIds, o
     const [expanded, setExpanded] = useState(false)
     const [mounted, setMounted] = useState(false)
 
-    const isOpen = selectedIds.length > 0
-
     useEffect(() => {
         setMounted(true)
     }, [])
 
-    // 선택 개수가 변할 때마다 expand 상태로 리셋
+    // 2개 선택될 때 자동으로 펼치기
     useEffect(() => {
-        setExpanded(selectedIds.length > 0)
+        if (selectedIds.length === 2) setExpanded(true)
     }, [selectedIds.length])
 
     // 2개 선택 시 헤더 요약 계산
@@ -57,9 +55,7 @@ export function SnapshotBottomPanel({ currentHoldings, snapshots, selectedIds, o
                 (1000 * 60 * 60 * 24),
         )
 
-        const currency: 'KRW' | 'USD' = language === 'en' && oldSn.exchangeRate
-            ? 'USD'
-            : 'KRW'
+        const currency: 'KRW' | 'USD' = language === 'en' && oldSn.exchangeRate ? 'USD' : 'KRW'
         const rate = language === 'en' && oldSn.exchangeRate ? Number(newSn.exchangeRate) : 1
         const displayDiff = currency === 'USD' ? valueDiff / rate : valueDiff
 
@@ -73,8 +69,48 @@ export function SnapshotBottomPanel({ currentHoldings, snapshots, selectedIds, o
         return { oldDate, newDate, diffDays, valueDiff: displayDiff, rateDiff, currency, diffLabel }
     }, [snapshots, selectedIds, language])
 
-    if (!isOpen || !mounted) return null
+    if (selectedIds.length === 0 || !mounted) return null
 
+    // ── 1개 선택: 플로팅 칩 ──────────────────────────────────────────────────
+    if (selectedIds.length === 1) {
+        const selectedSnapshot = snapshots.find(s => s.id === selectedIds[0])
+        const selectedDate = selectedSnapshot
+            ? formatDate(selectedSnapshot.snapshotDate, 'yy.MM.dd')
+            : ''
+
+        return createPortal(
+            <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center px-4 pb-6 pointer-events-none">
+                <div
+                    className={cn(
+                        'flex items-center gap-3 w-full max-w-md',
+                        'bg-background border border-border rounded-2xl shadow-xl px-4 h-14',
+                        'pointer-events-auto',
+                        'animate-in slide-in-from-bottom-4 duration-200',
+                    )}
+                >
+                    <span className="shrink-0 text-[11px] font-semibold bg-primary/10 text-primary rounded-lg px-2.5 py-1">
+                        {selectedDate}
+                    </span>
+                    <span className="flex-1 min-w-0 text-sm text-muted-foreground truncate">
+                        {language === 'ko'
+                            ? '비교할 스냅샷을 하나 더 선택하세요'
+                            : 'Select one more snapshot to compare'}
+                    </span>
+                    <button
+                        type="button"
+                        onClick={onClearSelection}
+                        className="p-1.5 hover:bg-muted rounded-md transition-colors shrink-0"
+                        aria-label="선택 취소"
+                    >
+                        <X className="w-4 h-4" />
+                    </button>
+                </div>
+            </div>,
+            document.body,
+        )
+    }
+
+    // ── 2개 선택: 풀 바텀 시트 ────────────────────────────────────────────────
     return createPortal(
         <>
             {/* dimmed background — 클릭은 통과 */}
@@ -91,10 +127,7 @@ export function SnapshotBottomPanel({ currentHoldings, snapshots, selectedIds, o
                 className={cn(
                     'fixed bottom-0 left-0 right-0 z-50',
                     'flex flex-col bg-background border-t shadow-lg',
-                    // 1개 선택: 안내 메시지만 → 작게 / 2개 선택: 비교 내용 → 크게
-                    selectedIds.length === 1
-                        ? 'max-h-[28dvh] md:max-h-[22dvh]'
-                        : 'max-h-[85dvh] md:max-h-[72dvh]',
+                    'max-h-[85dvh] md:max-h-[72dvh]',
                     'rounded-t-[1.5rem] md:rounded-t-xl',
                     'transition-transform duration-300 ease-out',
                 )}
@@ -118,8 +151,7 @@ export function SnapshotBottomPanel({ currentHoldings, snapshots, selectedIds, o
                                 {t('portfolioComparison')}
                             </span>
 
-                            {headerSummary ? (
-                                /* 2개 선택됨 — 날짜 범위 + 핵심 지표 */
+                            {headerSummary && (
                                 <div className="flex flex-col gap-1">
                                     <div className="flex items-center gap-2 flex-wrap">
                                         <span className="text-sm font-semibold text-foreground">
@@ -159,11 +191,6 @@ export function SnapshotBottomPanel({ currentHoldings, snapshots, selectedIds, o
                                         </span>
                                     </div>
                                 </div>
-                            ) : (
-                                /* 1개 선택됨 */
-                                <span className="text-sm font-semibold text-foreground">
-                                    {language === 'ko' ? '한 개 더 선택해주세요' : 'Select one more snapshot'}
-                                </span>
                             )}
                         </div>
 
@@ -192,34 +219,15 @@ export function SnapshotBottomPanel({ currentHoldings, snapshots, selectedIds, o
                 {/* 비교 내용 */}
                 <div className="flex-1 overflow-y-auto overscroll-contain">
                     <div className="p-4">
-                        {selectedIds.length === 1 ? (
-                            <SelectOneMore language={language} t={t} />
-                        ) : (
-                            <SnapshotDiff
-                                currentHoldings={currentHoldings}
-                                snapshots={snapshots}
-                                selectedIds={selectedIds}
-                            />
-                        )}
+                        <SnapshotDiff
+                            currentHoldings={currentHoldings}
+                            snapshots={snapshots}
+                            selectedIds={selectedIds}
+                        />
                     </div>
                 </div>
             </section>
         </>,
         document.body,
-    )
-}
-
-function SelectOneMore({ language, t }: { language: string; t: (k: any) => string }) {
-    return (
-        <div className="py-8 text-center">
-            <div className="text-sm font-semibold text-foreground mb-1">
-                {language === 'ko' ? '한 개 더 선택해주세요' : 'Select one more snapshot'}
-            </div>
-            <div className="text-xs text-muted-foreground">
-                {language === 'ko'
-                    ? `두 스냅샷을 선택하면 ${t('portfolioComparison')}을 볼 수 있어요`
-                    : 'Pick two snapshots to compare side-by-side'}
-            </div>
-        </div>
     )
 }
