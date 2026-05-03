@@ -190,7 +190,7 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings }: Snapshots
     const activeIndex = snapshots.findIndex(s => s.id === activeSnapshot.id)
 
     return (
-        <div className="max-w-[420px] md:max-w-2xl mx-auto w-full pb-4 relative">
+        <div className={cn('max-w-[420px] md:max-w-2xl mx-auto w-full relative', selectedIds.length > 0 ? 'pb-28' : 'pb-4')}>
             <Hero t={t} />
             <ActiveSnapshotCard
                 snapshot={activeSnapshot}
@@ -235,7 +235,9 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings }: Snapshots
                 title={t('newSnapshot')}
                 className="fixed right-4 z-40 w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all duration-150"
                 style={{
-                    bottom: 'calc(64px + 12px + var(--safe-bottom, 0px))',
+                    bottom: selectedIds.length > 0
+                        ? 'calc(72px + 12px + var(--safe-bottom, 0px))'
+                        : 'calc(64px + 12px + var(--safe-bottom, 0px))',
                 }}
             >
                 <Plus className="w-5 h-5" strokeWidth={2.5} />

@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useLanguage } from '@/lib/i18n/context'
+import { formatCurrency, formatDate } from '@/lib/utils/formatters'
 import { SnapshotDiff } from './snapshot-diff'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -18,27 +19,55 @@ interface Props {
 // vaul Drawer는 첫 mount 시 transform 0 → 목표 위치로 트랜지션돼 "보였다가 내려감" 결함이
 // 발생했고, 일부 환경에서 body scroll lock이 잡혀 뒤쪽 페이지가 스크롤되지 않는 문제도 있었음.
 export function SnapshotBottomPanel({ currentHoldings, snapshots, selectedIds, onClearSelection }: Props) {
-    const { t } = useLanguage()
+    const { t, language } = useLanguage()
     const [expanded, setExpanded] = useState(false)
     const [mounted, setMounted] = useState(false)
 
     const isOpen = selectedIds.length > 0
-    const isExpanded = expanded
 
     useEffect(() => {
         setMounted(true)
     }, [])
 
-    // 선택 개수가 변할 때마다 expand 상태로 리셋 — 1개든 2개든 사용자가 결과/안내를 즉시
-    // 볼 수 있게 한다. 헤더 탭으로 collapse 가능, X 버튼으로 완전히 닫을 수 있다.
+    // 선택 개수가 변할 때마다 expand 상태로 리셋
     useEffect(() => {
         setExpanded(selectedIds.length > 0)
     }, [selectedIds.length])
 
+    // 2개 선택 시 헤더 요약 계산
+    const headerSummary = useMemo(() => {
+        if (selectedIds.length !== 2) return null
+        const s1 = snapshots.find(s => s.id === selectedIds[0])
+        const s2 = snapshots.find(s => s.id === selectedIds[1])
+        if (!s1 || !s2) return null
+
+        const [newSn, oldSn] = [s1, s2].sort(
+            (a, b) => new Date(b.snapshotDate).getTime() - new Date(a.snapshotDate).getTime(),
+        )
+
+        const oldValue = Number(oldSn.totalValue)
+        const newValue = Number(newSn.totalValue)
+        const valueDiff = newValue - oldValue
+        const rateDiff = Number(newSn.profitRate) - Number(oldSn.profitRate)
+
+        const oldDate = formatDate(oldSn.snapshotDate, 'yy.MM.dd')
+        const newDate = formatDate(newSn.snapshotDate, 'yy.MM.dd')
+        const diffDays = Math.round(
+            (new Date(newSn.snapshotDate).getTime() - new Date(oldSn.snapshotDate).getTime()) /
+                (1000 * 60 * 60 * 24),
+        )
+
+        const currency: 'KRW' | 'USD' = language === 'en' && oldSn.exchangeRate
+            ? 'USD'
+            : 'KRW'
+        const rate = language === 'en' && oldSn.exchangeRate ? Number(newSn.exchangeRate) : 1
+        const displayDiff = currency === 'USD' ? valueDiff / rate : valueDiff
+
+        return { oldDate, newDate, diffDays, valueDiff: displayDiff, rateDiff, currency }
+    }, [snapshots, selectedIds, language])
+
     if (!isOpen || !mounted) return null
 
-    // createPortal로 body 직접 mount — 페이지 안의 transformed 컨테이너가
-    // fixed positioning의 containing block을 가로채는 것을 회피한다.
     return createPortal(
         <>
             {/* dimmed background — 클릭은 통과 */}
@@ -46,7 +75,7 @@ export function SnapshotBottomPanel({ currentHoldings, snapshots, selectedIds, o
                 aria-hidden
                 className={cn(
                     'fixed inset-0 z-40 bg-black/20 pointer-events-none transition-opacity duration-300',
-                    isExpanded ? 'opacity-100' : 'opacity-0',
+                    expanded ? 'opacity-100' : 'opacity-0',
                 )}
             />
             <section
@@ -55,12 +84,15 @@ export function SnapshotBottomPanel({ currentHoldings, snapshots, selectedIds, o
                 className={cn(
                     'fixed bottom-0 left-0 right-0 z-50',
                     'flex flex-col bg-background border-t shadow-lg',
-                    'max-h-[85dvh] md:max-h-[70dvh]',
+                    // 1개 선택: 안내 메시지만 → 작게 / 2개 선택: 비교 내용 → 크게
+                    selectedIds.length === 1
+                        ? 'max-h-[28dvh] md:max-h-[22dvh]'
+                        : 'max-h-[85dvh] md:max-h-[72dvh]',
                     'rounded-t-[1.5rem] md:rounded-t-xl',
                     'transition-transform duration-300 ease-out',
                 )}
                 style={{
-                    transform: isExpanded ? 'translateY(0)' : 'translateY(calc(100% - 64px))',
+                    transform: expanded ? 'translateY(0)' : 'translateY(calc(100% - 72px))',
                 }}
             >
                 {/* 핸들 / 헤더 — 탭하면 expand 토글 */}
@@ -68,18 +100,57 @@ export function SnapshotBottomPanel({ currentHoldings, snapshots, selectedIds, o
                     type="button"
                     onClick={() => setExpanded(e => !e)}
                     className="sticky top-0 z-10 bg-background border-b w-full text-left hover:bg-muted/50 transition-colors"
-                    aria-expanded={isExpanded}
+                    aria-expanded={expanded}
                 >
-                    <div className="flex items-center justify-between p-4">
-                        <div className="flex items-center gap-3 flex-1">
-                            <div className="w-12 h-1 bg-muted-foreground/30 rounded-full mx-auto md:hidden" />
-                            <h3 className="font-semibold text-sm md:text-base">
+                    <div className="flex items-start justify-between px-4 py-3 gap-3">
+                        <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+                            {/* 모바일 핸들 바 */}
+                            <div className="w-10 h-1 bg-muted-foreground/30 rounded-full mb-1 md:hidden mx-auto" />
+
+                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
                                 {t('portfolioComparison')}
-                                <span className="ml-2 text-xs text-muted-foreground">
-                                    ({selectedIds.length} {t('countUnit')})
+                            </span>
+
+                            {headerSummary ? (
+                                /* 2개 선택됨 — 날짜 범위 + 핵심 지표 */
+                                <div className="flex items-center gap-3 flex-wrap">
+                                    <span className="text-sm font-semibold text-foreground">
+                                        {headerSummary.oldDate}
+                                        <span className="text-muted-foreground mx-1">→</span>
+                                        {headerSummary.newDate}
+                                    </span>
+                                    {headerSummary.diffDays > 0 && (
+                                        <span className="text-[10px] text-muted-foreground border border-border rounded px-1.5 py-0.5">
+                                            {headerSummary.diffDays}일
+                                        </span>
+                                    )}
+                                    <span
+                                        className={cn(
+                                            'text-sm font-bold numeric',
+                                            headerSummary.valueDiff >= 0 ? 'text-profit' : 'text-loss',
+                                        )}
+                                    >
+                                        {headerSummary.valueDiff >= 0 ? '+' : ''}
+                                        {formatCurrency(headerSummary.valueDiff, headerSummary.currency)}
+                                    </span>
+                                    <span
+                                        className={cn(
+                                            'text-[11px] font-semibold numeric',
+                                            headerSummary.rateDiff >= 0 ? 'text-profit' : 'text-loss',
+                                        )}
+                                    >
+                                        {headerSummary.rateDiff >= 0 ? '▲' : '▼'}
+                                        {Math.abs(headerSummary.rateDiff).toFixed(2)}%p
+                                    </span>
+                                </div>
+                            ) : (
+                                /* 1개 선택됨 */
+                                <span className="text-sm font-semibold text-foreground">
+                                    {language === 'ko' ? '한 개 더 선택해주세요' : 'Select one more snapshot'}
                                 </span>
-                            </h3>
+                            )}
                         </div>
+
                         <span
                             role="button"
                             tabIndex={0}
@@ -94,7 +165,7 @@ export function SnapshotBottomPanel({ currentHoldings, snapshots, selectedIds, o
                                     onClearSelection()
                                 }
                             }}
-                            className="p-1.5 hover:bg-muted rounded-md transition-colors shrink-0 inline-flex items-center justify-center cursor-pointer"
+                            className="p-1.5 hover:bg-muted rounded-md transition-colors shrink-0 inline-flex items-center justify-center cursor-pointer mt-0.5"
                             aria-label={t('hideComparison')}
                         >
                             <X className="w-4 h-4" />
@@ -102,11 +173,11 @@ export function SnapshotBottomPanel({ currentHoldings, snapshots, selectedIds, o
                     </div>
                 </button>
 
-                {/* 비교 내용 — 1개 선택 시 안내, 2개일 때만 실제 비교 표시 */}
+                {/* 비교 내용 */}
                 <div className="flex-1 overflow-y-auto overscroll-contain">
                     <div className="p-4">
                         {selectedIds.length === 1 ? (
-                            <SelectOneMore />
+                            <SelectOneMore language={language} t={t} />
                         ) : (
                             <SnapshotDiff
                                 currentHoldings={currentHoldings}
@@ -122,8 +193,7 @@ export function SnapshotBottomPanel({ currentHoldings, snapshots, selectedIds, o
     )
 }
 
-function SelectOneMore() {
-    const { t, language } = useLanguage()
+function SelectOneMore({ language, t }: { language: string; t: (k: any) => string }) {
     return (
         <div className="py-8 text-center">
             <div className="text-sm font-semibold text-foreground mb-1">
