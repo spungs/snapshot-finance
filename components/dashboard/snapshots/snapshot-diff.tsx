@@ -14,7 +14,7 @@ interface Props {
 }
 
 export function SnapshotDiff({ currentHoldings, snapshots, selectedIds }: Props) {
-    const { t } = useLanguage()
+    const { t, language } = useLanguage()
 
     const diffData = useMemo(() => {
         if (!snapshots || snapshots.length === 0) return null
@@ -117,12 +117,19 @@ export function SnapshotDiff({ currentHoldings, snapshots, selectedIds }: Props)
 
     if (isIdentical) {
         return (
-            <div className="p-8 text-center bg-green-50 dark:bg-green-900/10 rounded-lg border border-green-200 dark:border-green-900/30">
+            <div className="p-6 text-center bg-green-50 dark:bg-green-900/10 rounded-lg border border-green-200 dark:border-green-900/30">
                 <div className="space-y-2">
                     <div className="flex items-center gap-2 justify-center">
-                        <ArrowRightLeft className="w-4 h-4 text-green-600" />
-                        <span className="font-semibold text-sm">{t('comparisonIdentical')}</span>
+                        <ArrowRightLeft className="w-4 h-4 text-green-600 shrink-0" />
+                        <span className="font-semibold text-sm break-keep">
+                            {language === 'ko'
+                                ? '두 포트폴리오가 동일합니다.'
+                                : 'Portfolios are identical.'}
+                        </span>
                     </div>
+                    <p className="text-xs text-muted-foreground break-keep">
+                        {language === 'ko' ? '변동사항이 없습니다.' : 'No changes.'}
+                    </p>
                     <p className="text-xs text-muted-foreground">
                         {rightTitle} → {leftTitle}
                     </p>
