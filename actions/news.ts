@@ -95,7 +95,7 @@ export async function getMyHoldingsForNews(): Promise<NewsStock[]> {
         select: {
             stock: { select: { stockCode: true, stockName: true, engName: true } },
         },
-        orderBy: { displayOrder: 'asc' },
+        orderBy: { createdAt: 'asc' },
     })
 
     const seen = new Set<string>()

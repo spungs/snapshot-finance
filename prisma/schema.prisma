@@ -121,7 +121,6 @@ model Holding {
   currency       String    @default("KRW")
   purchaseRate   Decimal   @default(1) @db.Decimal(10, 2)
   priceUpdatedAt DateTime?
-  displayOrder   Int       @default(0)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   stock          Stock     @relation(fields: [stockId], references: [id])
@@ -130,7 +129,6 @@ model Holding {
   @@unique([userId, stockId])
   @@index([userId])
   @@index([stockId])
-  @@index([userId, displayOrder])
   @@map("holdings")
 }
 

@@ -48,7 +48,6 @@ export async function GET(request: NextRequest) {
         if (isSnapshotDay) {
             console.log(`[Cron] Start Daily Snapshot (Day: ${dayOfWeek})`)
 
-            // Get users with holdings (Sorted by displayOrder)
             const users = await prisma.user.findMany({
                 where: {
                     isAutoSnapshotEnabled: true,
@@ -56,7 +55,7 @@ export async function GET(request: NextRequest) {
                 include: {
                     holdings: {
                         include: { stock: true },
-                        orderBy: { displayOrder: 'asc' }
+                        orderBy: { createdAt: 'asc' }
                     },
                 },
             })

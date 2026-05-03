@@ -109,7 +109,7 @@ export function PortfolioClient({ initialHoldings, summary }: Props) {
 
     // Edit/delete
     const [editingId, setEditingId] = useState<string | null>(null)
-    const [editValues, setEditValues] = useState({ quantity: '', averagePrice: '' })
+    const [editValues, setEditValues] = useState({ quantity: '', averagePrice: '', purchaseRate: '' })
     const [savingRow, setSavingRow] = useState<string | null>(null)
     const [deletingId, setDeletingId] = useState<string | null>(null)
 
@@ -206,21 +206,24 @@ export function PortfolioClient({ initialHoldings, summary }: Props) {
         setEditValues({
             quantity: h.quantity.toString(),
             averagePrice: h.averagePrice.toString(),
+            purchaseRate: h.purchaseRate ? h.purchaseRate.toString() : '',
         })
     }
 
     const cancelEdit = () => {
         setEditingId(null)
-        setEditValues({ quantity: '', averagePrice: '' })
+        setEditValues({ quantity: '', averagePrice: '', purchaseRate: '' })
     }
 
-    const saveEdit = async (id: string) => {
+    const saveEdit = async (id: string, currency: string) => {
         if (savingRow) return
         setSavingRow(id)
+        const purchaseRateVal = editValues.purchaseRate ? parseFloat(editValues.purchaseRate.replace(/,/g, '')) : undefined
         try {
             const res = await holdingsApi.update(id, {
                 quantity: parseInt(editValues.quantity),
                 averagePrice: parseFloat(editValues.averagePrice),
+                ...(currency === 'USD' && purchaseRateVal && purchaseRateVal > 0 && { purchaseRate: purchaseRateVal }),
             })
             if (res.success) {
                 setEditingId(null)
@@ -553,7 +556,7 @@ export function PortfolioClient({ initialHoldings, summary }: Props) {
                             {/* Edit row */}
                             {isEditing ? (
                                 <div className="mt-3 pt-3 border-t border-border space-y-2">
-                                    <div className="grid grid-cols-2 gap-2">
+                                    <div className={cn('grid gap-2', h.currency === 'USD' ? 'grid-cols-3' : 'grid-cols-2')}>
                                         <FormattedNumberInput
                                             label={t('quantity')}
                                             suffix={language === 'ko' ? '주' : 'shr'}
@@ -563,11 +566,20 @@ export function PortfolioClient({ initialHoldings, summary }: Props) {
                                         />
                                         <FormattedNumberInput
                                             label={t('averagePrice')}
-                                            prefix={h.currency === 'KRW' ? '₩' : '$'}
+                                            prefix="$"
                                             value={editValues.averagePrice}
                                             onChange={v => setEditValues(p => ({ ...p, averagePrice: v }))}
                                             disabled={savingRow !== null}
                                         />
+                                        {h.currency === 'USD' && (
+                                            <FormattedNumberInput
+                                                label={language === 'ko' ? '매입환율' : 'Buy rate'}
+                                                prefix="₩"
+                                                value={editValues.purchaseRate}
+                                                onChange={v => setEditValues(p => ({ ...p, purchaseRate: v }))}
+                                                disabled={savingRow !== null}
+                                            />
+                                        )}
                                     </div>
                                     <div className="flex justify-end gap-2">
                                         <button
@@ -580,7 +592,7 @@ export function PortfolioClient({ initialHoldings, summary }: Props) {
                                         </button>
                                         <button
                                             type="button"
-                                            onClick={() => saveEdit(h.id)}
+                                            onClick={() => saveEdit(h.id, h.currency)}
                                             disabled={savingRow !== null}
                                             className="bg-primary text-primary-foreground px-3 py-1 text-xs font-bold inline-flex items-center gap-1 hover:opacity-90"
                                         >

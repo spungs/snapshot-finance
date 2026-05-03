@@ -65,7 +65,7 @@ const holdingServiceInternal = {
             const holdings = await prisma.holding.findMany({
                 where: { userId },
                 include: { stock: true },
-                orderBy: { displayOrder: 'asc' },
+                orderBy: { createdAt: 'asc' },
             })
 
             // Fetch User Cash Balance
