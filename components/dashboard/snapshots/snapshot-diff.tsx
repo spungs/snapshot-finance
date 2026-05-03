@@ -41,17 +41,13 @@ export function SnapshotDiff({ currentHoldings, snapshots, selectedIds }: Props)
 
         const [newSn, oldSn] = targetSnapshots
 
-        const normalize = (items: any[], totalValue: number) => {
+        const normalize = (items: any[]) => {
             const map = new Map<string, any>()
             items.forEach(item => {
-                const currentValue = Number(item.currentValue) || 0
-                const weight = totalValue > 0 ? (currentValue / totalValue) * 100 : 0
                 map.set(item.stock.stockCode, {
                     name: item.stock.stockName,
                     code: item.stock.stockCode,
                     quantity: item.quantity,
-                    currentValue,
-                    weight,
                 })
             })
             return map
@@ -76,9 +72,6 @@ export function SnapshotDiff({ currentHoldings, snapshots, selectedIds }: Props)
                             oldQty: old.quantity,
                             newQty: item.quantity,
                             diffQty: Number(item.quantity) - Number(old.quantity),
-                            oldWeight: old.weight,
-                            newWeight: item.weight,
-                            weightDiff: item.weight - old.weight,
                         })
                         isIdentical = false
                     }
@@ -95,8 +88,8 @@ export function SnapshotDiff({ currentHoldings, snapshots, selectedIds }: Props)
             return { added, removed, modified, isIdentical }
         }
 
-        const newMap = normalize(newSn.holdings, Number(newSn.totalValue))
-        const oldMap = normalize(oldSn.holdings, Number(oldSn.totalValue))
+        const newMap = normalize(newSn.holdings)
+        const oldMap = normalize(oldSn.holdings)
         const diff = getDiff(newMap, oldMap)
 
         return {
@@ -175,11 +168,6 @@ export function SnapshotDiff({ currentHoldings, snapshots, selectedIds }: Props)
                                         {isIncrease ? '+' : ''}{formatNumber(item.diffQty)}
                                     </span>
                                 </div>
-                                <WeightChange
-                                    oldWeight={item.oldWeight}
-                                    newWeight={item.newWeight}
-                                    diff={item.weightDiff}
-                                />
                             </div>
                         )
                     })}
@@ -203,9 +191,6 @@ export function SnapshotDiff({ currentHoldings, snapshots, selectedIds }: Props)
                             <span className="shrink-0 text-xs font-medium text-muted-foreground">
                                 {formatNumber(item.quantity)}{t('countUnit')}
                             </span>
-                            <span className="shrink-0 text-[11px] font-semibold text-blue-600 w-12 text-right">
-                                {item.weight.toFixed(1)}%
-                            </span>
                         </div>
                     ))}
                 </Section>
@@ -227,9 +212,6 @@ export function SnapshotDiff({ currentHoldings, snapshots, selectedIds }: Props)
                             <StockLabel name={item.name} code={item.code} strikethrough />
                             <span className="shrink-0 text-xs font-medium text-muted-foreground line-through">
                                 {formatNumber(item.quantity)}{t('countUnit')}
-                            </span>
-                            <span className="shrink-0 text-[11px] font-semibold text-red-500 w-12 text-right line-through">
-                                {item.weight.toFixed(1)}%
                             </span>
                         </div>
                     ))}
@@ -281,25 +263,5 @@ function StockLabel({
             {name}
             <span className="text-muted-foreground font-normal text-[11px] ml-1.5">({code})</span>
         </span>
-    )
-}
-
-function WeightChange({
-    oldWeight,
-    newWeight,
-    diff,
-}: {
-    oldWeight: number
-    newWeight: number
-    diff: number
-}) {
-    const isUp = diff >= 0
-    return (
-        <div className="shrink-0 text-[10px] text-right w-14 leading-tight">
-            <div className="text-muted-foreground">{oldWeight.toFixed(1)}%</div>
-            <div className={cn('font-semibold', isUp ? 'text-blue-600' : 'text-red-600')}>
-                → {newWeight.toFixed(1)}%
-            </div>
-        </div>
     )
 }
