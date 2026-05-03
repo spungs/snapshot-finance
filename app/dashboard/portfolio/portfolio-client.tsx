@@ -115,6 +115,20 @@ export function PortfolioClient({ initialHoldings, summary }: Props) {
 
     const exRate = currentSummary.exchangeRate || 1435
 
+    // baseCurrency 기준 수익률 계산 — KRW면 환차손익 포함, USD면 달러 단순 등락
+    const calcDisplayProfitRate = (h: Holding) => {
+        const effRate = h.currency === 'USD'
+            ? (h.purchaseRate && h.purchaseRate !== 1 ? h.purchaseRate : exRate)
+            : 1
+        const cost = baseCurrency === 'KRW'
+            ? (h.currency === 'USD' ? h.totalCost * effRate : h.totalCost)
+            : (h.currency === 'USD' ? h.totalCost : h.totalCost / exRate)
+        const value = baseCurrency === 'KRW'
+            ? (h.currency === 'USD' ? h.currentValue * exRate : h.currentValue)
+            : (h.currency === 'USD' ? h.currentValue : h.currentValue / exRate)
+        return cost > 0 ? ((value - cost) / cost) * 100 : 0
+    }
+
     const refresh = useCallback(async () => {
         const res = await holdingsApi.getList()
         if (res.success && res.data) {
@@ -315,7 +329,7 @@ export function PortfolioClient({ initialHoldings, summary }: Props) {
                                                 {selectedWeight.toFixed(1)}%
                                             </span>
                                             <span>·</span>
-                                            <UpDown value={selectedHolding.profitRate} />
+                                            <UpDown value={calcDisplayProfitRate(selectedHolding)} />
                                         </div>
                                         <div className="mt-1 text-[11px] text-muted-foreground truncate">
                                             {selectedHolding.stockName}
@@ -478,6 +492,7 @@ export function PortfolioClient({ initialHoldings, summary }: Props) {
                         : (h.currency === 'USD' ? h.totalCost : h.totalCost / exRate)
                     // 수익금: 평가금 - 매입금 (통화 기준 일치)
                     const profitDisplay = valueDisplay - costDisplay
+                    const displayProfitRate = costDisplay > 0 ? (profitDisplay / costDisplay) * 100 : 0
                     const isProfit = profitDisplay >= 0
                     const profitText = profitDisplay >= 0
                         ? `+${formatCurrency(profitDisplay, baseCurrency)}`
@@ -550,7 +565,7 @@ export function PortfolioClient({ initialHoldings, summary }: Props) {
                                         {formatCurrency(valueDisplay, baseCurrency)}
                                     </div>
                                     <div className="mt-0.5 flex items-center justify-end gap-1.5">
-                                        <UpDown value={h.profitRate} />
+                                        <UpDown value={displayProfitRate} />
                                         <span className={cn(
                                             'text-[11px] font-semibold numeric',
                                             h.profit >= 0 ? 'text-profit' : 'text-loss',
