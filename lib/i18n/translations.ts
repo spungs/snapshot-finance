@@ -197,6 +197,12 @@ export const translations = {
         exclCash: '예수금 제외',
         priceStaleWarning: '가격 정보가 24시간 이상 지났습니다.',
         m7News: 'M7 News',
+        // Portfolio share (이미지 공유)
+        share: '공유',
+        shareSuccess: '공유했습니다.',
+        shareDownloaded: '이미지를 저장했습니다.',
+        shareFailed: '이미지 생성에 실패했습니다.',
+        shareEmptyHoldings: '공유할 보유 종목이 없습니다.',
         // Dashboard - Actions
         landing: {
             features: '기능',
@@ -644,6 +650,12 @@ export const translations = {
         exclCash: "Exclude Cash",
         priceStaleWarning: "Price data is older than 24 hours.",
         m7News: 'M7 News',
+        // Portfolio share
+        share: 'Share',
+        shareSuccess: 'Shared.',
+        shareDownloaded: 'Image saved.',
+        shareFailed: 'Failed to create image.',
+        shareEmptyHoldings: 'No holdings to share.',
         // Dashboard - Actions
         landing: {
             features: "Features",

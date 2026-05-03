@@ -44,7 +44,11 @@ export default async function PortfolioPage() {
 
   return (
     <>
-      <PortfolioClient initialHoldings={holdings} summary={summary} />
+      <PortfolioClient
+        initialHoldings={holdings}
+        summary={summary}
+        userName={session.user.name ?? null}
+      />
       {/* AI 챗 FAB은 보유 페이지에서만, 그것도 page 데이터 로드 완료 후에만 표시. */}
       <FloatingContainer>
         <AiChat isAuthenticated />

@@ -12,6 +12,7 @@ import { StockSearchCombobox } from '@/components/dashboard/stock-search-combobo
 import { FormattedNumberInput } from '@/components/ui/formatted-number-input'
 import { DonutChart } from '@/components/dashboard/donut-chart'
 import { CashBalanceDialog } from '@/components/dashboard/cash-balance-dialog'
+import { PortfolioShareButton } from '@/components/dashboard/portfolio-share'
 import { Plus, Edit2, Trash2, Check, X, Loader2, ArrowUp, ArrowDown, MoreVertical, Wallet } from 'lucide-react'
 import {
     DropdownMenu,
@@ -59,6 +60,7 @@ type SortDir = 'desc' | 'asc'
 interface Props {
     initialHoldings: Holding[]
     summary: Summary
+    userName?: string | null
 }
 
 function UpDown({ value, big = false }: { value: number; big?: boolean }) {
@@ -77,7 +79,7 @@ function UpDown({ value, big = false }: { value: number; big?: boolean }) {
     )
 }
 
-export function PortfolioClient({ initialHoldings, summary }: Props) {
+export function PortfolioClient({ initialHoldings, summary, userName }: Props) {
     const { t, language } = useLanguage()
     const { baseCurrency } = useCurrency()
     const [holdings, setHoldings] = useState<Holding[]>(initialHoldings)
@@ -441,11 +443,23 @@ export function PortfolioClient({ initialHoldings, summary }: Props) {
                 </CashBalanceDialog>
             </section>
 
-            {/* Holdings header — count + sort */}
+            {/* Holdings header — count + sort + share */}
             <div className="px-6 pb-3 flex justify-between items-center gap-2 flex-wrap">
-                <span className="eyebrow">
-                    {language === 'ko' ? '보유 종목' : 'Holdings'} · {holdings.length}
-                </span>
+                <div className="flex items-center gap-2">
+                    <span className="eyebrow">
+                        {language === 'ko' ? '보유 종목' : 'Holdings'} · {holdings.length}
+                    </span>
+                    <PortfolioShareButton
+                        holdings={holdings}
+                        summary={{
+                            totalCost: currentSummary.totalCost,
+                            totalValue: currentSummary.totalValue,
+                            cashBalance: currentSummary.cashBalance,
+                            exchangeRate: exRate,
+                        }}
+                        userName={userName}
+                    />
+                </div>
                 <div className="flex items-center gap-2 flex-wrap">
                     <SortToggle
                         active={sortKey === 'currentValue'}
