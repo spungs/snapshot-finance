@@ -463,14 +463,22 @@ export function PortfolioClient({ initialHoldings, summary }: Props) {
                         </div>
                     </div>
                 ) : holdingsWithWeight.map(h => {
-                    const isProfit = h.profit >= 0
                     const isEditing = editingId === h.id
+                    // 평가금: 현재 환율로 변환
                     const toBase = (v: number) => baseCurrency === 'KRW'
                         ? (h.currency === 'USD' ? v * exRate : v)
                         : (h.currency === 'USD' ? v : v / exRate)
                     const valueDisplay = toBase(h.currentValue)
-                    const costDisplay = toBase(h.totalCost)
-                    const profitDisplay = toBase(h.profit)
+                    // 매입금: purchaseRate(매입 시점 환율)로 고정 — 현재 환율 변동 영향 없음
+                    const effectivePurchaseRate = h.currency === 'USD'
+                        ? (h.purchaseRate && h.purchaseRate !== 1 ? h.purchaseRate : exRate)
+                        : 1
+                    const costDisplay = baseCurrency === 'KRW'
+                        ? (h.currency === 'USD' ? h.totalCost * effectivePurchaseRate : h.totalCost)
+                        : (h.currency === 'USD' ? h.totalCost : h.totalCost / exRate)
+                    // 수익금: 평가금 - 매입금 (통화 기준 일치)
+                    const profitDisplay = valueDisplay - costDisplay
+                    const isProfit = profitDisplay >= 0
                     const profitText = profitDisplay >= 0
                         ? `+${formatCurrency(profitDisplay, baseCurrency)}`
                         : formatCurrency(profitDisplay, baseCurrency)
