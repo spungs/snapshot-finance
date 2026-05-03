@@ -3,7 +3,7 @@
 import { useMemo } from 'react'
 
 import { useLanguage } from '@/lib/i18n/context'
-import { formatDate, formatNumber } from '@/lib/utils/formatters'
+import { formatCurrency, formatDate, formatNumber } from '@/lib/utils/formatters'
 import { ArrowRight, Plus, Minus, ArrowRightLeft } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -94,6 +94,8 @@ export function SnapshotDiff({ currentHoldings, snapshots, selectedIds }: Props)
 
         return {
             diff,
+            oldSn,
+            newSn,
             leftTitle: formatDate(newSn.snapshotDate, 'yyyy-MM-dd HH:mm'),
             rightTitle: formatDate(oldSn.snapshotDate, 'yyyy-MM-dd HH:mm'),
             isDefault,
@@ -112,27 +114,27 @@ export function SnapshotDiff({ currentHoldings, snapshots, selectedIds }: Props)
         )
     }
 
-    const { diff, rightTitle, leftTitle } = diffData as any
+    const { diff, oldSn, newSn, rightTitle, leftTitle } = diffData as any
     const { added, removed, modified, isIdentical } = diff
 
     if (isIdentical) {
         return (
-            <div className="p-6 text-center bg-green-50 dark:bg-green-900/10 rounded-lg border border-green-200 dark:border-green-900/30">
-                <div className="space-y-2">
-                    <div className="flex items-center gap-2 justify-center">
-                        <ArrowRightLeft className="w-4 h-4 text-green-600 shrink-0" />
-                        <span className="font-semibold text-sm break-keep">
-                            {language === 'ko'
-                                ? '두 포트폴리오가 동일합니다.'
-                                : 'Portfolios are identical.'}
-                        </span>
+            <div className="space-y-3">
+                <SnapshotSummaryRow oldSn={oldSn} newSn={newSn} language={language} />
+                <div className="p-5 text-center bg-green-50 dark:bg-green-900/10 rounded-lg border border-green-200 dark:border-green-900/30">
+                    <div className="space-y-1.5">
+                        <div className="flex items-center gap-2 justify-center">
+                            <ArrowRightLeft className="w-4 h-4 text-green-600 shrink-0" />
+                            <span className="font-semibold text-sm break-keep">
+                                {language === 'ko'
+                                    ? '두 포트폴리오가 동일합니다.'
+                                    : 'Portfolios are identical.'}
+                            </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground break-keep">
+                            {language === 'ko' ? '변동사항이 없습니다.' : 'No changes.'}
+                        </p>
                     </div>
-                    <p className="text-xs text-muted-foreground break-keep">
-                        {language === 'ko' ? '변동사항이 없습니다.' : 'No changes.'}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                        {rightTitle} → {leftTitle}
-                    </p>
                 </div>
             </div>
         )
@@ -140,6 +142,9 @@ export function SnapshotDiff({ currentHoldings, snapshots, selectedIds }: Props)
 
     return (
         <div className="space-y-5">
+            {/* 두 스냅샷 핵심 지표 요약 */}
+            <SnapshotSummaryRow oldSn={oldSn} newSn={newSn} language={language} />
+
             {/* 변경됨 — 기존 보유 종목 변화, 가장 중요 */}
             {modified.length > 0 && (
                 <Section
@@ -252,6 +257,48 @@ function Section({
                 {icon} {label} <span className="opacity-60">({count})</span>
             </h4>
             <div className="space-y-1.5">{children}</div>
+        </div>
+    )
+}
+
+function SnapshotSummaryRow({ oldSn, newSn, language }: { oldSn: any; newSn: any; language: string }) {
+    const currency: 'KRW' | 'USD' = language === 'en' && oldSn.exchangeRate ? 'USD' : 'KRW'
+    const exchangeRate = (sn: any) => language === 'en' && sn.exchangeRate ? Number(sn.exchangeRate) : 1
+
+    const items = [
+        {
+            date: formatDate(oldSn.snapshotDate, 'yy.MM.dd'),
+            totalValue: Number(oldSn.totalValue) / exchangeRate(oldSn),
+            profitRate: Number(oldSn.profitRate),
+        },
+        {
+            date: formatDate(newSn.snapshotDate, 'yy.MM.dd'),
+            totalValue: Number(newSn.totalValue) / exchangeRate(newSn),
+            profitRate: Number(newSn.profitRate),
+        },
+    ]
+
+    return (
+        <div className="grid grid-cols-2 gap-2">
+            {items.map((item, i) => (
+                <div
+                    key={i}
+                    className="bg-muted/40 rounded-lg px-3 py-2.5 space-y-1"
+                >
+                    <div className="text-[10px] font-semibold text-muted-foreground tracking-wider">
+                        {item.date}
+                    </div>
+                    <div className="text-sm font-bold text-foreground numeric leading-tight">
+                        {formatCurrency(item.totalValue, currency)}
+                    </div>
+                    <div className={cn(
+                        'text-[11px] font-semibold numeric',
+                        item.profitRate >= 0 ? 'text-profit' : 'text-loss',
+                    )}>
+                        {item.profitRate >= 0 ? '▲' : '▼'}{Math.abs(item.profitRate).toFixed(2)}%
+                    </div>
+                </div>
+            ))}
         </div>
     )
 }
