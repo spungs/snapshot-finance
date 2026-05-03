@@ -63,7 +63,14 @@ export function SnapshotBottomPanel({ currentHoldings, snapshots, selectedIds, o
         const rate = language === 'en' && oldSn.exchangeRate ? Number(newSn.exchangeRate) : 1
         const displayDiff = currency === 'USD' ? valueDiff / rate : valueDiff
 
-        return { oldDate, newDate, diffDays, valueDiff: displayDiff, rateDiff, currency }
+        const diffLabel = (() => {
+            if (diffDays === 1) return language === 'ko' ? '어제보다' : 'vs yesterday'
+            if (diffDays === 7) return language === 'ko' ? '일주일 전보다' : 'vs 1 week ago'
+            if (diffDays > 0) return language === 'ko' ? `${diffDays}일 전보다` : `vs ${diffDays} days ago`
+            return null
+        })()
+
+        return { oldDate, newDate, diffDays, valueDiff: displayDiff, rateDiff, currency, diffLabel }
     }, [snapshots, selectedIds, language])
 
     if (!isOpen || !mounted) return null
@@ -113,35 +120,44 @@ export function SnapshotBottomPanel({ currentHoldings, snapshots, selectedIds, o
 
                             {headerSummary ? (
                                 /* 2개 선택됨 — 날짜 범위 + 핵심 지표 */
-                                <div className="flex items-center gap-3 flex-wrap">
-                                    <span className="text-sm font-semibold text-foreground">
-                                        {headerSummary.oldDate}
-                                        <span className="text-muted-foreground mx-1">→</span>
-                                        {headerSummary.newDate}
-                                    </span>
-                                    {headerSummary.diffDays > 0 && (
-                                        <span className="text-[10px] text-muted-foreground border border-border rounded px-1.5 py-0.5">
-                                            {headerSummary.diffDays}일
+                                <div className="flex flex-col gap-1">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <span className="text-sm font-semibold text-foreground">
+                                            {headerSummary.oldDate}
+                                            <span className="text-muted-foreground mx-1">→</span>
+                                            {headerSummary.newDate}
                                         </span>
-                                    )}
-                                    <span
-                                        className={cn(
-                                            'text-sm font-bold numeric',
-                                            headerSummary.valueDiff >= 0 ? 'text-profit' : 'text-loss',
+                                        {headerSummary.diffDays > 0 && (
+                                            <span className="text-[10px] text-muted-foreground border border-border rounded px-1.5 py-0.5">
+                                                {headerSummary.diffDays}일
+                                            </span>
                                         )}
-                                    >
-                                        {headerSummary.valueDiff >= 0 ? '+' : ''}
-                                        {formatCurrency(headerSummary.valueDiff, headerSummary.currency)}
-                                    </span>
-                                    <span
-                                        className={cn(
-                                            'text-[11px] font-semibold numeric',
-                                            headerSummary.rateDiff >= 0 ? 'text-profit' : 'text-loss',
+                                    </div>
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        {headerSummary.diffLabel && (
+                                            <span className="text-[11px] text-muted-foreground">
+                                                {headerSummary.diffLabel}
+                                            </span>
                                         )}
-                                    >
-                                        {headerSummary.rateDiff >= 0 ? '▲' : '▼'}
-                                        {Math.abs(headerSummary.rateDiff).toFixed(2)}%p
-                                    </span>
+                                        <span
+                                            className={cn(
+                                                'text-sm font-bold numeric',
+                                                headerSummary.valueDiff >= 0 ? 'text-profit' : 'text-loss',
+                                            )}
+                                        >
+                                            {headerSummary.valueDiff >= 0 ? '+' : ''}
+                                            {formatCurrency(headerSummary.valueDiff, headerSummary.currency)}
+                                        </span>
+                                        <span
+                                            className={cn(
+                                                'text-[11px] font-semibold numeric',
+                                                headerSummary.rateDiff >= 0 ? 'text-profit' : 'text-loss',
+                                            )}
+                                        >
+                                            {headerSummary.rateDiff >= 0 ? '▲' : '▼'}
+                                            {Math.abs(headerSummary.rateDiff).toFixed(2)}%
+                                        </span>
+                                    </div>
                                 </div>
                             ) : (
                                 /* 1개 선택됨 */
