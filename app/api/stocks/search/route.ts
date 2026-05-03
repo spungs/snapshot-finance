@@ -44,6 +44,7 @@ export async function GET(request: NextRequest) {
                 where: {
                     stockName: {
                         contains: query,
+                        mode: 'insensitive',
                     }
                 },
                 orderBy: [

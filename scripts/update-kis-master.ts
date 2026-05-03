@@ -9,7 +9,7 @@ import { PrismaPg } from '@prisma/adapter-pg'
 import dotenv from 'dotenv'
 
 // Load env vars - prioritize .env for production DB as requested
-dotenv.config({ path: path.resolve(__dirname, '../.env'), override: true });
+dotenv.config({ path: path.resolve(process.cwd(), '.env'), override: true });
 // dotenv.config({ path: path.resolve(__dirname, '../.env.local') });
 
 const connectionString = process.env.DATABASE_URL
