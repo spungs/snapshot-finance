@@ -89,6 +89,9 @@ export function PortfolioShareButton({ holdings, summary, userName }: Props) {
             const dataUrl = await toPng(node, {
                 pixelRatio: 2,
                 cacheBust: true,
+                // CORS 차단된 외부 스타일시트(예: Google Fonts) 접근 시 발생하는
+                // SecurityError(cssRules) 회피 — 폰트 임베드 스킵
+                skipFonts: true,
                 backgroundColor: bg.startsWith('#') || bg.startsWith('rgb')
                     ? bg
                     : `hsl(${bg})`,
@@ -108,10 +111,11 @@ export function PortfolioShareButton({ holdings, summary, userName }: Props) {
                 && navShare.canShare({ files: [file] })
             if (typeof navShare.share === 'function' && canShareFiles) {
                 try {
-                    await navShare.share({
-                        files: [file],
-                        title: language === 'ko' ? '내 포트폴리오' : 'My Portfolio',
-                    })
+                    // title 등 추가 메타데이터를 함께 보내면 iOS 등 일부 OS가
+                    // 클립보드에 파일 + 미리보기 카드를 별개 항목으로 올려서
+                    // 붙여넣을 때 이미지가 두 장으로 보이는 현상이 있음.
+                    // 클립보드 일관성을 위해 files 단일 페이로드만 전달.
+                    await navShare.share({ files: [file] })
                     toast.success(t('shareSuccess'))
                     return
                 } catch (err) {
