@@ -273,11 +273,21 @@ export function PortfolioClient({ initialHoldings, summary, userName }: Props) {
 
     return (
         <div className="max-w-[480px] md:max-w-2xl mx-auto w-full">
-            {/* Hero */}
-            <section className="px-6 pt-3 pb-4">
-                <h1 className="hero-serif text-[32px] text-foreground">
+            {/* Hero — page title + page-level action(공유) */}
+            <section className="px-6 pt-3 pb-4 flex items-end justify-between gap-3">
+                <h1 className="hero-serif text-[32px] text-foreground leading-tight">
                     {language === 'ko' ? '현재 보유 자산' : 'Current Holdings'}
                 </h1>
+                <PortfolioShareButton
+                    holdings={holdings}
+                    summary={{
+                        totalCost: currentSummary.totalCost,
+                        totalValue: currentSummary.totalValue,
+                        cashBalance: currentSummary.cashBalance,
+                        exchangeRate: exRate,
+                    }}
+                    userName={userName}
+                />
             </section>
 
             {/* Donut + legend */}
@@ -443,23 +453,11 @@ export function PortfolioClient({ initialHoldings, summary, userName }: Props) {
                 </CashBalanceDialog>
             </section>
 
-            {/* Holdings header — count + sort + share */}
+            {/* Holdings header — count + sort */}
             <div className="px-6 pb-3 flex justify-between items-center gap-2 flex-wrap">
-                <div className="flex items-center gap-2">
-                    <span className="eyebrow">
-                        {language === 'ko' ? '보유 종목' : 'Holdings'} · {holdings.length}
-                    </span>
-                    <PortfolioShareButton
-                        holdings={holdings}
-                        summary={{
-                            totalCost: currentSummary.totalCost,
-                            totalValue: currentSummary.totalValue,
-                            cashBalance: currentSummary.cashBalance,
-                            exchangeRate: exRate,
-                        }}
-                        userName={userName}
-                    />
-                </div>
+                <span className="eyebrow">
+                    {language === 'ko' ? '보유 종목' : 'Holdings'} · {holdings.length}
+                </span>
                 <div className="flex items-center gap-2 flex-wrap">
                     <SortToggle
                         active={sortKey === 'currentValue'}

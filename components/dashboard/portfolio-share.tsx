@@ -149,11 +149,11 @@ export function PortfolioShareButton({ holdings, summary, userName }: Props) {
                 onClick={captureAndShare}
                 disabled={capturing}
                 aria-label={t('share')}
-                className="text-[11px] font-bold tracking-wide px-2 py-1 inline-flex items-center gap-1 text-muted-foreground hover:text-foreground disabled:opacity-50 transition-colors"
+                className="h-9 px-3 inline-flex items-center gap-1.5 border border-border bg-card text-foreground text-[12px] font-semibold tracking-wide hover:bg-muted disabled:opacity-50 transition-colors shrink-0"
             >
                 {capturing
-                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    : <Share2 className="w-3.5 h-3.5" />}
+                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                    : <Share2 className="w-4 h-4" />}
                 {t('share')}
             </button>
 
