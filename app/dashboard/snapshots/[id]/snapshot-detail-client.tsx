@@ -279,18 +279,31 @@ export default function SnapshotDetailClient({ snapshot }: Props) {
             ) : (
                 <div className="px-4 space-y-1.5">
                     {snapshot.holdings.map((h) => {
-                        const isItemUp = Number(h.profit) >= 0
-                        const itemCurrency: 'KRW' | 'USD' =
-                            isEn ? 'USD' : (h.currency as 'KRW' | 'USD')
+                        // 매입 시점 환율(legacy=1인 경우 스냅샷 환율로 폴백)
+                        const effectivePurchaseRate = h.currency === 'USD'
+                            ? (h.purchaseRate && h.purchaseRate !== 1 ? h.purchaseRate : rate)
+                            : 1
 
-                        let avgPrice = Number(h.averagePrice)
-                        let curPrice = Number(h.currentPrice)
-                        let profit = Number(h.profit)
-                        if (isEn && h.currency === 'KRW') {
-                            avgPrice = avgPrice / rate
-                            curPrice = curPrice / rate
-                            profit = profit / rate
-                        }
+                        // 평균단가·매입금: purchaseRate 사용 (환율 변동에 흔들리지 않음)
+                        const avgPrice = currency === 'KRW'
+                            ? (h.currency === 'USD' ? Number(h.averagePrice) * effectivePurchaseRate : Number(h.averagePrice))
+                            : (h.currency === 'USD' ? Number(h.averagePrice) : Number(h.averagePrice) / rate)
+                        const costDisplay = currency === 'KRW'
+                            ? (h.currency === 'USD' ? Number(h.totalCost) * effectivePurchaseRate : Number(h.totalCost))
+                            : (h.currency === 'USD' ? Number(h.totalCost) : Number(h.totalCost) / rate)
+
+                        // 현재가·평가금: 스냅샷 시점 환율(rate) 사용
+                        const curPrice = currency === 'KRW'
+                            ? (h.currency === 'USD' ? Number(h.currentPrice) * rate : Number(h.currentPrice))
+                            : (h.currency === 'USD' ? Number(h.currentPrice) : Number(h.currentPrice) / rate)
+                        const valueDisplay = currency === 'KRW'
+                            ? (h.currency === 'USD' ? Number(h.currentValue) * rate : Number(h.currentValue))
+                            : (h.currency === 'USD' ? Number(h.currentValue) : Number(h.currentValue) / rate)
+
+                        // 손익은 환산 후 평가금 - 매입금으로 재계산해 통화 일관성 보장
+                        const profit = valueDisplay - costDisplay
+                        const profitRateDisplay = costDisplay > 0 ? (profit / costDisplay) * 100 : 0
+                        const isItemUp = profit >= 0
 
                         const valKRW = h.currency === 'USD'
                             ? Number(h.currentValue) * rate
@@ -310,7 +323,7 @@ export default function SnapshotDetailClient({ snapshot }: Props) {
                                     <div className="font-serif text-[15px] font-semibold text-foreground leading-snug break-keep flex-1 min-w-0">
                                         {h.stock.stockName}
                                     </div>
-                                    <UpDown value={Number(h.profitRate)} />
+                                    <UpDown value={profitRateDisplay} />
                                 </div>
 
                                 <div className="mt-1.5 flex items-end justify-between gap-3">
@@ -327,7 +340,7 @@ export default function SnapshotDetailClient({ snapshot }: Props) {
                                         'text-[14px] font-bold numeric shrink-0',
                                         isItemUp ? 'text-profit' : 'text-loss',
                                     )}>
-                                        {isItemUp ? '+' : ''}{formatCurrency(profit, itemCurrency)}
+                                        {isItemUp ? '+' : ''}{formatCurrency(profit, currency)}
                                     </div>
                                 </div>
 
@@ -337,7 +350,7 @@ export default function SnapshotDetailClient({ snapshot }: Props) {
                                             {t('averagePrice')}
                                         </div>
                                         <div className="font-serif text-[13px] font-semibold text-foreground mt-0.5 numeric">
-                                            {formatCurrency(avgPrice, itemCurrency)}
+                                            {formatCurrency(avgPrice, currency)}
                                         </div>
                                     </div>
                                     <div className="text-right">
@@ -345,7 +358,7 @@ export default function SnapshotDetailClient({ snapshot }: Props) {
                                             {t('currentPrice')}
                                         </div>
                                         <div className="font-serif text-[13px] font-semibold text-foreground mt-0.5 numeric">
-                                            {formatCurrency(curPrice, itemCurrency)}
+                                            {formatCurrency(curPrice, currency)}
                                         </div>
                                     </div>
                                 </div>
