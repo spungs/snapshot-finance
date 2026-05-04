@@ -92,6 +92,7 @@ export function PortfolioClient({ initialHoldings, summary, userName }: Props) {
     const [newStock, setNewStock] = useState<any>(null)
     const [newQty, setNewQty] = useState('')
     const [newPrice, setNewPrice] = useState('')
+    const [addMode, setAddMode] = useState<'merge' | 'overwrite'>('merge')
     const [adding, setAdding] = useState(false)
     const [showAdd, setShowAdd] = useState(false)
     const [mounted, setMounted] = useState(false)
@@ -105,9 +106,20 @@ export function PortfolioClient({ initialHoldings, summary, userName }: Props) {
             setNewStock(null)
             setNewQty('')
             setNewPrice('')
+            setAddMode('merge')
         }
         setShowAdd(next)
     }
+
+    const handleStockSelect = (s: any) => {
+        setNewStock(s)
+        setAddMode('merge')
+    }
+
+    const existingHolding = useMemo(
+        () => (newStock ? holdings.find(h => h.stockId === newStock.id) ?? null : null),
+        [newStock, holdings],
+    )
 
     // Edit/delete
     const [editingId, setEditingId] = useState<string | null>(null)
@@ -199,7 +211,7 @@ export function PortfolioClient({ initialHoldings, summary, userName }: Props) {
                 stockId: newStock.id,
                 quantity: parseInt(newQty.replace(/,/g, '')),
                 averagePrice: parseFloat(newPrice.replace(/,/g, '')),
-                mode: 'overwrite',
+                mode: existingHolding ? addMode : 'overwrite',
             })
             if (res.success) {
                 setNewStock(null)
@@ -647,13 +659,16 @@ export function PortfolioClient({ initialHoldings, summary, userName }: Props) {
                     open={showAdd}
                     onOpenChange={handleDrawerChange}
                     newStock={newStock}
-                    setNewStock={setNewStock}
+                    setNewStock={handleStockSelect}
                     newQty={newQty}
                     setNewQty={setNewQty}
                     newPrice={newPrice}
                     setNewPrice={setNewPrice}
                     adding={adding}
                     handleAdd={handleAdd}
+                    existingHolding={existingHolding}
+                    addMode={addMode}
+                    setAddMode={setAddMode}
                     t={t}
                     language={language}
                 />,
@@ -674,6 +689,9 @@ interface AddHoldingFloatingProps {
     setNewPrice: (s: string) => void
     adding: boolean
     handleAdd: () => void
+    existingHolding: Holding | null
+    addMode: 'merge' | 'overwrite'
+    setAddMode: (m: 'merge' | 'overwrite') => void
     t: (key: any) => string
     language: 'ko' | 'en'
 }
@@ -684,6 +702,7 @@ function AddHoldingFloating({
     newQty, setNewQty,
     newPrice, setNewPrice,
     adding, handleAdd,
+    existingHolding, addMode, setAddMode,
     t, language,
 }: AddHoldingFloatingProps) {
     const isKR = newStock?.market === 'KOSPI' || newStock?.market === 'KOSDAQ'
@@ -719,6 +738,58 @@ function AddHoldingFloating({
                             onSelect={(s: any) => setNewStock(s)}
                             disabled={adding}
                         />
+                        {existingHolding && (
+                            <div className="border border-border bg-accent-soft rounded-md p-3 space-y-2.5">
+                                <div className="text-[11px] text-muted-foreground leading-snug">
+                                    {language === 'ko' ? (
+                                        <>
+                                            이미 보유 중인 종목입니다 — <span className="numeric font-semibold text-foreground">{formatNumber(existingHolding.quantity)}{qtySuffix}</span>
+                                            {' · '}
+                                            {language === 'ko' ? '평단' : 'Avg'} <span className="numeric font-semibold text-foreground">{(existingHolding.currency === 'KRW' ? '₩' : '$') + formatNumber(existingHolding.averagePrice)}</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            You already hold this stock — <span className="numeric font-semibold text-foreground">{formatNumber(existingHolding.quantity)} shr</span>
+                                            {' · '}
+                                            Avg <span className="numeric font-semibold text-foreground">{(existingHolding.currency === 'KRW' ? '₩' : '$') + formatNumber(existingHolding.averagePrice)}</span>
+                                        </>
+                                    )}
+                                </div>
+                                <div className="grid grid-cols-2 gap-1.5">
+                                    <button
+                                        type="button"
+                                        onClick={() => setAddMode('merge')}
+                                        disabled={adding}
+                                        className={cn(
+                                            'py-2 text-[12px] font-bold rounded-sm border transition-colors',
+                                            addMode === 'merge'
+                                                ? 'bg-primary text-primary-foreground border-primary'
+                                                : 'bg-background text-foreground border-border hover:bg-accent-soft',
+                                        )}
+                                    >
+                                        {language === 'ko' ? '물타기 (평단 합산)' : 'Average down (merge)'}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setAddMode('overwrite')}
+                                        disabled={adding}
+                                        className={cn(
+                                            'py-2 text-[12px] font-bold rounded-sm border transition-colors',
+                                            addMode === 'overwrite'
+                                                ? 'bg-primary text-primary-foreground border-primary'
+                                                : 'bg-background text-foreground border-border hover:bg-accent-soft',
+                                        )}
+                                    >
+                                        {language === 'ko' ? '덮어쓰기' : 'Overwrite'}
+                                    </button>
+                                </div>
+                                <div className="text-[10.5px] text-muted-foreground leading-snug">
+                                    {addMode === 'merge'
+                                        ? (language === 'ko' ? '입력한 수량을 더하고 평단가는 가중평균으로 계산됩니다.' : 'Quantity is added; average price is recalculated as a weighted mean.')
+                                        : (language === 'ko' ? '기존 보유분을 입력값으로 교체합니다.' : 'Existing holding is replaced with the new values.')}
+                                </div>
+                            </div>
+                        )}
                         <div className="grid grid-cols-2 gap-2">
                             <FormattedNumberInput
                                 label={t('quantity')}
@@ -741,7 +812,13 @@ function AddHoldingFloating({
                             disabled={!newStock || !newQty || !newPrice || adding}
                             className="w-full bg-primary text-primary-foreground py-3 text-sm font-bold disabled:opacity-50 hover:opacity-90 rounded-md"
                         >
-                            {adding ? t('addingProgress') : t('add')}
+                            {adding
+                                ? t('addingProgress')
+                                : existingHolding
+                                    ? (addMode === 'merge'
+                                        ? (language === 'ko' ? '물타기' : 'Average down')
+                                        : (language === 'ko' ? '덮어쓰기' : 'Overwrite'))
+                                    : t('add')}
                         </button>
                     </div>
                 </DialogContent>
