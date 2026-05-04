@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
                 }).slice(0, 10)
 
                 const formattedResults = sortedStocks.map(stock => ({
-                    symbol: stock.market === 'KOSPI' ? `${stock.stockCode}.KS` : `${stock.stockCode}.KQ`,
+                    symbol: stock.stockCode,
                     name: stock.engName || stock.stockName,  // 기본 표시명 (영문명 우선)
                     nameKo: stock.stockName,                 // 한글명
                     nameEn: stock.engName,                   // 영문명
@@ -143,7 +143,7 @@ export async function GET(request: NextRequest) {
             // 일반 주식이 있으면 상위 10개 반환, 없으면 Yahoo Finance로 fallback
             if (hasNonEtf) {
                 const formattedResults = sortedStocks.slice(0, 50).map(stock => ({
-                    symbol: stock.market === 'KOSPI' ? `${stock.stockCode}.KS` : `${stock.stockCode}.KQ`,
+                    symbol: stock.stockCode,
                     name: stock.engName || stock.stockName,  // 기본 표시명 (영문명 우선)
                     nameKo: stock.stockName,                 // 한글명
                     nameEn: stock.engName,                   // 영문명
