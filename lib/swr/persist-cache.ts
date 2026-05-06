@@ -1,14 +1,19 @@
 // SWR 캐시를 localStorage 에 영속화한다.
-// - 마운트 시 localStorage 에서 직렬화된 Map 복원 → 첫 페인트가 캐시 데이터로 시작
-// - beforeunload 에서 현재 캐시를 localStorage 에 저장
-// - 동일 사용자가 탭/세션을 닫고 다시 열어도 마지막 데이터 즉시 표시
 //
-// SWR 공식 문서의 표준 패턴: https://swr.vercel.app/docs/advanced/cache
+// 저장 트리거 (iOS PWA 안정성을 위해 다중 이벤트):
+// - visibilitychange: hidden — 사용자가 탭/앱을 백그라운드로 보낼 때
+// - pagehide — 페이지가 언로드되거나 bfcache 로 들어갈 때 (iOS 에서 가장 신뢰)
+// - beforeunload — 데스크톱 브라우저 정상 종료
+//
+// iOS PWA 의 "force quit" 은 어떤 이벤트도 보장하지 않으므로 위 세 가지로
+// 가능한 모든 정상 종료 경로를 커버한다.
+//
+// SWR 공식 문서: https://swr.vercel.app/docs/advanced/cache
 
 const STORAGE_KEY = 'snapshot-finance-swr-cache'
-
-// localStorage 에 너무 많이 쌓이면 Quota 초과 — 키 개수 상한.
 const MAX_ENTRIES = 50
+
+let saveScheduled = false
 
 // SWR Cache<Data> 의 형태와 호환되도록 any 로 둔다 — SWR 내부 State 객체를 그대로 저장.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -31,10 +36,10 @@ export function localStorageProvider(): Map<string, any> {
         // 파싱 실패 시 비어있는 캐시로 시작 (fail-open)
     }
 
-    window.addEventListener('beforeunload', () => {
+    const save = () => {
         try {
             const allEntries = Array.from(map.entries())
-            // SWR 내부 키(_$)는 직렬화 제외 + 상한 넘으면 최근 것만 유지
+            // SWR 내부 키($) 는 제외 + 상한 넘으면 최근 것만 유지
             const persistable = allEntries
                 .filter(([k]) => !k.startsWith('$'))
                 .slice(-MAX_ENTRIES)
@@ -42,7 +47,24 @@ export function localStorageProvider(): Map<string, any> {
         } catch {
             // Quota 초과 등 — silent fail
         }
+    }
+
+    // 같은 tick 에 여러 이벤트가 겹쳐도 한 번만 save (microtask 합치기)
+    const scheduleSave = () => {
+        if (saveScheduled) return
+        saveScheduled = true
+        queueMicrotask(() => {
+            saveScheduled = false
+            save()
+        })
+    }
+
+    // 다중 이벤트 — 어느 하나라도 트리거되면 저장
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') scheduleSave()
     })
+    window.addEventListener('pagehide', scheduleSave)
+    window.addEventListener('beforeunload', scheduleSave)
 
     return map
 }

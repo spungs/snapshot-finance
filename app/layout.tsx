@@ -73,6 +73,7 @@ import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster } from '@/components/ui/sonner'
 
 import { HistoryInit } from '@/components/history-init'
+import { SwRegister } from '@/components/sw-register'
 
 export default async function RootLayout({
   children,
@@ -100,6 +101,7 @@ export default async function RootLayout({
             data-auto_prompt="false">
           </div>
           <HistoryInit />
+          <SwRegister />
           <LanguageProvider>
             <CurrencyProvider>
               {children}
