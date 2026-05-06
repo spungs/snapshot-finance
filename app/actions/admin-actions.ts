@@ -228,33 +228,32 @@ export async function executeBulkImport(
     if (!session?.user?.id) return { success: false, error: "Unauthorized" }
     const userId = session.user.id
 
-    let successCount = 0
-    const errors: any[] = []
-
     try {
-        for (const item of items) {
-            try {
+        // 전체 import를 단일 트랜잭션으로 실행 - 중간에 실패하면 전체 롤백
+        const result = await prisma.$transaction(async (tx) => {
+            let successCount = 0
+            const errors: { identifier: string; message: string }[] = []
+
+            for (const item of items) {
                 // 1. Final Resolve (Should be robust now)
-                let stock = await prisma.stock.findUnique({ where: { stockCode: item.identifier } })
+                let stock = await tx.stock.findUnique({ where: { stockCode: item.identifier } })
 
                 if (!stock) {
                     // Try User Creation for US stocks explicitly
                     if (/^[A-Z]{1,5}$/i.test(item.identifier)) {
-                        stock = await prisma.stock.create({
+                        stock = await tx.stock.create({
                             data: {
                                 stockCode: item.identifier.toUpperCase(),
-                                stockName: item.identifier.toUpperCase(), // Can be updated later
-                                market: 'NAS', // Default to NAS or 'Unknown' - Let's try to infer or default to NAS for safety? Or Unknown.
-                                // Actually, if we set Unknown, but our heuristic says US -> USD, that's fine.
-                                // Let's try to set a US marker.
+                                stockName: item.identifier.toUpperCase(),
+                                market: 'NAS',
                                 sector: 'Unknown'
                             }
                         })
                     } else {
                         // KOREAN Logic
-                        const master = await prisma.kisStockMaster.findUnique({ where: { stockCode: item.identifier } })
+                        const master = await tx.kisStockMaster.findUnique({ where: { stockCode: item.identifier } })
                         if (master) {
-                            stock = await prisma.stock.create({
+                            stock = await tx.stock.create({
                                 data: {
                                     stockCode: master.stockCode,
                                     stockName: master.stockName,
@@ -267,6 +266,7 @@ export async function executeBulkImport(
                 }
 
                 if (!stock) {
+                    // Soft failure: 종목을 식별할 수 없는 항목은 스킵 (트랜잭션은 유지)
                     errors.push({ identifier: item.identifier, message: "Stock not found" })
                     continue
                 }
@@ -274,10 +274,10 @@ export async function executeBulkImport(
                 // Self-Healing (KR Only)
                 let market = stock.market
                 if ((market === 'Unknown' || !market) && /^\d{6}$/.test(stock.stockCode)) {
-                    const master = await prisma.kisStockMaster.findUnique({ where: { stockCode: stock.stockCode } })
+                    const master = await tx.kisStockMaster.findUnique({ where: { stockCode: stock.stockCode } })
                     if (master) {
                         market = master.market
-                        await prisma.stock.update({
+                        await tx.stock.update({
                             where: { id: stock.id },
                             data: { market: master.market }
                         })
@@ -288,12 +288,12 @@ export async function executeBulkImport(
 
                 // 2. Logic based on Strategy
                 if (strategy === 'overwrite') {
-                    await prisma.holding.upsert({
+                    await tx.holding.upsert({
                         where: { userId_stockId: { userId, stockId: stock.id } },
                         update: {
                             quantity: item.quantity,
                             averagePrice: item.averagePrice,
-                            currency, // Always update currency
+                            currency,
                         },
                         create: {
                             userId,
@@ -304,29 +304,27 @@ export async function executeBulkImport(
                         }
                     })
                 } else { // 'add'
-                    const existing = await prisma.holding.findUnique({
+                    const existing = await tx.holding.findUnique({
                         where: { userId_stockId: { userId, stockId: stock.id } }
                     })
 
                     if (existing) {
                         // Weighted Average Price Calculation
-                        // New Avg = ((Old Qty * Old Price) + (New Qty * New Price)) / (Old Qty + New Qty)
                         const totalQty = existing.quantity + item.quantity
                         const oldTotalVal = Number(existing.averagePrice) * existing.quantity
                         const newTotalVal = item.averagePrice * item.quantity
                         const newAvgPrice = (oldTotalVal + newTotalVal) / totalQty
 
-                        await prisma.holding.update({
+                        await tx.holding.update({
                             where: { userId_stockId: { userId, stockId: stock.id } },
                             data: {
                                 quantity: totalQty,
                                 averagePrice: newAvgPrice,
-                                currency, // Always update currency
+                                currency,
                             }
                         })
                     } else {
-                        // Create new if not exists (Same as overwrite)
-                        await prisma.holding.create({
+                        await tx.holding.create({
                             data: {
                                 userId,
                                 stockId: stock.id,
@@ -338,19 +336,22 @@ export async function executeBulkImport(
                     }
                 }
                 successCount++
-
-            } catch (e) {
-                console.error(`Import error for ${item.identifier}`, e)
-                errors.push({ identifier: item.identifier, message: "DB Error" })
             }
-        }
+
+            return { successCount, errors }
+        }, {
+            // 대량 import의 경우 기본 5초로는 부족할 수 있음
+            timeout: 30000,
+            maxWait: 10000,
+        })
 
         holdingService.invalidate(userId)
         revalidatePath('/dashboard')
-        return { success: true, count: successCount, errors }
+        return { success: true, count: result.successCount, errors: result.errors }
 
     } catch (error) {
-        console.error("Execute Execption:", error)
-        return { success: false, error: "Execution failed" }
+        // 트랜잭션 내부에서 throw된 모든 에러는 전체 롤백을 유발 - 부분 적용 방지
+        console.error("Bulk import transaction failed - rolled back:", error)
+        return { success: false, error: "Execution failed - transaction rolled back" }
     }
 }
