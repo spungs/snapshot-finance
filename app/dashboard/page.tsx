@@ -24,9 +24,12 @@ export default async function DashboardPage() {
 }
 
 async function HomeContent({ userId }: { userId: string }) {
-  const [{ data: holdingsData }, { data: snapshotsData }] = await Promise.all([
+  // bootstrap: 홈에서 보여줄 모든 데이터를 한 번에 병렬 fetch.
+  // chartData 는 PerformanceChart 의 SWR fallback 으로 전달돼 첫 페인트에 차트가 보인다.
+  const [{ data: holdingsData }, { data: snapshotsData }, chartData] = await Promise.all([
     holdingService.getList(userId),
     snapshotService.getList(userId, 30),
+    snapshotService.getChartData(userId),
   ])
 
   const summary = holdingsData?.summary ?? {
@@ -70,6 +73,7 @@ async function HomeContent({ userId }: { userId: string }) {
       }}
       holdings={holdings}
       recentSnapshots={recentSnapshots}
+      initialChartData={chartData}
       todayLabel={todayLabel + ' · ' + (new Date().getHours() < 12 ? '오전' : '오후')}
     />
   )

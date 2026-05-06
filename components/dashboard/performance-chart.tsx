@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useMemo } from 'react'
+import useSWR from 'swr'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -97,34 +98,50 @@ function CustomTooltip({ active, payload, mode, currency, exchangeRate }: any) {
   )
 }
 
-export function PerformanceChart() {
+interface PerformanceChartProps {
+  initialChartData?: ChartDataPoint[]
+}
+
+// 기간(period) 별 시작일 계산 — 메모리 필터용. 모든 period 가 동일 SWR 캐시
+// 항목을 공유하므로 토글 시 추가 API 호출 없이 즉시 반응한다.
+function startDateForPeriod(period: Period): Date | null {
+  const now = new Date()
+  switch (period) {
+    case '1M': { const d = new Date(now); d.setMonth(d.getMonth() - 1); return d }
+    case '3M': { const d = new Date(now); d.setMonth(d.getMonth() - 3); return d }
+    case '6M': { const d = new Date(now); d.setMonth(d.getMonth() - 6); return d }
+    case '1Y': { const d = new Date(now); d.setFullYear(d.getFullYear() - 1); return d }
+    case 'ALL':
+    default: return null
+  }
+}
+
+export function PerformanceChart({ initialChartData }: PerformanceChartProps) {
   const { language } = useLanguage()
   const { baseCurrency } = useCurrency()
   const [period, setPeriod] = useState<Period>('3M')
   const [mode, setMode] = useState<ChartMode>('profitRate')
-  const [data, setData] = useState<ChartDataPoint[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const exchangeRate = 1435
 
-  const fetchData = useCallback(async (p: Period) => {
-    setLoading(true)
-    setError(null)
-    try {
-      const res = await fetch(`/api/snapshots/chart-data?period=${p}`)
-      if (!res.ok) throw new Error('fetch failed')
-      const json = await res.json()
-      setData(json.data || [])
-    } catch {
-      setError(language === 'ko' ? '차트 데이터를 불러오지 못했습니다.' : 'Failed to load chart data.')
-    } finally {
-      setLoading(false)
+  // SWR — 서버에서 prefetch 된 initialChartData 를 fallback 으로 사용해 첫 페인트
+  // 부터 차트가 보인다. 이후엔 stale-while-revalidate 패턴으로 백그라운드 재검증.
+  const { data: allData, error, isLoading } = useSWR<ChartDataPoint[]>(
+    '/api/snapshots/chart-data',
+    {
+      fallbackData: initialChartData,
+      revalidateOnMount: !initialChartData, // SSR 데이터가 있으면 마운트 즉시 재검증 생략
     }
-  }, [language])
+  )
 
-  useEffect(() => {
-    fetchData(period)
-  }, [period, fetchData])
+  const data = useMemo<ChartDataPoint[]>(() => {
+    if (!allData) return []
+    const fromDate = startDateForPeriod(period)
+    if (!fromDate) return allData
+    return allData.filter((d) => new Date(d.date) >= fromDate)
+  }, [allData, period])
+
+  const loading = isLoading && !allData
+  const errorMsg = error ? (language === 'ko' ? '차트 데이터를 불러오지 못했습니다.' : 'Failed to load chart data.') : null
 
   const firstPoint = data[0]
   const lastPoint = data[data.length - 1]
@@ -208,9 +225,9 @@ export function PerformanceChart() {
       <CardContent>
         {loading ? (
           <Skeleton className="h-[240px] w-full rounded-md" />
-        ) : error ? (
+        ) : errorMsg ? (
           <div className="h-[240px] flex items-center justify-center text-muted-foreground text-sm">
-            {error}
+            {errorMsg}
           </div>
         ) : isEmpty ? (
           <div className="h-[240px] flex flex-col items-center justify-center gap-2 text-muted-foreground text-sm">

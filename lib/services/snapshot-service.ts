@@ -2,10 +2,10 @@ import { prisma } from '@/lib/prisma'
 import { cacheGet, cacheSet, cacheDelete } from '@/lib/cache'
 
 // 홈 PerformanceChart 용 사용자별 캐시.
-// - period(1M/3M/6M/1Y/ALL) 가 바뀌어도 동일 키를 공유 → 스위칭 즉시 응답.
-// - 변이(create/delete/update)는 invalidateChart() 로 즉시 무효화.
-// - cron(일일 스냅샷)은 별도 invalidate 안 해도 5분 TTL 이 자연스럽게 처리.
-const SNAPSHOTS_CHART_TTL_SECONDS = 300
+// - period 필터링은 클라이언트 메모리에서 수행 (모든 기간이 동일 캐시 공유)
+// - 변이(create/delete/update)는 invalidateChart() 로 즉시 무효화
+// - 따라서 TTL 을 길게 가져가도 안전. cron(일일 스냅샷)은 1시간 TTL 이 자연 처리.
+const SNAPSHOTS_CHART_TTL_SECONDS = 3600
 const snapshotsChartKey = (userId: string) => `chart:snapshots:${userId}`
 
 export interface ChartDataPoint {

@@ -27,6 +27,16 @@ interface SnapshotLite {
     exchangeRate?: number
 }
 
+interface ChartDataPoint {
+    date: string
+    totalValue: number
+    totalCost: number
+    totalProfit: number
+    profitRate: number
+    cashBalance: number
+    totalAsset: number
+}
+
 interface HomeClientProps {
     summary: {
         totalValue: number
@@ -39,6 +49,7 @@ interface HomeClientProps {
     }
     holdings: Holding[]
     recentSnapshots: SnapshotLite[]
+    initialChartData: ChartDataPoint[]
     todayLabel: string
 }
 
@@ -58,7 +69,7 @@ function UpDown({ value, big = false }: { value: number; big?: boolean }) {
     )
 }
 
-export function HomeClient({ summary, holdings, recentSnapshots, todayLabel }: HomeClientProps) {
+export function HomeClient({ summary, holdings, recentSnapshots, initialChartData, todayLabel }: HomeClientProps) {
     const { t, language } = useLanguage()
     const { baseCurrency } = useCurrency()
     const exRate = summary.exchangeRate || 1435
@@ -100,7 +111,7 @@ export function HomeClient({ summary, holdings, recentSnapshots, todayLabel }: H
             {/* Performance chart — 성과 흐름 */}
             {hasChart && (
                 <section className="mx-4 mb-4">
-                    <PerformanceChart />
+                    <PerformanceChart initialChartData={initialChartData} />
                 </section>
             )}
 

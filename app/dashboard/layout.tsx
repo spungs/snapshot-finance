@@ -1,6 +1,7 @@
 import { auth } from '@/lib/auth'
 import { ScreenHeader } from '@/components/dashboard/screen-header'
 import { BottomTabBar } from '@/components/dashboard/bottom-tab-bar'
+import { SWRProvider } from '@/components/swr-provider'
 import { User } from 'lucide-react'
 
 export default async function DashboardLayout({
@@ -12,38 +13,40 @@ export default async function DashboardLayout({
   const image = session?.user?.image
 
   return (
-    <div className="min-h-[100dvh] bg-background flex flex-col">
-      <ScreenHeader
-        right={
-          session?.user ? (
-            image ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={image}
-                alt=""
-                aria-hidden
-                className="h-9 w-9 rounded-full object-cover border border-border"
-              />
-            ) : (
-              <div
-                aria-hidden
-                className="h-9 w-9 rounded-full bg-muted flex items-center justify-center border border-border"
-              >
-                <User className="h-4 w-4 text-muted-foreground" />
-              </div>
-            )
-          ) : null
-        }
-      />
+    <SWRProvider>
+      <div className="min-h-[100dvh] bg-background flex flex-col">
+        <ScreenHeader
+          right={
+            session?.user ? (
+              image ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={image}
+                  alt=""
+                  aria-hidden
+                  className="h-9 w-9 rounded-full object-cover border border-border"
+                />
+              ) : (
+                <div
+                  aria-hidden
+                  className="h-9 w-9 rounded-full bg-muted flex items-center justify-center border border-border"
+                >
+                  <User className="h-4 w-4 text-muted-foreground" />
+                </div>
+              )
+            ) : null
+          }
+        />
 
-      <main
-        className="flex-1 flex flex-col"
-        style={{ paddingBottom: 'calc(96px + var(--safe-bottom, 0px))' }}
-      >
-        {children}
-      </main>
+        <main
+          className="flex-1 flex flex-col"
+          style={{ paddingBottom: 'calc(96px + var(--safe-bottom, 0px))' }}
+        >
+          {children}
+        </main>
 
-      <BottomTabBar />
-    </div>
+        <BottomTabBar />
+      </div>
+    </SWRProvider>
   )
 }
