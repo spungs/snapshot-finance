@@ -6,6 +6,9 @@ import Decimal from 'decimal.js'
 import { getUsdExchangeRate } from '@/lib/api/exchange-rate'
 import { snapshotService } from '@/lib/services/snapshot-service'
 import { auth } from '@/lib/auth'
+import { validateQuantity, validateAveragePrice, validateCashAmount } from '@/lib/validation/portfolio-input'
+
+const MAX_HOLDINGS_PER_SNAPSHOT = 200
 
 
 // POST /api/snapshots - 스냅샷 생성
@@ -23,7 +26,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { holdings, cashBalance, note, snapshotDate, exchangeRate: providedExchangeRate } = body
 
-    if (!holdings || holdings.length === 0) {
+    if (!Array.isArray(holdings) || holdings.length === 0) {
       return NextResponse.json(
         {
           success: false,
@@ -35,18 +38,87 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+    if (holdings.length > MAX_HOLDINGS_PER_SNAPSHOT) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: 'INVALID_REQUEST',
+            message: `보유 종목은 최대 ${MAX_HOLDINGS_PER_SNAPSHOT}개까지 허용됩니다.`,
+          },
+        },
+        { status: 400 }
+      )
+    }
 
-    // 총 매입금액 및 평가금액 계산 (KRW 기준)
-    const exchangeRate = providedExchangeRate ? Number(providedExchangeRate) : await getUsdExchangeRate()
+    if (cashBalance !== undefined) {
+      const cashCheck = validateCashAmount(cashBalance)
+      if (!cashCheck.ok) {
+        return NextResponse.json(
+          { success: false, error: { code: 'INVALID_REQUEST', message: cashCheck.error } },
+          { status: 400 }
+        )
+      }
+    }
+
+    // 환율은 양수만 허용 — Decimal(10,2) 컬럼 한도 + 0/음수/NaN 방어
+    let exchangeRate: number
+    if (providedExchangeRate !== undefined) {
+      const fxNum = Number(providedExchangeRate)
+      if (!Number.isFinite(fxNum) || fxNum <= 0 || fxNum > 100_000) {
+        return NextResponse.json(
+          { success: false, error: { code: 'INVALID_REQUEST', message: '환율이 올바르지 않습니다.' } },
+          { status: 400 }
+        )
+      }
+      exchangeRate = fxNum
+    } else {
+      exchangeRate = await getUsdExchangeRate()
+    }
+
     let totalCost = new Decimal(0)
     let totalValue = new Decimal(0)
 
-    const holdingsData = holdings.map((h: any) => {
-      const quantity = h.quantity
-      const averagePrice = new Decimal(h.averagePrice)
-      const currentPrice = new Decimal(h.currentPrice)
-      const currency = h.currency || 'KRW'
-      const purchaseRate = new Decimal(h.purchaseRate || 1)
+    // 종목별 입력 검증 — 잘못된 값은 400으로 즉시 반환
+    const validatedHoldings: Array<{ raw: any; qty: number; avg: number; cp: number }> = []
+    for (const h of holdings as any[]) {
+      const qty = validateQuantity(h.quantity)
+      if (!qty.ok) {
+        return NextResponse.json(
+          { success: false, error: { code: 'INVALID_REQUEST', message: qty.error } },
+          { status: 400 }
+        )
+      }
+      const avg = validateAveragePrice(h.averagePrice)
+      if (!avg.ok) {
+        return NextResponse.json(
+          { success: false, error: { code: 'INVALID_REQUEST', message: avg.error } },
+          { status: 400 }
+        )
+      }
+      const cpNum = Number(h.currentPrice)
+      if (!Number.isFinite(cpNum) || cpNum < 0) {
+        return NextResponse.json(
+          { success: false, error: { code: 'INVALID_REQUEST', message: 'currentPrice가 올바르지 않습니다.' } },
+          { status: 400 }
+        )
+      }
+      if (typeof h.stockId !== 'string' || !h.stockId) {
+        return NextResponse.json(
+          { success: false, error: { code: 'INVALID_REQUEST', message: 'stockId가 누락되었습니다.' } },
+          { status: 400 }
+        )
+      }
+      validatedHoldings.push({ raw: h, qty: qty.value, avg: avg.value, cp: cpNum })
+    }
+
+    const holdingsData = validatedHoldings.map(({ raw: h, qty, avg, cp }) => {
+      const quantity = qty
+      const averagePrice = new Decimal(avg)
+      const currentPrice = new Decimal(cp)
+      const currency = h.currency === 'USD' ? 'USD' : 'KRW'
+      const pRateNum = Number(h.purchaseRate)
+      const purchaseRate = Number.isFinite(pRateNum) && pRateNum > 0 ? new Decimal(pRateNum) : new Decimal(1)
 
       // 개별 종목 계산 (Native Currency 기준)
       const cost = averagePrice.times(quantity)

@@ -34,6 +34,7 @@ export async function GET(request: NextRequest) {
     }
 
     const results: any[] = []
+    let errorLogged = false
 
     try {
         // 2. Logic Branching based on Day of Week
@@ -195,14 +196,15 @@ export async function GET(request: NextRequest) {
                     details: { error: error as any, results }
                 }
             })
+            errorLogged = true
         } catch (logError) {
             console.error('[Cron] Failed to save error log to DB:', logError)
         }
 
         return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 })
     } finally {
-        // Log Success/Partial (if not already returned error)
-        if (results.length > 0) {
+        // Log Success/Partial — error 경로에서 이미 FAILED를 적었으면 중복 로그 방지
+        if (!errorLogged && results.length > 0) {
             try {
                 const failedCount = results.filter((r: any) => r.status === 'failed').length
                 const status = failedCount > 0 ? (failedCount === results.length ? 'FAILED' : 'PARTIAL') : 'SUCCESS'

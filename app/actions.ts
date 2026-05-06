@@ -4,11 +4,16 @@ import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { auth } from '@/lib/auth'
 import { holdingService } from '@/lib/services/holding-service'
+import { validateCashAmount } from '@/lib/validation/portfolio-input'
 
 export async function toggleAutoSnapshot(enabled: boolean) {
     const session = await auth()
     if (!session?.user?.id) {
         return { success: false, error: 'Unauthorized' }
+    }
+
+    if (typeof enabled !== 'boolean') {
+        return { success: false, error: 'Invalid input' }
     }
 
     try {
@@ -49,10 +54,16 @@ export async function updateTargetAsset(amount: number) {
         throw new Error("Unauthorized")
     }
 
+    // 음수, NaN, Infinity, Decimal(15,2) 한도 초과 모두 차단
+    const validated = validateCashAmount(amount)
+    if (!validated.ok) {
+        return { success: false, error: validated.error }
+    }
+
     try {
         await prisma.user.update({
             where: { id: session.user.id },
-            data: { targetAsset: amount },
+            data: { targetAsset: validated.value },
         })
         await holdingService.invalidate(session.user.id)
         revalidatePath('/dashboard')
