@@ -203,17 +203,20 @@ function ShareCard({ holdings, summary, userName, baseCurrency, language }: Shar
     // 평가금액 기준 정렬 (큰 순)
     const sorted = [...holdings].sort((a, b) => toBase(b, b.currentValue) - toBase(a, a.currentValue))
 
+    // summary.totalValue 는 holding-service에서 (주식평가금 + 예수금)로 계산된 "총 자산"이다.
+    // 수익률 계산은 예수금을 제외한 주식 평가금 기준으로 해야 정확하다.
     const totalValueBase = baseCurrency === 'KRW'
         ? summary.totalValue
         : summary.totalValue / exRate
-    const totalCostBaseSum = sorted.reduce((acc, h) => acc + costBase(h), 0)
-    const totalProfitBase = totalValueBase - totalCostBaseSum
-    const totalProfitRate = totalCostBaseSum > 0
-        ? new Decimal(totalProfitBase).div(totalCostBaseSum).times(100).toNumber()
-        : 0
     const cashBase = baseCurrency === 'KRW'
         ? summary.cashBalance
         : summary.cashBalance / exRate
+    const totalStockValueBase = totalValueBase - cashBase
+    const totalCostBaseSum = sorted.reduce((acc, h) => acc + costBase(h), 0)
+    const totalProfitBase = totalStockValueBase - totalCostBaseSum
+    const totalProfitRate = totalCostBaseSum > 0
+        ? new Decimal(totalProfitBase).div(totalCostBaseSum).times(100).toNumber()
+        : 0
 
     const dateLabel = formatToday(language)
     const headerName = userName?.trim() || (language === 'ko' ? '나' : 'Me')
