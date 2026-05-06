@@ -1,5 +1,6 @@
 // HomeClient와 동일한 레이아웃의 정적 스켈레톤.
 // 서버 컴포넌트로 즉시 전송되며, KIS API 응답 대기 동안 사용자에게 화면 골격을 보여준다.
+import { SkeletonLoaderBar } from '@/components/ui/skeleton-loader-bar'
 
 function Bar({ className = '' }: { className?: string }) {
     return <div className={`bg-muted rounded-sm ${className}`} aria-hidden />
@@ -7,6 +8,8 @@ function Bar({ className = '' }: { className?: string }) {
 
 export function HomeSkeleton() {
     return (
+        <>
+        <SkeletonLoaderBar />
         <div className="max-w-[480px] md:max-w-2xl mx-auto w-full animate-pulse">
             {/* Hero — 날짜 / 큰 금액 / 수익률 */}
             <section className="px-6 pt-3 pb-6">
@@ -79,5 +82,6 @@ export function HomeSkeleton() {
                 </ul>
             </section>
         </div>
+        </>
     )
 }

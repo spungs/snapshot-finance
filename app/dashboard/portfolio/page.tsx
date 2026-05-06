@@ -16,20 +16,15 @@ export default async function PortfolioPage() {
   }
 
   // 셸(헤더/바텀탭)은 layout에서 즉시 렌더되고,
-  // KIS API를 포함한 데이터 페칭은 Suspense 경계 안에서 스트리밍된다.
+  // KIS API를 포함한 데이터 페칭과 AI 챗 FAB 모두 Suspense 안에서 스트리밍된다
+  // — 데이터 도달 전엔 FAB 도 노출되지 않아 로딩 화면이 깔끔하게 유지된다.
   return (
-    <>
-      <Suspense fallback={<PortfolioSkeleton />}>
-        <PortfolioContent
-          userId={session.user.id}
-          userName={session.user.name ?? null}
-        />
-      </Suspense>
-      {/* AI 챗 FAB은 보유 페이지에서만 표시. 셸과 동시에 렌더되어도 무방. */}
-      <FloatingContainer>
-        <AiChat isAuthenticated />
-      </FloatingContainer>
-    </>
+    <Suspense fallback={<PortfolioSkeleton />}>
+      <PortfolioContent
+        userId={session.user.id}
+        userName={session.user.name ?? null}
+      />
+    </Suspense>
   )
 }
 
@@ -70,10 +65,15 @@ async function PortfolioContent({
   }))
 
   return (
-    <PortfolioClient
-      initialHoldings={holdings}
-      summary={summary}
-      userName={userName}
-    />
+    <>
+      <PortfolioClient
+        initialHoldings={holdings}
+        summary={summary}
+        userName={userName}
+      />
+      <FloatingContainer>
+        <AiChat isAuthenticated />
+      </FloatingContainer>
+    </>
   )
 }

@@ -1,5 +1,6 @@
 // SnapshotDetailClient와 동일한 레이아웃의 정적 스켈레톤.
 // DB 조회 동안 셸 안쪽에서 즉시 렌더된다.
+import { SkeletonLoaderBar } from '@/components/ui/skeleton-loader-bar'
 
 function Bar({ className = '' }: { className?: string }) {
     return <div className={`bg-muted rounded-sm ${className}`} aria-hidden />
@@ -7,6 +8,8 @@ function Bar({ className = '' }: { className?: string }) {
 
 export function SnapshotDetailSkeleton() {
     return (
+        <>
+        <SkeletonLoaderBar />
         <div className="max-w-[420px] md:max-w-2xl mx-auto w-full pb-8 animate-pulse">
             {/* Hero — back link + title + 더보기 */}
             <section className="px-6 pt-3 pb-4">
@@ -95,5 +98,6 @@ export function SnapshotDetailSkeleton() {
                 ))}
             </div>
         </div>
+        </>
     )
 }
