@@ -97,5 +97,13 @@ ad_plan_*.md
 public/sitemap*.xml
 public/robots.txt
 
+# Service Worker (Serwist 가 빌드 시 생성)
+public/sw.js
+public/sw.js.map
+public/swe-worker-*.js
+public/swe-worker-*.js.map
+public/workbox-*.js
+public/workbox-*.js.map
+
 # Claude Code
 .claude/

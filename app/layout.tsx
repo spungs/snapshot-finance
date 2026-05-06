@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Source_Serif_4, Noto_Serif_KR, JetBrains_Mono } from "next/font/google";
+import { APPLE_STARTUP_IMAGES } from '@/lib/ios-splash-images'
 import "./globals.css";
 
 // JetBrains Mono — matches design
@@ -55,6 +56,14 @@ export const metadata: Metadata = {
   robots: {
     index: true,
     follow: true,
+  },
+  // PWA 메타 — iOS standalone 모드에서 검은 화면 대신 브랜드 splash 표시
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Snapshot",
+    startupImage: APPLE_STARTUP_IMAGES,
   },
 };
 
