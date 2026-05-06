@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Camera } from 'lucide-react'
+import Image from 'next/image'
 
 interface ScreenHeaderProps {
     right?: React.ReactNode
@@ -15,7 +15,7 @@ export function ScreenHeader({ right }: ScreenHeaderProps) {
         >
             <div className="px-6 pb-2 flex items-center justify-between max-w-[480px] md:max-w-2xl mx-auto">
                 <Link href="/dashboard" className="flex items-center gap-2 min-h-[44px]">
-                    <Camera className="w-5 h-5 text-primary" strokeWidth={2} aria-hidden />
+                    <Image src="/logo.png" alt="Snapshot" width={28} height={28} priority />
                     <span className="text-base font-bold text-foreground tracking-tight">
                         Snapshot
                     </span>
