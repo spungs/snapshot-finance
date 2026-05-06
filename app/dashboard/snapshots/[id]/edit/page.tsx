@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { invalidateSwPagesCache } from '@/lib/sw-invalidate'
 import Link from 'next/link'
 import { ChevronLeft, Loader2, Plus, Trash2 } from 'lucide-react'
 
@@ -324,7 +323,6 @@ export default function EditSnapshotPage() {
             })
 
             if (response.success) {
-                await invalidateSwPagesCache()
                 router.push(`/dashboard/snapshots/${params.id}`)
             } else {
                 setError(response.error?.message || t('updateFailed'))

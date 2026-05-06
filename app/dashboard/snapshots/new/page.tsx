@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { invalidateSwPagesCache } from '@/lib/sw-invalidate'
 import Link from 'next/link'
 import { StockSearchCombobox } from '@/components/dashboard/stock-search-combobox'
 import { FormattedNumberInput } from '@/components/ui/formatted-number-input'
@@ -342,7 +341,6 @@ export default function NewSnapshotPage() {
       })
 
       if (response.success) {
-        await invalidateSwPagesCache()
         router.push('/dashboard/snapshots')
       } else {
         setError(response.error?.message || t('searchError'))

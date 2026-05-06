@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { invalidateSwPagesCache } from '@/lib/sw-invalidate'
 import { ChevronLeft, MoreVertical, Pencil, Trash2, Loader2, AlertCircle } from 'lucide-react'
 
 import { useLanguage } from '@/lib/i18n/context'
@@ -99,7 +98,6 @@ export default function SnapshotDetailClient({ snapshot }: Props) {
         try {
             const res = await snapshotsApi.delete(snapshot.id)
             if (res.success) {
-                await invalidateSwPagesCache()
                 router.push('/dashboard/snapshots')
             } else {
                 setError(res.error?.message || t('deleteFailed'))
