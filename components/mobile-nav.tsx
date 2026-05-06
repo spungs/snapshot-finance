@@ -74,7 +74,7 @@ export function MobileNav({ type, user }: MobileNavProps) {
                                 onClick={() => setOpen(false)}
                             >
                                 <div className="flex items-center font-bold text-xl">
-                                    <Image src="/logo.png" alt="Snapshot Finance" width={28} height={28} className="mr-2" />
+                                    <Image src="/logo.png" alt="Snapshot Finance" width={48} height={48} className="mr-3" />
                                     Snapshot Finance
                                 </div>
                             </Link>
@@ -84,7 +84,7 @@ export function MobileNav({ type, user }: MobileNavProps) {
                                 className="flex items-center font-bold text-xl"
                                 onClick={() => setOpen(false)}
                             >
-                                <Image src="/logo.png" alt="Snapshot Finance" width={28} height={28} className="mr-2" />
+                                <Image src="/logo.png" alt="Snapshot Finance" width={48} height={48} className="mr-3" />
                                 Snapshot Finance
                             </Link>
                         )}
