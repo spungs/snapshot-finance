@@ -64,11 +64,13 @@ export async function GET(request: NextRequest) {
             const usdRate = await getUsdExchangeRate()
             console.log(`[Cron] Using USD Rate: ${usdRate}`)
 
-            for (const user of users) {
+            // 사용자를 청크 단위(10명씩)로 병렬 처리 - 타임아웃 방지 + 외부 API 부하 제어
+            const USER_BATCH_SIZE = 10
+
+            const processUser = async (user: typeof users[number]) => {
                 try {
                     if (user.holdings.length === 0) {
-                        results.push({ userId: user.id, status: 'skipped', reason: 'No holdings' })
-                        continue
+                        return { userId: user.id, status: 'skipped', reason: 'No holdings' }
                     }
 
                     // Fetch prices and calculate values (Real-time)
@@ -84,9 +86,7 @@ export async function GET(request: NextRequest) {
                             const val = currentPrice * quantity
                             const cost = avgPrice * quantity
 
-                            // Normalize values to KRW for portfolio total
-                            // 매입금액은 매입 시점 환율(purchaseRate)로 동결 — 환율 변동만으로 매입금액이 출렁이지 않게 함
-                            // purchaseRate 누락/legacy(1)면 현재 환율로 폴백
+                            // 매입금액은 매입 시점 환율(purchaseRate)로 동결
                             const purchaseRate = Number(holding.purchaseRate)
                             const effectivePurchaseRate = purchaseRate && purchaseRate !== 1 ? purchaseRate : usdRate
                             const krwValue = holding.currency === 'USD' ? val * usdRate : val
@@ -95,7 +95,6 @@ export async function GET(request: NextRequest) {
                             totalValue += krwValue
                             totalCost += krwCost
 
-                            // Per holding profit
                             const hProfit = val - cost
                             const hProfitRate = cost > 0 ? (hProfit / cost) * 100 : 0
 
@@ -109,7 +108,7 @@ export async function GET(request: NextRequest) {
                                 currentValue: val,
                                 profit: hProfit,
                                 profitRate: hProfitRate,
-                                purchaseRate: Number(holding.purchaseRate || 1100), // Fallback if missing
+                                purchaseRate: Number(holding.purchaseRate || 1100),
                             }
                         })
                     )
@@ -117,7 +116,6 @@ export async function GET(request: NextRequest) {
                     const totalProfit = totalValue - totalCost
                     const profitRate = totalCost > 0 ? (totalProfit / totalCost) * 100 : 0
 
-                    // Create Snapshot
                     const newSnapshot = await prisma.portfolioSnapshot.create({
                         data: {
                             userId: user.id,
@@ -126,7 +124,7 @@ export async function GET(request: NextRequest) {
                             totalCost,
                             totalProfit,
                             profitRate,
-                            cashBalance: user.cashBalance || 0, // Capture current cash balance
+                            cashBalance: user.cashBalance || 0,
                             exchangeRate: usdRate,
                             note: `Auto Snapshot (${new Date().toLocaleDateString('ko-KR')})`,
                             holdings: {
@@ -135,12 +133,18 @@ export async function GET(request: NextRequest) {
                         },
                     })
 
-                    results.push({ userId: user.id, status: 'success', snapshotId: newSnapshot.id })
-
+                    return { userId: user.id, status: 'success' as const, snapshotId: newSnapshot.id }
                 } catch (error) {
                     console.error(`[Cron] Error processing user ${user.id}:`, error)
-                    results.push({ userId: user.id, status: 'failed', error: error instanceof Error ? error.message : 'Unknown error' })
+                    return { userId: user.id, status: 'failed' as const, error: error instanceof Error ? error.message : 'Unknown error' }
                 }
+            }
+
+            for (let i = 0; i < users.length; i += USER_BATCH_SIZE) {
+                const batch = users.slice(i, i + USER_BATCH_SIZE)
+                const batchResults = await Promise.all(batch.map(processUser))
+                results.push(...batchResults)
+                console.log(`[Cron] Batch ${Math.floor(i / USER_BATCH_SIZE) + 1}/${Math.ceil(users.length / USER_BATCH_SIZE)} done (${batchResults.length} users)`)
             }
         } else {
             console.log(`[Cron] Skipping Snapshot (Day: ${dayOfWeek}). Market closed.`)
