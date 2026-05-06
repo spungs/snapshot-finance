@@ -62,7 +62,7 @@ export default function SignIn() {
                                 />
                             </svg>
                         )}
-                        <span>{isSigningIn ? 'Signing in...' : 'Sign in with Google'}</span>
+                        <span>{isSigningIn ? '로그인 중...' : 'Sign in with Google'}</span>
                     </button>
 
                 </CardContent>

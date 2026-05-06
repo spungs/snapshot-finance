@@ -1,11 +1,16 @@
+import Image from 'next/image'
+
 export default function DashboardLoading() {
     return (
-        <div className="flex flex-1 w-full flex-col items-center justify-center gap-4">
-            <div className="w-64 max-w-full space-y-2">
-                <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
-                    <div className="h-full bg-primary animate-indeterminate rounded-full" />
-                </div>
-            </div>
+        <div className="flex flex-1 w-full min-h-[60vh] flex-col items-center justify-center gap-6 bg-background">
+            <Image
+                src="/logo.png"
+                alt="Snapshot Finance"
+                width={64}
+                height={64}
+                priority
+            />
+            <div className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
         </div>
     )
 }
