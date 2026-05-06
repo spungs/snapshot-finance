@@ -23,5 +23,7 @@ declare module "next-auth/jwt" {
         /** OpenID ID Token */
         idToken?: string
         isAutoSnapshotEnabled?: boolean
+        /** 마지막으로 DB에서 사용자 필드를 갱신한 시각 (ms) - TTL 기반 리프레시용 */
+        lastDbRefresh?: number
     }
 }
