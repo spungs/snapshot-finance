@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Menu, X, LogOut, Camera } from 'lucide-react'
+import Image from 'next/image'
+import { Menu, X, LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
@@ -73,7 +74,7 @@ export function MobileNav({ type, user }: MobileNavProps) {
                                 onClick={() => setOpen(false)}
                             >
                                 <div className="flex items-center font-bold text-xl">
-                                    <Camera className="mr-2 h-6 w-6" />
+                                    <Image src="/logo.png" alt="Snapshot Finance" width={28} height={28} className="mr-2" />
                                     Snapshot Finance
                                 </div>
                             </Link>
@@ -83,7 +84,7 @@ export function MobileNav({ type, user }: MobileNavProps) {
                                 className="flex items-center font-bold text-xl"
                                 onClick={() => setOpen(false)}
                             >
-                                <Camera className="mr-2 h-6 w-6" />
+                                <Image src="/logo.png" alt="Snapshot Finance" width={28} height={28} className="mr-2" />
                                 Snapshot Finance
                             </Link>
                         )}

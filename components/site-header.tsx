@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Camera } from 'lucide-react'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { MobileNav } from '@/components/mobile-nav'
 import { useLanguage } from '@/lib/i18n/context'
@@ -14,7 +14,7 @@ export function SiteHeader() {
     return (
         <header className="px-4 lg:px-6 h-14 flex items-center border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50 justify-between">
             <Link className="flex items-center justify-center font-bold text-xl" href="/">
-                <Camera className="mr-2 h-6 w-6" />
+                <Image src="/logo.png" alt="Snapshot Finance" width={28} height={28} className="mr-2" priority />
                 Snapshot Finance
             </Link>
             <nav className="hidden sm:flex ml-auto gap-4 sm:gap-6 items-center">
