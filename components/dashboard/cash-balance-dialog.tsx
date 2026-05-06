@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Button } from "@/components/ui/button"
 import { FormattedNumberInput } from "@/components/ui/formatted-number-input"
 import { updateCashBalance } from "@/app/actions/cash-actions"
+import { invalidateSwPagesCache } from "@/lib/sw-invalidate"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import { Edit2, Loader2 } from "lucide-react"
@@ -65,6 +66,8 @@ export function CashBalanceDialog({
                 toast.success(t('updateCashSuccess'))
                 setOpen(false)
                 onSuccess?.()
+                // SW StaleWhileRevalidate 가 stale 페이지 반환하지 않도록 캐시 클리어
+                await invalidateSwPagesCache()
                 startTransition(() => {
                     router.refresh()
                 })

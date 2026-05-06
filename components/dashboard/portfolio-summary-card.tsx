@@ -30,6 +30,7 @@ import confetti from 'canvas-confetti'
 import { useEffect, useRef, useTransition } from 'react'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
+import { invalidateSwPagesCache } from '@/lib/sw-invalidate'
 
 interface PortfolioSummaryCardProps {
   // ... existing props
@@ -66,7 +67,8 @@ export function PortfolioSummaryCard({
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
+    await invalidateSwPagesCache()
     startTransition(() => {
       router.refresh()
     })

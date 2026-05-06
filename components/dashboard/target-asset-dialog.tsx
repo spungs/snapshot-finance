@@ -12,6 +12,7 @@ import {
 import { FormattedNumberInput } from "@/components/ui/formatted-number-input"
 import { Label } from "@/components/ui/label"
 import { updateTargetAsset } from "@/app/actions"
+import { invalidateSwPagesCache } from "@/lib/sw-invalidate"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import { Edit2, Loader2, Target } from "lucide-react"
@@ -82,6 +83,7 @@ export function TargetAssetDialog({
             if (result.success) {
                 toast.success(t('targetUpdateSuccess') || 'Goal updated')
                 setOpen(false)
+                await invalidateSwPagesCache()
                 if (onRefresh) {
                     onRefresh()
                 } else {

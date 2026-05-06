@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import { updateCashBalance } from '@/app/actions/cash-actions'
+import { invalidateSwPagesCache } from '@/lib/sw-invalidate'
 import type { ParsedAction } from '@/app/api/ai/portfolio/route'
 
 interface HoldingContext {
@@ -299,6 +300,7 @@ export function AiChat({ isAuthenticated = false }: AiChatProps) {
                 i === msgIndex ? { ...m, actionState: 'confirmed', disambiguationCandidates: undefined } : m
             ))
             await fetchHoldingsData()
+            await invalidateSwPagesCache()
             router.refresh()
             // portfolio-client는 useState로 holdings를 들고 있어 router.refresh만으로는 갱신되지 않음 → 명시 신호.
             if (typeof window !== 'undefined') {
