@@ -17,6 +17,7 @@ model User {
   isAutoSnapshotEnabled Boolean             @default(false)
   cashBalance           Decimal             @default(0) @db.Decimal(15, 2)
   targetAsset           Decimal             @default(0) @db.Decimal(15, 2)
+  role                  String              @default("user")
   accounts              Account[]
   holdings              Holding[]
   snapshots             PortfolioSnapshot[]

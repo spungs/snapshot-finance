@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
+import { requireAdmin } from '@/lib/auth-helpers'
 
 // GET /api/stocks - 종목 목록 조회 (페이지네이션 강제)
 export async function GET(request: NextRequest) {
@@ -38,19 +39,19 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/stocks - 종목 추가
-// 인증된 사용자만 새 종목 'create'만 허용. 기존 종목 덮어쓰기는 마스터 데이터를 오염시킬 수 있어
+// POST /api/stocks - 종목 추가 (admin 전용)
+// 새 종목 'create'만 허용. 기존 종목 덮어쓰기는 마스터 데이터를 오염시킬 수 있어
 // upsert를 의도적으로 빼고, 이미 존재하는 종목은 그대로 반환한다.
 export async function POST(request: NextRequest) {
-  try {
-    const session = await auth()
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { success: false, error: { code: 'UNAUTHORIZED', message: '인증이 필요합니다.' } },
-        { status: 401 }
-      )
-    }
+  const guard = await requireAdmin()
+  if (guard.error) {
+    return NextResponse.json(
+      { success: false, error: { code: guard.error, message: guard.error === 'UNAUTHORIZED' ? '인증이 필요합니다.' : '권한이 없습니다.' } },
+      { status: guard.status }
+    )
+  }
 
+  try {
     const body = await request.json()
     const { stockCode, stockName, engName, market, sector } = body
 

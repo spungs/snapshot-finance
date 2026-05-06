@@ -22,6 +22,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             // 초기 로그인: user 객체에서 필드를 토큰에 적재
             if (user) {
                 token.isAutoSnapshotEnabled = (user as { isAutoSnapshotEnabled?: boolean }).isAutoSnapshotEnabled
+                token.role = (user as { role?: string }).role ?? "user"
                 token.lastDbRefresh = Date.now()
                 return token
             }
@@ -42,11 +43,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             if (token.sub && now - lastRefresh > SESSION_REFRESH_TTL_MS) {
                 const dbUser = await prisma.user.findUnique({
                     where: { id: token.sub },
-                    select: { deletedAt: true, isAutoSnapshotEnabled: true }
+                    select: { deletedAt: true, isAutoSnapshotEnabled: true, role: true }
                 })
 
                 if (dbUser) {
                     token.isAutoSnapshotEnabled = dbUser.isAutoSnapshotEnabled
+                    token.role = dbUser.role
 
                     // 소프트 삭제 상태에서 로그인 시 복구
                     if (dbUser.deletedAt) {
@@ -66,6 +68,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             if (token.sub && session.user) {
                 session.user.id = token.sub
                 session.user.isAutoSnapshotEnabled = token.isAutoSnapshotEnabled as boolean | undefined
+                session.user.role = (token.role as string | undefined) ?? "user"
             }
             return session
         },
