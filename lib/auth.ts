@@ -11,7 +11,9 @@ const SESSION_REFRESH_TTL_MS = 5 * 60 * 1000
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
     adapter: PrismaAdapter(prisma),
-    session: { strategy: "jwt" },
+    // PWA에서 앱을 종료했다 다시 열어도 세션이 풀리지 않도록 maxAge를 명시.
+    // 기본값(30일)과 동일하지만, 환경에 따라 누락 시 짧게 처리되는 케이스가 보고되어 명시 고정.
+    session: { strategy: "jwt", maxAge: 30 * 24 * 60 * 60 },
     ...authConfig,
     providers: [
         ...authConfig.providers,
