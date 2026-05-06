@@ -1,7 +1,8 @@
 'use client'
 
+import { useState, useTransition } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { useLanguage } from '@/lib/i18n/context'
 import { Home, PieChart, Camera, MoreHorizontal } from 'lucide-react'
@@ -23,7 +24,15 @@ const TABS: TabDef[] = [
 
 export function BottomTabBar() {
     const pathname = usePathname()
+    const router = useRouter()
     const { t } = useLanguage()
+    const [isPending, startTransition] = useTransition()
+    // 클릭 즉시 active 상태 반영 — transition 진행 중에만 사용, 완료되면 pathname 기준으로 자동 복귀
+    const [optimisticHref, setOptimisticHref] = useState<string | null>(null)
+
+    const isTabActive = (tab: TabDef, target: string) => {
+        return tab.exact ? target === tab.href : target === tab.href || target.startsWith(tab.href + '/')
+    }
 
     return (
         <nav
@@ -37,18 +46,32 @@ export function BottomTabBar() {
         >
             <ul className="flex items-stretch justify-around max-w-[480px] mx-auto px-1 pt-2 pb-1.5">
                 {TABS.map(tab => {
-                    const isActive = tab.exact
-                        ? pathname === tab.href
-                        : pathname === tab.href || pathname.startsWith(tab.href + '/')
+                    const realActive = isTabActive(tab, pathname)
+                    // transition 중일 때만 낙관적 상태 사용, 완료 후엔 pathname 기준
+                    const optimisticActive =
+                        isPending && optimisticHref ? isTabActive(tab, optimisticHref) : false
+                    const isActive = isPending && optimisticHref ? optimisticActive : realActive
                     const Icon = tab.icon
                     return (
                         <li key={tab.href} className="flex-1 min-w-0">
                             <Link
                                 href={tab.href}
+                                prefetch={true}
                                 aria-current={isActive ? 'page' : undefined}
+                                onMouseEnter={() => router.prefetch(tab.href)}
+                                onTouchStart={() => router.prefetch(tab.href)}
+                                onClick={(e) => {
+                                    if (realActive) return
+                                    e.preventDefault()
+                                    setOptimisticHref(tab.href)
+                                    startTransition(() => {
+                                        router.push(tab.href)
+                                    })
+                                }}
                                 className={cn(
                                     'flex flex-col items-center justify-center gap-0.5 px-2 py-1 transition-colors min-h-[44px]',
                                     isActive ? 'text-primary' : 'text-muted-foreground',
+                                    isPending && optimisticActive ? 'opacity-90' : '',
                                 )}
                             >
                                 <span className="h-[26px] flex items-center justify-center">
@@ -67,6 +90,17 @@ export function BottomTabBar() {
                     )
                 })}
             </ul>
+            {/* 라우트 전환 진행 인디케이터 (상단 1.5px 라인) */}
+            <div
+                aria-hidden
+                className={cn(
+                    'absolute left-0 right-0 -top-px h-[1.5px] overflow-hidden pointer-events-none',
+                    isPending ? 'opacity-100' : 'opacity-0',
+                    'transition-opacity duration-150',
+                )}
+            >
+                <div className="h-full w-full bg-primary animate-indeterminate" />
+            </div>
         </nav>
     )
 }
