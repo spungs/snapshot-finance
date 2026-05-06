@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import Decimal from 'decimal.js'
 import { auth } from '@/lib/auth'
+import { snapshotService } from '@/lib/services/snapshot-service'
 import { validateQuantity, validateAveragePrice, validateCashAmount } from '@/lib/validation/portfolio-input'
 
 const MAX_HOLDINGS_PER_SNAPSHOT = 200
@@ -102,6 +103,9 @@ export async function DELETE(
     await prisma.portfolioSnapshot.delete({
       where: { id },
     })
+
+    // 차트 캐시 무효화
+    await snapshotService.invalidateChart(session.user.id)
 
     return NextResponse.json({
       success: true,
@@ -301,6 +305,9 @@ export async function PUT(
         })
       }
     })
+
+    // 차트 캐시 무효화
+    await snapshotService.invalidateChart(session.user.id)
 
     return NextResponse.json({
       success: true,

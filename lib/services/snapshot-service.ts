@@ -1,4 +1,22 @@
 import { prisma } from '@/lib/prisma'
+import { cacheGet, cacheSet, cacheDelete } from '@/lib/cache'
+
+// 홈 PerformanceChart 용 사용자별 캐시.
+// - period(1M/3M/6M/1Y/ALL) 가 바뀌어도 동일 키를 공유 → 스위칭 즉시 응답.
+// - 변이(create/delete/update)는 invalidateChart() 로 즉시 무효화.
+// - cron(일일 스냅샷)은 별도 invalidate 안 해도 5분 TTL 이 자연스럽게 처리.
+const SNAPSHOTS_CHART_TTL_SECONDS = 300
+const snapshotsChartKey = (userId: string) => `chart:snapshots:${userId}`
+
+export interface ChartDataPoint {
+    date: string
+    totalValue: number
+    totalCost: number
+    totalProfit: number
+    profitRate: number
+    cashBalance: number
+    totalAsset: number
+}
 
 export const snapshotService = {
     async getList(userId: string, limit: number = 20, cursor?: string) {
@@ -48,5 +66,49 @@ export const snapshotService = {
         if (!snapshot) return null
 
         return snapshot
+    },
+
+    /**
+     * 홈 PerformanceChart 데이터를 Redis 우선으로 조회.
+     * 캐시 hit 시 DB 미접근. 모든 period 가 동일 캐시 항목을 공유한다.
+     */
+    async getChartData(userId: string): Promise<ChartDataPoint[]> {
+        const key = snapshotsChartKey(userId)
+        const cached = await cacheGet<ChartDataPoint[]>(key)
+        if (cached) return cached
+
+        const snapshots = await prisma.portfolioSnapshot.findMany({
+            where: { userId },
+            orderBy: { snapshotDate: 'asc' },
+            select: {
+                snapshotDate: true,
+                totalValue: true,
+                totalCost: true,
+                totalProfit: true,
+                profitRate: true,
+                cashBalance: true,
+            },
+        })
+
+        const items: ChartDataPoint[] = snapshots.map((s) => ({
+            date: s.snapshotDate.toISOString(),
+            totalValue: Number(s.totalValue),
+            totalCost: Number(s.totalCost),
+            totalProfit: Number(s.totalProfit),
+            profitRate: Number(s.profitRate),
+            cashBalance: Number(s.cashBalance),
+            // 총 자산 = 주식 평가액 + 예수금
+            totalAsset: Number(s.totalValue) + Number(s.cashBalance),
+        }))
+
+        await cacheSet(key, items, SNAPSHOTS_CHART_TTL_SECONDS)
+        return items
+    },
+
+    /**
+     * 스냅샷 변이 직후 호출. 다음 차트 조회는 fresh DB 결과를 받는다.
+     */
+    async invalidateChart(userId: string) {
+        await cacheDelete(snapshotsChartKey(userId))
     },
 }

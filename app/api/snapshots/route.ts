@@ -183,6 +183,9 @@ export async function POST(request: NextRequest) {
       },
     })
 
+    // 차트 캐시 무효화 — 다음 홈 진입에서 fresh DB 결과 반영
+    await snapshotService.invalidateChart(userId)
+
     return NextResponse.json({ success: true, data: snapshot }, { status: 201 })
   } catch (error) {
     console.error('Snapshot creation error:', error)
