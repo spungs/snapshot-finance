@@ -11,7 +11,12 @@ export function SnapshotsSkeleton() {
     return (
         <>
         <SkeletonLoaderBar />
-        <LoadingHint stage1="스냅샷을 불러오는 중..." stage2="조금만 더 기다려 주세요" />
+        <LoadingHint messages={[
+            '스냅샷을 불러오는 중...',
+            '기록을 정렬하는 중...',
+            '타임라인을 준비하는 중...',
+            '조금만 더 기다려 주세요',
+        ]} />
         <div className="flex-1 min-h-0 overflow-hidden">
         <div className="max-w-[420px] md:max-w-2xl mx-auto w-full pb-4 animate-pulse">
             {/* Hero — 페이지 타이틀 */}

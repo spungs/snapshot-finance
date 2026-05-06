@@ -11,7 +11,12 @@ export function PortfolioSkeleton() {
     return (
         <>
         <SkeletonLoaderBar />
-        <LoadingHint stage1="보유 종목 시세를 가져오는 중..." stage2="조금만 더 기다려 주세요" />
+        <LoadingHint messages={[
+            '보유 종목 시세를 가져오는 중...',
+            '수익률을 계산하는 중...',
+            '비중을 분석하는 중...',
+            '조금만 더 기다려 주세요',
+        ]} />
         <div className="flex-1 min-h-0 overflow-hidden">
         <div className="max-w-[480px] md:max-w-2xl mx-auto w-full animate-pulse">
             {/* Hero — 페이지 타이틀 + 공유 버튼 자리 */}

@@ -11,7 +11,12 @@ export function HomeSkeleton() {
     return (
         <>
         <SkeletonLoaderBar />
-        <LoadingHint stage1="보유 종목 시세를 가져오는 중..." stage2="조금만 더 기다려 주세요" />
+        <LoadingHint messages={[
+            '보유 종목 시세를 가져오는 중...',
+            '포트폴리오 평가액을 계산하는 중...',
+            '차트를 준비하는 중...',
+            '조금만 더 기다려 주세요',
+        ]} />
         {/* flex-1 + min-h-0 + overflow-hidden — 스켈레톤이 viewport 를 넘겨도 스크롤 안 생김 */}
         <div className="flex-1 min-h-0 overflow-hidden">
         <div className="max-w-[480px] md:max-w-2xl mx-auto w-full animate-pulse">
