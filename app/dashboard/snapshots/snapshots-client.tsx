@@ -16,6 +16,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useRouter } from 'next/navigation'
+import { invalidateSwPagesCache } from '@/lib/sw-invalidate'
 import { toast } from 'sonner'
 
 interface Snapshot {
@@ -170,6 +171,8 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings }: Snapshots
                     const remaining = snapshots.filter(s => s.id !== id)
                     setActiveId(remaining[0]?.id ?? null)
                 }
+                // 다른 페이지(홈 차트 등)의 stale 캐시 방지
+                await invalidateSwPagesCache()
             } else {
                 alert(response.error?.message || t('deleteFailed'))
             }

@@ -4,6 +4,7 @@ import { useState, useCallback, useMemo, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { holdingsApi } from '@/lib/api/client'
+import { invalidateSwPagesCache } from '@/lib/sw-invalidate'
 import { formatCurrency, formatNumber, formatProfitRate } from '@/lib/utils/formatters'
 import { cn } from '@/lib/utils'
 import { useLanguage } from '@/lib/i18n/context'
@@ -149,6 +150,9 @@ export function PortfolioClient({ initialHoldings, summary, userName }: Props) {
             setHoldings(res.data.holdings)
             setCurrentSummary(res.data.summary)
             setSelectedSegIdx(null)
+            // 다른 페이지(홈 차트/요약, 스냅샷 등) 의 stale 캐시 방지 — 변이 후
+            // 홈으로 이동했을 때 종목 변경분이 즉시 반영되도록.
+            await invalidateSwPagesCache()
         }
     }, [])
 
