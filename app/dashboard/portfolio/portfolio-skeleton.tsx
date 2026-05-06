@@ -1,6 +1,7 @@
 // PortfolioClient와 동일한 레이아웃의 정적 스켈레톤.
 // KIS API를 포함한 데이터 페칭 동안 셸 안쪽에서 즉시 렌더된다.
 import { SkeletonLoaderBar } from '@/components/ui/skeleton-loader-bar'
+import { LoadingHint } from '@/components/ui/loading-hint'
 
 function Bar({ className = '' }: { className?: string }) {
     return <div className={`bg-muted rounded-sm ${className}`} aria-hidden />
@@ -10,6 +11,7 @@ export function PortfolioSkeleton() {
     return (
         <>
         <SkeletonLoaderBar />
+        <LoadingHint stage1="보유 종목 시세를 가져오는 중..." stage2="조금만 더 기다려 주세요" />
         <div className="max-w-[480px] md:max-w-2xl mx-auto w-full animate-pulse">
             {/* Hero — 페이지 타이틀 + 공유 버튼 자리 */}
             <section className="px-6 pt-3 pb-4 flex items-end justify-between gap-3">

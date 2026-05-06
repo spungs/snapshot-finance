@@ -3,6 +3,7 @@
 // 상단 SkeletonLoaderBar 가 시간 흐름을 시각화한다.
 
 import { SkeletonLoaderBar } from './skeleton-loader-bar'
+import { LoadingHint } from './loading-hint'
 
 function Bar({ className = '' }: { className?: string }) {
     return <div className={`bg-muted rounded-sm ${className}`} aria-hidden />
@@ -12,6 +13,7 @@ export function GenericPageSkeleton() {
     return (
         <>
             <SkeletonLoaderBar />
+            <LoadingHint />
             <div className="max-w-[480px] md:max-w-2xl mx-auto w-full animate-pulse">
                 {/* Title hero */}
                 <section className="px-6 pt-3 pb-4 space-y-2">
