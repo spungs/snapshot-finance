@@ -14,7 +14,7 @@ export async function updateCashBalance(amount: number) {
             where: { id: session.user.id },
             data: { cashBalance: amount }
         })
-        holdingService.invalidate(session.user.id)
+        await holdingService.invalidate(session.user.id)
         revalidatePath('/dashboard')
         return { success: true }
     } catch (error) {
@@ -345,7 +345,7 @@ export async function executeBulkImport(
             maxWait: 10000,
         })
 
-        holdingService.invalidate(userId)
+        await holdingService.invalidate(userId)
         revalidatePath('/dashboard')
         return { success: true, count: result.successCount, errors: result.errors }
 

@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import yahooFinance from '@/lib/yahoo-finance'
+import { cacheGet, cacheSet } from '@/lib/cache'
 
 const KIS_BASE_URL = {
     REAL: 'https://openapi.koreainvestment.com:9443',
@@ -23,15 +24,15 @@ interface AccessToken {
 // Simple in-memory cache for token (Note: This resets on server restart. For production, use DB or Redis)
 let cachedToken: AccessToken | null = null
 
-// Price Cache to prevent 429 Rate Limits
+// Price Cache to prevent 429 Rate Limits — Redis 기반으로 변경
+// 이전 in-memory Map은 Vercel Serverless 인스턴스간 공유 안 되어 효과 미미했음
 interface PriceCacheItem {
     price: number
     change: number
     changeRate: number
-    timestamp: number
 }
-const priceCache: Map<string, PriceCacheItem> = new Map()
-const PRICE_CACHE_DURATION = 1000 * 60 * 2 // 2 minutes
+const PRICE_CACHE_TTL_SECONDS = 120 // 2 minutes
+const priceCacheKey = (market: string, symbol: string) => `kis:price:${market}:${symbol}`
 
 export class KisClient {
     private tokenPromise: Promise<string> | null = null
@@ -113,11 +114,10 @@ export class KisClient {
     }
 
     async getCurrentPrice(symbol: string, market: 'KOSPI' | 'KOSDAQ' | 'US' = 'KOSPI', retryCount = 0): Promise<{ price: number; change: number; changeRate: number }> {
-        // 1. Check Cache
-        const cacheKey = `${market}:${symbol}`
-        const cached = priceCache.get(cacheKey)
-        if (cached && (Date.now() - cached.timestamp < PRICE_CACHE_DURATION)) {
-            // console.log(`[Cache] Hit for ${symbol}`)
+        // 1. Check Redis Cache
+        const cacheKey = priceCacheKey(market, symbol)
+        const cached = await cacheGet<PriceCacheItem>(cacheKey)
+        if (cached) {
             return {
                 price: cached.price,
                 change: cached.change,
@@ -178,7 +178,7 @@ export class KisClient {
                 change: parseInt(data.output.prdy_vrss), // Change amount
                 changeRate: parseFloat(data.output.prdy_ctrt), // Change rate
             }
-            priceCache.set(cacheKey, { ...result, timestamp: Date.now() })
+            await cacheSet(cacheKey, result, PRICE_CACHE_TTL_SECONDS)
             return result
         }
 
@@ -217,7 +217,7 @@ export class KisClient {
                     change,
                     changeRate,
                 }
-                priceCache.set(cacheKey, { ...result, timestamp: Date.now() })
+                await cacheSet(cacheKey, result, PRICE_CACHE_TTL_SECONDS)
                 return result
 
             } catch (error) {

@@ -54,7 +54,7 @@ export async function updateTargetAsset(amount: number) {
             where: { id: session.user.id },
             data: { targetAsset: amount },
         })
-        holdingService.invalidate(session.user.id)
+        await holdingService.invalidate(session.user.id)
         revalidatePath('/dashboard')
         return { success: true }
     } catch (error) {

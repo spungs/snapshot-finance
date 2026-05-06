@@ -68,7 +68,7 @@ export async function PATCH(
             include: { stock: true },
         })
 
-        holdingService.invalidate(session.user.id)
+        await holdingService.invalidate(session.user.id)
         return NextResponse.json({ success: true, data: updated })
     } catch (error) {
         console.error('Holding update error:', error)
@@ -109,7 +109,7 @@ export async function DELETE(
 
         await prisma.holding.delete({ where: { id } })
 
-        holdingService.invalidate(session.user.id)
+        await holdingService.invalidate(session.user.id)
         return NextResponse.json({ success: true, message: '종목이 삭제되었습니다.' })
     } catch (error) {
         console.error('Holding delete error:', error)

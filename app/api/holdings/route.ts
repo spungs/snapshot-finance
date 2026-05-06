@@ -185,7 +185,7 @@ export async function POST(request: NextRequest) {
             })
         }
 
-        holdingService.invalidate(userId)
+        await holdingService.invalidate(userId)
         return NextResponse.json({ success: true, data: holding })
     } catch (error) {
         console.error('Holding create error:', error)

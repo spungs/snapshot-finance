@@ -3,10 +3,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import yahooFinance from '@/lib/yahoo-finance'
 import { prisma } from '@/lib/prisma'
 import { ratelimit, getIP, checkRateLimit } from '@/lib/ratelimit'
+import { cacheGet, cacheSet } from '@/lib/cache'
 
-// Simple in-memory cache to prevent rate limiting
-const SEARCH_CACHE = new Map<string, { data: any, timestamp: number }>()
-const CACHE_TTL = 1000 * 60 * 60 * 6 // 6 hours
+// Redis 기반 검색 결과 캐시 — 외부 API rate limit 보호용
+// 이전 in-memory Map은 Vercel Serverless 인스턴스간 공유 안 되어 효과 미미했음
+const SEARCH_CACHE_TTL_SECONDS = 60 * 60 * 6 // 6 hours
+const searchCacheKey = (query: string) => `stocks:search:${query.toLowerCase()}`
 
 export async function GET(request: NextRequest) {
     // Rate limiting
@@ -160,13 +162,12 @@ export async function GET(request: NextRequest) {
 
         // 2. English Search - Use Yahoo Finance
         try {
-            // Check Cache first
-            const now = Date.now()
-            const cacheKey = query.toLowerCase()
-            const cached = SEARCH_CACHE.get(cacheKey)
+            // Check Redis cache first
+            const cacheKey = searchCacheKey(query)
+            const cached = await cacheGet<any[]>(cacheKey)
 
-            if (cached && (now - cached.timestamp < CACHE_TTL)) {
-                return NextResponse.json({ success: true, data: cached.data, source: 'cache' })
+            if (cached) {
+                return NextResponse.json({ success: true, data: cached, source: 'cache' })
             }
 
             // Use singleton instance to share session/cookies and avoid rate limits
@@ -186,13 +187,7 @@ export async function GET(request: NextRequest) {
                     market: quote.exchange === 'KOE' ? 'KOSPI' : quote.exchange === 'KO' ? 'KOSDAQ' : 'US',
                 }))
 
-            // Update Cache
-            // Limit cache size to prevent memory leak (simple approach)
-            if (SEARCH_CACHE.size > 1000) {
-                const firstKey = SEARCH_CACHE.keys().next().value
-                if (firstKey) SEARCH_CACHE.delete(firstKey) // Remove oldest key (insertion order in Map)
-            }
-            SEARCH_CACHE.set(cacheKey, { data: formattedResults, timestamp: now })
+            await cacheSet(cacheKey, formattedResults, SEARCH_CACHE_TTL_SECONDS)
 
             return NextResponse.json({ success: true, data: formattedResults })
         } catch (yahooError: any) {
@@ -236,13 +231,7 @@ export async function GET(request: NextRequest) {
                     }))
 
                 // Cache Finnhub results too
-                const now = Date.now()
-                const cacheKey = query.toLowerCase()
-                if (SEARCH_CACHE.size > 1000) {
-                    const firstKey = SEARCH_CACHE.keys().next().value
-                    if (firstKey) SEARCH_CACHE.delete(firstKey)
-                }
-                SEARCH_CACHE.set(cacheKey, { data: formattedResults, timestamp: now })
+                await cacheSet(searchCacheKey(query), formattedResults, SEARCH_CACHE_TTL_SECONDS)
 
                 console.log(`Finnhub Search Success: ${formattedResults.length} results`)
                 return NextResponse.json({ success: true, data: formattedResults, source: 'finnhub' })

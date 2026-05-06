@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { kisClient } from '@/lib/api/kis-client'
 import { getUsdExchangeRate } from '@/lib/api/exchange-rate'
+import { cacheGet, cacheSet, cacheDelete } from '@/lib/cache'
 
 // Helper function to fetch current price (KIS API)
 async function fetchCurrentPrice(stockCode: string, market: string): Promise<number> {
@@ -20,12 +21,13 @@ async function fetchCurrentPrice(stockCode: string, market: string): Promise<num
     }
 }
 
-// In-memory TTL cache for getList — same userId hitting home/portfolio in quick
-// succession (e.g., tab switching) reuses the result instead of re-running KIS calls.
-// Stored value is the full success response; mutations call invalidate() below.
-const HOLDINGS_CACHE_TTL_MS = 10_000
+// Redis-backed TTL cache for getList — 빠른 연속 요청(탭 전환 등) 시
+// KIS 가격 조회를 재실행하지 않고 결과 재사용. Mutation 시 invalidate() 호출.
+// 이전 in-memory Map은 Vercel Serverless에서 인스턴스간 공유 안 되어 효과 미미했음.
+const HOLDINGS_CACHE_TTL_SECONDS = 10
+const holdingsCacheKey = (userId: string) => `holdings:list:${userId}`
+
 type HoldingsListResult = Awaited<ReturnType<typeof computeList>>
-const holdingsCache = new Map<string, { data: HoldingsListResult; expiresAt: number }>()
 
 async function computeList(userId: string) {
     return holdingServiceInternal._compute(userId)
@@ -34,24 +36,22 @@ async function computeList(userId: string) {
 export const holdingService = {
     /** Drop the cached holdings result for a user. Call after any mutation that
      *  affects holdings, cashBalance, or targetAsset so the next read reflects it. */
-    invalidate(userId: string) {
-        holdingsCache.delete(userId)
+    async invalidate(userId: string) {
+        await cacheDelete(holdingsCacheKey(userId))
     },
 
     async getList(userId: string) {
-        const cached = holdingsCache.get(userId)
-        if (cached && cached.expiresAt > Date.now()) {
-            return cached.data
+        const key = holdingsCacheKey(userId)
+        const cached = await cacheGet<HoldingsListResult>(key)
+        if (cached) {
+            return cached
         }
 
         const result = await computeList(userId)
 
         // Only cache successful responses; failures should retry on next request
         if (result?.success) {
-            holdingsCache.set(userId, {
-                data: result,
-                expiresAt: Date.now() + HOLDINGS_CACHE_TTL_MS,
-            })
+            await cacheSet(key, result, HOLDINGS_CACHE_TTL_SECONDS)
         }
 
         return result

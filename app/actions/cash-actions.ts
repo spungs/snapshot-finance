@@ -24,7 +24,7 @@ export async function updateCashBalance(amount: number) {
             data: { cashBalance: validated.value }
         })
 
-        holdingService.invalidate(session.user.id)
+        await holdingService.invalidate(session.user.id)
         revalidatePath('/dashboard')
         return { success: true }
     } catch (error) {
