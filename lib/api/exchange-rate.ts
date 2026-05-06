@@ -9,8 +9,21 @@
 // and frequently returns 429 Too Many Requests, which previously cost ~2.5s
 // per cold cache miss while the fallback chain unwound. KIS does not expose a
 // reliable public FX endpoint either, so it's omitted as well.
+//
+// 캐시 계층:
+//   L1: in-memory (per Lambda 인스턴스, 5분)  — 가장 빠름
+//   L2: Redis (모든 인스턴스 공유, 10분)        — cron 이 주기적으로 갱신
+//   L3: 위 sources
 
-const CACHE_DURATION_MS = 1000 * 60 * 5 // 5 minutes
+import {
+    cacheGet,
+    cacheSet,
+    exchangeRateKey,
+    EXCHANGE_RATE_CACHE_TTL_SECONDS,
+    type ExchangeRateCacheEntry,
+} from '@/lib/cache'
+
+const CACHE_DURATION_MS = 1000 * 60 * 5 // 5 minutes (in-memory L1)
 let cachedRate: { price: number; timestamp: number } | null = null
 
 const HARD_FALLBACK_KRW_PER_USD = 1400
@@ -67,12 +80,23 @@ const SOURCES: Array<{ name: string; fn: RateSource }> = [
 export async function getUsdExchangeRate(): Promise<number> {
     const now = Date.now()
 
-    // 1. Hot cache
+    // 1. L1: in-memory hot cache
     if (cachedRate && now - cachedRate.timestamp < CACHE_DURATION_MS) {
         return cachedRate.price
     }
 
-    // 2. Try each source in order with a per-source timeout so a hung endpoint
+    // 2. L2: Redis 공유 캐시 (cron 이 갱신해 둔 값)
+    try {
+        const shared = await cacheGet<ExchangeRateCacheEntry>(exchangeRateKey())
+        if (shared && Number.isFinite(shared.rate) && shared.rate > 0) {
+            cachedRate = { price: shared.rate, timestamp: now }
+            return shared.rate
+        }
+    } catch {
+        // fail-open: Redis 장애 시 sources 로 진행
+    }
+
+    // 3. L3: Try each source in order with a per-source timeout so a hung endpoint
     //    can't sink the entire request.
     for (const source of SOURCES) {
         const controller = new AbortController()
@@ -82,6 +106,12 @@ export async function getUsdExchangeRate(): Promise<number> {
             if (rate !== null) {
                 cachedRate = { price: rate, timestamp: now }
                 console.log(`Exchange Rate Updated: ${rate} (Source: ${source.name})`)
+                // L2 채워두기 — 다른 인스턴스도 즉시 혜택
+                cacheSet(
+                    exchangeRateKey(),
+                    { rate, updatedAt: new Date().toISOString() } satisfies ExchangeRateCacheEntry,
+                    EXCHANGE_RATE_CACHE_TTL_SECONDS,
+                ).catch(() => { })
                 return rate
             }
         } catch (e) {
@@ -91,7 +121,7 @@ export async function getUsdExchangeRate(): Promise<number> {
         }
     }
 
-    // 3. Stale cache wins over hard fallback
+    // 4. Stale cache wins over hard fallback
     if (cachedRate) {
         console.warn('All FX sources failed, using stale cache.')
         return cachedRate.price
