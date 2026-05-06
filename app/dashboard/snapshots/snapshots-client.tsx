@@ -77,6 +77,13 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings }: Snapshots
     const [selectedIds, setSelectedIds] = useState<string[]>([])
     const [activeId, setActiveId] = useState<string | null>(initialSnapshots[0]?.id ?? null)
 
+    // 부모 server component 가 router.refresh() 후 새 props 로 재렌더되면
+    // useState 초기값은 마운트 시 1회만 적용되므로 자동 동기화 안 됨.
+    // 명시적으로 props 변경을 감지해 state 갱신.
+    useEffect(() => {
+        setSnapshots(initialSnapshots)
+    }, [initialSnapshots])
+
     const [nextCursor, setNextCursor] = useState<string | undefined>(undefined)
     const [hasMore, setHasMore] = useState(initialSnapshots.length >= 20)
     const [isLoadingMore, setIsLoadingMore] = useState(false)

@@ -85,6 +85,18 @@ export function PortfolioClient({ initialHoldings, summary, userName }: Props) {
     const { baseCurrency } = useCurrency()
     const [holdings, setHoldings] = useState<Holding[]>(initialHoldings)
     const [currentSummary, setCurrentSummary] = useState<Summary>(summary)
+
+    // 부모 server component 가 router.refresh() 로 새 props 를 내려보내면
+    // useState 의 초기값은 마운트 시점에만 적용되므로 자동 갱신 안 됨.
+    // 명시적으로 props 변경을 감지해 state 를 동기화한다.
+    // (예: 예수금/목표금액/스냅샷 변이 후 home 또는 portfolio 가 fresh 데이터로
+    //  rerender 되었을 때 화면이 즉시 반영되어야 함.)
+    useEffect(() => {
+        setHoldings(initialHoldings)
+    }, [initialHoldings])
+    useEffect(() => {
+        setCurrentSummary(summary)
+    }, [summary])
     const [sortKey, setSortKey] = useState<SortKey>('profit')
     const [sortDir, setSortDir] = useState<SortDir>('desc')
     const [selectedSegIdx, setSelectedSegIdx] = useState<number | null>(null)
