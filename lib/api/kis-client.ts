@@ -1,6 +1,12 @@
 import { prisma } from '@/lib/prisma'
 import yahooFinance from '@/lib/yahoo-finance'
-import { cacheGet, cacheSet } from '@/lib/cache'
+import {
+    cacheGet,
+    cacheSet,
+    stockPriceKey,
+    PRICE_CACHE_TTL_SECONDS,
+    type PriceCacheEntry,
+} from '@/lib/cache'
 
 const KIS_BASE_URL = {
     REAL: 'https://openapi.koreainvestment.com:9443',
@@ -24,15 +30,9 @@ interface AccessToken {
 // Simple in-memory cache for token (Note: This resets on server restart. For production, use DB or Redis)
 let cachedToken: AccessToken | null = null
 
-// Price Cache to prevent 429 Rate Limits — Redis 기반으로 변경
-// 이전 in-memory Map은 Vercel Serverless 인스턴스간 공유 안 되어 효과 미미했음
-interface PriceCacheItem {
-    price: number
-    change: number
-    changeRate: number
-}
-const PRICE_CACHE_TTL_SECONDS = 120 // 2 minutes
-const priceCacheKey = (market: string, symbol: string) => `kis:price:${market}:${symbol}`
+// Price Cache: lib/cache.ts 의 공용 stock:price:{stockCode} 키를 사용한다.
+// cron(/api/cron/update-prices) 이 같은 키를 주기적으로 갱신하므로
+// 캐시 hit 시 사용자 요청에서 KIS 호출이 발생하지 않는다.
 
 export class KisClient {
     private tokenPromise: Promise<string> | null = null
@@ -114,14 +114,14 @@ export class KisClient {
     }
 
     async getCurrentPrice(symbol: string, market: 'KOSPI' | 'KOSDAQ' | 'US' = 'KOSPI', retryCount = 0): Promise<{ price: number; change: number; changeRate: number }> {
-        // 1. Check Redis Cache
-        const cacheKey = priceCacheKey(market, symbol)
-        const cached = await cacheGet<PriceCacheItem>(cacheKey)
-        if (cached) {
+        // 1. Check Redis Cache (cron 이 갱신해 두는 공용 키)
+        const cacheKey = stockPriceKey(symbol)
+        const cached = await cacheGet<PriceCacheEntry>(cacheKey)
+        if (cached && Number.isFinite(cached.price) && cached.price > 0) {
             return {
                 price: cached.price,
                 change: cached.change,
-                changeRate: cached.changeRate
+                changeRate: cached.changeRate,
             }
         }
 
@@ -178,7 +178,12 @@ export class KisClient {
                 change: parseInt(data.output.prdy_vrss), // Change amount
                 changeRate: parseFloat(data.output.prdy_ctrt), // Change rate
             }
-            await cacheSet(cacheKey, result, PRICE_CACHE_TTL_SECONDS)
+            const entry: PriceCacheEntry = {
+                ...result,
+                currency: 'KRW',
+                updatedAt: new Date().toISOString(),
+            }
+            await cacheSet(cacheKey, entry, PRICE_CACHE_TTL_SECONDS)
             return result
         }
 
@@ -217,7 +222,12 @@ export class KisClient {
                     change,
                     changeRate,
                 }
-                await cacheSet(cacheKey, result, PRICE_CACHE_TTL_SECONDS)
+                const entry: PriceCacheEntry = {
+                    ...result,
+                    currency: 'USD',
+                    updatedAt: new Date().toISOString(),
+                }
+                await cacheSet(cacheKey, entry, PRICE_CACHE_TTL_SECONDS)
                 return result
 
             } catch (error) {

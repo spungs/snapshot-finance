@@ -1,11 +1,24 @@
 import { prisma } from '@/lib/prisma'
 import { kisClient } from '@/lib/api/kis-client'
 import { getUsdExchangeRate } from '@/lib/api/exchange-rate'
-import { cacheGet, cacheSet, cacheDelete } from '@/lib/cache'
+import {
+    cacheGet,
+    cacheSet,
+    cacheDelete,
+    stockPriceKey,
+    PRICE_CACHE_TTL_SECONDS,
+    type PriceCacheEntry,
+} from '@/lib/cache'
 import Decimal from 'decimal.js'
 
-// Helper function to fetch current price (KIS API)
+// 가격 조회: 우선 Redis(stock:price:{code}) → 미스 시 KIS 직접 호출.
+// cron 미실행 / 캐시 만료 / 신규 보유 종목 등 어떤 상태에서도 동작 보장.
 async function fetchCurrentPrice(stockCode: string, market: string): Promise<number> {
+    const cached = await cacheGet<PriceCacheEntry>(stockPriceKey(stockCode))
+    if (cached && Number.isFinite(cached.price) && cached.price > 0) {
+        return cached.price
+    }
+
     try {
         let marketType: 'KOSPI' | 'KOSDAQ' | 'US' = 'KOSPI'
         if (market === 'US' || market === 'NAS' || market === 'NYS' || market === 'AMS') {
@@ -15,12 +28,25 @@ async function fetchCurrentPrice(stockCode: string, market: string): Promise<num
         }
 
         const priceData = await kisClient.getCurrentPrice(stockCode, marketType)
+        if (Number.isFinite(priceData.price) && priceData.price > 0) {
+            const entry: PriceCacheEntry = {
+                price: priceData.price,
+                currency: marketType === 'US' ? 'USD' : 'KRW',
+                change: priceData.change ?? 0,
+                changeRate: priceData.changeRate ?? 0,
+                updatedAt: new Date().toISOString(),
+            }
+            await cacheSet(stockPriceKey(stockCode), entry, PRICE_CACHE_TTL_SECONDS)
+        }
         return priceData.price
     } catch (e) {
         console.warn(`Failed to fetch price for ${stockCode}:`, e)
         return 0
     }
 }
+
+// 환율 조회는 lib/api/exchange-rate.ts 의 L1(in-memory) → L2(Redis) → sources
+// 계층화된 캐시를 그대로 위임한다.
 
 // Redis-backed TTL cache for getList — 빠른 연속 요청(탭 전환 등) 시
 // KIS 가격 조회를 재실행하지 않고 결과 재사용. Mutation 시 invalidate() 호출.
@@ -80,10 +106,8 @@ const holdingServiceInternal = {
             const targetAsset = user?.targetAsset ? new Decimal(user.targetAsset.toString()) : new Decimal(0)
 
             // Fetch FX rate and per-stock prices in a single parallel batch.
-            // — `getCurrentPrice` already de-dupes the KIS token fetch via tokenPromise,
-            //   so a separate `ensureConnection()` priming step is redundant.
-            // — FX call is independent of stock prices, so running them serially
-            //   (the previous structure) just stacked latency.
+            // 둘 다 내부적으로 Redis(공유 캐시) 우선 조회 후 미스 시 직접 호출 —
+            // cron 이 갱신해 둔 캐시 히트 시 외부 API 호출 0건으로 응답 가능.
             const fxPromise = getUsdExchangeRate()
 
             // 개별 종목 시세를 병렬로 가져온다. 시세→DB write 부작용은
