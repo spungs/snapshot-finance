@@ -1,9 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { MobileNav } from '@/components/mobile-nav'
+import { SnapshotLogo } from '@/components/icons/snapshot-logo'
 import { useLanguage } from '@/lib/i18n/context'
 import { translations } from '@/lib/i18n/translations'
 
@@ -13,8 +13,8 @@ export function SiteHeader() {
 
     return (
         <header className="px-4 lg:px-6 h-14 flex items-center border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50 justify-between">
-            <Link className="flex items-center justify-center font-bold text-xl" href="/">
-                <Image src="/logo.png" alt="Snapshot Finance" width={48} height={48} className="mr-3" priority />
+            <Link className="flex items-center gap-2 font-bold text-xl" href="/">
+                <SnapshotLogo size={28} className="text-primary" />
                 Snapshot Finance
             </Link>
             <nav className="hidden sm:flex ml-auto gap-4 sm:gap-6 items-center">

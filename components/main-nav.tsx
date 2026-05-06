@@ -2,10 +2,10 @@
 
 import React from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { NavLinks } from '@/components/dashboard/nav-links'
 import { MobileNav } from '@/components/mobile-nav'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
+import { SnapshotLogo } from '@/components/icons/snapshot-logo'
 
 interface MainNavProps {
     user?: any
@@ -17,8 +17,8 @@ export function MainNav({ user }: MainNavProps) {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between items-center h-16">
                     <Link href={user ? "/dashboard" : "/"} prefetch={true} className="flex items-center">
-                        <div className="text-xl font-bold text-foreground flex items-center gap-3">
-                            <Image src="/logo.png" alt="Snapshot Finance" width={48} height={48} priority />
+                        <div className="text-xl font-bold text-foreground flex items-center gap-2">
+                            <SnapshotLogo size={28} className="text-primary" />
                             Snapshot Finance
                         </div>
                     </Link>

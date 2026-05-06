@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import Image from 'next/image'
+import { SnapshotLogo } from '@/components/icons/snapshot-logo'
 
 interface ScreenHeaderProps {
     right?: React.ReactNode
@@ -14,8 +14,8 @@ export function ScreenHeader({ right }: ScreenHeaderProps) {
             style={{ paddingTop: 'calc(0.875rem + var(--safe-top, 0px))' }}
         >
             <div className="px-6 pb-2 flex items-center justify-between max-w-[480px] md:max-w-2xl mx-auto">
-                <Link href="/dashboard" className="flex items-center gap-3 min-h-[44px]">
-                    <Image src="/logo.png" alt="Snapshot" width={48} height={48} priority />
+                <Link href="/dashboard" className="flex items-center gap-2 min-h-[44px]">
+                    <SnapshotLogo size={28} className="text-primary" />
                     <span className="text-lg font-bold text-foreground tracking-tight">
                         Snapshot
                     </span>

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
+import { SnapshotLogo } from '@/components/icons/snapshot-logo'
 import { Menu, X, LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
@@ -70,21 +70,19 @@ export function MobileNav({ type, user }: MobileNavProps) {
                         {type === 'dashboard' ? (
                             <Link
                                 href="/dashboard"
-                                className="flex items-center font-bold text-xl"
+                                className="flex items-center gap-2 font-bold text-xl"
                                 onClick={() => setOpen(false)}
                             >
-                                <div className="flex items-center font-bold text-xl">
-                                    <Image src="/logo.png" alt="Snapshot Finance" width={48} height={48} className="mr-3" />
-                                    Snapshot Finance
-                                </div>
+                                <SnapshotLogo size={28} className="text-primary" />
+                                Snapshot Finance
                             </Link>
                         ) : (
                             <Link
                                 href="/"
-                                className="flex items-center font-bold text-xl"
+                                className="flex items-center gap-2 font-bold text-xl"
                                 onClick={() => setOpen(false)}
                             >
-                                <Image src="/logo.png" alt="Snapshot Finance" width={48} height={48} className="mr-3" />
+                                <SnapshotLogo size={28} className="text-primary" />
                                 Snapshot Finance
                             </Link>
                         )}
