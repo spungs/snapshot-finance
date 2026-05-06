@@ -76,11 +76,13 @@ export default function SnapshotDetailClient({ snapshot }: Props) {
 
     const conv = (v: number) => (isEn && rate ? v / rate : v)
 
-    const totalValue = conv(Number(snapshot.totalValue))
+    // snapshot.totalValue 는 DB에 주식 평가금만 누적해 저장한 값(예수금은 cashBalance 컬럼에 별도 저장).
+    // "총 자산" hero는 주식 + 예수금이고, "주식 평가액" 카드는 stockValue 그대로 사용한다.
+    const stockValue = conv(Number(snapshot.totalValue))
     const totalCost = conv(Number(snapshot.totalCost))
     const totalProfit = conv(Number(snapshot.totalProfit))
     const cashBalance = conv(Number(snapshot.cashBalance))
-    const stockValue = totalValue - cashBalance
+    const totalAssets = stockValue + cashBalance
     const profitRate = Number(snapshot.profitRate)
     const isProfit = totalProfit >= 0
 
@@ -208,7 +210,7 @@ export default function SnapshotDetailClient({ snapshot }: Props) {
                     {t('totalValue')}
                 </div>
                 <div className="amount-display text-[30px] text-foreground leading-none">
-                    {formatCurrency(totalValue, currency)}
+                    {formatCurrency(totalAssets, currency)}
                 </div>
 
                 <div className="flex gap-4 mt-3.5 items-stretch">
