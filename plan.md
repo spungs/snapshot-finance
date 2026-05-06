@@ -41,7 +41,8 @@
 #### 4. 기타 유지보수
 - [x] Next.js 16 호환성 업데이트 (`middleware.ts` → `proxy.ts`)
 - [x] Vercel 배포 환경 이슈 해결 (DB 연결, 시간대, 환경변수)
-- [x] **Cron 표준화**: (Vercel) `vercel.json` 크론 1개(`daily-snapshot`)로 완전 통합 - *Free Plan 최적화*
+- [x] **Cron 표준화**: Supabase pg_cron 으로 통합 (`vercel.json` 제거) — daily-snapshot, M7 뉴스 7개, update-prices-kr/us 가격 워밍
+- [x] **미국주식 가격 공유 캐시**: `/api/cron/update-prices?market=US` cron 추가 + KIS 해외시세 폴백(EXCD 자동 매핑)
 - [x] **Snapshot 로직 고도화**: 단순 복사 -> **매일 실시간 시세 조회(Fetch)** 방식으로 업그레이드
 - [x] **스케줄링**: 월~금(UTC) 스냅샷 생성 / 매일 유저 정리 자동화
 - [x] **Weekly Snapshot 최적화**: 금요일 22:30 UTC (토요일 07:30 KST) 실행 및 중복 방지 로직 추가

@@ -34,6 +34,35 @@ let cachedToken: AccessToken | null = null
 // cron(/api/cron/update-prices) 이 같은 키를 주기적으로 갱신하므로
 // 캐시 hit 시 사용자 요청에서 KIS 호출이 발생하지 않는다.
 
+// 미국 거래소 코드 매핑 — Stock.market 값(혼재) → KIS EXCD.
+// 'NASD'/'NYSE'/'AMEX' 가 들어있으면 직접 매핑. 'US' 만 있는 종목은
+// KisStockMaster 를 조회해 추론, 그래도 없으면 NAS 폴백.
+async function resolveUsExcd(stockCode: string, market?: string | null): Promise<'NAS' | 'NYS' | 'AMS'> {
+    switch (market) {
+        case 'NASD':
+        case 'NAS':
+            return 'NAS'
+        case 'NYSE':
+        case 'NYS':
+            return 'NYS'
+        case 'AMEX':
+        case 'AMS':
+            return 'AMS'
+    }
+    try {
+        const master = await prisma.kisStockMaster.findUnique({
+            where: { stockCode },
+            select: { market: true },
+        })
+        if (master?.market === 'NYSE') return 'NYS'
+        if (master?.market === 'AMEX') return 'AMS'
+        if (master?.market === 'NASD') return 'NAS'
+    } catch (e) {
+        console.warn(`[KIS] resolveUsExcd lookup failed for ${stockCode}:`, e)
+    }
+    return 'NAS' // 가장 흔한 거래소를 기본값으로
+}
+
 export class KisClient {
     private tokenPromise: Promise<string> | null = null
 
@@ -188,55 +217,94 @@ export class KisClient {
         }
 
         // Overseas Stock (US)
+        // 1차: Finnhub (실시간) → 실패 시 2차: KIS 해외 현재가 (15분 지연)
         else {
-            try {
-                // Use Finnhub for US stocks (More stable than Yahoo Finance)
-                // Docs: https://finnhub.io/docs/api/quote
-                const apiKey = process.env.FINNHUB_API_KEY
-                if (!apiKey) {
-                    throw new Error('FINNHUB_API_KEY is missing in .env')
-                }
-
-                const response = await fetch(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${apiKey}`, {
-                    cache: 'no-store'
-                })
-
-                if (!response.ok) {
-                    throw new Error(`Finnhub API error: ${response.status}`)
-                }
-
-                const data = await response.json()
-                // Response format: { c: Current price, d: Change, dp: Percent change, h: High, l: Low, o: Open, pc: Previous close }
-
-                // Check if data is valid (sometimes Finnhub returns 0 for invalid symbols)
-                if (data.c === 0 && data.pc === 0) {
-                    throw new Error(`No data found for ${symbol}`)
-                }
-
-                const price = Number(data.c)
-                const change = Number(data.d) // Finnhub provides absolute change
-                const changeRate = Number(data.dp) // Finnhub provides percentage
-
-                const result = {
-                    price,
-                    change,
-                    changeRate,
-                }
-                const entry: PriceCacheEntry = {
-                    ...result,
-                    currency: 'USD',
-                    updatedAt: new Date().toISOString(),
-                }
-                await cacheSet(cacheKey, entry, PRICE_CACHE_TTL_SECONDS)
-                return result
-
-            } catch (error) {
-                // Enhance error message for logging
-                const msg = error instanceof Error ? error.message : String(error)
-                console.error(`Finnhub Error for ${symbol}:`, msg)
-                throw new Error(`Finnhub failed for ${symbol}: ${msg}`)
+            const result = await this.getUsPrice(symbol)
+            const entry: PriceCacheEntry = {
+                ...result,
+                currency: 'USD',
+                updatedAt: new Date().toISOString(),
             }
+            await cacheSet(cacheKey, entry, PRICE_CACHE_TTL_SECONDS)
+            return result
         }
+    }
+
+    // 미국주식 현재가 — Finnhub 우선, 실패 시 KIS 해외시세 폴백.
+    // Finnhub 무료 한도 초과/장애 시 cron 워밍이 끊기지 않도록 이중화.
+    private async getUsPrice(symbol: string): Promise<{ price: number; change: number; changeRate: number }> {
+        const finnhubKey = process.env.FINNHUB_API_KEY
+        if (finnhubKey) {
+            try {
+                const response = await fetch(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${finnhubKey}`, {
+                    cache: 'no-store',
+                })
+                if (response.ok) {
+                    const data = await response.json()
+                    // c=0 && pc=0 이면 invalid symbol 응답
+                    if (!(data.c === 0 && data.pc === 0)) {
+                        return {
+                            price: Number(data.c),
+                            change: Number(data.d),
+                            changeRate: Number(data.dp),
+                        }
+                    }
+                    console.warn(`[Finnhub] No data for ${symbol}, falling back to KIS`)
+                } else {
+                    console.warn(`[Finnhub] HTTP ${response.status} for ${symbol}, falling back to KIS`)
+                }
+            } catch (e) {
+                console.warn(`[Finnhub] Error for ${symbol}, falling back to KIS:`, e)
+            }
+        } else {
+            console.warn('[Finnhub] FINNHUB_API_KEY missing, using KIS only')
+        }
+
+        return this.getKisOverseasPrice(symbol)
+    }
+
+    // KIS 해외 현재가 단일 조회 (HHDFS00000300, 15분 지연 시세).
+    // 실시간 시세는 별도 신청 필요.
+    private async getKisOverseasPrice(symbol: string): Promise<{ price: number; change: number; changeRate: number }> {
+        const token = await this.getAccessToken()
+        const excd = await resolveUsExcd(symbol)
+
+        const path = '/uapi/overseas-price/v1/quotations/price'
+        const tr_id = 'HHDFS00000300'
+        const params = new URLSearchParams({
+            AUTH: '',
+            EXCD: excd,
+            SYMB: symbol,
+        })
+
+        const response = await fetch(`${BASE_URL}${path}?${params}`, {
+            headers: {
+                'Content-Type': 'application/json',
+                authorization: `Bearer ${token}`,
+                appkey: APP_KEY!,
+                appsecret: APP_SECRET!,
+                tr_id: tr_id,
+                custtype: 'P',
+            },
+            cache: 'no-store',
+        })
+
+        if (!response.ok) {
+            const errorText = await response.text()
+            throw new Error(`KIS Overseas Price ${response.status}: ${errorText}`)
+        }
+        const data = await response.json()
+        if (data.rt_cd !== '0') {
+            throw new Error(`KIS Overseas Price: ${data.msg1}`)
+        }
+        // output: { last, diff, rate, ... }
+        const price = parseFloat(data.output?.last)
+        const change = parseFloat(data.output?.diff)
+        const changeRate = parseFloat(data.output?.rate)
+        if (!Number.isFinite(price) || price <= 0) {
+            throw new Error(`KIS Overseas Price: invalid price for ${symbol}`)
+        }
+        return { price, change: change || 0, changeRate: changeRate || 0 }
     }
 
     async getDailyPrice(symbol: string, market: 'KOSPI' | 'KOSDAQ' | 'US', date: string, retryCount = 0): Promise<any> {

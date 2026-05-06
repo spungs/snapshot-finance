@@ -12,15 +12,19 @@ import {
     type ExchangeRateCacheEntry,
 } from '@/lib/cache'
 
-// 가격 갱신 cron — 보유 중인 유니크 종목만 KIS API로 한 번씩 호출하고
-// 결과를 Redis에 공유 캐시로 저장한다. 사용자 페이지 진입 시에는 Redis만
-// 읽으면 되므로 KIS 호출이 사용자 수에 비례해 늘지 않는다.
+// 가격 갱신 cron — 보유 중인 유니크 종목만 KIS/Finnhub 으로 한 번씩 호출하고
+// 결과를 Redis 공유 캐시(stock:price:{code})에 저장한다. 사용자 페이지 진입 시
+// kisClient.getCurrentPrice 가 동일 키로 Redis 를 우선 읽으므로, KIS 호출이
+// 사용자 수에 비례해 늘지 않는다.
+//
+// pg_cron 에 두 개 등록 — 시장별 시간대가 달라서:
+//   update-prices-kr  ?market=KR  schedule: */3 0-6 * * 1-5  (UTC, KST 09~16)
+//   update-prices-us  ?market=US  schedule: */3 13-22 * * 1-5 (UTC, KST 22~07)
 //
 // 운영 가정:
-// - 평일 09:00~15:35 KST (한국장 + 미국장 프리마켓 직전까지) 사이에만 호출
-// - cron 주기는 3분 (vercel.json), 캐시 TTL은 10분 → cron 한두 번 누락돼도
-//   여전히 캐시가 살아있다.
-// - KIS 도메인 시세 API는 초당 20건 제한 → 15개 청크 + 청크 사이 1초 sleep
+// - cron 주기 3분, 캐시 TTL 10분 → 한두 번 누락돼도 캐시는 살아있음.
+// - KIS 도메인/해외 시세 API 모두 초당 20건 제한 → 15개 청크 + 1초 sleep.
+// - 환율은 KR cron 에서만 갱신 (1일 변동폭이 작아 한쪽이면 충분).
 
 export const maxDuration = 300
 
@@ -29,24 +33,39 @@ const CHUNK_DELAY_MS = 1000
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
+type Market = 'KR' | 'US'
 type MarketType = 'KOSPI' | 'KOSDAQ' | 'US'
 
+function parseMarketParam(raw: string | null): Market {
+    return raw === 'US' ? 'US' : 'KR'
+}
+
+// Stock.market 컬럼 → kisClient.getCurrentPrice 가 받는 marketType 으로 정규화.
 function resolveMarket(market: string | null | undefined): MarketType {
     if (!market) return 'KOSPI'
-    if (market === 'US' || market === 'NAS' || market === 'NYS' || market === 'AMS') return 'US'
+    if (market === 'US' || market === 'NAS' || market === 'NYS' || market === 'AMS' ||
+        market === 'NASD' || market === 'NYSE' || market === 'AMEX') return 'US'
     if (market === 'KOSDAQ' || market === 'KQ') return 'KOSDAQ'
     return 'KOSPI'
 }
 
-function isMarketOpenKst(now: Date): { open: boolean; reason?: string } {
-    // KST = UTC+9. UTC를 +9 한 가상의 Date 의 UTC 필드를 KST 로 해석해서 사용한다.
+// 한국장: 평일 09:00~15:35 KST
+function isKrMarketOpen(now: Date): { open: boolean; reason?: string } {
     const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000)
-    const day = kst.getUTCDay() // 0=Sun, 6=Sat
-    if (day === 0 || day === 6) return { open: false, reason: 'WEEKEND' }
+    const day = kst.getUTCDay()
+    if (day === 0 || day === 6) return { open: false, reason: 'WEEKEND_KR' }
     const minutes = kst.getUTCHours() * 60 + kst.getUTCMinutes()
-    const start = 9 * 60          // 09:00
-    const end = 15 * 60 + 35      // 15:35
-    if (minutes < start || minutes > end) return { open: false, reason: 'OUTSIDE_HOURS' }
+    if (minutes < 9 * 60 || minutes > 15 * 60 + 35) return { open: false, reason: 'OUTSIDE_HOURS_KR' }
+    return { open: true }
+}
+
+// 미국 정규장 — DST 양쪽 커버. UTC 평일 13~22시.
+// (정규장 EDT: UTC 13:30~20:00, EST: UTC 14:30~21:00. 양 끝에 ~30분 버퍼)
+function isUsMarketOpen(now: Date): { open: boolean; reason?: string } {
+    const day = now.getUTCDay()
+    if (day === 0 || day === 6) return { open: false, reason: 'WEEKEND_US' }
+    const hour = now.getUTCHours()
+    if (hour < 13 || hour > 22) return { open: false, reason: 'OUTSIDE_HOURS_US' }
     return { open: true }
 }
 
@@ -59,26 +78,26 @@ interface UpdateResult {
 }
 
 export async function GET(request: NextRequest) {
-    // 1. 인증 — Vercel Cron 은 Authorization: Bearer ${CRON_SECRET} 헤더를 자동 부착
+    // 1. 인증 — pg_cron 의 net.http_get 이 Authorization: Bearer ${CRON_SECRET} 부착
     const authHeader = request.headers.get('authorization')
     if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
         return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
     }
 
     const now = new Date()
-
-    // ?force=1 쿼리로 장 시간 체크 우회 (수동 워밍업 / 디버깅용)
     const url = new URL(request.url)
+    const targetMarket = parseMarketParam(url.searchParams.get('market'))
     const force = url.searchParams.get('force') === '1'
 
-    // 2. 장 시간 체크 — 외 시간엔 즉시 종료해 KIS 호출 0건
+    // 2. 장 시간 체크 — 외 시간엔 즉시 종료해 KIS/Finnhub 호출 0건
     if (!force) {
-        const market = isMarketOpenKst(now)
-        if (!market.open) {
+        const m = targetMarket === 'KR' ? isKrMarketOpen(now) : isUsMarketOpen(now)
+        if (!m.open) {
             return NextResponse.json({
                 success: true,
                 skipped: true,
-                reason: market.reason ?? 'MARKET_CLOSED',
+                market: targetMarket,
+                reason: m.reason ?? 'MARKET_CLOSED',
             })
         }
     }
@@ -89,29 +108,37 @@ export async function GET(request: NextRequest) {
     let errorLogged = false
 
     try {
-        // 3. 보유 종목 중 유니크한 (stockCode, market) 만 추출 — Holding 이 1개라도
-        //    걸려있는 stock 만 가격을 갱신한다. (검색만 한 종목은 갱신 대상 아님)
+        // 3. 시장에 맞는 보유 종목만 추출 — Holding 1개라도 걸린 stock 만 갱신
+        const marketFilter = targetMarket === 'US'
+            ? { in: ['US', 'NASD', 'NYSE', 'AMEX', 'NAS', 'NYS', 'AMS'] }
+            : { in: ['KOSPI', 'KOSDAQ', 'KS', 'KQ'] }
+
         const stocks = await prisma.stock.findMany({
-            where: { liveHoldings: { some: {} } },
+            where: {
+                liveHoldings: { some: {} },
+                market: marketFilter,
+            },
             select: { stockCode: true, market: true },
         })
 
-        console.log(`[Cron:update-prices] ${stocks.length} unique stocks to refresh`)
+        console.log(`[Cron:update-prices:${targetMarket}] ${stocks.length} unique stocks`)
 
-        // 4. 환율 갱신 — 1회만 호출, 모든 사용자가 공유
-        try {
-            const rate = await getUsdExchangeRate()
-            if (rate > 0) {
-                const entry: ExchangeRateCacheEntry = {
-                    rate,
-                    updatedAt: now.toISOString(),
+        // 4. 환율은 KR cron 에서만 갱신 (1일 변동폭이 작아 한 번이면 충분)
+        if (targetMarket === 'KR') {
+            try {
+                const rate = await getUsdExchangeRate()
+                if (rate > 0) {
+                    const entry: ExchangeRateCacheEntry = {
+                        rate,
+                        updatedAt: now.toISOString(),
+                    }
+                    await cacheSet(exchangeRateKey(), entry, EXCHANGE_RATE_CACHE_TTL_SECONDS)
+                    exchangeRateUpdated = true
+                    exchangeRateValue = rate
                 }
-                await cacheSet(exchangeRateKey(), entry, EXCHANGE_RATE_CACHE_TTL_SECONDS)
-                exchangeRateUpdated = true
-                exchangeRateValue = rate
+            } catch (e) {
+                console.warn(`[Cron:update-prices:${targetMarket}] FX refresh failed:`, e)
             }
-        } catch (e) {
-            console.warn('[Cron:update-prices] FX refresh failed:', e)
         }
 
         // 5. 종목 시세 갱신 — 청크 단위 + 청크 사이 sleep 으로 rate limit 보호
@@ -136,7 +163,7 @@ export async function GET(request: NextRequest) {
                         return { stockCode, market, status: 'success', price: priceData.price }
                     } catch (e) {
                         const msg = e instanceof Error ? e.message : String(e)
-                        console.warn(`[Cron:update-prices] ${stockCode} failed:`, msg)
+                        console.warn(`[Cron:update-prices:${targetMarket}] ${stockCode} failed:`, msg)
                         return { stockCode, market, status: 'failed', error: msg }
                     }
                 })
@@ -154,6 +181,7 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({
             success: true,
+            market: targetMarket,
             stocksProcessed: results.length,
             successCount,
             failedCount,
@@ -161,11 +189,11 @@ export async function GET(request: NextRequest) {
             exchangeRateValue,
         })
     } catch (error) {
-        console.error('[Cron:update-prices] Job failed:', error)
+        console.error(`[Cron:update-prices:${targetMarket}] Job failed:`, error)
         try {
             await prisma.cronLog.create({
                 data: {
-                    jobName: 'UpdatePrices',
+                    jobName: `UpdatePrices:${targetMarket}`,
                     status: 'FAILED',
                     message: error instanceof Error ? error.message : String(error),
                     details: { results, exchangeRateUpdated, exchangeRateValue } as any,
@@ -173,7 +201,7 @@ export async function GET(request: NextRequest) {
             })
             errorLogged = true
         } catch (logError) {
-            console.error('[Cron:update-prices] Failed to save error log:', logError)
+            console.error(`[Cron:update-prices:${targetMarket}] Failed to save error log:`, logError)
         }
         return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 })
     } finally {
@@ -185,14 +213,14 @@ export async function GET(request: NextRequest) {
                     : failedCount === results.length ? 'FAILED' : 'PARTIAL'
                 await prisma.cronLog.create({
                     data: {
-                        jobName: 'UpdatePrices',
+                        jobName: `UpdatePrices:${targetMarket}`,
                         status,
                         message: `Processed ${results.length} stocks. Failed: ${failedCount}. FX updated: ${exchangeRateUpdated}`,
                         details: { failed: results.filter(r => r.status === 'failed') } as any,
                     },
                 })
             } catch (logError) {
-                console.error('[Cron:update-prices] Failed to save log:', logError)
+                console.error(`[Cron:update-prices:${targetMarket}] Failed to save log:`, logError)
             }
         }
     }
