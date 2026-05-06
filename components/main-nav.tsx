@@ -2,7 +2,7 @@
 
 import React from 'react'
 import Link from 'next/link'
-import { Camera } from 'lucide-react'
+import Image from 'next/image'
 import { NavLinks } from '@/components/dashboard/nav-links'
 import { MobileNav } from '@/components/mobile-nav'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
@@ -18,7 +18,7 @@ export function MainNav({ user }: MainNavProps) {
                 <div className="flex justify-between items-center h-16">
                     <Link href={user ? "/dashboard" : "/"} className="flex items-center">
                         <div className="text-xl font-bold text-foreground flex items-center gap-2">
-                            <Camera className="h-6 w-6" />
+                            <Image src="/logo.png" alt="Snapshot Finance" width={28} height={28} priority />
                             Snapshot Finance
                         </div>
                     </Link>
