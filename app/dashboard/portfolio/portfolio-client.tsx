@@ -84,7 +84,7 @@ export function PortfolioClient({ initialHoldings, summary, userName }: Props) {
     const { baseCurrency } = useCurrency()
     const [holdings, setHoldings] = useState<Holding[]>(initialHoldings)
     const [currentSummary, setCurrentSummary] = useState<Summary>(summary)
-    const [sortKey, setSortKey] = useState<SortKey>('currentValue')
+    const [sortKey, setSortKey] = useState<SortKey>('profit')
     const [sortDir, setSortDir] = useState<SortDir>('desc')
     const [selectedSegIdx, setSelectedSegIdx] = useState<number | null>(null)
 
