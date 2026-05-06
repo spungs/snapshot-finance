@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import Decimal from 'decimal.js'
 import { prisma } from '@/lib/prisma'
 import { kisClient } from '@/lib/api/kis-client'
 import { getUsdExchangeRate } from '@/lib/api/exchange-rate'
@@ -82,54 +83,56 @@ export async function POST(request: NextRequest) {
 
                     const priceData = await kisClient.getCurrentPrice(holding.stock.stockCode, market as any)
 
-                    const currentPriceNative = priceData.price
-                    const snapshotPriceNative = Number(holding.averagePrice) // Use Average Price (Cost)
-
-                    const purchaseRate = Number(holding.purchaseRate) || 1
+                    const currentPrice = new Decimal(priceData.price)
+                    const snapshotPrice = new Decimal(holding.averagePrice as any) // Use Average Price (Cost)
 
                     // Determine Cost Basis Rate
                     // User Request: Use Snapshot Time Exchange Rate.
                     // We interpret this as forcing the calculation to use the exchange rate stored in the snapshot.
-                    let costBasisRate = 1
-                    if (isUsd) {
-                        costBasisRate = snapshotExchangeRate
-                    }
+                    const costBasisRate = isUsd ? new Decimal(snapshotExchangeRate) : new Decimal(1)
+                    const appliedRateDec = new Decimal(appliedRate)
 
-                    const quantity = Number(holding.quantity)
+                    const quantity = new Decimal(holding.quantity as any)
 
                     // Native calculations for display
-                    const simulatedValueNative = currentPriceNative * quantity
-                    const originalValueNative = snapshotPriceNative * quantity
+                    const simulatedValueNative = currentPrice.times(quantity)
+                    const originalValueNative = snapshotPrice.times(quantity)
+                    const gainNative = simulatedValueNative.minus(originalValueNative)
+                    const gainRateNative = originalValueNative.isZero()
+                        ? new Decimal(0)
+                        : gainNative.dividedBy(originalValueNative).times(100)
 
                     // KRW calculations for total summary
                     // Simulated (Current) Value using Current Exchange Rate
-                    const simulatedValueKRW = simulatedValueNative * appliedRate
+                    const simulatedValueKRW = simulatedValueNative.times(appliedRateDec)
 
                     // Original (Cost) Value using Purchase Rate (or Snapshot Rate fallback)
-                    const originalValueKRW = originalValueNative * costBasisRate
+                    const originalValueKRW = originalValueNative.times(costBasisRate)
 
-                    const gainKRW = simulatedValueKRW - originalValueKRW
-                    const gainRateKRW = originalValueKRW > 0 ? ((simulatedValueKRW - originalValueKRW) / originalValueKRW) * 100 : 0
+                    const gainKRW = simulatedValueKRW.minus(originalValueKRW)
+                    const gainRateKRW = originalValueKRW.isZero()
+                        ? new Decimal(0)
+                        : gainKRW.dividedBy(originalValueKRW).times(100)
 
                     return {
                         stockName: holding.stock.stockName,
                         stockCode: holding.stock.stockCode,
-                        quantity: quantity,
+                        quantity: quantity.toNumber(),
                         currency: isUsd ? 'USD' : 'KRW',
 
                         // Detail View: Native Currency
-                        snapshotPrice: snapshotPriceNative, // Average Price
-                        currentPrice: currentPriceNative,
-                        originalValue: originalValueNative,
-                        simulatedValue: simulatedValueNative,
-                        gain: simulatedValueNative - originalValueNative,
-                        gainRate: originalValueNative > 0 ? ((simulatedValueNative - originalValueNative) / originalValueNative) * 100 : 0,
+                        snapshotPrice: snapshotPrice.toNumber(), // Average Price
+                        currentPrice: currentPrice.toNumber(),
+                        originalValue: originalValueNative.toNumber(),
+                        simulatedValue: simulatedValueNative.toNumber(),
+                        gain: gainNative.toNumber(),
+                        gainRate: gainRateNative.toNumber(),
 
                         // Fields for aggregation
-                        originalValueKRW,
-                        simulatedValueKRW,
-                        gainKRW,
-                        gainRateKRW
+                        originalValueKRW: originalValueKRW.toNumber(),
+                        simulatedValueKRW: simulatedValueKRW.toNumber(),
+                        gainKRW: gainKRW.toNumber(),
+                        gainRateKRW: gainRateKRW.toNumber()
                     }
                 } catch (error) {
                     console.error(`Failed to simulate ${holding.stock.stockName}:`, error)
@@ -153,19 +156,27 @@ export async function POST(request: NextRequest) {
         )
 
         // 3. Aggregate results (using KRW values for total)
-        const totalOriginalValue = simulationResults.reduce((sum, item) => sum + (item.originalValueKRW || 0), 0)
-        const totalSimulatedValue = simulationResults.reduce((sum, item) => sum + (item.simulatedValueKRW || 0), 0)
-        const totalGain = totalSimulatedValue - totalOriginalValue
-        const totalGainRate = totalOriginalValue > 0 ? (totalGain / totalOriginalValue) * 100 : 0
+        const totalOriginalValueDec = simulationResults.reduce(
+            (sum, item) => sum.plus(item.originalValueKRW || 0),
+            new Decimal(0)
+        )
+        const totalSimulatedValueDec = simulationResults.reduce(
+            (sum, item) => sum.plus(item.simulatedValueKRW || 0),
+            new Decimal(0)
+        )
+        const totalGainDec = totalSimulatedValueDec.minus(totalOriginalValueDec)
+        const totalGainRateDec = totalOriginalValueDec.isZero()
+            ? new Decimal(0)
+            : totalGainDec.dividedBy(totalOriginalValueDec).times(100)
 
         return NextResponse.json({
             success: true,
             data: {
                 snapshotDate: snapshot.snapshotDate,
-                totalOriginalValue,
-                totalSimulatedValue,
-                totalGain,
-                totalGainRate,
+                totalOriginalValue: totalOriginalValueDec.toNumber(),
+                totalSimulatedValue: totalSimulatedValueDec.toNumber(),
+                totalGain: totalGainDec.toNumber(),
+                totalGainRate: totalGainRateDec.toNumber(),
                 holdings: simulationResults, // Items contain native values + hidden KRW values
                 exchangeRate: currentExchangeRate,
                 snapshotExchangeRate,
