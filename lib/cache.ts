@@ -63,8 +63,11 @@ export interface ExchangeRateCacheEntry {
     updatedAt: string
 }
 
-export const PRICE_CACHE_TTL_SECONDS = 600 // 10분 — cron 주기(3분)의 3배 정도 여유
-export const EXCHANGE_RATE_CACHE_TTL_SECONDS = 600
+// 가격 TTL 길게: 장외 시간/주말엔 cron 이 안 돌아도 마지막 종가가 살아있어야 함.
+// 장중엔 cron(3분)이 매번 덮어쓰므로 stale 위험 없음. 종목별 가격 변동 없는 장외엔
+// 캐시 자체가 곧 fresh 한 가격(=종가)이라 길게 유지해도 OK.
+export const PRICE_CACHE_TTL_SECONDS = 14400 // 4시간
+export const EXCHANGE_RATE_CACHE_TTL_SECONDS = 21600 // 6시간 — 환율 변동 작음
 
 export const stockPriceKey = (stockCode: string) => `stock:price:${stockCode}`
 export const exchangeRateKey = () => `exchange:usd-krw`

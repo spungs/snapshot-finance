@@ -24,6 +24,16 @@ const withSerwist = withSerwistInit({
 });
 
 const nextConfig: NextConfig = {
+  // Next.js 16 RSC 클라이언트 캐시 유지 시간.
+  // 동일 라우트로 30초 안에 돌아오면 SSR 재실행 없이 캐시된 RSC 즉시 사용 →
+  // 홈 → 보유 → 홈 같은 토글 시 skeleton flash 제거. force-dynamic 페이지에도 적용됨.
+  // https://nextjs.org/docs/app/api-reference/next-config-js/staleTimes
+  experimental: {
+    staleTimes: {
+      dynamic: 30,
+      static: 180,
+    },
+  },
   async headers() {
     return [
       {
