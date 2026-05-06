@@ -12,6 +12,7 @@ export function SnapshotsSkeleton() {
         <>
         <SkeletonLoaderBar />
         <LoadingHint stage1="스냅샷을 불러오는 중..." stage2="조금만 더 기다려 주세요" />
+        <div className="flex-1 min-h-0 overflow-hidden">
         <div className="max-w-[420px] md:max-w-2xl mx-auto w-full pb-4 animate-pulse">
             {/* Hero — 페이지 타이틀 */}
             <section className="px-6 pt-3 pb-4 space-y-2">
@@ -81,6 +82,7 @@ export function SnapshotsSkeleton() {
                     </div>
                 ))}
             </div>
+        </div>
         </div>
         </>
     )

@@ -14,6 +14,7 @@ export function GenericPageSkeleton() {
         <>
             <SkeletonLoaderBar />
             <LoadingHint />
+            <div className="flex-1 min-h-0 overflow-hidden">
             <div className="max-w-[480px] md:max-w-2xl mx-auto w-full animate-pulse">
                 {/* Title hero */}
                 <section className="px-6 pt-3 pb-4 space-y-2">
@@ -31,6 +32,7 @@ export function GenericPageSkeleton() {
                         </div>
                     ))}
                 </section>
+            </div>
             </div>
         </>
     )

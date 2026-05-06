@@ -12,6 +12,8 @@ export function HomeSkeleton() {
         <>
         <SkeletonLoaderBar />
         <LoadingHint stage1="보유 종목 시세를 가져오는 중..." stage2="조금만 더 기다려 주세요" />
+        {/* flex-1 + min-h-0 + overflow-hidden — 스켈레톤이 viewport 를 넘겨도 스크롤 안 생김 */}
+        <div className="flex-1 min-h-0 overflow-hidden">
         <div className="max-w-[480px] md:max-w-2xl mx-auto w-full animate-pulse">
             {/* Hero — 날짜 / 큰 금액 / 수익률 */}
             <section className="px-6 pt-3 pb-6">
@@ -83,6 +85,7 @@ export function HomeSkeleton() {
                     ))}
                 </ul>
             </section>
+        </div>
         </div>
         </>
     )
