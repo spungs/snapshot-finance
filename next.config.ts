@@ -15,12 +15,29 @@ const securityHeaders = [
 
 // PWA Service Worker — app/sw.ts 를 컴파일해 public/sw.js 로 출력.
 // 개발 모드에서는 자동 비활성화 (캐시 디버깅 혼란 방지).
+//
+// exclude 패턴: iOS splash 40개는 디바이스마다 1개만 사용되므로 SW precache 에
+// 모두 미리 다운로드하면 39개가 낭비. iOS 자체 캐시가 처리하므로 SW 에서 제외.
+// (정적 asset 제외 → Hobby 100GB/월 대역폭 절약)
 const withSerwist = withSerwistInit({
   swSrc: "app/sw.ts",
   swDest: "public/sw.js",
   cacheOnNavigation: true,
   reloadOnOnline: true,
   disable: process.env.NODE_ENV === "development",
+  // iOS apple-touch-startup-image — 디바이스마다 1개만 사용. iOS 자체 캐시
+  // 가 처리하므로 SW precache 에서 모두 제외해 install 대역폭 절약.
+  // globPublicPatterns: precache 할 public/ 파일 패턴 (기본 ["**/*"]).
+  // splash/** 만 빠지도록 명시적으로 다른 패턴 나열.
+  globPublicPatterns: [
+    'icons/**',
+    'favicon.*',
+    '*.svg',
+    'logo.*',
+    'manifest.*',
+    'robots.txt',
+    'ads.txt',
+  ],
 });
 
 const nextConfig: NextConfig = {

@@ -26,7 +26,9 @@ import {
 // - KIS 도메인/해외 시세 API 모두 초당 20건 제한 → 15개 청크 + 1초 sleep.
 // - 환율은 KR cron 에서만 갱신 (1일 변동폭이 작아 한쪽이면 충분).
 
-export const maxDuration = 300
+// Vercel Hobby 함수 timeout 한도. 실제 cron 소요는 8~10초 (100 종목 기준)이라
+// 충분히 안에서 끝남. Pro 로 업그레이드하면 300까지 늘릴 수 있음.
+export const maxDuration = 60
 
 const CHUNK_SIZE = 15
 const CHUNK_DELAY_MS = 1000
