@@ -16,7 +16,7 @@ export function MainNav({ user }: MainNavProps) {
         <header className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b sticky top-0 z-50">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between items-center h-16">
-                    <Link href={user ? "/dashboard" : "/"} className="flex items-center">
+                    <Link href={user ? "/dashboard" : "/"} prefetch={true} className="flex items-center">
                         <div className="text-xl font-bold text-foreground flex items-center gap-2">
                             <Image src="/logo.png" alt="Snapshot Finance" width={28} height={28} priority />
                             Snapshot Finance

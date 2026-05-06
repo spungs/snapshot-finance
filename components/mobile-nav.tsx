@@ -99,6 +99,7 @@ export function MobileNav({ type, user }: MobileNavProps) {
                             <Link
                                 key={link.href}
                                 href={link.href}
+                                prefetch={true}
                                 className="hover:text-primary transition-colors py-2 border-b border-border/50"
                                 onClick={() => setOpen(false)}
                             >
@@ -108,7 +109,7 @@ export function MobileNav({ type, user }: MobileNavProps) {
 
                         {type === 'landing' && (
                             <div className="flex flex-col gap-4 mt-4">
-                                <Link href="/dashboard" onClick={() => setOpen(false)}>
+                                <Link href="/dashboard" prefetch={true} onClick={() => setOpen(false)}>
                                     <Button variant="outline" className="w-full text-lg h-12">
                                         {trans.landing.login}
                                     </Button>
@@ -149,7 +150,7 @@ export function MobileNav({ type, user }: MobileNavProps) {
                                         <DeleteAccountDialog variant="item" />
                                     </>
                                 ) : (
-                                    <Link href="/dashboard" onClick={() => setOpen(false)}>
+                                    <Link href="/dashboard" prefetch={true} onClick={() => setOpen(false)}>
                                         <Button variant="outline" className="w-full text-lg h-12">
                                             {trans.landing.login || 'Login'}
                                         </Button>
