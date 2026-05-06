@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
+import { requireAdmin } from '@/lib/auth-helpers'
 import { revalidatePath } from 'next/cache'
 import { holdingService } from '@/lib/services/holding-service'
 import Decimal from 'decimal.js'
@@ -225,9 +226,11 @@ export async function executeBulkImport(
     items: { identifier: string, quantity: number, averagePrice: number }[], // Identifier here should be Valid Stock Code
     strategy: 'overwrite' | 'add'
 ) {
-    const session = await auth()
-    if (!session?.user?.id) return { success: false, error: "Unauthorized" }
-    const userId = session.user.id
+    const guard = await requireAdmin()
+    if (guard.error) {
+        return { success: false, error: guard.error === 'UNAUTHORIZED' ? 'Unauthorized' : 'Forbidden' }
+    }
+    const userId = guard.session.user.id!
 
     try {
         // 전체 import를 단일 트랜잭션으로 실행 - 중간에 실패하면 전체 롤백
