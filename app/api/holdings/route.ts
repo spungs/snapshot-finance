@@ -5,6 +5,7 @@ import { getUsdExchangeRate } from '@/lib/api/exchange-rate'
 import { holdingService } from '@/lib/services/holding-service'
 import { kisClient } from '@/lib/api/kis-client'
 import { validateQuantity, validateAveragePrice } from '@/lib/validation/portfolio-input'
+import Decimal from 'decimal.js'
 
 
 // 현재가 조회 헬퍼 함수 (KIS API 사용)
@@ -134,10 +135,13 @@ export async function POST(request: NextRequest) {
 
             if (existing) {
                 const oldQty = existing.quantity
-                const oldAvg = Number(existing.averagePrice)
+                const oldAvg = new Decimal(existing.averagePrice.toString())
                 const newQty = oldQty + quantity
-                // 가중평균 평단가 계산
-                const newAvg = ((oldQty * oldAvg) + (quantity * averagePrice)) / newQty
+                // 가중평균 평단가 = (기존 매입금액 + 신규 매입금액) / 총 수량
+                // Decimal로 누적 부동소수점 오차 방지 — 평단가는 한 번 어긋나면 영구히 오류로 남는다.
+                const oldTotal = oldAvg.times(oldQty)
+                const newTotal = new Decimal(averagePrice).times(quantity)
+                const newAvg = newQty > 0 ? oldTotal.plus(newTotal).div(newQty) : new Decimal(0)
 
                 holding = await prisma.holding.update({
                     where: { id: existing.id },

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { kisClient } from '@/lib/api/kis-client'
 import { getUsdExchangeRate } from '@/lib/api/exchange-rate'
+import Decimal from 'decimal.js'
 
 // Unified Cron Job: Daily Snapshot + User Maintenance
 // Schedule: 22:30 UTC Mon-Fri (07:30 KST Tue-Sat / 화~토)
@@ -73,48 +74,53 @@ export async function GET(request: NextRequest) {
                         return { userId: user.id, status: 'skipped', reason: 'No holdings' }
                     }
 
-                    // Fetch prices and calculate values (Real-time)
-                    let totalValue = 0
-                    let totalCost = 0
+                    // Fetch prices and calculate values (Real-time) — 모든 합계는 Decimal로
+                    const usdRateDec = new Decimal(usdRate || 0)
+                    let totalValue = new Decimal(0)
+                    let totalCost = new Decimal(0)
 
                     const snapshotHoldingsData = await Promise.all(
                         user.holdings.map(async (holding) => {
                             const currentPrice = await getStockPrice(holding.stock.stockCode, holding.stock.market || 'Unknown')
                             const quantity = holding.quantity
-                            const avgPrice = Number(holding.averagePrice)
+                            const avgPrice = new Decimal(holding.averagePrice.toString())
+                            const cur = new Decimal(currentPrice || 0)
 
-                            const val = currentPrice * quantity
-                            const cost = avgPrice * quantity
+                            const val = cur.times(quantity)
+                            const cost = avgPrice.times(quantity)
 
-                            // 매입금액은 매입 시점 환율(purchaseRate)로 동결
-                            const purchaseRate = Number(holding.purchaseRate)
-                            const effectivePurchaseRate = purchaseRate && purchaseRate !== 1 ? purchaseRate : usdRate
-                            const krwValue = holding.currency === 'USD' ? val * usdRate : val
-                            const krwCost = holding.currency === 'USD' ? cost * effectivePurchaseRate : cost
+                            // 매입금액은 매입 시점 환율(purchaseRate)로 동결 — 환율 변동만으로 매입금액이 출렁이지 않게 함
+                            // purchaseRate 누락/legacy(1)면 현재 환율로 폴백
+                            const purchaseRate = new Decimal(holding.purchaseRate.toString())
+                            const effectivePurchaseRate = purchaseRate.gt(0) && !purchaseRate.equals(1)
+                                ? purchaseRate
+                                : usdRateDec
+                            const krwValue = holding.currency === 'USD' ? val.times(usdRateDec) : val
+                            const krwCost = holding.currency === 'USD' ? cost.times(effectivePurchaseRate) : cost
 
-                            totalValue += krwValue
-                            totalCost += krwCost
+                            totalValue = totalValue.plus(krwValue)
+                            totalCost = totalCost.plus(krwCost)
 
-                            const hProfit = val - cost
-                            const hProfitRate = cost > 0 ? (hProfit / cost) * 100 : 0
+                            const hProfit = val.minus(cost)
+                            const hProfitRate = cost.isZero() ? new Decimal(0) : hProfit.div(cost).times(100)
 
                             return {
                                 stockId: holding.stockId,
                                 quantity: quantity,
                                 averagePrice: avgPrice,
-                                currentPrice: currentPrice,
+                                currentPrice: cur,
                                 currency: holding.currency,
                                 totalCost: cost,
                                 currentValue: val,
                                 profit: hProfit,
                                 profitRate: hProfitRate,
-                                purchaseRate: Number(holding.purchaseRate || 1100),
+                                purchaseRate: purchaseRate.gt(0) ? purchaseRate : usdRateDec,
                             }
                         })
                     )
 
-                    const totalProfit = totalValue - totalCost
-                    const profitRate = totalCost > 0 ? (totalProfit / totalCost) * 100 : 0
+                    const totalProfit = totalValue.minus(totalCost)
+                    const profitRate = totalCost.isZero() ? new Decimal(0) : totalProfit.div(totalCost).times(100)
 
                     const newSnapshot = await prisma.portfolioSnapshot.create({
                         data: {
@@ -124,8 +130,8 @@ export async function GET(request: NextRequest) {
                             totalCost,
                             totalProfit,
                             profitRate,
-                            cashBalance: user.cashBalance || 0,
-                            exchangeRate: usdRate,
+                            cashBalance: user.cashBalance || new Decimal(0), // Capture current cash balance
+                            exchangeRate: usdRateDec,
                             note: `Auto Snapshot (${new Date().toLocaleDateString('ko-KR')})`,
                             holdings: {
                                 create: snapshotHoldingsData,

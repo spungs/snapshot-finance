@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 import { holdingService } from '@/lib/services/holding-service'
+import Decimal from 'decimal.js'
 
 export async function updateCashBalance(amount: number) {
     const session = await auth()
@@ -309,11 +310,13 @@ export async function executeBulkImport(
                     })
 
                     if (existing) {
-                        // Weighted Average Price Calculation
+                        // Weighted Average — Decimal 사용. 누적 부동소수점 오차가 평단가에 영구히 누적되는 것을 막는다.
                         const totalQty = existing.quantity + item.quantity
-                        const oldTotalVal = Number(existing.averagePrice) * existing.quantity
-                        const newTotalVal = item.averagePrice * item.quantity
-                        const newAvgPrice = (oldTotalVal + newTotalVal) / totalQty
+                        const oldTotalVal = new Decimal(existing.averagePrice.toString()).times(existing.quantity)
+                        const newTotalVal = new Decimal(item.averagePrice).times(item.quantity)
+                        const newAvgPrice = totalQty > 0
+                            ? oldTotalVal.plus(newTotalVal).div(totalQty)
+                            : new Decimal(0)
 
                         await tx.holding.update({
                             where: { userId_stockId: { userId, stockId: stock.id } },
