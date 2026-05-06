@@ -1,8 +1,10 @@
+import { Suspense } from 'react'
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { holdingService } from '@/lib/services/holding-service'
 import { snapshotService } from '@/lib/services/snapshot-service'
 import { HomeClient } from './home-client'
+import { HomeSkeleton } from './home-skeleton'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,9 +14,19 @@ export default async function DashboardPage() {
     redirect('/auth/signin')
   }
 
+  // 셸(헤더/바텀탭)은 layout에서 즉시 렌더되고,
+  // KIS API를 포함한 데이터 페칭은 Suspense 경계 안에서 스트리밍된다.
+  return (
+    <Suspense fallback={<HomeSkeleton />}>
+      <HomeContent userId={session.user.id} />
+    </Suspense>
+  )
+}
+
+async function HomeContent({ userId }: { userId: string }) {
   const [{ data: holdingsData }, { data: snapshotsData }] = await Promise.all([
-    holdingService.getList(session.user.id),
-    snapshotService.getList(session.user.id, 30),
+    holdingService.getList(userId),
+    snapshotService.getList(userId, 30),
   ])
 
   const summary = holdingsData?.summary ?? {
