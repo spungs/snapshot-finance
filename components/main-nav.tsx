@@ -17,8 +17,8 @@ export function MainNav({ user }: MainNavProps) {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between items-center h-16">
                     <Link href={user ? "/dashboard" : "/"} prefetch={true} className="flex items-center">
-                        <div className="text-xl font-bold text-foreground flex items-center gap-2">
-                            <Image src="/logo.png" alt="Snapshot Finance" width={28} height={28} priority />
+                        <div className="text-xl font-bold text-foreground flex items-center gap-3">
+                            <Image src="/logo.png" alt="Snapshot Finance" width={48} height={48} priority />
                             Snapshot Finance
                         </div>
                     </Link>
