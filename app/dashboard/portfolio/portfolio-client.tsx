@@ -429,6 +429,29 @@ export function PortfolioClient({ initialHoldings, summary, userName }: Props) {
                                     </div>
                                 )
                             })()}
+                            {currentSummary.cashBalance > 0 && (() => {
+                                const totalAssets = currentSummary.totalValue + currentSummary.cashBalance
+                                const cashWeight = totalAssets > 0
+                                    ? (currentSummary.cashBalance / totalAssets) * 100
+                                    : 0
+                                const cashDimmed = selectedSegIdx !== null
+                                return (
+                                    <div
+                                        className={cn(
+                                            'flex items-center gap-2 min-w-0 transition-opacity py-0.5',
+                                            cashDimmed && 'opacity-30',
+                                        )}
+                                    >
+                                        <span className="w-2 h-2 rounded-sm shrink-0 bg-muted-foreground/40" />
+                                        <span className="text-[11px] text-muted-foreground truncate flex-1">
+                                            {language === 'ko' ? '예수금' : 'Cash'}
+                                        </span>
+                                        <span className="text-[11px] font-bold text-foreground numeric">
+                                            {cashWeight.toFixed(1)}%
+                                        </span>
+                                    </div>
+                                )
+                            })()}
                         </div>
                     </section>
                 )
