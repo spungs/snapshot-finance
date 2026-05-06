@@ -1,8 +1,9 @@
-import { prisma } from '@/lib/prisma'
+import { Suspense } from 'react'
 import { auth } from '@/lib/auth'
-import SnapshotDetailClient from './snapshot-detail-client'
-import { notFound } from 'next/navigation'
+import { redirect, notFound } from 'next/navigation'
 import { snapshotService } from '@/lib/services/snapshot-service'
+import SnapshotDetailClient from './snapshot-detail-client'
+import { SnapshotDetailSkeleton } from './snapshot-detail-skeleton'
 
 export default async function SnapshotDetailPage({
   params,
@@ -11,8 +12,24 @@ export default async function SnapshotDetailPage({
 }) {
   const { id } = await params
   const session = await auth()
-  if (!session?.user?.id) return null
+  if (!session?.user?.id) {
+    redirect('/auth/signin')
+  }
 
+  return (
+    <Suspense fallback={<SnapshotDetailSkeleton />}>
+      <SnapshotDetailContent id={id} userId={session.user.id} />
+    </Suspense>
+  )
+}
+
+async function SnapshotDetailContent({
+  id,
+  userId,
+}: {
+  id: string
+  userId: string
+}) {
   const snapshot = await snapshotService.getDetail(id)
 
   if (!snapshot) {
@@ -20,7 +37,7 @@ export default async function SnapshotDetailPage({
   }
 
   // Verify ownership
-  if (snapshot.userId !== session.user.id) {
+  if (snapshot.userId !== userId) {
     notFound()
   }
 

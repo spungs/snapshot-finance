@@ -1,11 +1,12 @@
+import { Suspense } from 'react'
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { snapshotService } from '@/lib/services/snapshot-service'
+import { prisma } from '@/lib/prisma'
 import { SnapshotsClient } from './snapshots-client'
+import { SnapshotsSkeleton } from './snapshots-skeleton'
 
 export const dynamic = 'force-dynamic'
-
-import { prisma } from '@/lib/prisma'
 
 export default async function SnapshotsPage() {
   const session = await auth()
@@ -13,13 +14,21 @@ export default async function SnapshotsPage() {
     redirect('/auth/signin')
   }
 
-  const { data: snapshots } = await snapshotService.getList(session.user.id)
+  return (
+    <Suspense fallback={<SnapshotsSkeleton />}>
+      <SnapshotsContent userId={session.user.id} />
+    </Suspense>
+  )
+}
 
-  // Fetch current holdings for comparison
-  const currentHoldingsRaw = await prisma.holding.findMany({
-    where: { userId: session.user.id },
-    include: { stock: true }
-  })
+async function SnapshotsContent({ userId }: { userId: string }) {
+  const [{ data: snapshots }, currentHoldingsRaw] = await Promise.all([
+    snapshotService.getList(userId),
+    prisma.holding.findMany({
+      where: { userId },
+      include: { stock: true },
+    }),
+  ])
 
   const currentHoldings = currentHoldingsRaw.map(h => ({
     id: h.id,
@@ -59,4 +68,3 @@ export default async function SnapshotsPage() {
     />
   )
 }
-

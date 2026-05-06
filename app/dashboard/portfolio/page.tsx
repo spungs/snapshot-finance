@@ -1,7 +1,9 @@
+import { Suspense } from 'react'
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { holdingService } from '@/lib/services/holding-service'
 import { PortfolioClient } from './portfolio-client'
+import { PortfolioSkeleton } from './portfolio-skeleton'
 import { AiChat } from '@/components/dashboard/ai-chat'
 import { FloatingContainer } from '@/components/ui/floating-container'
 
@@ -13,7 +15,32 @@ export default async function PortfolioPage() {
     redirect('/auth/signin')
   }
 
-  const { data } = await holdingService.getList(session.user.id)
+  // 셸(헤더/바텀탭)은 layout에서 즉시 렌더되고,
+  // KIS API를 포함한 데이터 페칭은 Suspense 경계 안에서 스트리밍된다.
+  return (
+    <>
+      <Suspense fallback={<PortfolioSkeleton />}>
+        <PortfolioContent
+          userId={session.user.id}
+          userName={session.user.name ?? null}
+        />
+      </Suspense>
+      {/* AI 챗 FAB은 보유 페이지에서만 표시. 셸과 동시에 렌더되어도 무방. */}
+      <FloatingContainer>
+        <AiChat isAuthenticated />
+      </FloatingContainer>
+    </>
+  )
+}
+
+async function PortfolioContent({
+  userId,
+  userName,
+}: {
+  userId: string
+  userName: string | null
+}) {
+  const { data } = await holdingService.getList(userId)
 
   const summary = {
     totalCost: Number(data?.summary?.totalCost ?? 0),
@@ -43,16 +70,10 @@ export default async function PortfolioPage() {
   }))
 
   return (
-    <>
-      <PortfolioClient
-        initialHoldings={holdings}
-        summary={summary}
-        userName={session.user.name ?? null}
-      />
-      {/* AI 챗 FAB은 보유 페이지에서만, 그것도 page 데이터 로드 완료 후에만 표시. */}
-      <FloatingContainer>
-        <AiChat isAuthenticated />
-      </FloatingContainer>
-    </>
+    <PortfolioClient
+      initialHoldings={holdings}
+      summary={summary}
+      userName={userName}
+    />
   )
 }
