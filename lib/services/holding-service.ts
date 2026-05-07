@@ -186,7 +186,16 @@ const holdingServiceInternal = {
                 )
             if (updates.length > 0) {
                 // 응답 latency를 늘리지 않도록 await 하지 않고 fire-and-forget — 실패해도 다음 요청에서 다시 시도
-                Promise.allSettled(updates).catch(() => { })
+                // Promise.allSettled 는 reject 하지 않으므로 .catch() 는 dead code. then() 안에서 실패 항목만 로그.
+                Promise.allSettled(updates).then((results) => {
+                    const failed = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected')
+                    if (failed.length > 0) {
+                        console.warn(
+                            `[HoldingService] 배경 가격 업데이트 ${failed.length}/${results.length} 실패`,
+                            failed.map((f) => (f.reason instanceof Error ? f.reason.message : String(f.reason))),
+                        )
+                    }
+                })
             }
 
             // 응답 필드만 남기고 메타 필드는 제거

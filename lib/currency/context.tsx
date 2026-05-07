@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { useLanguage } from '@/lib/i18n/context'
+import { FALLBACK_USD_RATE } from '@/lib/api/exchange-rate'
 
 export type Currency = 'KRW' | 'USD'
 
@@ -16,7 +17,7 @@ const CurrencyContext = createContext<CurrencyContextType | undefined>(undefined
 
 export function CurrencyProvider({ children }: { children: React.ReactNode }) {
     const [baseCurrency, setBaseCurrencyState] = useState<Currency>('KRW')
-    const [exchangeRate, setExchangeRate] = useState<number>(1435) // Default fallback
+    const [exchangeRate, setExchangeRate] = useState<number>(FALLBACK_USD_RATE)
 
     useEffect(() => {
         const savedCurrency = localStorage.getItem('baseCurrency') as Currency

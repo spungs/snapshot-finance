@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { holdingService } from '@/lib/services/holding-service'
 import { snapshotService } from '@/lib/services/snapshot-service'
+import { FALLBACK_USD_RATE } from '@/lib/api/exchange-rate'
 import { HomeClient } from './home-client'
 import { HomeSkeleton } from './home-skeleton'
 
@@ -34,7 +35,7 @@ async function HomeContent({ userId }: { userId: string }) {
 
   const summary = holdingsData?.summary ?? {
     totalCost: 0, totalValue: 0, totalProfit: 0, totalProfitRate: 0,
-    holdingsCount: 0, exchangeRate: 1435, cashBalance: 0,
+    holdingsCount: 0, exchangeRate: FALLBACK_USD_RATE, cashBalance: 0,
   }
 
   const holdings = (holdingsData?.holdings ?? []).map(h => ({
@@ -53,7 +54,7 @@ async function HomeContent({ userId }: { userId: string }) {
     snapshotDate: s.snapshotDate.toISOString(),
     totalValue: Number(s.totalValue),
     profitRate: Number(s.profitRate),
-    exchangeRate: s.exchangeRate ? Number(s.exchangeRate) : 1435,
+    exchangeRate: s.exchangeRate ? Number(s.exchangeRate) : FALLBACK_USD_RATE,
   }))
 
   const todayLabel = new Date().toLocaleDateString('ko-KR', {
@@ -68,7 +69,7 @@ async function HomeContent({ userId }: { userId: string }) {
         totalProfit: Number(summary.totalProfit),
         totalProfitRate: Number(summary.totalProfitRate),
         cashBalance: Number(summary.cashBalance ?? 0),
-        exchangeRate: Number(summary.exchangeRate ?? 1435),
+        exchangeRate: Number(summary.exchangeRate ?? FALLBACK_USD_RATE),
         holdingsCount: summary.holdingsCount,
       }}
       holdings={holdings}

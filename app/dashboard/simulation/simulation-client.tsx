@@ -6,6 +6,7 @@ import { formatCurrency, formatDate, formatNumber } from '@/lib/utils/formatters
 import { cn } from '@/lib/utils'
 import { Loader2, AlertCircle } from 'lucide-react'
 import { useLanguage } from '@/lib/i18n/context'
+import { FALLBACK_USD_RATE } from '@/lib/api/exchange-rate'
 import {
     Select,
     SelectContent,
@@ -226,7 +227,7 @@ function ResultBlock({
 }) {
     const isEn = language === 'en'
     const currency: 'KRW' | 'USD' = isEn ? 'USD' : 'KRW'
-    const rate = result.exchangeRate || 1435
+    const rate = result.exchangeRate || FALLBACK_USD_RATE
     const snapshotRate = result.snapshotExchangeRate || 1
 
     const totalInvested = isEn && result.snapshotExchangeRate

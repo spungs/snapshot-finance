@@ -2,6 +2,7 @@ import { Suspense } from 'react'
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { holdingService } from '@/lib/services/holding-service'
+import { FALLBACK_USD_RATE } from '@/lib/api/exchange-rate'
 import { PortfolioClient } from './portfolio-client'
 import { PortfolioSkeleton } from './portfolio-skeleton'
 import { AiChat } from '@/components/dashboard/ai-chat'
@@ -43,7 +44,7 @@ async function PortfolioContent({
     totalProfit: Number(data?.summary?.totalProfit ?? 0),
     totalProfitRate: Number(data?.summary?.totalProfitRate ?? 0),
     holdingsCount: data?.summary?.holdingsCount ?? 0,
-    exchangeRate: Number(data?.summary?.exchangeRate ?? 1435),
+    exchangeRate: Number(data?.summary?.exchangeRate ?? FALLBACK_USD_RATE),
     cashBalance: Number(data?.summary?.cashBalance ?? 0),
   }
 

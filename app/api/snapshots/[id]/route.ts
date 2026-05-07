@@ -4,6 +4,7 @@ import { Prisma } from '@prisma/client'
 import Decimal from 'decimal.js'
 import { auth } from '@/lib/auth'
 import { snapshotService } from '@/lib/services/snapshot-service'
+import { FALLBACK_USD_RATE } from '@/lib/api/exchange-rate'
 import { validateQuantity, validateAveragePrice, validateCashAmount } from '@/lib/validation/portfolio-input'
 
 const MAX_HOLDINGS_PER_SNAPSHOT = 200
@@ -178,7 +179,7 @@ export async function PUT(
 
     // exchangeRate는 양수여야 한다 — Decimal(10,2) 컬럼이라 음수/거대값/NaN 방어
     const fxNum = exchangeRate !== undefined ? Number(exchangeRate) : NaN
-    const effectiveExchangeRate = Number.isFinite(fxNum) && fxNum > 0 ? fxNum : 1435
+    const effectiveExchangeRate = Number.isFinite(fxNum) && fxNum > 0 ? fxNum : FALLBACK_USD_RATE
 
     if (cashBalance !== undefined) {
       const cashCheck = validateCashAmount(cashBalance)

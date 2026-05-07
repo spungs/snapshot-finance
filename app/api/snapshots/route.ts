@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { calculateProfitRate, calculateProfit, calculateCurrentValue, calculateTotalCost } from '@/lib/utils/calculations'
 
 import Decimal from 'decimal.js'
-import { getUsdExchangeRate } from '@/lib/api/exchange-rate'
+import { getUsdExchangeRate, FALLBACK_USD_RATE } from '@/lib/api/exchange-rate'
 import { snapshotService } from '@/lib/services/snapshot-service'
 import { auth } from '@/lib/auth'
 import { validateQuantity, validateAveragePrice, validateCashAmount } from '@/lib/validation/portfolio-input'
@@ -132,9 +132,9 @@ export async function POST(request: NextRequest) {
 
       if (currency === 'USD') {
         // purchaseRate가 1이면(데이터 누락 추정) 현재 환율을 사용하여 원화 환산 (터무니없는 수익률 방지)
-        const effectivePurchaseRate = purchaseRate.equals(1) ? new Decimal(exchangeRate || 1400) : purchaseRate
+        const effectivePurchaseRate = purchaseRate.equals(1) ? new Decimal(exchangeRate || FALLBACK_USD_RATE) : purchaseRate
         costKRW = cost.times(effectivePurchaseRate)
-        valueKRW = value.times(exchangeRate || 1400) // Fallback rate if fetch fails
+        valueKRW = value.times(exchangeRate || FALLBACK_USD_RATE) // Fallback rate if fetch fails
       }
 
       totalCost = totalCost.plus(costKRW)
@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
         totalProfit,
         profitRate,
         cashBalance: new Decimal(cashBalance || 0),
-        exchangeRate: new Decimal(exchangeRate || 1435),
+        exchangeRate: new Decimal(exchangeRate || FALLBACK_USD_RATE),
         note,
         holdings: {
           create: holdingsData,
@@ -216,7 +216,8 @@ export async function GET(request: NextRequest) {
     const userId = session.user.id
 
     const { searchParams } = new URL(request.url)
-    const limit = parseInt(searchParams.get('limit') || '20')
+    const rawLimit = parseInt(searchParams.get('limit') || '20', 10)
+    const limit = Number.isFinite(rawLimit) ? Math.max(1, Math.min(rawLimit, 100)) : 20
     const cursor = searchParams.get('cursor')
 
     const { data: snapshots, pagination } = await snapshotService.getList(userId, limit, cursor || undefined)

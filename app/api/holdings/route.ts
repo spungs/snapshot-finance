@@ -4,6 +4,7 @@ import { auth } from '@/lib/auth'
 import { getUsdExchangeRate } from '@/lib/api/exchange-rate'
 import { holdingService } from '@/lib/services/holding-service'
 import { kisClient } from '@/lib/api/kis-client'
+import { ratelimit, checkRateLimit } from '@/lib/ratelimit'
 import { validateQuantity, validateAveragePrice } from '@/lib/validation/portfolio-input'
 import Decimal from 'decimal.js'
 
@@ -67,6 +68,22 @@ export async function POST(request: NextRequest) {
         }
 
         const userId = session.user.id
+
+        // KIS 외부 API 호출 어뷰즈 방지
+        const rl = await checkRateLimit(ratelimit.api, userId)
+        if (rl && !rl.success) {
+            return NextResponse.json(
+                { success: false, error: { code: 'RATE_LIMIT', message: '너무 많은 요청입니다.' } },
+                {
+                    status: 429,
+                    headers: {
+                        'X-RateLimit-Limit': rl.limit.toString(),
+                        'X-RateLimit-Remaining': rl.remaining.toString(),
+                        'X-RateLimit-Reset': rl.reset.toString(),
+                    },
+                }
+            )
+        }
 
         const body = await request.json()
         const { stockId, quantity: rawQuantity, averagePrice: rawAveragePrice, mode = 'overwrite' } = body

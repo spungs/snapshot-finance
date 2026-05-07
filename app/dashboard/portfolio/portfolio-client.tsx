@@ -8,6 +8,7 @@ import { formatCurrency, formatNumber, formatProfitRate } from '@/lib/utils/form
 import { cn } from '@/lib/utils'
 import { useLanguage } from '@/lib/i18n/context'
 import { useCurrency } from '@/lib/currency/context'
+import { FALLBACK_USD_RATE } from '@/lib/api/exchange-rate'
 import { StockSearchCombobox } from '@/components/dashboard/stock-search-combobox'
 import { FormattedNumberInput } from '@/components/ui/formatted-number-input'
 import { DonutChart } from '@/components/dashboard/donut-chart'
@@ -139,7 +140,7 @@ export function PortfolioClient({ initialHoldings, summary, userName }: Props) {
     const [savingRow, setSavingRow] = useState<string | null>(null)
     const [deletingId, setDeletingId] = useState<string | null>(null)
 
-    const exRate = currentSummary.exchangeRate || 1435
+    const exRate = currentSummary.exchangeRate || FALLBACK_USD_RATE
 
     // baseCurrency 기준 수익률 계산 — KRW면 환차손익 포함, USD면 달러 단순 등락
     const calcDisplayProfitRate = (h: Holding) => {

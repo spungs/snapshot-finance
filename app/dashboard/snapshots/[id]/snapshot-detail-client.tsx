@@ -9,6 +9,7 @@ import { useLanguage } from '@/lib/i18n/context'
 import { snapshotsApi } from '@/lib/api/client'
 import { formatCurrency, formatDate, formatNumber } from '@/lib/utils/formatters'
 import { cn } from '@/lib/utils'
+import { FALLBACK_USD_RATE } from '@/lib/api/exchange-rate'
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -72,7 +73,7 @@ export default function SnapshotDetailClient({ snapshot }: Props) {
 
     const isEn = language === 'en'
     const currency: 'KRW' | 'USD' = isEn ? 'USD' : 'KRW'
-    const rate = snapshot.exchangeRate || 1435
+    const rate = snapshot.exchangeRate || FALLBACK_USD_RATE
 
     const conv = (v: number) => (isEn && rate ? v / rate : v)
 

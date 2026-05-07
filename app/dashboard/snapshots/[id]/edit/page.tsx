@@ -11,6 +11,7 @@ import { snapshotsApi } from '@/lib/api/client'
 import { formatCurrency } from '@/lib/utils/formatters'
 import { useLanguage } from '@/lib/i18n/context'
 import { cn } from '@/lib/utils'
+import { FALLBACK_USD_RATE } from '@/lib/api/exchange-rate'
 
 interface HoldingInput {
     stockId: string
@@ -38,7 +39,7 @@ export default function EditSnapshotPage() {
     const [updatingPrices, setUpdatingPrices] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [summaryDisplayCurrency, setSummaryDisplayCurrency] = useState<'KRW' | 'USD'>('KRW')
-    const [exchangeRate, setExchangeRate] = useState<number>(1435)
+    const [exchangeRate, setExchangeRate] = useState<number>(FALLBACK_USD_RATE)
     const loadedDateRef = useRef<string | null>(null)
 
     // Abort controllers — cancel in-flight fetches on unmount (e.g., tab nav) and on supersession
@@ -70,7 +71,7 @@ export default function EditSnapshotPage() {
                     const snapshot = response.data
                     setCashBalance(snapshot.cashBalance.toString())
                     setNote(snapshot.note || '')
-                    setExchangeRate(Number(snapshot.exchangeRate) || 1435)
+                    setExchangeRate(Number(snapshot.exchangeRate) || FALLBACK_USD_RATE)
 
                     const dateStr = snapshot.snapshotDate
                         ? new Date(snapshot.snapshotDate).toISOString().split('T')[0]
@@ -90,7 +91,7 @@ export default function EditSnapshotPage() {
                         const currency = h.currency || 'KRW'
                         let purchaseRate = h.purchaseRate ? h.purchaseRate.toString() : '1'
                         if (currency === 'USD' && purchaseRate === '1') {
-                            purchaseRate = '1435'
+                            purchaseRate = String(FALLBACK_USD_RATE)
                         }
                         return {
                             stockId: h.stockId,
@@ -131,16 +132,16 @@ export default function EditSnapshotPage() {
             setUpdatingPrices(true)
             try {
                 if (snapshotDate === today) {
-                    if (!controller.signal.aborted) setExchangeRate(1435)
+                    if (!controller.signal.aborted) setExchangeRate(FALLBACK_USD_RATE)
                 } else {
                     try {
                         const res = await fetch(`/api/stocks/history?symbol=KRW=X&market=FX&date=${snapshotDate}`, { signal: controller.signal })
                         const data = await res.json()
                         if (controller.signal.aborted) return
-                        setExchangeRate(data?.success && data?.data?.close ? data.data.close : 1435)
+                        setExchangeRate(data?.success && data?.data?.close ? data.data.close : FALLBACK_USD_RATE)
                     } catch (e) {
                         if ((e as Error).name === 'AbortError') return
-                        setExchangeRate(1435)
+                        setExchangeRate(FALLBACK_USD_RATE)
                     }
                 }
 

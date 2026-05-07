@@ -9,6 +9,7 @@ import { snapshotsApi, holdingsApi } from '@/lib/api/client'
 import { formatCurrency } from '@/lib/utils/formatters'
 import { useLanguage } from '@/lib/i18n/context'
 import { cn } from '@/lib/utils'
+import { FALLBACK_USD_RATE } from '@/lib/api/exchange-rate'
 import { ArrowLeft, Download, Loader2, Plus, Trash2 } from 'lucide-react'
 
 interface HoldingInput {
@@ -35,7 +36,7 @@ export default function NewSnapshotPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [summaryDisplayCurrency, setSummaryDisplayCurrency] = useState<'KRW' | 'USD'>('KRW')
-  const [exchangeRate, setExchangeRate] = useState<number>(1435)
+  const [exchangeRate, setExchangeRate] = useState<number>(FALLBACK_USD_RATE)
   const [updatingPrices, setUpdatingPrices] = useState(false)
 
   // Abort controllers — cancel in-flight fetches on unmount (e.g., tab nav) and on supersession
@@ -67,7 +68,7 @@ export default function NewSnapshotPage() {
     async function updateData() {
       setUpdatingPrices(true)
       try {
-        let currentRate = 1435
+        let currentRate = FALLBACK_USD_RATE
         if (snapshotDate === today) {
           try {
             const res = await fetch('/api/exchange-rate', { signal: controller.signal })
@@ -77,11 +78,11 @@ export default function NewSnapshotPage() {
               currentRate = data.rate
               setExchangeRate(currentRate)
             } else {
-              setExchangeRate(1435)
+              setExchangeRate(FALLBACK_USD_RATE)
             }
           } catch (e) {
             if ((e as Error).name === 'AbortError') return
-            setExchangeRate(1435)
+            setExchangeRate(FALLBACK_USD_RATE)
           }
         } else {
           try {
@@ -89,14 +90,14 @@ export default function NewSnapshotPage() {
             const data = await res.json()
             if (controller.signal.aborted) return
             if (data.success && data.data) {
-              currentRate = data.data.close || 1435
+              currentRate = data.data.close || FALLBACK_USD_RATE
               setExchangeRate(currentRate)
             } else {
-              setExchangeRate(1435)
+              setExchangeRate(FALLBACK_USD_RATE)
             }
           } catch (e) {
             if ((e as Error).name === 'AbortError') return
-            setExchangeRate(1435)
+            setExchangeRate(FALLBACK_USD_RATE)
           }
         }
 

@@ -17,7 +17,7 @@ export default async function SettingsPage() {
         name: session.user.name,
         email: session.user.email,
         image: session.user.image,
-        isAutoSnapshotEnabled: (session.user as any).isAutoSnapshotEnabled,
+        isAutoSnapshotEnabled: session.user.isAutoSnapshotEnabled,
       }}
     />
   )

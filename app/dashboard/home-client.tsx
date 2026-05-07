@@ -6,6 +6,7 @@ import { formatCurrency, formatDate } from '@/lib/utils/formatters'
 import { cn } from '@/lib/utils'
 import { useLanguage } from '@/lib/i18n/context'
 import { useCurrency } from '@/lib/currency/context'
+import { FALLBACK_USD_RATE } from '@/lib/api/exchange-rate'
 import { Wallet } from 'lucide-react'
 
 interface Holding {
@@ -72,7 +73,7 @@ function UpDown({ value, big = false }: { value: number; big?: boolean }) {
 export function HomeClient({ summary, holdings, recentSnapshots, initialChartData, todayLabel }: HomeClientProps) {
     const { t, language } = useLanguage()
     const { baseCurrency } = useCurrency()
-    const exRate = summary.exchangeRate || 1435
+    const exRate = summary.exchangeRate || FALLBACK_USD_RATE
 
     const convert = (v: number) => baseCurrency === 'KRW' ? v : v / exRate
     const isProfit = summary.totalProfit >= 0

@@ -2,6 +2,7 @@ import { Suspense } from 'react'
 import { auth } from '@/lib/auth'
 import { redirect, notFound } from 'next/navigation'
 import { snapshotService } from '@/lib/services/snapshot-service'
+import { FALLBACK_USD_RATE } from '@/lib/api/exchange-rate'
 import SnapshotDetailClient from './snapshot-detail-client'
 import { SnapshotDetailSkeleton } from './snapshot-detail-skeleton'
 
@@ -51,7 +52,7 @@ async function SnapshotDetailContent({
     totalProfit: snapshot.totalProfit.toNumber(),
     profitRate: snapshot.profitRate.toNumber(),
     cashBalance: snapshot.cashBalance.toNumber(),
-    exchangeRate: snapshot.exchangeRate ? snapshot.exchangeRate.toNumber() : 1435,
+    exchangeRate: snapshot.exchangeRate ? snapshot.exchangeRate.toNumber() : FALLBACK_USD_RATE,
     holdings: snapshot.holdings.map((holding) => ({
       id: holding.id,
       snapshotId: holding.snapshotId,

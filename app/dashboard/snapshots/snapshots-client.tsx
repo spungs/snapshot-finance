@@ -94,6 +94,8 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings }: Snapshots
             setNextCursor(initialSnapshots[initialSnapshots.length - 1].id)
             if (!activeId) setActiveId(initialSnapshots[0].id)
         }
+        // initialSnapshots 가 줄어들거나(삭제) 늘어나면 hasMore 도 재평가
+        setHasMore(initialSnapshots.length >= 20)
     }, [initialSnapshots, activeId])
 
     // Cancel any in-flight pagination fetch when the component unmounts (e.g., tab switch)

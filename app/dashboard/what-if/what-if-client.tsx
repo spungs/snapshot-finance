@@ -16,6 +16,7 @@ import {
     YAxis,
 } from 'recharts'
 import { useLanguage } from '@/lib/i18n/context'
+import { FALLBACK_USD_RATE } from '@/lib/api/exchange-rate'
 
 interface Stock {
     id: string
@@ -88,7 +89,7 @@ export function WhatIfClient() {
     const [chartData, setChartData] = React.useState<ChartData[]>([])
     const [loading, setLoading] = React.useState(false)
     const [error, setError] = React.useState<string | null>(null)
-    const [exchangeRate, setExchangeRate] = React.useState<number>(1435)
+    const [exchangeRate, setExchangeRate] = React.useState<number>(FALLBACK_USD_RATE)
     const [appliedQuery, setAppliedQuery] = React.useState<{
         stock: Stock
         startDate: string

@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
+import { FALLBACK_USD_RATE } from '@/lib/api/exchange-rate'
 import SimulationClient from './simulation-client'
 import SimulationError from './simulation-error'
 
@@ -40,7 +41,7 @@ export default async function SimulationPage() {
         totalProfit: Number(snap.totalProfit),
         profitRate: Number(snap.profitRate),
         cashBalance: Number(snap.cashBalance),
-        exchangeRate: snap.exchangeRate ? Number(snap.exchangeRate) : 1435,
+        exchangeRate: snap.exchangeRate ? Number(snap.exchangeRate) : FALLBACK_USD_RATE,
         snapshotDate: snap.snapshotDate.toISOString(),
         createdAt: snap.createdAt.toISOString(),
         holdings: snap.holdings.map((h) => ({

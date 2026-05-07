@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { snapshotService } from '@/lib/services/snapshot-service'
 import { prisma } from '@/lib/prisma'
+import { FALLBACK_USD_RATE } from '@/lib/api/exchange-rate'
 import { SnapshotsClient } from './snapshots-client'
 import { SnapshotsSkeleton } from './snapshots-skeleton'
 
@@ -47,7 +48,7 @@ async function SnapshotsContent({ userId }: { userId: string }) {
     totalProfit: snapshot.totalProfit.toString(),
     profitRate: snapshot.profitRate.toString(),
     cashBalance: snapshot.cashBalance.toString(),
-    exchangeRate: snapshot.exchangeRate ? Number(snapshot.exchangeRate) : 1435,
+    exchangeRate: snapshot.exchangeRate ? Number(snapshot.exchangeRate) : FALLBACK_USD_RATE,
     note: snapshot.note || null,
     holdings: snapshot.holdings.map((h: any) => ({
       id: h.id,

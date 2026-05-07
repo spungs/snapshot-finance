@@ -26,7 +26,13 @@ import {
 const CACHE_DURATION_MS = 1000 * 60 * 5 // 5 minutes (in-memory L1)
 let cachedRate: { price: number; timestamp: number } | null = null
 
-const HARD_FALLBACK_KRW_PER_USD = 1400
+/**
+ * USD→KRW 환율의 단일 폴백 상수.
+ * - 모든 외부 소스 실패 시 마지막 보루
+ * - UI/SSR 에서 환율 데이터 누락 시 표시 기본값
+ * 코드 곳곳에 1400/1435 매직넘버 산재 → 통일하여 한 곳에서만 관리.
+ */
+export const FALLBACK_USD_RATE = 1435
 
 type RateSource = (signal?: AbortSignal) => Promise<number | null>
 
@@ -127,6 +133,6 @@ export async function getUsdExchangeRate(): Promise<number> {
         return cachedRate.price
     }
 
-    console.error(`All FX sources failed and no cache. Falling back to ${HARD_FALLBACK_KRW_PER_USD}.`)
-    return HARD_FALLBACK_KRW_PER_USD
+    console.error(`All FX sources failed and no cache. Falling back to ${FALLBACK_USD_RATE}.`)
+    return FALLBACK_USD_RATE
 }
