@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useLanguage } from '@/lib/i18n/context'
 import type { TranslationKey } from '@/lib/i18n/translations'
-import { ChevronRight, TrendingUp, Sparkle, Newspaper, Settings } from 'lucide-react'
+import { ChevronRight, TrendingUp, Sparkle, Settings } from 'lucide-react'
 
 interface MoreItem {
     href: string
@@ -23,7 +23,6 @@ const GROUPS: MoreGroup[] = [
         items: [
             { href: '/dashboard/simulation', titleKey: 'moreSimulationTitle', descKey: 'moreSimulationDesc', icon: TrendingUp },
             { href: '/dashboard/what-if', titleKey: 'moreWhatIfTitle', descKey: 'moreWhatIfDesc', icon: Sparkle },
-            { href: '/news', titleKey: 'moreNewsTitle', descKey: 'moreNewsDesc', icon: Newspaper },
         ],
     },
     {

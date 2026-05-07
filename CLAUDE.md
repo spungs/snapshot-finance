@@ -11,7 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 과거 수익률 및 성과 추적
 - "만약에" 시뮬레이션 (구현 완료)
 - 주식 현재가 조회 및 자산 평가 (KIS / Yahoo Finance)
-- 종목 관련 뉴스 AI 요약
+- 자연어 포트폴리오 수정 AI 어시스턴트 (Gemini)
 
 수동 구글 스프레드시트 기록을 자동화된 데이터베이스 기반 솔루션으로 대체합니다.
 
@@ -23,7 +23,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **인증:** NextAuth.js v5 (Google OAuth, Prisma Adapter)
 - **데이터베이스:** PostgreSQL + Prisma ORM v7 (Supabase)
 - **시세 API:** KIS (한국투자증권) Open API, Yahoo Finance (yahoo-finance2)
-- **AI:** Google Generative AI (뉴스 요약)
+- **AI:** Google Generative AI (포트폴리오 어시스턴트 — `gemini-2.5-flash-lite`)
 - **Rate Limiting:** Upstash Redis (`@upstash/ratelimit`)
 - **배포:** Vercel + Supabase
 
@@ -52,7 +52,7 @@ app/                     # Next.js App Router
   │   ├─ holdings/, kis/, simulation/
   │   ├─ snapshots/, stocks/, user/
   ├─ dashboard/            # 인증 필요 영역 (홈/포트폴리오/스냅샷/시뮬레이션/설정)
-  ├─ auth/, guides/, news/, privacy/, terms/
+  ├─ auth/, guides/, privacy/, terms/
 components/
   ├─ dashboard/            # 대시보드 전용 위젯 (차트/테이블 등)
   ├─ ui/                   # shadcn/ui 기반 공통 컴포넌트
@@ -64,7 +64,7 @@ lib/
   ├─ auth.ts, auth.config.ts  # NextAuth 설정
   ├─ prisma.ts             # PrismaClient 싱글톤
   ├─ ratelimit.ts          # Upstash 레이트리미터
-  ├─ currency/, hooks/, i18n/, news/, utils/
+  ├─ currency/, hooks/, i18n/, utils/
 prisma/
   ├─ schema.prisma, migrations/, seed.ts
 scripts/                # 일회성 마스터 업데이트 스크립트
@@ -84,7 +84,7 @@ User
           └─ Stock (N:1)
 ```
 
-부수 모델: `Account`/`VerificationToken` (NextAuth), `Stock` (마스터), `KisStockMaster` (KIS 검색용), `ApiToken` (KIS 토큰 캐시), `CronLog` (크론 실행 기록), `NewsArticle` (AI 요약 캐시).
+부수 모델: `Account`/`VerificationToken` (NextAuth), `Stock` (마스터), `KisStockMaster` (KIS 검색용), `ApiToken` (KIS 토큰 캐시), `CronLog` (크론 실행 기록).
 
 ### 핵심 설계 원칙
 
@@ -118,7 +118,7 @@ const profitRate = new Decimal(currentValue)
 
 - 일간 스냅샷: `GET /api/cron/daily-snapshot` (장 마감 후)
 - 만료 사용자 정리: `GET /api/cron/delete-expired-users`
-- 뉴스 업데이트: `GET /api/cron/news-update`
+- 가격 워밍: `GET /api/cron/update-prices?market=KR|US`
 - 스케줄러: **Supabase pg_cron**이 관리 (참고: 최근 `vercel.json` 제거됨)
 - 모든 실행 결과는 `CronLog` 테이블에 기록
 
@@ -164,6 +164,8 @@ const profitRate = new Decimal(currentValue)
 
 ### 최근 주요 변경
 
+- **뉴스 요약 기능 제거** — `app/news/`, `lib/news/`, `lib/ai/summarizer.ts`, `actions/news.ts`, `news_articles` 테이블, M7 종목별 7개 pg_cron 일괄 정지/삭제 (Gemini RPD 절감 목적)
+- 자연어 포트폴리오 어시스턴트(AI Chat) 도입 — `/api/ai/portfolio`
 - 모바일 탭 셸 + 에디토리얼 디자인 시스템 도입
 - `vercel.json` 제거 (cron은 Supabase pg_cron이 관리)
 - 차트 컴파일 오류 수정 및 디자인 시스템 정렬

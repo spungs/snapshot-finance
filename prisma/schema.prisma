@@ -168,23 +168,3 @@ model CronLog {
   @@map("cron_logs")
 }
 
-model NewsArticle {
-  id          String   @id @default(cuid())
-  symbol      String   // e.g., "AAPL"
-  title       String
-  url         String   @unique
-  publishedAt DateTime
-  
-  // AI Summaries
-  summaryShort  String? @db.Text // 3 lines
-  summaryMedium String? @db.Text // 5 lines
-  summaryLong   String? @db.Text // 10 lines
-  
-  source      String?
-  imageUrl    String?
-  
-  createdAt   DateTime @default(now())
-
-  @@index([symbol, publishedAt(sort: Desc)])
-  @@map("news_articles")
-}

@@ -26,23 +26,21 @@ export function MobileNav({ type, user }: MobileNavProps) {
     const { t } = useLanguage()
     const trans = translations[language]
 
-    // Landing page links (Guest Order: Why Invest, What If, M7 News)
+    // Landing page links (Guest Order: Why Invest, What If)
     const landingLinks = [
         { href: '#about', label: trans.landing.about },
         { href: '#features', label: trans.landing.features },
         { href: '/dashboard/why', label: t('whyInvest') },
         { href: '/dashboard/what-if', label: t('whatIf') },
-        { href: '/news', label: trans.m7News },
     ]
 
-    // Dashboard links (Auth Order: What If, M7 News, Why Invest)
+    // Dashboard links (Auth Order: What If, Why Invest)
     const allDashboardLinks = [
         { href: '/dashboard', label: t('dashboard'), protected: true },
         { href: '/dashboard/snapshots', label: t('snapshots'), protected: true },
         { href: '/dashboard/simulation', label: t('simulation'), protected: true },
         { href: '/dashboard/what-if', label: t('whatIf'), protected: false },
-        { href: '/news', label: trans.m7News, protected: false },
-        { href: '/dashboard/why', label: t('whyInvest'), protected: false }, // Explicitly added here too
+        { href: '/dashboard/why', label: t('whyInvest'), protected: false },
     ]
 
     const guestDashboardLinks = [

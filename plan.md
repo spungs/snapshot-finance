@@ -1,7 +1,7 @@
 # Snapshot Finance
 
 **작성일:** 2025-11-25  
-**최종 업데이트:** 2026-05-07 (PWA 도입 + 다층 캐싱 + 안티패턴 정리)  
+**최종 업데이트:** 2026-05-07 (뉴스 요약 기능 전면 제거 — 자산관리 앱 핵심 가치와 어긋남, Gemini RPD 절감 / PWA 도입 + 다층 캐싱 + 안티패턴 정리)  
 **목표:** 개인용 주식 잔고 관리 MVP (무료 플랜)
 
 ---
@@ -41,7 +41,7 @@
 #### 4. 기타 유지보수
 - [x] Next.js 16 호환성 업데이트 (`middleware.ts` → `proxy.ts`)
 - [x] Vercel 배포 환경 이슈 해결 (DB 연결, 시간대, 환경변수)
-- [x] **Cron 표준화**: Supabase pg_cron 으로 통합 (`vercel.json` 제거) — daily-snapshot, M7 뉴스 7개, update-prices-kr/us 가격 워밍
+- [x] **Cron 표준화**: Supabase pg_cron 으로 통합 (`vercel.json` 제거) — daily-snapshot, update-prices-kr/us 가격 워밍 *(M7 뉴스 7개 cron은 2026-05-07 뉴스 기능 제거와 함께 일괄 unschedule)*
 - [x] **미국주식 가격 공유 캐시**: `/api/cron/update-prices?market=US` cron 추가 + KIS 해외시세 폴백(EXCD 자동 매핑)
 - [x] **Snapshot 로직 고도화**: 단순 복사 -> **매일 실시간 시세 조회(Fetch)** 방식으로 업그레이드
 - [x] **스케줄링**: 월~금(UTC) 스냅샷 생성 / 매일 유저 정리 자동화
@@ -158,9 +158,9 @@
     - [x] 필수 콘텐츠(10개 이상) 및 정적 페이지(Terms, Privacy, About) 보강
     - [x] 가이드 상세 페이지 투자 유의사항(Investment Disclaimer) 추가 및 다국어 지원
     - [x] 전역 헤더(`SiteHeader`) 및 푸터(`SiteFooter`) 컴포넌트화 및 적용
-    - [x] **M7 News (구 Big Tech News) 고도화**:
-        - [x] UI/UX 리파인: 카드 스타일, 로딩 상태, 폰트 크기 조절 기능(LocalStorage 연동)
-        - [x] **Navigation 개선**: 로그인 여부에 따른 메뉴 순서 변경(Context-Aware Header) 및 `MainNav` 통합
-        - [x] 브랜딩 변경: 'Big Tech' -> 'M7' 용어 일괄 변경 및 다국어 지원 완벽 적용
+    - [x] ~~**M7 News (구 Big Tech News) 고도화**~~ *(2026-05-07 자산관리 앱 핵심 가치와 어긋나 기능 전면 제거)*
+        - ~~UI/UX 리파인: 카드 스타일, 로딩 상태, 폰트 크기 조절 기능(LocalStorage 연동)~~
+        - ~~**Navigation 개선**: 로그인 여부에 따른 메뉴 순서 변경(Context-Aware Header) 및 `MainNav` 통합~~
+        - ~~브랜딩 변경: 'Big Tech' -> 'M7' 용어 일괄 변경 및 다국어 지원 완벽 적용~~
 
 ---
