@@ -1,5 +1,9 @@
 export type Language = 'ko' | 'en'
 
+// 번역 키 유니온 타입 — 컨텍스트의 t() 가 받는 키와 동일.
+// `as any` 우회 없이 i18n 키 사용처에 그대로 적용 가능.
+type StringKeys<T> = { [K in keyof T]: T[K] extends string ? K : never }[keyof T]
+
 export const translations = {
     ko: {
         home: '홈',
@@ -897,3 +901,6 @@ export const translations = {
         whatIfPeriod: 'Period',
     },
 }
+
+export type TranslationKey = StringKeys<typeof translations['ko']>
+

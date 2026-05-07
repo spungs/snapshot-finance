@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Decimal from 'decimal.js'
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { kisClient } from '@/lib/api/kis-client'
 import { getUsdExchangeRate } from '@/lib/api/exchange-rate'
 import { auth } from '@/lib/auth'
 import { ratelimit, getIP, checkRateLimit } from '@/lib/ratelimit'
+
+// kisClient.getCurrentPrice 가 받는 시장 코드와 동일한 유니온 — `as any` 우회 없이 사용
+type MarketCode = 'KOSPI' | 'KOSDAQ' | 'US'
+
+// 스냅샷 holding(+stock) 의 Prisma payload 타입 — 매 holding 콜백이 받는 정확한 모양
+type SimulationHolding = Prisma.SnapshotHoldingGetPayload<{ include: { stock: true } }>
 
 export async function POST(request: NextRequest) {
     try {
@@ -67,24 +74,25 @@ export async function POST(request: NextRequest) {
         const currentExchangeRateData = await getUsdExchangeRate()
         const currentExchangeRate = currentExchangeRateData
 
-        const snapshotExchangeRate = Number((snapshot as any).exchangeRate) || 1
+        const snapshotExchangeRate = Number(snapshot.exchangeRate) || 1
 
         // 2. Fetch current prices for all holdings in parallel
         const simulationResults = await Promise.all(
-            snapshot.holdings.map(async (holding: any) => {
+            snapshot.holdings.map(async (holding: SimulationHolding) => {
                 try {
-                    // Determine market and currency
-                    const market = holding.stock.market === 'KOSPI' || holding.stock.market === 'KOSDAQ'
-                        ? holding.stock.market
-                        : (isNaN(Number(holding.stock.stockCode)) ? 'US' : 'KOSPI')
+                    // Determine market and currency — kisClient 가 받는 유니온으로 좁힌다
+                    const market: MarketCode =
+                        holding.stock.market === 'KOSPI' || holding.stock.market === 'KOSDAQ'
+                            ? holding.stock.market
+                            : (isNaN(Number(holding.stock.stockCode)) ? 'US' : 'KOSPI')
 
                     const isUsd = holding.currency === 'USD' || market === 'US'
                     const appliedRate = isUsd ? currentExchangeRate : 1
 
-                    const priceData = await kisClient.getCurrentPrice(holding.stock.stockCode, market as any)
+                    const priceData = await kisClient.getCurrentPrice(holding.stock.stockCode, market)
 
                     const currentPrice = new Decimal(priceData.price)
-                    const snapshotPrice = new Decimal(holding.averagePrice as any) // Use Average Price (Cost)
+                    const snapshotPrice = new Decimal(holding.averagePrice.toString()) // Average Price (Cost) — Prisma Decimal → string → decimal.js
 
                     // Determine Cost Basis Rate
                     // User Request: Use Snapshot Time Exchange Rate.
@@ -92,7 +100,7 @@ export async function POST(request: NextRequest) {
                     const costBasisRate = isUsd ? new Decimal(snapshotExchangeRate) : new Decimal(1)
                     const appliedRateDec = new Decimal(appliedRate)
 
-                    const quantity = new Decimal(holding.quantity as any)
+                    const quantity = new Decimal(holding.quantity)
 
                     // Native calculations for display
                     const simulatedValueNative = currentPrice.times(quantity)

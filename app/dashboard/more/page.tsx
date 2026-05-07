@@ -2,17 +2,18 @@
 
 import Link from 'next/link'
 import { useLanguage } from '@/lib/i18n/context'
+import type { TranslationKey } from '@/lib/i18n/translations'
 import { ChevronRight, TrendingUp, Sparkle, Newspaper, Settings } from 'lucide-react'
 
 interface MoreItem {
     href: string
-    titleKey: string
-    descKey?: string
+    titleKey: TranslationKey
+    descKey?: TranslationKey
     icon: React.ComponentType<{ className?: string; strokeWidth?: number }>
 }
 
 interface MoreGroup {
-    labelKey: string
+    labelKey: TranslationKey
     items: MoreItem[]
 }
 
@@ -46,7 +47,7 @@ export default function MorePage() {
 
             {GROUPS.map((group) => (
                 <div key={group.labelKey} className="mb-6">
-                    <div className="eyebrow px-6 mb-2">{t(group.labelKey as any)}</div>
+                    <div className="eyebrow px-6 mb-2">{t(group.labelKey)}</div>
                     <div className="mx-4 bg-card border border-border">
                         {group.items.map((item, i) => {
                             const Icon = item.icon
@@ -61,11 +62,11 @@ export default function MorePage() {
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="font-serif text-[15px] font-semibold text-foreground">
-                                            {t(item.titleKey as any)}
+                                            {t(item.titleKey)}
                                         </div>
                                         {item.descKey && (
                                             <div className="text-[11px] text-muted-foreground mt-0.5">
-                                                {t(item.descKey as any)}
+                                                {t(item.descKey)}
                                             </div>
                                         )}
                                     </div>

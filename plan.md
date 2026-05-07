@@ -1,7 +1,7 @@
 # Snapshot Finance
 
 **작성일:** 2025-11-25  
-**최종 업데이트:** 2026-05-03 (포트폴리오 이미지 공유 기능 추가)  
+**최종 업데이트:** 2026-05-07 (PWA 도입 + 다층 캐싱 + 안티패턴 정리)  
 **목표:** 개인용 주식 잔고 관리 MVP (무료 플랜)
 
 ---
@@ -131,6 +131,21 @@
 - [x] **시뮬레이션 결과 개선**:
     - [x] 결과 테이블 '비중'(Weight) 컬럼 추가 (소수점 1자리)
     - [x] 비중 계산 로직 수정 (단일 통화 기준 통일)
+- [x] **PWA 도입 (2026-05-07)**:
+    - [x] Serwist 기반 Service Worker (NetworkFirst navigation, defaultCache 표준화)
+    - [x] iOS apple-touch-startup-image 40종 + standalone manifest
+    - [x] 수동 SW 등록 (Next.js 16 호환) + localStorage 영속화 강화
+- [x] **캐싱 다층화 (2026-05-07)**:
+    - [x] Upstash Redis 공유 캐시 (L2: holdings/charts/prices/exchange-rate)
+    - [x] SWR + localStorage 클라이언트 영속 캐시 (L1)
+    - [x] Next.js `staleTimes` 로 navigation 즉시화
+    - [x] `cron/update-prices` (KR/US) 가격 워밍 + 장 시간 게이팅 + `force=1` 수동 실행
+- [x] **안티패턴 정리 (2026-05-07)**:
+    - [x] `useState(prop)` 미동기화 패턴 수정 (portfolio, snapshots, hasMore)
+    - [x] 변이 라우트(rate limit / limit 캡 / Promise.allSettled 로깅) 보강
+    - [x] `as any` 다수 정리 + i18n `TranslationKey` 타입 export
+    - [x] 환율 폴백 매직넘버 산재 → `FALLBACK_USD_RATE` 단일 출처화
+    - [x] Decimal/Prisma 타입 정합성(simulation route) 정리
 - [ ] **에러 핸들링 강화**: 사용자 친화적인 에러 메시지 및 토스트 알림
 - [ ] **단위/통합 테스트**: 주요 비즈니스 로직(수익률 계산 등) 테스트 코드 작성
 

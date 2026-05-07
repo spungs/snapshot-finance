@@ -43,8 +43,21 @@ interface SimulationResult {
     snapshotExchangeRate: number
 }
 
+// page.tsx 에서 Decimal/Date 를 직렬화한 결과의 모양 — Prisma 스냅샷을 클라이언트로 넘기기 위한 평문 형태
+interface SerializedSnapshot {
+    id: string
+    snapshotDate: string
+    note?: string | null
+    totalValue: number
+    totalCost: number
+    totalProfit: number
+    profitRate: number
+    cashBalance: number
+    exchangeRate: number
+}
+
 interface SimulationClientProps {
-    initialSnapshots: any[]
+    initialSnapshots: SerializedSnapshot[]
 }
 
 function UpDown({ value, big = false }: { value: number; big?: boolean }) {

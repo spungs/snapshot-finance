@@ -5,11 +5,12 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { useLanguage } from '@/lib/i18n/context'
+import type { TranslationKey } from '@/lib/i18n/translations'
 import { Home, PieChart, Camera, MoreHorizontal } from 'lucide-react'
 
 interface TabDef {
     href: string
-    labelKey: string
+    labelKey: TranslationKey
     icon: typeof Home
     exact?: boolean
 }
@@ -83,7 +84,7 @@ export function BottomTabBar() {
                                         isActive ? 'font-semibold' : 'font-medium',
                                     )}
                                 >
-                                    {t(tab.labelKey as any)}
+                                    {t(tab.labelKey)}
                                 </span>
                             </Link>
                         </li>

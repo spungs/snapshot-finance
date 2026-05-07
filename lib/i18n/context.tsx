@@ -1,18 +1,13 @@
 'use client'
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
-import { Language, translations } from './translations'
+import { Language, translations, TranslationKey } from './translations'
 
 interface LanguageContextType {
     language: Language
     setLanguage: (lang: Language) => void
-    t: (key: StringKeys<typeof translations['ko']>) => string
+    t: (key: TranslationKey) => string
 }
-
-// Helper type to extract only keys that have string values
-type StringKeys<T> = {
-    [K in keyof T]: T[K] extends string ? K : never
-}[keyof T]
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined)
 
@@ -36,11 +31,10 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem('language', lang)
     }
 
-    const t = (key: StringKeys<typeof translations['ko']>) => {
+    const t = (key: TranslationKey) => {
         const value = translations[language][key]
-        // Since we constrained the key to StringKeys, value should be string,
-        // but TypeScript might still need convincing because translations[language] is a union
-        return (value as string) || key as string
+        // 키를 TranslationKey 로 좁혔으므로 value 는 string 이지만, translations[language] 는 ko/en 유니온이라 narrowing 한계 → 명시 캐스팅
+        return (value as string) || (key as string)
     }
 
     return (
