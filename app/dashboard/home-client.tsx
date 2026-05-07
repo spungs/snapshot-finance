@@ -2,7 +2,6 @@
 
 import Link from 'next/link'
 import { PerformanceChart } from '@/components/dashboard/performance-chart'
-import { ExchangeRateFootnote } from '@/components/dashboard/exchange-rate-footnote'
 import { formatCurrency, formatDate } from '@/lib/utils/formatters'
 import { cn } from '@/lib/utils'
 import { useLanguage } from '@/lib/i18n/context'
@@ -102,7 +101,15 @@ export function HomeClient({ summary, holdings, recentSnapshots, initialChartDat
         <div className="max-w-[480px] md:max-w-2xl mx-auto w-full">
             {/* Hero — Big serif amount + ▲ rate */}
             <section className="px-6 pt-3 pb-6">
-                <div className="eyebrow mb-2">{todayLabel}</div>
+                {/* 날짜 좌측 / 환율(USD 보유 시) 우측 — 메타 정보를 한 줄에 병렬 배치 */}
+                <div className="flex items-baseline justify-between gap-2 mb-2">
+                    <div className="eyebrow">{todayLabel}</div>
+                    {hasUsdHolding && (
+                        <div className="text-xs text-muted-foreground numeric">
+                            1 USD ≈ {formatCurrency(exRate, 'KRW')}
+                        </div>
+                    )}
+                </div>
                 <div className="hero-serif text-[40px] sm:text-5xl text-foreground numeric">
                     {formatCurrency(displayValue, baseCurrency)}
                 </div>
@@ -112,13 +119,6 @@ export function HomeClient({ summary, holdings, recentSnapshots, initialChartDat
                         {isProfit ? '+' : ''}{formatCurrency(displayProfit, baseCurrency)}
                     </span>
                 </div>
-                {hasUsdHolding && (
-                    <ExchangeRateFootnote
-                        rate={exRate}
-                        updatedAt={summary.exchangeRateUpdatedAt}
-                        className="mt-2.5"
-                    />
-                )}
             </section>
 
             {/* Performance chart — 성과 흐름 */}
