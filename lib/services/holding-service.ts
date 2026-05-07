@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { kisClient } from '@/lib/api/kis-client'
-import { getUsdExchangeRate } from '@/lib/api/exchange-rate'
+import { getUsdExchangeRateWithMeta } from '@/lib/api/exchange-rate'
 import {
     cacheGet,
     cacheSet,
@@ -111,7 +111,7 @@ const holdingServiceInternal = {
             // Fetch FX rate and per-stock prices in a single parallel batch.
             // 둘 다 내부적으로 Redis(공유 캐시) 우선 조회 후 미스 시 직접 호출 —
             // cron 이 갱신해 둔 캐시 히트 시 외부 API 호출 0건으로 응답 가능.
-            const fxPromise = getUsdExchangeRate()
+            const fxPromise = getUsdExchangeRateWithMeta()
 
             // 개별 종목 시세를 병렬로 가져온다. 시세→DB write 부작용은
             // 본 GET 핸들러에서 분리해 한 번에 묶어서 처리한다 (race + GET-side-effect 회피).
@@ -172,7 +172,9 @@ const holdingServiceInternal = {
                 }
             }))
 
-            const [exchangeRate, holdingsWithPriceRaw] = await Promise.all([fxPromise, pricesPromise])
+            const [fxMeta, holdingsWithPriceRaw] = await Promise.all([fxPromise, pricesPromise])
+            const exchangeRate = fxMeta.rate
+            const exchangeRateUpdatedAt = fxMeta.updatedAt
             const exRate = new Decimal(exchangeRate || 0)
 
             // 시세 변동분만 모아 한 번에 update — N+1 race 회피
@@ -240,6 +242,7 @@ const holdingServiceInternal = {
                         totalProfitRate: totalProfitRate.toNumber(),
                         holdingsCount: holdingsWithPrice.length,
                         exchangeRate,
+                        exchangeRateUpdatedAt,
                         cashBalance: cashBalance.toNumber(),
                         targetAsset: targetAsset.toNumber(),
                     },

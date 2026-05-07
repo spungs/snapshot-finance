@@ -14,6 +14,7 @@ import { FormattedNumberInput } from '@/components/ui/formatted-number-input'
 import { DonutChart } from '@/components/dashboard/donut-chart'
 import { CashBalanceDialog } from '@/components/dashboard/cash-balance-dialog'
 import { PortfolioShareButton } from '@/components/dashboard/portfolio-share'
+import { ExchangeRateFootnote } from '@/components/dashboard/exchange-rate-footnote'
 import { Plus, Edit2, Trash2, Check, X, Loader2, ArrowUp, ArrowDown, MoreVertical, Wallet } from 'lucide-react'
 import {
     DropdownMenu,
@@ -52,6 +53,7 @@ interface Summary {
     totalProfitRate: number
     holdingsCount: number
     exchangeRate: number
+    exchangeRateUpdatedAt?: string | null
     cashBalance: number
 }
 
@@ -141,6 +143,8 @@ export function PortfolioClient({ initialHoldings, summary, userName }: Props) {
     const [deletingId, setDeletingId] = useState<string | null>(null)
 
     const exRate = currentSummary.exchangeRate || FALLBACK_USD_RATE
+    // USD 종목 한 개라도 보유 시에만 환율 footnote 의미 있음
+    const hasUsdHolding = useMemo(() => holdings.some(h => h.currency === 'USD'), [holdings])
 
     // baseCurrency 기준 수익률 계산 — KRW면 환차손익 포함, USD면 달러 단순 등락
     const calcDisplayProfitRate = (h: Holding) => {
@@ -466,6 +470,14 @@ export function PortfolioClient({ initialHoldings, summary, userName }: Props) {
                                 )
                             })()}
                         </div>
+
+                        {hasUsdHolding && (
+                            <ExchangeRateFootnote
+                                rate={exRate}
+                                updatedAt={currentSummary.exchangeRateUpdatedAt}
+                                className="mt-3 pt-3 border-t border-border text-right"
+                            />
+                        )}
                     </section>
                 )
             })()}

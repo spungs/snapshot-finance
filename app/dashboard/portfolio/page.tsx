@@ -45,6 +45,7 @@ async function PortfolioContent({
     totalProfitRate: Number(data?.summary?.totalProfitRate ?? 0),
     holdingsCount: data?.summary?.holdingsCount ?? 0,
     exchangeRate: Number(data?.summary?.exchangeRate ?? FALLBACK_USD_RATE),
+    exchangeRateUpdatedAt: data?.summary?.exchangeRateUpdatedAt ?? null,
     cashBalance: Number(data?.summary?.cashBalance ?? 0),
   }
 

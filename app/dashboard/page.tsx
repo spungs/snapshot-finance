@@ -35,7 +35,7 @@ async function HomeContent({ userId }: { userId: string }) {
 
   const summary = holdingsData?.summary ?? {
     totalCost: 0, totalValue: 0, totalProfit: 0, totalProfitRate: 0,
-    holdingsCount: 0, exchangeRate: FALLBACK_USD_RATE, cashBalance: 0,
+    holdingsCount: 0, exchangeRate: FALLBACK_USD_RATE, exchangeRateUpdatedAt: null, cashBalance: 0,
   }
 
   const holdings = (holdingsData?.holdings ?? []).map(h => ({
@@ -70,6 +70,7 @@ async function HomeContent({ userId }: { userId: string }) {
         totalProfitRate: Number(summary.totalProfitRate),
         cashBalance: Number(summary.cashBalance ?? 0),
         exchangeRate: Number(summary.exchangeRate ?? FALLBACK_USD_RATE),
+        exchangeRateUpdatedAt: summary.exchangeRateUpdatedAt ?? null,
         holdingsCount: summary.holdingsCount,
       }}
       holdings={holdings}

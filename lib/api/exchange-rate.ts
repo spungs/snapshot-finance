@@ -83,12 +83,16 @@ const SOURCES: Array<{ name: string; fn: RateSource }> = [
     { name: 'Finnhub-OANDA', fn: fromFinnhubOanda },
 ]
 
-export async function getUsdExchangeRate(): Promise<number> {
+/**
+ * 환율 + 갱신 시각을 함께 반환. UI 푸터에 "방금 갱신" 같은 신뢰 시그널을 표시할 때 사용.
+ * 모든 캐시 계층의 동작은 getUsdExchangeRate 와 동일.
+ */
+export async function getUsdExchangeRateWithMeta(): Promise<{ rate: number; updatedAt: string | null }> {
     const now = Date.now()
 
     // 1. L1: in-memory hot cache
     if (cachedRate && now - cachedRate.timestamp < CACHE_DURATION_MS) {
-        return cachedRate.price
+        return { rate: cachedRate.price, updatedAt: new Date(cachedRate.timestamp).toISOString() }
     }
 
     // 2. L2: Redis 공유 캐시 (cron 이 갱신해 둔 값)
@@ -96,7 +100,7 @@ export async function getUsdExchangeRate(): Promise<number> {
         const shared = await cacheGet<ExchangeRateCacheEntry>(exchangeRateKey())
         if (shared && Number.isFinite(shared.rate) && shared.rate > 0) {
             cachedRate = { price: shared.rate, timestamp: now }
-            return shared.rate
+            return { rate: shared.rate, updatedAt: shared.updatedAt ?? null }
         }
     } catch {
         // fail-open: Redis 장애 시 sources 로 진행
@@ -110,15 +114,16 @@ export async function getUsdExchangeRate(): Promise<number> {
         try {
             const rate = await source.fn(controller.signal)
             if (rate !== null) {
+                const updatedAt = new Date().toISOString()
                 cachedRate = { price: rate, timestamp: now }
                 console.log(`Exchange Rate Updated: ${rate} (Source: ${source.name})`)
                 // L2 채워두기 — 다른 인스턴스도 즉시 혜택
                 cacheSet(
                     exchangeRateKey(),
-                    { rate, updatedAt: new Date().toISOString() } satisfies ExchangeRateCacheEntry,
+                    { rate, updatedAt } satisfies ExchangeRateCacheEntry,
                     EXCHANGE_RATE_CACHE_TTL_SECONDS,
                 ).catch(() => { })
-                return rate
+                return { rate, updatedAt }
             }
         } catch (e) {
             console.warn(`FX source ${source.name} failed:`, e instanceof Error ? e.message : e)
@@ -130,9 +135,14 @@ export async function getUsdExchangeRate(): Promise<number> {
     // 4. Stale cache wins over hard fallback
     if (cachedRate) {
         console.warn('All FX sources failed, using stale cache.')
-        return cachedRate.price
+        return { rate: cachedRate.price, updatedAt: new Date(cachedRate.timestamp).toISOString() }
     }
 
     console.error(`All FX sources failed and no cache. Falling back to ${FALLBACK_USD_RATE}.`)
-    return FALLBACK_USD_RATE
+    return { rate: FALLBACK_USD_RATE, updatedAt: null }
+}
+
+export async function getUsdExchangeRate(): Promise<number> {
+    const { rate } = await getUsdExchangeRateWithMeta()
+    return rate
 }

@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { PerformanceChart } from '@/components/dashboard/performance-chart'
+import { ExchangeRateFootnote } from '@/components/dashboard/exchange-rate-footnote'
 import { formatCurrency, formatDate } from '@/lib/utils/formatters'
 import { cn } from '@/lib/utils'
 import { useLanguage } from '@/lib/i18n/context'
@@ -46,6 +47,7 @@ interface HomeClientProps {
         totalProfitRate: number
         cashBalance: number
         exchangeRate: number
+        exchangeRateUpdatedAt?: string | null
         holdingsCount: number
     }
     holdings: Holding[]
@@ -88,6 +90,9 @@ export function HomeClient({ summary, holdings, recentSnapshots, initialChartDat
     const diffFromLatest = latestSnap ? summary.totalProfitRate - latestRate : 0
     const hasChart = recentSnapshots.length >= 2
 
+    // USD 종목 한 개라도 보유 시 환율 footnote 노출 — 의미 없으면(전부 KRW) 노이즈가 되므로 숨김
+    const hasUsdHolding = holdings.some(h => h.currency === 'USD')
+
     // Top returns — 평가수익률 상위 4개 (큰 순)
     const topReturns = [...holdings]
         .sort((a, b) => b.profitRate - a.profitRate)
@@ -107,6 +112,13 @@ export function HomeClient({ summary, holdings, recentSnapshots, initialChartDat
                         {isProfit ? '+' : ''}{formatCurrency(displayProfit, baseCurrency)}
                     </span>
                 </div>
+                {hasUsdHolding && (
+                    <ExchangeRateFootnote
+                        rate={exRate}
+                        updatedAt={summary.exchangeRateUpdatedAt}
+                        className="mt-2.5"
+                    />
+                )}
             </section>
 
             {/* Performance chart — 성과 흐름 */}
