@@ -7,6 +7,10 @@ import { cn } from '@/lib/utils'
 import { useLanguage } from '@/lib/i18n/context'
 import { useCurrency } from '@/lib/currency/context'
 import { FALLBACK_USD_RATE } from '@/lib/api/exchange-rate'
+import { useLocalStorage } from '@/lib/hooks/use-local-storage'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Wallet } from 'lucide-react'
 
 interface Holding {
@@ -92,6 +96,12 @@ export function HomeClient({ summary, holdings, recentSnapshots, initialChartDat
     // USD 종목 한 개라도 보유 시 환율 footnote 노출 — 의미 없으면(전부 KRW) 노이즈가 되므로 숨김
     const hasUsdHolding = holdings.some(h => h.currency === 'USD')
 
+    // 이자 환산 원금 — 사용자가 설정한 연 이자율(기본 3%)을 기준으로 "이 수익을 예금 이자로 받으려면 얼마가 필요한가" 환산.
+    // 동기부여 시그널 (예: "내 수익 = 5억 정기예금 1년치 이자"). localStorage 영속.
+    const [interestRate, setInterestRate] = useLocalStorage('interestRate', 3)
+    const safeRate = Math.max(0.01, interestRate)
+    const interestPrincipal = displayProfit / (safeRate / 100)
+
     // Top returns — 평가수익률 상위 4개 (큰 순)
     const topReturns = [...holdings]
         .sort((a, b) => b.profitRate - a.profitRate)
@@ -148,6 +158,58 @@ export function HomeClient({ summary, holdings, recentSnapshots, initialChartDat
                     )}>
                         {isProfit ? '+' : ''}{formatCurrency(displayProfit, baseCurrency, { compact: true })}
                     </div>
+                    {/* 수익 발생 시 — "이 수익 = 연 N% 예금 X원 의 1년치 이자" 동기부여 시그널 */}
+                    {summary.totalProfit > 0 && (
+                        <div className="mt-2 text-[11px] text-muted-foreground numeric flex items-baseline gap-1 flex-wrap">
+                            <span aria-hidden>≈</span>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <button
+                                        type="button"
+                                        className="border-b border-dashed border-muted-foreground/50 hover:border-foreground hover:text-foreground transition-colors"
+                                        aria-label={t('interestPrincipal').replace('{rate}', interestRate.toString())}
+                                    >
+                                        {language === 'ko' ? `연 ${interestRate}%` : `${interestRate}%`}
+                                    </button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-64" align="start">
+                                    <div className="space-y-3">
+                                        <div className="space-y-1.5">
+                                            <h4 className="font-semibold text-sm leading-none">
+                                                {t('interestPrincipal').replace('{rate}', interestRate.toString())}
+                                            </h4>
+                                            <p className="text-xs text-muted-foreground leading-relaxed">
+                                                {t('interestPrincipalTooltip')
+                                                    .replace('{rate}', interestRate.toString())
+                                                    .replace('{profit}', formatCurrency(displayProfit, baseCurrency))}
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Label htmlFor="interest-rate" className="text-xs whitespace-nowrap">
+                                                {language === 'ko' ? '이자율' : 'Rate'} (%)
+                                            </Label>
+                                            <Input
+                                                id="interest-rate"
+                                                type="number"
+                                                value={interestRate}
+                                                onChange={(e) => {
+                                                    const v = Number(e.target.value)
+                                                    if (Number.isFinite(v) && v >= 0) setInterestRate(v)
+                                                }}
+                                                min={0}
+                                                max={100}
+                                                step={0.1}
+                                                className="h-8"
+                                            />
+                                        </div>
+                                    </div>
+                                </PopoverContent>
+                            </Popover>
+                            <span>
+                                {language === 'ko' ? '예금' : 'deposit'} {formatCurrency(interestPrincipal, baseCurrency, { compact: true })}
+                            </span>
+                        </div>
+                    )}
                 </div>
             </section>
 
