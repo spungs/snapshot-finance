@@ -114,6 +114,14 @@ const profitRate = new Decimal(currentValue)
 2. 생성 시점의 환율 및 주가를 `SnapshotHolding`에 동결
 3. **반드시 단일 트랜잭션**으로 처리 (스냅샷 + 모든 SnapshotHolding 원자적 생성)
 
+### Prisma 마이그레이션 — schema 변경에 동반 마이그레이션 필수
+
+`prisma/schema.prisma` 의 모델/필드/인덱스를 추가·삭제·변경할 때는 **반드시 같은 커밋에서 `npx prisma migrate dev --name <설명>` 으로 마이그레이션 파일을 생성**한다.
+
+- ❌ schema.prisma 만 수정하고 마이그레이션을 생성하지 않으면, DB 의 `_prisma_migrations` 테이블과 로컬 마이그레이션 폴더가 어긋나 다음 `migrate dev` 실행 시 **drift 감지 → reset 강요(데이터 손실)** 가 발생한다.
+- 이미 운영 DB 에 적용된 적이 있는 컬럼/인덱스를 schema 에서만 제거하면 **유령 마이그레이션 row** 가 남는다 (실제 사례: `bf535ec` 가 displayOrder 를 schema 에서만 제거하고 drop 마이그레이션을 만들지 않아 2026-05-07 까지 잠복).
+- 운영 DB 에 직접 SQL 을 실행했더라도, 동일한 변경을 마이그레이션 파일로 만들어 history 를 일치시킬 것.
+
 ### 자동 스냅샷 / Cron
 
 - 일간 스냅샷: `GET /api/cron/daily-snapshot` (장 마감 후)
