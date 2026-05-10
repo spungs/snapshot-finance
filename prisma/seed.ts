@@ -1,6 +1,17 @@
 import 'dotenv/config'
 import { PrismaClient } from '@prisma/client'
 
+// SAFETY GUARD: 운영 DB wipe 방지 — localhost 가 아닌 DB 에는 절대 실행 금지.
+// 본 파일의 deleteMany() 호출들이 조건 없는 전체 삭제를 수행하므로,
+// .env 의 운영 DATABASE_URL 로 실수 실행 시 운영 데이터 영구 손실 위험.
+const dbUrl = process.env.DATABASE_URL ?? ''
+if (!dbUrl.includes('localhost') && !dbUrl.includes('127.0.0.1')) {
+  console.error('SAFETY ABORT: seed.ts must run against a local database only.')
+  console.error(`  DATABASE_URL host: ${dbUrl.match(/@([^/]+)/)?.[1] ?? 'unknown'}`)
+  console.error('  Use `npm run seed:dev` (auto-loads .env.dev) instead.')
+  process.exit(1)
+}
+
 const prisma = new PrismaClient()
 
 async function main() {
@@ -11,7 +22,7 @@ async function main() {
     await prisma.snapshotHolding.deleteMany({})
     await prisma.portfolioSnapshot.deleteMany({})
     await prisma.holding.deleteMany({})
-    // await prisma.securitiesAccount.deleteMany({}) // Removed
+    await prisma.brokerageAccount.deleteMany({})
     await prisma.user.deleteMany({ where: { email: { in: ['test@example.com', 'free@example.com', 'pro@example.com', 'max@example.com'] } } })
   } catch (e) {
     console.log('Cleanup failed (start fresh):', e)
@@ -52,6 +63,19 @@ async function main() {
     },
   })
   console.log(`Created user: ${freeUser.email}`)
+
+  // 다중 계좌 시연용 BrokerageAccount 시드 (기본 계좌 + NH/키움)
+  const defaultAccount = await prisma.brokerageAccount.create({
+    data: { userId: freeUser.id, name: '기본 계좌', displayOrder: 0 },
+  })
+  await prisma.brokerageAccount.create({
+    data: { userId: freeUser.id, name: 'NH투자증권', displayOrder: 1 },
+  })
+  await prisma.brokerageAccount.create({
+    data: { userId: freeUser.id, name: '키움증권', displayOrder: 2 },
+  })
+  console.log(`Created 3 brokerage accounts for ${freeUser.email}`)
+  console.log(`(default account id: ${defaultAccount.id})`)
 
   console.log('Seeding completed!')
 }
