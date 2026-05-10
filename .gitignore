@@ -107,3 +107,14 @@ public/workbox-*.js.map
 
 # Claude Code
 .claude/
+
+# Database dump backups (포함 시 비밀 데이터 노출 위험)
+*.sql.backup
+prod_dump_*.sql
+dev_backup_*.sql
+prod_schema.sql
+import.log
+*.err
+
+# Raw migration SQL (prisma migrate diff temp output)
+*_migration_raw.sql
