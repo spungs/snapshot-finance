@@ -8,7 +8,7 @@ const dbUrl = process.env.DATABASE_URL ?? ''
 if (!dbUrl.includes('localhost') && !dbUrl.includes('127.0.0.1')) {
   console.error('SAFETY ABORT: seed.ts must run against a local database only.')
   console.error(`  DATABASE_URL host: ${dbUrl.match(/@([^/]+)/)?.[1] ?? 'unknown'}`)
-  console.error('  Use `npm run seed:dev` (auto-loads .env.dev) instead.')
+  console.error('  Use `npm run seed:dev` (auto-loads .env.development.local) instead.')
   process.exit(1)
 }
 
