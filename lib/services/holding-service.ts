@@ -96,7 +96,7 @@ const holdingServiceInternal = {
             const [holdings, user] = await Promise.all([
                 prisma.holding.findMany({
                     where: { userId },
-                    include: { stock: true },
+                    include: { stock: true, account: { select: { id: true, name: true } } },
                     orderBy: { createdAt: 'asc' },
                 }),
                 prisma.user.findUnique({
@@ -155,6 +155,8 @@ const holdingServiceInternal = {
                     stockCode: holding.stock.stockCode,
                     stockName: holding.stock.stockName,
                     market: holding.stock.market,
+                    accountId: holding.accountId,
+                    accountName: holding.account?.name ?? null,
                     quantity: holding.quantity,
                     averagePrice: averagePrice.toNumber(),
                     currentPrice: displayPrice.toNumber(),
@@ -167,6 +169,7 @@ const holdingServiceInternal = {
                     profitRate: profitRate.toNumber(),
                     // 부작용 처리용 메타 — 응답에는 포함하지 않는다
                     _holdingId: holding.id,
+                    _stockId: holding.stockId,
                     _shouldUpdateDb: fetchedPrice > 0 && !new Decimal(fetchedPrice).equals(storedPrice),
                     _fetchedPrice: fetchedPrice,
                 }
@@ -177,12 +180,20 @@ const holdingServiceInternal = {
             const exchangeRateUpdatedAt = fxMeta.updatedAt
             const exRate = new Decimal(exchangeRate || 0)
 
-            // 시세 변동분만 모아 한 번에 update — N+1 race 회피
+            // 시세 변동분만 모아 한 번에 update — N+1 race 회피.
+            // 같은 stockId 의 모든 Holding row(여러 계좌에 분산되어 있을 수 있음)에 동일 가격 반영.
+            // 동일 stockId 가 여러 행에 있으면 첫 항목만 picking 해 stockId 단위 update 발행.
+            const seenStockIds = new Set<string>()
             const updates = holdingsWithPriceRaw
                 .filter(h => h._shouldUpdateDb)
+                .filter(h => {
+                    if (seenStockIds.has(h._stockId)) return false
+                    seenStockIds.add(h._stockId)
+                    return true
+                })
                 .map(h =>
-                    prisma.holding.update({
-                        where: { id: h._holdingId },
+                    prisma.holding.updateMany({
+                        where: { stockId: h._stockId },
                         data: { currentPrice: h._fetchedPrice, priceUpdatedAt: new Date() },
                     })
                 )
@@ -201,7 +212,7 @@ const holdingServiceInternal = {
             }
 
             // 응답 필드만 남기고 메타 필드는 제거
-            const holdingsWithPrice = holdingsWithPriceRaw.map(({ _holdingId, _shouldUpdateDb, _fetchedPrice, ...rest }) => rest)
+            const holdingsWithPrice = holdingsWithPriceRaw.map(({ _holdingId, _stockId, _shouldUpdateDb, _fetchedPrice, ...rest }) => rest)
 
             // KRW 기준 합계 계산 — Decimal 누적
             let totalCostKRW = new Decimal(0)

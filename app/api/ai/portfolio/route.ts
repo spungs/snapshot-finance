@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai'
 import { auth } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
 import { ratelimit, checkRateLimit } from '@/lib/ratelimit'
 import { getUsdExchangeRate } from '@/lib/api/exchange-rate'
 import {
@@ -27,6 +28,10 @@ export interface ParsedAction {
     averagePrice?: number
     currency?: 'KRW' | 'USD'
     amount?: number
+    /** 사용자가 자연어에 명시한 계좌명 (예: "NH"). server 가 BrokerageAccount.id 로 매핑 후 client 에 전달. */
+    accountId?: string
+    /** UI 표시용 계좌명 (확인 버블에 노출). */
+    accountName?: string
 }
 
 interface HoldingContext {
@@ -34,6 +39,17 @@ interface HoldingContext {
     quantity: number
     averagePrice: number
     currency: string
+    /** 다중 계좌에서 같은 종목이 여러 번 보일 수 있어 disambiguation 에 활용. */
+    accountId?: string
+    accountName?: string
+}
+
+// 자유 텍스트 accountName(모델이 반환) — 너무 길거나 비어있으면 무시.
+function pickAccountName(arg: unknown): string | undefined {
+    if (typeof arg !== 'string') return undefined
+    const trimmed = arg.trim()
+    if (!trimmed || trimmed.length > 50) return undefined
+    return trimmed
 }
 
 // Gemini가 반환한 function call args를 검증하고 ParsedAction으로 좁힌다.
@@ -56,7 +72,8 @@ function validateParsedAction(
                 if (!c.ok) return c
                 currency = c.value
             }
-            return { ok: true, value: { type, stockName: name.value, quantity: qty.value, averagePrice: price.value, currency } }
+            const accountName = pickAccountName(args.accountName)
+            return { ok: true, value: { type, stockName: name.value, quantity: qty.value, averagePrice: price.value, currency, accountName } }
         }
         case 'update_holding': {
             const name = validateStockName(args.stockName)
@@ -76,12 +93,14 @@ function validateParsedAction(
             if (quantity === undefined && averagePrice === undefined) {
                 return { ok: false, error: '수정할 수량 또는 평단가를 알려주세요.' }
             }
-            return { ok: true, value: { type, stockName: name.value, quantity, averagePrice } }
+            const accountName = pickAccountName(args.accountName)
+            return { ok: true, value: { type, stockName: name.value, quantity, averagePrice, accountName } }
         }
         case 'delete_holding': {
             const name = validateStockName(args.stockName)
             if (!name.ok) return name
-            return { ok: true, value: { type, stockName: name.value } }
+            const accountName = pickAccountName(args.accountName)
+            return { ok: true, value: { type, stockName: name.value, accountName } }
         }
         case 'update_cash_balance': {
             const amount = validateCashAmount(args.amount)
@@ -91,6 +110,26 @@ function validateParsedAction(
         default:
             return { ok: false, error: '지원하지 않는 작업입니다.' }
     }
+}
+
+/**
+ * 사용자가 자연어로 언급한 계좌명("NH 에 …")을 BrokerageAccount.id 로 매핑.
+ * 정확 일치 → 부분 일치(대소문자 무시) → 전부 실패면 null.
+ */
+function resolveAccountIdByName(
+    accounts: { id: string; name: string }[],
+    accountName: string | undefined,
+): { id: string; name: string } | null {
+    if (!accountName) return null
+    const q = accountName.trim().toLowerCase()
+    if (!q) return null
+    const exact = accounts.find(a => a.name.toLowerCase() === q)
+    if (exact) return exact
+    const partial = accounts.find(a => {
+        const n = a.name.toLowerCase()
+        return n.includes(q) || q.includes(n)
+    })
+    return partial ?? null
 }
 
 export async function POST(request: NextRequest) {
@@ -133,6 +172,18 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ success: false, error: '메시지가 없습니다.' }, { status: 400 })
         }
 
+        // 사용자의 BrokerageAccount 목록 — 시스템 프롬프트 컨텍스트 + 자연어 계좌명 매핑에 사용.
+        // 같은 종목이 여러 계좌에 분산될 수 있어 보유종목 수까지 함께 노출.
+        const userAccounts = await prisma.brokerageAccount.findMany({
+            where: { userId: session.user.id },
+            select: {
+                id: true,
+                name: true,
+                _count: { select: { holdings: true } },
+            },
+            orderBy: [{ displayOrder: 'asc' }, { createdAt: 'asc' }],
+        })
+
         const systemInstruction = `당신은 Snapshot Finance의 주식 포트폴리오 관리 어시스턴트입니다.
 사용자의 자연어 요청을 분석해 적절한 함수를 호출하거나, 명확화가 필요하면 텍스트로 답변하세요.
 
@@ -152,9 +203,15 @@ export async function POST(request: NextRequest) {
 5. 함수 호출 시 모든 필수 파라미터가 합리적 범위인지 확인하세요. 음수 수량, 0 평단가, 비정상적으로 큰 값은 호출하지 마세요.
 6. **이전 대화 맥락 활용** — 사용자가 "그거 삭제해줘", "그럼 200주로 바꿔줘" 처럼 대명사/생략을 사용하면 직전 대화에서 언급된 종목을 기준으로 동작하세요.
 
+## 다중 계좌(Brokerage Account) 처리
+사용자는 여러 증권 계좌(BrokerageAccount)를 가질 수 있습니다. 사용자가 특정 계좌를 명시하면(예: "NH에 삼성전자 5주 추가해줘") **accountName** 인자에 그 계좌 이름을 그대로 담아 호출하세요.
+- 사용자가 계좌를 명시하지 않은 경우(예: "삼성전자 5주 추가") accountName 은 비워둡니다 — 서버가 기본 계좌로 처리합니다.
+- 보유 계좌가 여러 개이고, 같은 종목이 여러 계좌에 분산된 update/delete 요청에서 사용자가 계좌를 명시하지 않았으면 함수를 호출하지 말고 어느 계좌인지 텍스트로 물어보세요.
+
 ## 예시
 - "삼성전자 100주 평단 75000원에 추가해줘" → add_holding(stockName="삼성전자", quantity=100, averagePrice=75000, currency="KRW")
-- "애플 50주 190달러에 매수했어" → add_holding(stockName="애플", quantity=50, averagePrice=190, currency="USD")
+- "NH 계좌에 애플 50주 190달러에 매수했어" → add_holding(stockName="애플", quantity=50, averagePrice=190, currency="USD", accountName="NH")
+- "키움에서 삼성전자 삭제해줘" → delete_holding(stockName="삼성전자", accountName="키움")
 - "예수금 500만원으로 변경" → update_cash_balance(amount=5000000)
 - "삼성 추가해줘" → 텍스트: "삼성전자, 삼성SDI, 삼성바이오로직스 등 비슷한 종목이 많은데 어떤 종목을 말씀하시나요?"
 - "오늘 시장 어떤 거 같아?" → 텍스트: "저는 포트폴리오 관리만 도와드릴 수 있어요."`
@@ -174,6 +231,7 @@ export async function POST(request: NextRequest) {
                                 quantity: { type: SchemaType.NUMBER, description: '매수 수량' },
                                 averagePrice: { type: SchemaType.NUMBER, description: '평균 매수가격' },
                                 currency: { type: SchemaType.STRING, description: '통화 (KRW 또는 USD)' },
+                                accountName: { type: SchemaType.STRING, description: '사용자가 명시한 증권 계좌 이름 (예: "NH"). 명시되지 않았으면 비워둡니다.' },
                             },
                             required: ['stockName', 'quantity', 'averagePrice'],
                         },
@@ -187,6 +245,7 @@ export async function POST(request: NextRequest) {
                                 stockName: { type: SchemaType.STRING, description: '종목명' },
                                 quantity: { type: SchemaType.NUMBER, description: '새로운 수량' },
                                 averagePrice: { type: SchemaType.NUMBER, description: '새로운 평균 매수가' },
+                                accountName: { type: SchemaType.STRING, description: '사용자가 명시한 증권 계좌 이름. 같은 종목이 여러 계좌에 있을 때만 의미가 있습니다.' },
                             },
                             required: ['stockName'],
                         },
@@ -198,6 +257,7 @@ export async function POST(request: NextRequest) {
                             type: SchemaType.OBJECT,
                             properties: {
                                 stockName: { type: SchemaType.STRING, description: '삭제할 종목명' },
+                                accountName: { type: SchemaType.STRING, description: '사용자가 명시한 증권 계좌 이름. 같은 종목이 여러 계좌에 있을 때만 의미가 있습니다.' },
                             },
                             required: ['stockName'],
                         },
@@ -217,8 +277,15 @@ export async function POST(request: NextRequest) {
             }],
         })
 
+        const accountsText = userAccounts.length > 0
+            ? `현재 증권 계좌:\n${userAccounts.map(a => `- ${a.name} (보유 종목 ${a._count.holdings}개)`).join('\n')}`
+            : '현재 증권 계좌가 없습니다.'
+
         const holdingsText = holdingsContext.length > 0
-            ? `현재 보유 종목:\n${holdingsContext.map(h => `- ${h.stockName}: ${h.quantity}주, 평단가 ${h.averagePrice.toLocaleString()} ${h.currency}`).join('\n')}`
+            ? `현재 보유 종목:\n${holdingsContext.map(h => {
+                const acc = h.accountName ? ` [${h.accountName}]` : ''
+                return `- ${h.stockName}${acc}: ${h.quantity}주, 평단가 ${h.averagePrice.toLocaleString()} ${h.currency}`
+            }).join('\n')}`
             : '현재 보유 종목 없음'
 
         // Gemini chat은 user/model 교차를 요구하고 첫 메시지가 user여야 한다.
@@ -230,7 +297,7 @@ export async function POST(request: NextRequest) {
                 parts: [{ text: m.content }],
             }))
 
-        const userPrompt = `${holdingsText}\n\n사용자 요청: ${message}`
+        const userPrompt = `${accountsText}\n\n${holdingsText}\n\n사용자 요청: ${message}`
 
         const chat = model.startChat({ history: geminiHistory })
         const result = await chat.sendMessage(userPrompt)
@@ -253,6 +320,23 @@ export async function POST(request: NextRequest) {
             }
 
             const action = validation.value
+
+            // 자연어 accountName → BrokerageAccount.id 매핑.
+            // 매핑 실패 시 (사용자가 모르는 계좌명을 댄 경우) 액션 자체를 반려하고 사용자에게 다시 물어본다.
+            if (action.accountName) {
+                const matched = resolveAccountIdByName(userAccounts, action.accountName)
+                if (!matched) {
+                    return NextResponse.json({
+                        success: true,
+                        action: null,
+                        reply: `'${action.accountName}' 라는 계좌를 찾을 수 없습니다. 다음 계좌 중에서 선택해주세요: ${userAccounts.map(a => a.name).join(', ') || '(등록된 계좌 없음)'}`,
+                    })
+                }
+                action.accountId = matched.id
+                action.accountName = matched.name
+            }
+
+            const accountSuffix = action.accountName ? ` (계좌: ${action.accountName})` : ''
             let reply = ''
             switch (action.type) {
                 case 'add_holding':
@@ -260,20 +344,20 @@ export async function POST(request: NextRequest) {
                         // USD 매입은 매입 시점 환율로 동결됨 — 사용자가 적용 환율을 인지하고 확인할 수 있도록 명시.
                         const rate = await getUsdExchangeRate()
                         const totalKrw = Math.round(action.quantity * action.averagePrice * rate)
-                        reply = `**${action.stockName}** ${action.quantity}주를 평균 ${action.averagePrice.toLocaleString()}$ (환율 ${rate.toLocaleString()}원/$, 매입금액 약 ${totalKrw.toLocaleString()}원)에 추가할까요?`
+                        reply = `**${action.stockName}** ${action.quantity}주를 평균 ${action.averagePrice.toLocaleString()}$ (환율 ${rate.toLocaleString()}원/$, 매입금액 약 ${totalKrw.toLocaleString()}원)에 추가할까요?${accountSuffix}`
                     } else {
-                        reply = `**${action.stockName}** ${action.quantity}주를 평균 ${action.averagePrice?.toLocaleString()}원에 추가할까요?`
+                        reply = `**${action.stockName}** ${action.quantity}주를 평균 ${action.averagePrice?.toLocaleString()}원에 추가할까요?${accountSuffix}`
                     }
                     break
                 case 'update_holding': {
                     const updates: string[] = []
                     if (action.quantity !== undefined) updates.push(`수량 ${action.quantity}주`)
                     if (action.averagePrice !== undefined) updates.push(`평단가 ${action.averagePrice.toLocaleString()}`)
-                    reply = `**${action.stockName}**을 ${updates.join(', ')}(으)로 수정할까요?`
+                    reply = `**${action.stockName}**을 ${updates.join(', ')}(으)로 수정할까요?${accountSuffix}`
                     break
                 }
                 case 'delete_holding':
-                    reply = `**${action.stockName}**을 포트폴리오에서 삭제할까요?`
+                    reply = `**${action.stockName}**을 포트폴리오에서 삭제할까요?${accountSuffix}`
                     break
                 case 'update_cash_balance':
                     reply = `예수금을 **${action.amount?.toLocaleString()}원**으로 변경할까요?`

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { kisClient } from '@/lib/api/kis-client'
 import { getUsdExchangeRate } from '@/lib/api/exchange-rate'
+import { mergeHoldingsByStock } from '@/lib/services/snapshot-service'
 import Decimal from 'decimal.js'
 
 // Unified Cron Job: Daily Snapshot + User Maintenance
@@ -75,16 +76,19 @@ export async function GET(request: NextRequest) {
                         return { userId: user.id, status: 'skipped', reason: 'No holdings' }
                     }
 
+                    // 여러 계좌에 분산된 같은 종목을 stockId 단위로 통합 (가중평균 평단 + 합계 수량)
+                    const merged = mergeHoldingsByStock(user.holdings)
+
                     // Fetch prices and calculate values (Real-time) — 모든 합계는 Decimal로
                     const usdRateDec = new Decimal(usdRate || 0)
                     let totalValue = new Decimal(0)
                     let totalCost = new Decimal(0)
 
                     const snapshotHoldingsData = await Promise.all(
-                        user.holdings.map(async (holding) => {
+                        merged.map(async (holding) => {
                             const currentPrice = await getStockPrice(holding.stock.stockCode, holding.stock.market || 'Unknown')
                             const quantity = holding.quantity
-                            const avgPrice = new Decimal(holding.averagePrice.toString())
+                            const avgPrice = holding.averagePrice
                             const cur = new Decimal(currentPrice || 0)
 
                             const val = cur.times(quantity)
@@ -92,7 +96,7 @@ export async function GET(request: NextRequest) {
 
                             // 매입금액은 매입 시점 환율(purchaseRate)로 동결 — 환율 변동만으로 매입금액이 출렁이지 않게 함
                             // purchaseRate 누락/legacy(1)면 현재 환율로 폴백
-                            const purchaseRate = new Decimal(holding.purchaseRate.toString())
+                            const purchaseRate = holding.purchaseRate
                             const effectivePurchaseRate = purchaseRate.gt(0) && !purchaseRate.equals(1)
                                 ? purchaseRate
                                 : usdRateDec

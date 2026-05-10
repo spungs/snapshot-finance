@@ -1,5 +1,87 @@
 import { prisma } from '@/lib/prisma'
 import { cacheGet, cacheSet, cacheDelete } from '@/lib/cache'
+import Decimal from 'decimal.js'
+
+/**
+ * 사용자의 여러 계좌에 분산된 Holding 을 stockId 단위로 통합.
+ *
+ * 통합 규칙(사용자 결정에 따라 계좌 분리 없이 단일 스냅샷):
+ *  - quantity: 단순 합계
+ *  - averagePrice: 가중평균 = Σ(avgPrice * quantity) / Σ(quantity)
+ *  - currency / purchaseRate: 같은 stockId 면 동일하다는 가정. 다르면 첫 행 값 사용.
+ *
+ * 입력 holdings 는 prisma 의 Holding[] (stock 포함). 빈 배열도 허용.
+ * 반환은 stockId 단위로 group 된 정규화된 행 배열.
+ */
+export interface MergedHoldingRow {
+    stockId: string
+    quantity: number
+    averagePrice: Decimal
+    currency: string
+    purchaseRate: Decimal
+    stock: {
+        stockCode: string
+        stockName: string
+        market: string | null
+    }
+}
+
+interface RawHoldingForMerge {
+    stockId: string
+    quantity: number
+    averagePrice: { toString(): string } | string | number
+    currency: string
+    purchaseRate: { toString(): string } | string | number
+    stock: { stockCode: string; stockName: string; market: string | null }
+}
+
+export function mergeHoldingsByStock(holdings: RawHoldingForMerge[]): MergedHoldingRow[] {
+    const buckets = new Map<string, {
+        quantitySum: number
+        weightedCostSum: Decimal // Σ(avgPrice * qty)
+        currency: string
+        purchaseRate: Decimal
+        stock: RawHoldingForMerge['stock']
+    }>()
+
+    for (const h of holdings) {
+        const qty = h.quantity
+        const avg = new Decimal(h.averagePrice.toString())
+        const pr = new Decimal(h.purchaseRate.toString())
+        const cost = avg.times(qty)
+
+        const cur = buckets.get(h.stockId)
+        if (cur) {
+            cur.quantitySum += qty
+            cur.weightedCostSum = cur.weightedCostSum.plus(cost)
+            // currency/purchaseRate 는 첫 행 값 유지 (사실상 동일하다는 가정)
+        } else {
+            buckets.set(h.stockId, {
+                quantitySum: qty,
+                weightedCostSum: cost,
+                currency: h.currency,
+                purchaseRate: pr,
+                stock: h.stock,
+            })
+        }
+    }
+
+    const merged: MergedHoldingRow[] = []
+    for (const [stockId, b] of buckets.entries()) {
+        const avgPrice = b.quantitySum > 0
+            ? b.weightedCostSum.div(b.quantitySum)
+            : new Decimal(0)
+        merged.push({
+            stockId,
+            quantity: b.quantitySum,
+            averagePrice: avgPrice,
+            currency: b.currency,
+            purchaseRate: b.purchaseRate,
+            stock: b.stock,
+        })
+    }
+    return merged
+}
 
 // 홈 PerformanceChart 용 사용자별 캐시.
 // - period 필터링은 클라이언트 메모리에서 수행 (모든 기간이 동일 캐시 공유)

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
+import { assertAccountOwnership } from '@/lib/auth-helpers'
 import { getUsdExchangeRate } from '@/lib/api/exchange-rate'
 import { holdingService } from '@/lib/services/holding-service'
 import { kisClient } from '@/lib/api/kis-client'
@@ -86,7 +87,7 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json()
-        const { stockId, quantity: rawQuantity, averagePrice: rawAveragePrice, mode = 'overwrite' } = body
+        const { stockId, accountId: rawAccountId, quantity: rawQuantity, averagePrice: rawAveragePrice, mode = 'overwrite' } = body
         let { purchaseRate, currency } = body
         if (!purchaseRate) purchaseRate = 1
 
@@ -95,6 +96,39 @@ export async function POST(request: NextRequest) {
                 { success: false, error: { code: 'INVALID_INPUT', message: '필수 필드가 누락되었습니다.' } },
                 { status: 400 }
             )
+        }
+
+        // accountId 결정: 본문에 명시되면 IDOR 검증, 없으면 사용자의 첫(가장 오래된) 계좌로 폴백.
+        // 폴백이 없으면 400 — 모든 Holding 은 BrokerageAccount 에 종속.
+        let accountId: string
+        if (rawAccountId) {
+            if (typeof rawAccountId !== 'string') {
+                return NextResponse.json(
+                    { success: false, error: { code: 'INVALID_INPUT', message: 'accountId가 올바르지 않습니다.' } },
+                    { status: 400 }
+                )
+            }
+            const owned = await assertAccountOwnership(rawAccountId, userId)
+            if (!owned) {
+                return NextResponse.json(
+                    { success: false, error: { code: 'FORBIDDEN', message: '해당 계좌에 접근할 수 없습니다.' } },
+                    { status: 403 }
+                )
+            }
+            accountId = owned.id
+        } else {
+            const fallback = await prisma.brokerageAccount.findFirst({
+                where: { userId },
+                orderBy: [{ displayOrder: 'asc' }, { createdAt: 'asc' }],
+                select: { id: true },
+            })
+            if (!fallback) {
+                return NextResponse.json(
+                    { success: false, error: { code: 'NO_ACCOUNT', message: '먼저 증권 계좌를 만들어주세요.' } },
+                    { status: 400 }
+                )
+            }
+            accountId = fallback.id
         }
 
         const qtyResult = validateQuantity(rawQuantity)
@@ -139,12 +173,12 @@ export async function POST(request: NextRequest) {
 
         let holding
 
-        // 물타기 모드이고 기존 보유분이 있을 경우 처리
+        // 물타기 모드이고 기존 보유분이 있을 경우 처리 (해당 계좌 + stockId 단위)
         if (mode === 'merge') {
             const existing = await prisma.holding.findUnique({
                 where: {
-                    userId_stockId: {
-                        userId,
+                    accountId_stockId: {
+                        accountId,
                         stockId,
                     },
                 },
@@ -179,8 +213,8 @@ export async function POST(request: NextRequest) {
         if (!holding) {
             holding = await prisma.holding.upsert({
                 where: {
-                    userId_stockId: {
-                        userId,
+                    accountId_stockId: {
+                        accountId,
                         stockId,
                     },
                 },
@@ -194,6 +228,7 @@ export async function POST(request: NextRequest) {
                 },
                 create: {
                     user: { connect: { id: userId } },
+                    account: { connect: { id: accountId } },
                     stock: { connect: { id: stockId } },
                     quantity,
                     averagePrice,
