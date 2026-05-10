@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { holdingService } from '@/lib/services/holding-service'
 import { FALLBACK_USD_RATE } from '@/lib/api/exchange-rate'
+import { prisma } from '@/lib/prisma'
 import { PortfolioClient } from './portfolio-client'
 import { PortfolioSkeleton } from './portfolio-skeleton'
 import { AiChat } from '@/components/dashboard/ai-chat'
@@ -36,7 +37,18 @@ async function PortfolioContent({
   userId: string
   userName: string | null
 }) {
-  const { data } = await holdingService.getList(userId)
+  // 보유 종목과 계좌 목록을 병렬 조회. 계좌 목록은 셀렉터 / 보기 토글의 기반 데이터.
+  // (Phase A 통합 후 prisma.brokerageAccount 가 제공된다.)
+  const [{ data }, accountsRaw] = await Promise.all([
+    holdingService.getList(userId),
+    prisma.brokerageAccount
+      .findMany({
+        where: { userId },
+        select: { id: true, name: true },
+        orderBy: { createdAt: 'asc' },
+      })
+      .catch(() => [] as Array<{ id: string; name: string }>),
+  ])
 
   const summary = {
     totalCost: Number(data?.summary?.totalCost ?? 0),
@@ -64,7 +76,12 @@ async function PortfolioContent({
     currentValue: Number(h.currentValue),
     profit: Number(h.profit),
     profitRate: Number(h.profitRate),
+    // Agent 4 가 /api/holdings 응답에 추가한 필드 — holding-service 가 함께 제공.
+    accountId: h.accountId ?? null,
+    accountName: h.accountName ?? null,
   }))
+
+  const accounts = accountsRaw.map(a => ({ id: a.id, name: a.name }))
 
   return (
     <>
@@ -72,6 +89,7 @@ async function PortfolioContent({
         initialHoldings={holdings}
         summary={summary}
         userName={userName}
+        accounts={accounts}
       />
       <FloatingContainer>
         <AiChat isAuthenticated />

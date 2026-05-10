@@ -26,6 +26,7 @@ export function NavLinks({ user }: NavLinksProps) {
     const allLinks = [
         { href: '/dashboard', label: t.dashboard, protected: true },
         { href: '/dashboard/snapshots', label: t.snapshots, protected: true },
+        { href: '/dashboard/accounts', label: t.moreAccountsTitle, protected: true },
         { href: '/dashboard/simulation', label: t.simulation, protected: true },
         { href: '/dashboard/what-if', label: t.whatIf, protected: false },
         { href: '/dashboard/why', label: t.whyInvest, protected: false },

@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useMemo, useEffect } from 'react'
 import { createPortal } from 'react-dom'
+import Decimal from 'decimal.js'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { holdingsApi } from '@/lib/api/client'
 import { formatCurrency, formatNumber, formatProfitRate } from '@/lib/utils/formatters'
@@ -14,14 +15,19 @@ import { FormattedNumberInput } from '@/components/ui/formatted-number-input'
 import { DonutChart } from '@/components/dashboard/donut-chart'
 import { CashBalanceDialog } from '@/components/dashboard/cash-balance-dialog'
 import { PortfolioShareButton } from '@/components/dashboard/portfolio-share'
+import { BulkImportDialog } from '@/components/dashboard/bulk-import-dialog'
 import { ExchangeRateFootnote } from '@/components/dashboard/exchange-rate-footnote'
-import { Plus, Edit2, Trash2, Check, X, Loader2, ArrowUp, ArrowDown, MoreVertical, Wallet } from 'lucide-react'
+import { AccountSelector, type BrokerageAccountOption } from '@/components/dashboard/account-selector'
+import { Plus, Edit2, Trash2, Check, X, Loader2, ArrowUp, ArrowDown, MoreVertical, Wallet, Upload } from 'lucide-react'
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+
+const RECENT_ACCOUNT_STORAGE_KEY = 'holdings:recent-account'
+const VIEW_MODE_STORAGE_KEY = 'holdings-view-mode'
 
 const SEGMENT_COLORS = [
     '#3b82f6', '#a855f7', '#10b981', '#ef4444', '#f59e0b',
@@ -44,7 +50,12 @@ interface Holding {
     currentValue: number
     profit: number
     profitRate: number
+    /** Phase B 다중 계좌 — Agent 4 가 응답에 추가. 단일 계좌/Phase A 미적용 환경에선 null. */
+    accountId?: string | null
+    accountName?: string | null
 }
+
+type ViewMode = 'byAccount' | 'unified'
 
 interface Summary {
     totalCost: number
@@ -64,6 +75,7 @@ interface Props {
     initialHoldings: Holding[]
     summary: Summary
     userName?: string | null
+    accounts?: BrokerageAccountOption[]
 }
 
 function UpDown({ value, big = false }: { value: number; big?: boolean }) {
@@ -82,11 +94,33 @@ function UpDown({ value, big = false }: { value: number; big?: boolean }) {
     )
 }
 
-export function PortfolioClient({ initialHoldings, summary, userName }: Props) {
+export function PortfolioClient({ initialHoldings, summary, userName, accounts = [] }: Props) {
     const { t, language } = useLanguage()
     const { baseCurrency } = useCurrency()
     const [holdings, setHoldings] = useState<Holding[]>(initialHoldings)
     const [currentSummary, setCurrentSummary] = useState<Summary>(summary)
+    const isMultiAccount = accounts.length > 1
+
+    // 보기 모드: byAccount(계좌별 섹션) ↔ unified(통합 합산)
+    // 단일 계좌일 때 토글 자체를 숨기고 모드는 무관 (UI 영향 없음).
+    const [viewMode, setViewMode] = useState<ViewMode>('byAccount')
+    useEffect(() => {
+        if (typeof window === 'undefined') return
+        try {
+            const stored = window.localStorage.getItem(VIEW_MODE_STORAGE_KEY)
+            if (stored === 'byAccount' || stored === 'unified') {
+                setViewMode(stored)
+            }
+        } catch { /* ignore */ }
+    }, [])
+    const handleViewModeChange = (next: ViewMode) => {
+        setViewMode(next)
+        if (typeof window !== 'undefined') {
+            try {
+                window.localStorage.setItem(VIEW_MODE_STORAGE_KEY, next)
+            } catch { /* ignore */ }
+        }
+    }
 
     // 부모 server component 가 router.refresh() 로 새 props 를 내려보내면
     // useState 의 초기값은 마운트 시점에만 적용되므로 자동 갱신 안 됨.
@@ -107,6 +141,7 @@ export function PortfolioClient({ initialHoldings, summary, userName }: Props) {
     const [newStock, setNewStock] = useState<any>(null)
     const [newQty, setNewQty] = useState('')
     const [newPrice, setNewPrice] = useState('')
+    const [newAccountId, setNewAccountId] = useState<string | null>(null)
     const [addMode, setAddMode] = useState<'merge' | 'overwrite'>('merge')
     const [adding, setAdding] = useState(false)
     const [showAdd, setShowAdd] = useState(false)
@@ -122,6 +157,7 @@ export function PortfolioClient({ initialHoldings, summary, userName }: Props) {
             setNewQty('')
             setNewPrice('')
             setAddMode('merge')
+            // newAccountId 는 의도적으로 유지 — 드로어 재오픈 시 마지막 선택 계좌가 자연스럽게 남는다.
         }
         setShowAdd(next)
     }
@@ -131,10 +167,17 @@ export function PortfolioClient({ initialHoldings, summary, userName }: Props) {
         setAddMode('merge')
     }
 
-    const existingHolding = useMemo(
-        () => (newStock ? holdings.find(h => h.stockId === newStock.id) ?? null : null),
-        [newStock, holdings],
-    )
+    // 같은 계좌 + 같은 종목으로 이미 보유 중인 row 가 있는지 — 물타기/덮어쓰기 분기 기준.
+    // 다중 계좌에서는 다른 계좌에 같은 종목이 있어도 별개로 취급.
+    const existingHolding = useMemo(() => {
+        if (!newStock) return null
+        if (isMultiAccount) {
+            if (!newAccountId) return null
+            return holdings.find(h => h.stockId === newStock.id && h.accountId === newAccountId) ?? null
+        }
+        // 단일 계좌(또는 Phase A 미적용) — 기존 동작 유지: stockId 만으로 매칭
+        return holdings.find(h => h.stockId === newStock.id) ?? null
+    }, [newStock, holdings, isMultiAccount, newAccountId])
 
     // Edit/delete
     const [editingId, setEditingId] = useState<string | null>(null)
@@ -176,8 +219,77 @@ export function PortfolioClient({ initialHoldings, summary, userName }: Props) {
         return () => window.removeEventListener('portfolio:refresh', handler)
     }, [refresh])
 
+    // 통합 모드 — 같은 stockId 의 여러 계좌 row 를 합쳐 가중평균 평단으로 표시.
+    // Decimal.js 사용 — 누적 부동소수점 오차 방지 (평단가는 한 번 어긋나면 영구 오류).
+    const unifiedHoldings = useMemo<Holding[]>(() => {
+        const groups = new Map<string, Holding[]>()
+        for (const h of holdings) {
+            const list = groups.get(h.stockId) ?? []
+            list.push(h)
+            groups.set(h.stockId, list)
+        }
+        const merged: Holding[] = []
+        for (const [stockId, list] of groups) {
+            if (list.length === 1) {
+                merged.push(list[0])
+                continue
+            }
+            // 같은 stockId 의 여러 row 합산. currency/market 은 첫 항목 기준 (동일 종목이므로 동일).
+            const first = list[0]
+            let totalQty = new Decimal(0)
+            let totalCostByCurrency = new Decimal(0)
+            // 가중평균 매입환율 = sum(qty * purchaseRate) / sum(qty) — USD 종목에 한해 의미
+            let weightedRateNumer = new Decimal(0)
+            let totalCurrentValue = new Decimal(0)
+            for (const h of list) {
+                const qty = new Decimal(h.quantity)
+                const avg = new Decimal(h.averagePrice)
+                totalQty = totalQty.plus(qty)
+                totalCostByCurrency = totalCostByCurrency.plus(avg.times(qty))
+                totalCurrentValue = totalCurrentValue.plus(new Decimal(h.currentValue))
+                if (h.purchaseRate && h.purchaseRate !== 1) {
+                    weightedRateNumer = weightedRateNumer.plus(new Decimal(h.purchaseRate).times(qty))
+                }
+            }
+            const avgPrice = totalQty.gt(0) ? totalCostByCurrency.div(totalQty) : new Decimal(0)
+            const purchaseRate = first.currency === 'USD' && totalQty.gt(0) && weightedRateNumer.gt(0)
+                ? weightedRateNumer.div(totalQty).toNumber()
+                : first.purchaseRate
+            const totalCost = totalCostByCurrency.toNumber()
+            const currentValue = totalCurrentValue.toNumber()
+            const profit = currentValue - totalCost
+            const profitRate = totalCost > 0 ? (profit / totalCost) * 100 : 0
+            merged.push({
+                // unified-{stockId} 를 가상 ID 로 — 실제 row id 가 아님 (편집/삭제 불가하다는 신호)
+                id: `unified-${stockId}`,
+                stockId,
+                stockCode: first.stockCode,
+                stockName: first.stockName,
+                market: first.market,
+                quantity: totalQty.toNumber(),
+                averagePrice: avgPrice.toNumber(),
+                currentPrice: first.currentPrice,
+                currency: first.currency,
+                purchaseRate,
+                totalCost,
+                currentValue,
+                profit,
+                profitRate,
+                accountId: null,
+                accountName: null,
+            })
+        }
+        return merged
+    }, [holdings])
+
+    // 화면에 그릴 holdings — 모드에 따라 통합 vs 원본
+    const baseHoldings = useMemo(() => {
+        if (!isMultiAccount) return holdings
+        return viewMode === 'unified' ? unifiedHoldings : holdings
+    }, [holdings, unifiedHoldings, viewMode, isMultiAccount])
+
     const sortedHoldings = useMemo(() => {
-        const arr = [...holdings]
+        const arr = [...baseHoldings]
         arr.sort((a, b) => {
             const norm = (h: Holding, key: SortKey) =>
                 h.currency === 'USD' ? h[key] * exRate : h[key]
@@ -185,7 +297,7 @@ export function PortfolioClient({ initialHoldings, summary, userName }: Props) {
             return sortDir === 'desc' ? -diff : diff
         })
         return arr
-    }, [holdings, sortKey, sortDir, exRate])
+    }, [baseHoldings, sortKey, sortDir, exRate])
 
     const totalValueNormalized = currentSummary.totalValue || 1
 
@@ -198,9 +310,10 @@ export function PortfolioClient({ initialHoldings, summary, userName }: Props) {
         [sortedHoldings, totalValueNormalized, exRate]
     )
 
-    // Build donut from full holdings list (preserves color stability across sort changes)
+    // Build donut from current view's holdings (preserves color stability across sort changes).
+    // 통합 모드면 종목별 합산 row 기준, 계좌별 모드면 계좌×종목 단위 row 기준.
     const donutSegments = useMemo(() => {
-        const sortedByValue = [...holdings].sort((a, b) => {
+        const sortedByValue = [...baseHoldings].sort((a, b) => {
             const norm = (h: Holding) => h.currency === 'USD' ? h.currentValue * exRate : h.currentValue
             return norm(b) - norm(a)
         })
@@ -209,7 +322,7 @@ export function PortfolioClient({ initialHoldings, summary, userName }: Props) {
             color: SEGMENT_COLORS[i % SEGMENT_COLORS.length],
             holding: h,
         }))
-    }, [holdings, exRate])
+    }, [baseHoldings, exRate])
 
     const handleSort = (key: SortKey) => {
         if (sortKey === key) {
@@ -222,6 +335,11 @@ export function PortfolioClient({ initialHoldings, summary, userName }: Props) {
 
     const handleAdd = async () => {
         if (!newStock || !newQty || !newPrice) return
+        // 다중 계좌면 accountId 필수
+        if (isMultiAccount && !newAccountId) {
+            alert(language === 'ko' ? '계좌를 선택해주세요.' : 'Please select an account.')
+            return
+        }
         setAdding(true)
         try {
             const res = await holdingsApi.create({
@@ -229,6 +347,7 @@ export function PortfolioClient({ initialHoldings, summary, userName }: Props) {
                 quantity: parseInt(newQty.replace(/,/g, '')),
                 averagePrice: parseFloat(newPrice.replace(/,/g, '')),
                 mode: existingHolding ? addMode : 'overwrite',
+                ...(newAccountId ? { accountId: newAccountId } : {}),
             })
             if (res.success) {
                 setNewStock(null)
@@ -247,6 +366,8 @@ export function PortfolioClient({ initialHoldings, summary, userName }: Props) {
     }
 
     const startEdit = (h: Holding) => {
+        // 통합 모드의 가상 합산 row 는 편집 불가 (실제 DB row 가 아님)
+        if (h.id.startsWith('unified-')) return
         setEditingId(h.id)
         setEditValues({
             quantity: h.quantity.toString(),
@@ -300,23 +421,193 @@ export function PortfolioClient({ initialHoldings, summary, userName }: Props) {
     const convert = (v: number) => baseCurrency === 'KRW' ? v : v / exRate
     const displayTotal = convert(currentSummary.totalValue)
 
+    // 카드 렌더 함수 — byAccount 모드에서 그룹별로 호출, unified/단일계좌에서 평탄 리스트로 호출.
+    // 헤더에 단순 값/평단 등 표시 정보는 holdingsWithWeight 가 미리 계산해 둠 (weight/color 포함).
+    type HoldingCardItem = (typeof holdingsWithWeight)[number]
+    const renderHoldingCard = (h: HoldingCardItem) => {
+        const isEditing = editingId === h.id
+        const isVirtual = h.id.startsWith('unified-')
+        // 평가금: 현재 환율로 변환
+        const toBase = (v: number) => baseCurrency === 'KRW'
+            ? (h.currency === 'USD' ? v * exRate : v)
+            : (h.currency === 'USD' ? v : v / exRate)
+        const valueDisplay = toBase(h.currentValue)
+        // 매입금: purchaseRate(매입 시점 환율)로 고정 — 현재 환율 변동 영향 없음
+        const effectivePurchaseRate = h.currency === 'USD'
+            ? (h.purchaseRate && h.purchaseRate !== 1 ? h.purchaseRate : exRate)
+            : 1
+        const costDisplay = baseCurrency === 'KRW'
+            ? (h.currency === 'USD' ? h.totalCost * effectivePurchaseRate : h.totalCost)
+            : (h.currency === 'USD' ? h.totalCost : h.totalCost / exRate)
+        // 수익금: 평가금 - 매입금 (통화 기준 일치)
+        const profitDisplay = valueDisplay - costDisplay
+        const displayProfitRate = costDisplay > 0 ? (profitDisplay / costDisplay) * 100 : 0
+        const profitText = profitDisplay >= 0
+            ? `+${formatCurrency(profitDisplay, baseCurrency)}`
+            : formatCurrency(profitDisplay, baseCurrency)
+
+        return (
+            <div
+                key={h.id}
+                className={cn(
+                    'bg-card border border-border p-4',
+                    isEditing && 'border-primary',
+                )}
+                style={{ borderLeftWidth: '3px', borderLeftColor: h.color }}
+            >
+                {/* Row 1: 종목명 (full) + overflow menu */}
+                <div className="flex items-start justify-between gap-2">
+                    <div className="font-serif text-[15px] font-semibold text-foreground leading-snug break-keep flex-1 min-w-0">
+                        {h.stockName}
+                    </div>
+                    {!isEditing && !isVirtual && (
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <button
+                                    type="button"
+                                    disabled={!!editingId || deletingId === h.id}
+                                    className="-mt-1 -mr-2 p-2 text-muted-foreground hover:text-foreground disabled:opacity-50 shrink-0"
+                                    aria-label={language === 'ko' ? '더보기' : 'More'}
+                                >
+                                    {deletingId === h.id
+                                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                                        : <MoreVertical className="w-4 h-4" />}
+                                </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="min-w-[140px]">
+                                <DropdownMenuItem
+                                    onClick={() => startEdit(h)}
+                                    className="cursor-pointer"
+                                >
+                                    <Edit2 className="w-4 h-4 mr-2" /> {t('edit')}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                    onClick={() => handleDelete(h.id)}
+                                    className="cursor-pointer text-destructive focus:text-destructive"
+                                >
+                                    <Trash2 className="w-4 h-4 mr-2" /> {t('delete')}
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    )}
+                </div>
+
+                {/* Row 2: 메타 (좌) + 평가금액·등락률 (우) */}
+                <div className="mt-1.5 flex items-end justify-between gap-3">
+                    <div className="text-[10px] text-muted-foreground tracking-[0.5px] flex-1 min-w-0 space-y-0.5">
+                        <div>
+                            {h.stockCode} · {formatNumber(h.quantity)}{language === 'ko' ? '주' : 'shr'}
+                            {' · '}
+                            {language === 'ko' ? '평단 ' : 'avg '}
+                            {formatCurrency(h.averagePrice, h.currency)}
+                        </div>
+                        <div>
+                            {language === 'ko' ? `비중 ${h.weight.toFixed(1)}%` : `${h.weight.toFixed(1)}% wt`}
+                        </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                        <div className="text-[10px] text-muted-foreground tracking-[0.5px] numeric">
+                            {language === 'ko' ? '매입' : 'Cost'} {formatCurrency(costDisplay, baseCurrency)}
+                        </div>
+                        <div className="text-[14px] font-bold text-foreground numeric mt-0.5">
+                            {formatCurrency(valueDisplay, baseCurrency)}
+                        </div>
+                        <div className="mt-0.5 flex items-center justify-end gap-1.5">
+                            <UpDown value={displayProfitRate} />
+                            <span className={cn(
+                                'text-[11px] font-semibold numeric',
+                                h.profit >= 0 ? 'text-profit' : 'text-loss',
+                            )}>
+                                {profitText}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Edit row */}
+                {isEditing ? (
+                    <div className="mt-3 pt-3 border-t border-border space-y-2">
+                        <div className={cn('grid gap-2', h.currency === 'USD' ? 'grid-cols-3' : 'grid-cols-2')}>
+                            <FormattedNumberInput
+                                label={t('quantity')}
+                                suffix={language === 'ko' ? '주' : 'shr'}
+                                value={editValues.quantity}
+                                onChange={v => setEditValues(p => ({ ...p, quantity: v }))}
+                                disabled={savingRow !== null}
+                            />
+                            <FormattedNumberInput
+                                label={t('averagePrice')}
+                                prefix="$"
+                                value={editValues.averagePrice}
+                                onChange={v => setEditValues(p => ({ ...p, averagePrice: v }))}
+                                disabled={savingRow !== null}
+                            />
+                            {h.currency === 'USD' && (
+                                <FormattedNumberInput
+                                    label={language === 'ko' ? '매입환율' : 'Buy rate'}
+                                    prefix="₩"
+                                    value={editValues.purchaseRate}
+                                    onChange={v => setEditValues(p => ({ ...p, purchaseRate: v }))}
+                                    disabled={savingRow !== null}
+                                />
+                            )}
+                        </div>
+                        <div className="flex justify-end gap-2">
+                            <button
+                                type="button"
+                                onClick={cancelEdit}
+                                disabled={savingRow !== null}
+                                className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1 px-2 py-1"
+                            >
+                                <X className="w-3 h-3" /> {t('cancel')}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => saveEdit(h.id, h.currency)}
+                                disabled={savingRow !== null}
+                                className="bg-primary text-primary-foreground px-3 py-1 text-xs font-bold inline-flex items-center gap-1 hover:opacity-90"
+                            >
+                                {savingRow === h.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                                {t('save')}
+                            </button>
+                        </div>
+                    </div>
+                ) : null}
+            </div>
+        )
+    }
+
     return (
         <div className="max-w-[480px] md:max-w-2xl mx-auto w-full">
-            {/* Hero — page title + page-level action(공유) */}
+            {/* Hero — page title + page-level actions (일괄 등록 + 공유) */}
             <section className="px-6 pt-3 pb-4 flex items-end justify-between gap-3">
                 <h1 className="hero-serif text-[32px] text-foreground leading-tight">
                     {language === 'ko' ? '현재 보유 자산' : 'Current Holdings'}
                 </h1>
-                <PortfolioShareButton
-                    holdings={holdings}
-                    summary={{
-                        totalCost: currentSummary.totalCost,
-                        totalValue: currentSummary.totalValue,
-                        cashBalance: currentSummary.cashBalance,
-                        exchangeRate: exRate,
-                    }}
-                    userName={userName}
-                />
+                <div className="flex items-center gap-1">
+                    <BulkImportDialog onSuccess={refresh}>
+                        <button
+                            type="button"
+                            className="text-[11px] font-bold tracking-wide text-muted-foreground hover:text-foreground px-2.5 py-2 inline-flex items-center gap-1 min-h-[36px]"
+                            aria-label={language === 'ko' ? '일괄 등록' : 'Bulk import'}
+                        >
+                            <Upload className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">
+                                {language === 'ko' ? '일괄 등록' : 'Bulk'}
+                            </span>
+                        </button>
+                    </BulkImportDialog>
+                    <PortfolioShareButton
+                        holdings={holdings}
+                        summary={{
+                            totalCost: currentSummary.totalCost,
+                            totalValue: currentSummary.totalValue,
+                            cashBalance: currentSummary.cashBalance,
+                            exchangeRate: exRate,
+                        }}
+                        userName={userName}
+                    />
+                </div>
             </section>
 
             {/* Donut + legend */}
@@ -513,12 +804,48 @@ export function PortfolioClient({ initialHoldings, summary, userName }: Props) {
                 </CashBalanceDialog>
             </section>
 
-            {/* Holdings header — count + sort */}
+            {/* Holdings header — count + (다중 계좌 시) view-mode toggle + sort */}
             <div className="px-6 pb-3 flex justify-between items-center gap-2 flex-wrap">
                 <span className="eyebrow">
-                    {language === 'ko' ? '보유 종목' : 'Holdings'} · {holdings.length}
+                    {language === 'ko' ? '보유 종목' : 'Holdings'} · {baseHoldings.length}
                 </span>
                 <div className="flex items-center gap-2 flex-wrap">
+                    {isMultiAccount && (
+                        <div
+                            role="tablist"
+                            aria-label={language === 'ko' ? '보기 방식' : 'View mode'}
+                            className="inline-flex border border-border rounded-sm overflow-hidden"
+                        >
+                            <button
+                                type="button"
+                                role="tab"
+                                aria-selected={viewMode === 'byAccount'}
+                                onClick={() => handleViewModeChange('byAccount')}
+                                className={cn(
+                                    'text-[11px] font-bold tracking-wide px-2.5 py-1 transition-colors',
+                                    viewMode === 'byAccount'
+                                        ? 'bg-foreground text-background'
+                                        : 'text-muted-foreground hover:text-foreground',
+                                )}
+                            >
+                                {language === 'ko' ? '계좌별' : 'By account'}
+                            </button>
+                            <button
+                                type="button"
+                                role="tab"
+                                aria-selected={viewMode === 'unified'}
+                                onClick={() => handleViewModeChange('unified')}
+                                className={cn(
+                                    'text-[11px] font-bold tracking-wide px-2.5 py-1 border-l border-border transition-colors',
+                                    viewMode === 'unified'
+                                        ? 'bg-foreground text-background'
+                                        : 'text-muted-foreground hover:text-foreground',
+                                )}
+                            >
+                                {language === 'ko' ? '통합' : 'Unified'}
+                            </button>
+                        </div>
+                    )}
                     <SortToggle
                         active={sortKey === 'currentValue'}
                         dir={sortDir}
@@ -548,158 +875,59 @@ export function PortfolioClient({ initialHoldings, summary, userName }: Props) {
                             {t('holdingsEmpty')}
                         </div>
                     </div>
-                ) : holdingsWithWeight.map(h => {
-                    const isEditing = editingId === h.id
-                    // 평가금: 현재 환율로 변환
-                    const toBase = (v: number) => baseCurrency === 'KRW'
-                        ? (h.currency === 'USD' ? v * exRate : v)
-                        : (h.currency === 'USD' ? v : v / exRate)
-                    const valueDisplay = toBase(h.currentValue)
-                    // 매입금: purchaseRate(매입 시점 환율)로 고정 — 현재 환율 변동 영향 없음
-                    const effectivePurchaseRate = h.currency === 'USD'
-                        ? (h.purchaseRate && h.purchaseRate !== 1 ? h.purchaseRate : exRate)
-                        : 1
-                    const costDisplay = baseCurrency === 'KRW'
-                        ? (h.currency === 'USD' ? h.totalCost * effectivePurchaseRate : h.totalCost)
-                        : (h.currency === 'USD' ? h.totalCost : h.totalCost / exRate)
-                    // 수익금: 평가금 - 매입금 (통화 기준 일치)
-                    const profitDisplay = valueDisplay - costDisplay
-                    const displayProfitRate = costDisplay > 0 ? (profitDisplay / costDisplay) * 100 : 0
-                    const isProfit = profitDisplay >= 0
-                    const profitText = profitDisplay >= 0
-                        ? `+${formatCurrency(profitDisplay, baseCurrency)}`
-                        : formatCurrency(profitDisplay, baseCurrency)
-
-                    return (
-                        <div
-                            key={h.id}
-                            className={cn(
-                                'bg-card border border-border p-4',
-                                isEditing && 'border-primary',
-                            )}
-                            style={{ borderLeftWidth: '3px', borderLeftColor: h.color }}
-                        >
-                            {/* Row 1: 종목명 (full) + overflow menu */}
-                            <div className="flex items-start justify-between gap-2">
-                                <div className="font-serif text-[15px] font-semibold text-foreground leading-snug break-keep flex-1 min-w-0">
-                                    {h.stockName}
-                                </div>
-                                {!isEditing && (
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <button
-                                                type="button"
-                                                disabled={!!editingId || deletingId === h.id}
-                                                className="-mt-1 -mr-2 p-2 text-muted-foreground hover:text-foreground disabled:opacity-50 shrink-0"
-                                                aria-label={language === 'ko' ? '더보기' : 'More'}
-                                            >
-                                                {deletingId === h.id
-                                                    ? <Loader2 className="w-4 h-4 animate-spin" />
-                                                    : <MoreVertical className="w-4 h-4" />}
-                                            </button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end" className="min-w-[140px]">
-                                            <DropdownMenuItem
-                                                onClick={() => startEdit(h)}
-                                                className="cursor-pointer"
-                                            >
-                                                <Edit2 className="w-4 h-4 mr-2" /> {t('edit')}
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem
-                                                onClick={() => handleDelete(h.id)}
-                                                className="cursor-pointer text-destructive focus:text-destructive"
-                                            >
-                                                <Trash2 className="w-4 h-4 mr-2" /> {t('delete')}
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                )}
-                            </div>
-
-                            {/* Row 2: 메타 (좌) + 평가금액·등락률 (우) */}
-                            <div className="mt-1.5 flex items-end justify-between gap-3">
-                                <div className="text-[10px] text-muted-foreground tracking-[0.5px] flex-1 min-w-0 space-y-0.5">
-                                    <div>
-                                        {h.stockCode} · {formatNumber(h.quantity)}{language === 'ko' ? '주' : 'shr'}
-                                        {' · '}
-                                        {language === 'ko' ? '평단 ' : 'avg '}
-                                        {formatCurrency(h.averagePrice, h.currency)}
-                                    </div>
-                                    <div>
-                                        {language === 'ko' ? `비중 ${h.weight.toFixed(1)}%` : `${h.weight.toFixed(1)}% wt`}
-                                    </div>
-                                </div>
-                                <div className="text-right shrink-0">
-                                    <div className="text-[10px] text-muted-foreground tracking-[0.5px] numeric">
-                                        {language === 'ko' ? '매입' : 'Cost'} {formatCurrency(costDisplay, baseCurrency)}
-                                    </div>
-                                    <div className="text-[14px] font-bold text-foreground numeric mt-0.5">
-                                        {formatCurrency(valueDisplay, baseCurrency)}
-                                    </div>
-                                    <div className="mt-0.5 flex items-center justify-end gap-1.5">
-                                        <UpDown value={displayProfitRate} />
-                                        <span className={cn(
-                                            'text-[11px] font-semibold numeric',
-                                            h.profit >= 0 ? 'text-profit' : 'text-loss',
-                                        )}>
-                                            {profitText}
+                ) : isMultiAccount && viewMode === 'byAccount' ? (
+                    // 계좌별 모드 — 계좌 단위 sticky header + 그 아래 카드들.
+                    // accounts 정의 순서를 따름 (BrokerageAccount 의 createdAt 순). 미배정(accountId=null) row 는 끝에.
+                    (() => {
+                        const groups = new Map<string | null, typeof holdingsWithWeight>()
+                        for (const h of holdingsWithWeight) {
+                            const key = h.accountId ?? null
+                            const list = groups.get(key) ?? []
+                            list.push(h)
+                            groups.set(key, list)
+                        }
+                        const ordered: Array<{ accountId: string | null; name: string; rows: typeof holdingsWithWeight }> = []
+                        for (const a of accounts) {
+                            const rows = groups.get(a.id)
+                            if (rows && rows.length > 0) {
+                                ordered.push({ accountId: a.id, name: a.name, rows })
+                            }
+                        }
+                        const orphan = groups.get(null)
+                        if (orphan && orphan.length > 0) {
+                            ordered.push({
+                                accountId: null,
+                                name: language === 'ko' ? '미지정 계좌' : 'Unassigned',
+                                rows: orphan,
+                            })
+                        }
+                        return ordered.map(group => {
+                            // 계좌 총 평가액 — KRW 환산 기준 (요약/도넛과 일관)
+                            const groupTotal = group.rows.reduce((sum, r) => {
+                                const v = r.currency === 'USD' ? r.currentValue * exRate : r.currentValue
+                                return sum + v
+                            }, 0)
+                            const groupTotalDisplay = baseCurrency === 'KRW' ? groupTotal : groupTotal / exRate
+                            return (
+                                <div key={group.accountId ?? '__orphan'} className="space-y-1.5">
+                                    {/* Sticky 계좌 헤더 — 모바일에서 스크롤 시 유지 */}
+                                    <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm flex items-center justify-between gap-2 py-2 px-1 border-b border-border">
+                                        <span className="eyebrow truncate">{group.name}</span>
+                                        <span className="text-[12px] font-bold numeric text-foreground shrink-0">
+                                            {formatCurrency(groupTotalDisplay, baseCurrency)}
                                         </span>
                                     </div>
-                                </div>
-                            </div>
-
-                            {/* Edit row */}
-                            {isEditing ? (
-                                <div className="mt-3 pt-3 border-t border-border space-y-2">
-                                    <div className={cn('grid gap-2', h.currency === 'USD' ? 'grid-cols-3' : 'grid-cols-2')}>
-                                        <FormattedNumberInput
-                                            label={t('quantity')}
-                                            suffix={language === 'ko' ? '주' : 'shr'}
-                                            value={editValues.quantity}
-                                            onChange={v => setEditValues(p => ({ ...p, quantity: v }))}
-                                            disabled={savingRow !== null}
-                                        />
-                                        <FormattedNumberInput
-                                            label={t('averagePrice')}
-                                            prefix="$"
-                                            value={editValues.averagePrice}
-                                            onChange={v => setEditValues(p => ({ ...p, averagePrice: v }))}
-                                            disabled={savingRow !== null}
-                                        />
-                                        {h.currency === 'USD' && (
-                                            <FormattedNumberInput
-                                                label={language === 'ko' ? '매입환율' : 'Buy rate'}
-                                                prefix="₩"
-                                                value={editValues.purchaseRate}
-                                                onChange={v => setEditValues(p => ({ ...p, purchaseRate: v }))}
-                                                disabled={savingRow !== null}
-                                            />
-                                        )}
-                                    </div>
-                                    <div className="flex justify-end gap-2">
-                                        <button
-                                            type="button"
-                                            onClick={cancelEdit}
-                                            disabled={savingRow !== null}
-                                            className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1 px-2 py-1"
-                                        >
-                                            <X className="w-3 h-3" /> {t('cancel')}
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => saveEdit(h.id, h.currency)}
-                                            disabled={savingRow !== null}
-                                            className="bg-primary text-primary-foreground px-3 py-1 text-xs font-bold inline-flex items-center gap-1 hover:opacity-90"
-                                        >
-                                            {savingRow === h.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
-                                            {t('save')}
-                                        </button>
+                                    <div className="space-y-1.5">
+                                        {group.rows.map(h => renderHoldingCard(h))}
                                     </div>
                                 </div>
-                            ) : null}
-                        </div>
-                    )
-                })}
+                            )
+                        })
+                    })()
+                ) : (
+                    // 통합 모드 또는 단일 계좌 — 평탄한 카드 리스트
+                    holdingsWithWeight.map(h => renderHoldingCard(h))
+                )}
             </div>
 
             {mounted && createPortal(
@@ -717,6 +945,9 @@ export function PortfolioClient({ initialHoldings, summary, userName }: Props) {
                     existingHolding={existingHolding}
                     addMode={addMode}
                     setAddMode={setAddMode}
+                    accounts={accounts}
+                    accountId={newAccountId}
+                    setAccountId={setNewAccountId}
                     t={t}
                     language={language}
                 />,
@@ -740,6 +971,9 @@ interface AddHoldingFloatingProps {
     existingHolding: Holding | null
     addMode: 'merge' | 'overwrite'
     setAddMode: (m: 'merge' | 'overwrite') => void
+    accounts: BrokerageAccountOption[]
+    accountId: string | null
+    setAccountId: (id: string) => void
     t: (key: any) => string
     language: 'ko' | 'en'
 }
@@ -751,6 +985,7 @@ function AddHoldingFloating({
     newPrice, setNewPrice,
     adding, handleAdd,
     existingHolding, addMode, setAddMode,
+    accounts, accountId, setAccountId,
     t, language,
 }: AddHoldingFloatingProps) {
     const isKR = newStock?.market === 'KOSPI' || newStock?.market === 'KOSDAQ'
@@ -785,6 +1020,16 @@ function AddHoldingFloating({
                             value={newStock?.stockName || ''}
                             onSelect={(s: any) => setNewStock(s)}
                             disabled={adding}
+                        />
+                        {/* 계좌 셀렉터 — 단일 계좌 사용자에게는 자동으로 숨김 (AccountSelector 자체 처리).
+                            마지막 사용 계좌를 localStorage 에 영속화. */}
+                        <AccountSelector
+                            accounts={accounts}
+                            value={accountId}
+                            onChange={setAccountId}
+                            rememberKey={RECENT_ACCOUNT_STORAGE_KEY}
+                            disabled={adding}
+                            label={language === 'ko' ? '계좌' : 'Account'}
                         />
                         {existingHolding && (
                             <div className="border border-border bg-accent-soft rounded-md p-3 space-y-2.5">

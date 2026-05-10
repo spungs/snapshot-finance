@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useLanguage } from '@/lib/i18n/context'
 import type { TranslationKey } from '@/lib/i18n/translations'
-import { ChevronRight, TrendingUp, Sparkle, Settings } from 'lucide-react'
+import { ChevronRight, TrendingUp, Sparkle, Settings, Wallet } from 'lucide-react'
 
 interface MoreItem {
     href: string
@@ -28,6 +28,7 @@ const GROUPS: MoreGroup[] = [
     {
         labelKey: 'moreGroupAccount',
         items: [
+            { href: '/dashboard/accounts', titleKey: 'moreAccountsTitle', descKey: 'moreAccountsDesc', icon: Wallet },
             { href: '/dashboard/settings', titleKey: 'tabSettings', icon: Settings },
         ],
     },

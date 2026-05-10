@@ -97,7 +97,8 @@ export const holdingsApi = {
     averagePrice: number
     currency?: string
     purchaseRate?: number
-    mode?: 'merge' | 'overwrite'
+    mode?: 'merge' | 'overwrite' | 'new'
+    accountId?: string
   }) =>
     fetchApi<any>('/holdings', {
       method: 'POST',
@@ -109,6 +110,7 @@ export const holdingsApi = {
     averagePrice?: number
     currency?: string
     purchaseRate?: number
+    accountId?: string
   }) =>
     fetchApi<any>(`/holdings/${id}`, {
       method: 'PATCH',
