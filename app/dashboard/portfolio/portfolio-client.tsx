@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import Decimal from 'decimal.js'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { TransferHoldingDialog } from '@/components/dashboard/transfer-holding-dialog'
+import { useRelativeTime } from '@/lib/hooks/use-relative-time'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { holdingsApi } from '@/lib/api/client'
 import { formatCurrency, formatNumber, formatProfitRate } from '@/lib/utils/formatters'
@@ -58,6 +59,8 @@ interface Holding {
     /** Phase B 다중 계좌 — Agent 4 가 응답에 추가. 단일 계좌/Phase A 미적용 환경에선 null. */
     accountId?: string | null
     accountName?: string | null
+    /** 현재가가 마지막으로 갱신된 시점 (ISO). 사용자에게 캐시 시점 안내용. */
+    priceUpdatedAt?: string | null
 }
 
 type ViewMode = 'byAccount' | 'unified'
@@ -1029,12 +1032,16 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                             //   - 수익금 = 평가금 - 매입금
                             let groupValueKrw = 0
                             let groupCostKrw = 0
+                            let groupOldestPriceTime: string | null = null
                             for (const r of group.rows) {
                                 const buyRate = r.currency === 'USD'
                                     ? (r.purchaseRate && r.purchaseRate !== 1 ? r.purchaseRate : exRate)
                                     : 1
                                 groupValueKrw += r.currency === 'USD' ? r.currentValue * exRate : r.currentValue
                                 groupCostKrw += r.currency === 'USD' ? r.totalCost * buyRate : r.totalCost
+                                if (r.priceUpdatedAt && (!groupOldestPriceTime || new Date(r.priceUpdatedAt) < new Date(groupOldestPriceTime))) {
+                                    groupOldestPriceTime = r.priceUpdatedAt
+                                }
                             }
                             const groupProfitKrw = groupValueKrw - groupCostKrw
                             const groupValueDisplay = baseCurrency === 'KRW' ? groupValueKrw : groupValueKrw / exRate
@@ -1045,7 +1052,10 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                                 <div key={group.accountId ?? '__orphan'} className="space-y-1.5">
                                     {/* Sticky 계좌 헤더 — 종목명(좌) + 평가/매입/수익 3행(우) */}
                                     <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm flex items-start justify-between gap-2 py-2 px-1 border-b border-border">
-                                        <span className="eyebrow truncate pt-0.5">{group.name}</span>
+                                        <div className="flex flex-col gap-0 truncate pt-0.5 min-w-0">
+                                            <span className="eyebrow truncate">{group.name}</span>
+                                            <PriceUpdatedFootnote iso={groupOldestPriceTime} language={language} />
+                                        </div>
                                         <div className="flex flex-col items-end gap-0 shrink-0 leading-tight">
                                             <div className="flex items-baseline gap-1">
                                                 <span className="text-[10px] text-muted-foreground tracking-wide">
@@ -1091,12 +1101,23 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                         const totalCostDisplay = convert(currentSummary.totalCost)
                         const totalProfitDisplay = convert(currentSummary.totalProfit)
                         const isProfit = currentSummary.totalProfit >= 0
+                        // 전체 종목 중 가장 오래된 주가 갱신 시점 — 사용자에게 캐시 시점 안내
+                        let oldestPriceTime: string | null = null
+                        for (const h of holdings) {
+                            if (!h.priceUpdatedAt) continue
+                            if (!oldestPriceTime || new Date(h.priceUpdatedAt) < new Date(oldestPriceTime)) {
+                                oldestPriceTime = h.priceUpdatedAt
+                            }
+                        }
                         return (
                             <>
                                 <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm flex items-start justify-between gap-2 py-2 px-1 border-b border-border">
-                                    <span className="eyebrow truncate pt-0.5">
-                                        {language === 'ko' ? '전체' : 'Total'}
-                                    </span>
+                                    <div className="flex flex-col gap-0 truncate pt-0.5 min-w-0">
+                                        <span className="eyebrow truncate">
+                                            {language === 'ko' ? '전체' : 'Total'}
+                                        </span>
+                                        <PriceUpdatedFootnote iso={oldestPriceTime} language={language} />
+                                    </div>
                                     <div className="flex flex-col items-end gap-0 shrink-0 leading-tight">
                                         <div className="flex items-baseline gap-1">
                                             <span className="text-[10px] text-muted-foreground tracking-wide">
@@ -1362,6 +1383,26 @@ function AddHoldingFloating({
                 </DialogContent>
             </Dialog>
         </>
+    )
+}
+
+/**
+ * 합계/그룹 헤더 좌측 라벨 아래에 "주가 3분 전" 표시.
+ * 실시간 시세가 아닌 캐시 시점임을 사용자에게 안내해 증권사 앱과의 평가금 차이 컴플레인 예방.
+ * useRelativeTime 이 1분 간격으로 자동 재계산.
+ */
+function PriceUpdatedFootnote({
+    iso, language,
+}: {
+    iso: string | null
+    language: 'ko' | 'en'
+}) {
+    const relative = useRelativeTime(iso)
+    if (!iso || !relative) return null
+    return (
+        <span className="text-[10px] text-muted-foreground truncate">
+            {language === 'ko' ? `주가 ${relative}` : `Price ${relative}`}
+        </span>
     )
 }
 
