@@ -41,6 +41,12 @@ const withSerwist = withSerwistInit({
 });
 
 const nextConfig: NextConfig = {
+  // Turbopack 사용 명시 (next dev 기본). @serwist/next 가 주입하는 webpack config 와
+  // 의도된 공존임을 알려 dev 시작 시 경고 silence.
+  // - dev: Turbopack (빠른 HMR)
+  // - build: package.json 의 "next build --webpack" 그대로 (Serwist PWA 정상 작동)
+  turbopack: {},
+
   // Next.js 16 RSC 클라이언트 캐시 유지 시간.
   // 동일 라우트로 30초 안에 돌아오면 SSR 재실행 없이 캐시된 RSC 즉시 사용 →
   // 홈 → 보유 → 홈 같은 토글 시 skeleton flash 제거. force-dynamic 페이지에도 적용됨.
