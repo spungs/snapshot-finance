@@ -12,6 +12,31 @@ type ActionResult<T = undefined> =
     | { success: true; data?: T }
     | { success: false; error: string }
 
+/**
+ * DB mutation 성공 후의 cache invalidation / revalidatePath 가 throw 해도
+ * 사용자가 "실패" 로 잘못 인식하지 않도록 격리.
+ *
+ * 배경: 과거 revalidatePath / Next.js internal race 로 throw 가 발생하면 외부
+ * catch 가 잡아 success: false 반환 → toast.error → 사용자 재시도 → 중복 변경
+ * 데이터 무결성 문제 발생. DB 는 이미 commit 됐으므로 cleanup 실패는 non-critical.
+ */
+async function safeCleanup(userId: string, invalidateHoldings = false): Promise<void> {
+    if (invalidateHoldings) {
+        try {
+            await holdingService.invalidate(userId)
+        } catch (e) {
+            console.warn('[account-actions] holdings cache invalidate failed (non-critical):', e)
+        }
+    }
+    try {
+        revalidatePath('/dashboard/accounts')
+        revalidatePath('/dashboard/portfolio')
+        revalidatePath('/dashboard')
+    } catch (e) {
+        console.warn('[account-actions] revalidatePath failed (non-critical):', e)
+    }
+}
+
 function validateName(raw: unknown): { ok: true; value: string } | { ok: false; error: string } {
     if (typeof raw !== 'string') return { ok: false, error: 'INVALID_NAME' }
     const trimmed = raw.trim()
@@ -48,9 +73,7 @@ export async function createAccount(name: string): Promise<ActionResult<{ id: st
             select: { id: true },
         })
 
-        revalidatePath('/dashboard/accounts')
-        revalidatePath('/dashboard/portfolio')
-        revalidatePath('/dashboard')
+        await safeCleanup(userId)
         return { success: true, data: { id: created.id } }
     } catch (error) {
         console.error('createAccount failed:', error)
@@ -77,9 +100,7 @@ export async function renameAccount(accountId: string, name: string): Promise<Ac
             data: { name: validated.value },
         })
 
-        revalidatePath('/dashboard/accounts')
-        revalidatePath('/dashboard/portfolio')
-        revalidatePath('/dashboard')
+        await safeCleanup(userId)
         return { success: true }
     } catch (error) {
         console.error('renameAccount failed:', error)
@@ -123,9 +144,7 @@ export async function reorderAccounts(orderedIds: string[]): Promise<ActionResul
             ),
         )
 
-        revalidatePath('/dashboard/accounts')
-        revalidatePath('/dashboard/portfolio')
-        revalidatePath('/dashboard')
+        await safeCleanup(userId)
         return { success: true }
     } catch (error) {
         console.error('reorderAccounts failed:', error)
@@ -162,12 +181,7 @@ export async function deleteAccount(
             return { deletedHoldingsCount: holdingsCount, remainingAccountsCount: remaining }
         })
 
-        // holding-service 캐시 무효화 — 보유 종목이 함께 삭제됐을 수 있음
-        await holdingService.invalidate(userId)
-
-        revalidatePath('/dashboard/accounts')
-        revalidatePath('/dashboard/portfolio')
-        revalidatePath('/dashboard')
+        await safeCleanup(userId, true)
         return { success: true, data: result }
     } catch (error) {
         console.error('deleteAccount failed:', error)
@@ -190,7 +204,7 @@ export async function ensureDefaultAccount(
 
     try {
         const account = await ensureUserHasAccount(userId, defaultName)
-        revalidatePath('/dashboard/accounts')
+        await safeCleanup(userId)
         return { success: true, data: { id: account.id } }
     } catch (error) {
         console.error('ensureDefaultAccount failed:', error)
