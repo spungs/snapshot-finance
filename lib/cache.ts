@@ -1,17 +1,33 @@
 import { Redis } from '@upstash/redis'
 
 // Upstash Redis 인스턴스 (lib/ratelimit.ts와 동일 환경변수 재사용)
-// fail-open 정책: Redis 장애 시 캐시 미스로 처리하고 원본 로직 실행
-const redis = new Redis({
-    url: process.env.UPSTASH_REDIS_REST_URL!,
-    token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-})
+// fail-open 정책: Redis 장애 시 캐시 미스로 처리하고 원본 로직 실행.
+//
+// 환경변수 미설정 시 (대표적으로 .env.development.local 로컬 dev) 아예 비활성화 —
+// undefined token 으로 fetch 시도해 'TypeError: fetch failed' 가 SSR 로그를
+// 도배하는 것을 막는다. 운영에서는 두 변수 모두 세팅되어 정상 작동.
+const cacheEnabled =
+    !!process.env.UPSTASH_REDIS_REST_URL && !!process.env.UPSTASH_REDIS_REST_TOKEN
+
+const redis = cacheEnabled
+    ? new Redis({
+          url: process.env.UPSTASH_REDIS_REST_URL!,
+          token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+      })
+    : null
+
+if (!cacheEnabled && process.env.NODE_ENV !== 'production') {
+    console.info(
+        '[Cache] Upstash Redis disabled (UPSTASH_REDIS_REST_URL / TOKEN not set). Operating without cache.',
+    )
+}
 
 /**
  * Redis 캐시 조회. Redis 장애/타임아웃 시 null 반환 (fail-open).
  * Upstash SDK는 자동으로 JSON 직렬화/역직렬화 수행.
  */
 export async function cacheGet<T>(key: string): Promise<T | null> {
+    if (!redis) return null
     try {
         const value = await redis.get<T>(key)
         return value
@@ -26,6 +42,7 @@ export async function cacheGet<T>(key: string): Promise<T | null> {
  * 실패해도 원본 로직 진행에 영향을 주지 않도록 swallow.
  */
 export async function cacheSet<T>(key: string, value: T, ttlSeconds: number): Promise<void> {
+    if (!redis) return
     try {
         await redis.set(key, value, { ex: ttlSeconds })
     } catch (error) {
@@ -37,6 +54,7 @@ export async function cacheSet<T>(key: string, value: T, ttlSeconds: number): Pr
  * 캐시 삭제. mutate 시 invalidate 용도.
  */
 export async function cacheDelete(key: string): Promise<void> {
+    if (!redis) return
     try {
         await redis.del(key)
     } catch (error) {
