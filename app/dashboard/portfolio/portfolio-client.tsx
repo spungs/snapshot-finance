@@ -8,6 +8,7 @@ import Decimal from 'decimal.js'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { TransferHoldingDialog } from '@/components/dashboard/transfer-holding-dialog'
 import { useRelativeTime } from '@/lib/hooks/use-relative-time'
+import { useStockTicks } from '@/lib/hooks/use-stock-ticks'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { holdingsApi } from '@/lib/api/client'
 import { formatCurrency, formatNumber, formatProfitRate } from '@/lib/utils/formatters'
@@ -108,6 +109,46 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
     const [holdings, setHoldings] = useState<Holding[]>(initialHoldings)
     const [currentSummary, setCurrentSummary] = useState<Summary>(summary)
     const isMultiAccount = accounts.length > 1
+
+    // 실시간 시세 구독 (KIS WebSocket worker → Supabase Realtime broadcast)
+    // env 미설정 / 워커 미가동 / 장 마감 시엔 ticks 빈 Map → 기존 currentPrice 그대로 유지
+    const tickSubscriptions = useMemo(
+        () => holdings.map(h => {
+            const m = h.market?.toUpperCase()
+            const market: 'KR' | 'US' | null =
+                m === 'KOSPI' || m === 'KOSDAQ' || m === 'KS' || m === 'KQ' ? 'KR'
+                    : m === 'US' || m === 'NASD' || m === 'NAS' || m === 'NYSE' || m === 'NYS' || m === 'AMEX' || m === 'AMS' ? 'US'
+                        : null
+            return market ? { code: h.stockCode, market } : null
+        }).filter((x): x is { code: string; market: 'KR' | 'US' } => x !== null),
+        [holdings],
+    )
+    const ticks = useStockTicks(tickSubscriptions)
+
+    // tick 도착 시 holdings 의 가격/평가금/수익 자동 갱신.
+    // totalCost 는 매입가 × 수량이라 불변, summary 는 다음 server fetch 시 동기화.
+    useEffect(() => {
+        if (ticks.size === 0) return
+        setHoldings((prev) => {
+            let mutated = false
+            const next = prev.map((h) => {
+                const t = ticks.get(h.stockCode)
+                if (!t) return h
+                if (t.price === h.currentPrice) return h
+                mutated = true
+                const newValue = h.quantity * t.price
+                return {
+                    ...h,
+                    currentPrice: t.price,
+                    currentValue: newValue,
+                    profit: newValue - h.totalCost,
+                    profitRate: h.totalCost > 0 ? ((newValue - h.totalCost) / h.totalCost) * 100 : 0,
+                    priceUpdatedAt: new Date(t.ts).toISOString(),
+                }
+            })
+            return mutated ? next : prev
+        })
+    }, [ticks])
 
     // 보기 모드: byAccount(계좌별 섹션) ↔ unified(통합 합산)
     // 단일 계좌일 때 토글 자체를 숨기고 모드는 무관 (UI 영향 없음).
