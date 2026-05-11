@@ -1084,8 +1084,53 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                         })
                     })()
                 ) : (
-                    // 통합 모드 또는 단일 계좌 — 평탄한 카드 리스트
-                    holdingsWithWeight.map(h => renderHoldingCard(h))
+                    // 통합 모드 또는 단일 계좌 — 합계 헤더 + 평탄한 카드 리스트
+                    // 계좌별 모드의 그룹 헤더와 동일 디자인 (라벨 "전체"/"Total")
+                    (() => {
+                        const totalValueDisplay = convert(currentSummary.totalValue)
+                        const totalCostDisplay = convert(currentSummary.totalCost)
+                        const totalProfitDisplay = convert(currentSummary.totalProfit)
+                        const isProfit = currentSummary.totalProfit >= 0
+                        return (
+                            <>
+                                <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm flex items-start justify-between gap-2 py-2 px-1 border-b border-border">
+                                    <span className="eyebrow truncate pt-0.5">
+                                        {language === 'ko' ? '전체' : 'Total'}
+                                    </span>
+                                    <div className="flex flex-col items-end gap-0 shrink-0 leading-tight">
+                                        <div className="flex items-baseline gap-1">
+                                            <span className="text-[10px] text-muted-foreground tracking-wide">
+                                                {language === 'ko' ? '평가' : 'Value'}
+                                            </span>
+                                            <span className="text-[12px] font-bold numeric text-foreground">
+                                                {formatCurrency(totalValueDisplay, baseCurrency)}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-baseline gap-1">
+                                            <span className="text-[10px] text-muted-foreground tracking-wide">
+                                                {language === 'ko' ? '매입' : 'Cost'}
+                                            </span>
+                                            <span className="text-[10px] numeric text-muted-foreground">
+                                                {formatCurrency(totalCostDisplay, baseCurrency)}
+                                            </span>
+                                        </div>
+                                        <div className={cn(
+                                            'flex items-baseline gap-1',
+                                            isProfit ? 'text-profit' : 'text-loss',
+                                        )}>
+                                            <span className="text-[10px] tracking-wide opacity-80">
+                                                {language === 'ko' ? '수익' : 'P/L'}
+                                            </span>
+                                            <span className="text-[10px] font-bold numeric">
+                                                {isProfit ? '+' : ''}{formatCurrency(totalProfitDisplay, baseCurrency)}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                {holdingsWithWeight.map(h => renderHoldingCard(h))}
+                            </>
+                        )
+                    })()
                 )}
             </div>
 
