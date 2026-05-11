@@ -32,6 +32,7 @@ import {
 
 const RECENT_ACCOUNT_STORAGE_KEY = 'holdings:recent-account'
 const VIEW_MODE_STORAGE_KEY = 'holdings-view-mode'
+const ACCOUNT_FILTER_STORAGE_KEY = 'holdings-account-filter'
 
 const SEGMENT_COLORS = [
     '#3b82f6', '#a855f7', '#10b981', '#ef4444', '#f59e0b',
@@ -122,6 +123,31 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
         if (typeof window !== 'undefined') {
             try {
                 window.localStorage.setItem(VIEW_MODE_STORAGE_KEY, next)
+            } catch { /* ignore */ }
+        }
+    }
+
+    // 계좌 탭 필터 — 계좌별 모드에서 특정 계좌만 보기. 'all' = 전체 계좌 표시.
+    // accountId 가 삭제된 계좌면 'all' 로 자동 폴백.
+    const [accountFilter, setAccountFilter] = useState<string | 'all'>('all')
+    useEffect(() => {
+        if (typeof window === 'undefined') return
+        try {
+            const stored = window.localStorage.getItem(ACCOUNT_FILTER_STORAGE_KEY)
+            if (stored) setAccountFilter(stored)
+        } catch { /* ignore */ }
+    }, [])
+    // 저장된 accountId 가 현재 accounts 목록에 없으면 'all' 로 폴백
+    useEffect(() => {
+        if (accountFilter === 'all') return
+        const exists = accounts.some(a => a.id === accountFilter)
+        if (!exists) setAccountFilter('all')
+    }, [accountFilter, accounts])
+    const handleAccountFilterChange = (next: string | 'all') => {
+        setAccountFilter(next)
+        if (typeof window !== 'undefined') {
+            try {
+                window.localStorage.setItem(ACCOUNT_FILTER_STORAGE_KEY, next)
             } catch { /* ignore */ }
         }
     }
@@ -914,6 +940,50 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                 </div>
             </div>
 
+            {/* 계좌 탭 필터 — 계좌별 모드에서만 노출, 다중 계좌 한정 */}
+            {isMultiAccount && viewMode === 'byAccount' && (
+                <div className="px-6 pb-3">
+                    <div
+                        role="tablist"
+                        aria-label={language === 'ko' ? '계좌 필터' : 'Account filter'}
+                        className="flex gap-1 overflow-x-auto pb-1"
+                        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                    >
+                        <button
+                            type="button"
+                            role="tab"
+                            aria-selected={accountFilter === 'all'}
+                            onClick={() => handleAccountFilterChange('all')}
+                            className={cn(
+                                'shrink-0 text-[11px] font-bold tracking-wide px-3 py-1 rounded-sm border transition-colors',
+                                accountFilter === 'all'
+                                    ? 'bg-foreground text-background border-foreground'
+                                    : 'bg-background text-muted-foreground border-border hover:text-foreground',
+                            )}
+                        >
+                            {language === 'ko' ? '전체' : 'All'}
+                        </button>
+                        {accounts.map(a => (
+                            <button
+                                key={a.id}
+                                type="button"
+                                role="tab"
+                                aria-selected={accountFilter === a.id}
+                                onClick={() => handleAccountFilterChange(a.id)}
+                                className={cn(
+                                    'shrink-0 text-[11px] font-bold tracking-wide px-3 py-1 rounded-sm border transition-colors',
+                                    accountFilter === a.id
+                                        ? 'bg-foreground text-background border-foreground'
+                                        : 'bg-background text-muted-foreground border-border hover:text-foreground',
+                                )}
+                            >
+                                {a.name}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             {/* Holdings list */}
             <div className="px-4 pb-4 space-y-1.5">
                 {holdingsWithWeight.length === 0 ? (
@@ -948,21 +1018,63 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                                 rows: orphan,
                             })
                         }
-                        return ordered.map(group => {
-                            // 계좌 총 평가액 — KRW 환산 기준 (요약/도넛과 일관)
-                            const groupTotal = group.rows.reduce((sum, r) => {
-                                const v = r.currency === 'USD' ? r.currentValue * exRate : r.currentValue
-                                return sum + v
-                            }, 0)
-                            const groupTotalDisplay = baseCurrency === 'KRW' ? groupTotal : groupTotal / exRate
+                        // 계좌 탭 필터 적용 — 'all' 이 아니면 해당 계좌 그룹만
+                        const visible = accountFilter === 'all'
+                            ? ordered
+                            : ordered.filter(g => g.accountId === accountFilter)
+                        return visible.map(group => {
+                            // 계좌 합계 (KRW 환산 기준):
+                            //   - 평가금 = sum(currentValue * 현재환율 if USD else currentValue)
+                            //   - 매입금 = sum(totalCost * 매입환율 if USD else totalCost)
+                            //   - 수익금 = 평가금 - 매입금
+                            let groupValueKrw = 0
+                            let groupCostKrw = 0
+                            for (const r of group.rows) {
+                                const buyRate = r.currency === 'USD'
+                                    ? (r.purchaseRate && r.purchaseRate !== 1 ? r.purchaseRate : exRate)
+                                    : 1
+                                groupValueKrw += r.currency === 'USD' ? r.currentValue * exRate : r.currentValue
+                                groupCostKrw += r.currency === 'USD' ? r.totalCost * buyRate : r.totalCost
+                            }
+                            const groupProfitKrw = groupValueKrw - groupCostKrw
+                            const groupValueDisplay = baseCurrency === 'KRW' ? groupValueKrw : groupValueKrw / exRate
+                            const groupCostDisplay = baseCurrency === 'KRW' ? groupCostKrw : groupCostKrw / exRate
+                            const groupProfitDisplay = baseCurrency === 'KRW' ? groupProfitKrw : groupProfitKrw / exRate
+                            const isProfit = groupProfitKrw >= 0
                             return (
                                 <div key={group.accountId ?? '__orphan'} className="space-y-1.5">
-                                    {/* Sticky 계좌 헤더 — 모바일에서 스크롤 시 유지 */}
-                                    <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm flex items-center justify-between gap-2 py-2 px-1 border-b border-border">
-                                        <span className="eyebrow truncate">{group.name}</span>
-                                        <span className="text-[12px] font-bold numeric text-foreground shrink-0">
-                                            {formatCurrency(groupTotalDisplay, baseCurrency)}
-                                        </span>
+                                    {/* Sticky 계좌 헤더 — 종목명(좌) + 평가/매입/수익 3행(우) */}
+                                    <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm flex items-start justify-between gap-2 py-2 px-1 border-b border-border">
+                                        <span className="eyebrow truncate pt-0.5">{group.name}</span>
+                                        <div className="flex flex-col items-end gap-0 shrink-0 leading-tight">
+                                            <div className="flex items-baseline gap-1">
+                                                <span className="text-[10px] text-muted-foreground tracking-wide">
+                                                    {language === 'ko' ? '평가' : 'Value'}
+                                                </span>
+                                                <span className="text-[12px] font-bold numeric text-foreground">
+                                                    {formatCurrency(groupValueDisplay, baseCurrency)}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-baseline gap-1">
+                                                <span className="text-[10px] text-muted-foreground tracking-wide">
+                                                    {language === 'ko' ? '매입' : 'Cost'}
+                                                </span>
+                                                <span className="text-[10px] numeric text-muted-foreground">
+                                                    {formatCurrency(groupCostDisplay, baseCurrency)}
+                                                </span>
+                                            </div>
+                                            <div className={cn(
+                                                'flex items-baseline gap-1',
+                                                isProfit ? 'text-profit' : 'text-loss',
+                                            )}>
+                                                <span className="text-[10px] tracking-wide opacity-80">
+                                                    {language === 'ko' ? '수익' : 'P/L'}
+                                                </span>
+                                                <span className="text-[10px] font-bold numeric">
+                                                    {isProfit ? '+' : ''}{formatCurrency(groupProfitDisplay, baseCurrency)}
+                                                </span>
+                                            </div>
+                                        </div>
                                     </div>
                                     <div className="space-y-1.5">
                                         {group.rows.map(h => renderHoldingCard(h))}
