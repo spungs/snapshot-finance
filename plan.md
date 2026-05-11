@@ -256,7 +256,14 @@ model Holding {
 **Important (놓치면 UX/일관성 문제):**
 - [ ] **빈 상태(Empty State) UX**: 신규 가입자 자동 "기본 계좌" 생성 트리거 위치 결정 (회원가입 시 vs 첫 종목 추가 시) + 마지막 계좌 삭제 직후 종목 추가 시 동작 정의 (자동 재생성 vs 계좌 먼저 만들도록 강제)
 - [ ] **단일 계좌 사용자 UX 단순화**: 계좌 1 개만 있을 때 종목 폼의 계좌 셀렉터 자동 숨김 / 보기 토글 비활성화 처리 — 기존 사용자가 마이그레이션 후 UI 변화 거의 못 느끼게
-- [ ] **종목 이동(Move Between Accounts) 기능**: 보유 종목을 다른 계좌로 옮기기. 같은 종목이 양쪽에 있을 때 가중평균 합치기 / 충돌 막기 정책 결정 필요
+- [ ] **주식이체(Transfer Between Accounts) 기능** — *2026-05-12 사양 확정, 운영 smoke test 완료 후 착수*
+  - **부분 이체 지원**: 전체 또는 일부 수량 (수량 input, 보유 수량 이하 검증)
+  - **충돌 시 자동 가중평균 merge**: 목적지에 동일 종목 있으면 수량 합산 + 평단가 가중평균. USD 종목은 매입환율도 가중평균. 실제 증권사 동작과 일치
+  - **매입환율 보존(USD)**: 이체 시 원본 row 의 `purchaseRate` 유지 — 새 평가/손익 왜곡 방지
+  - **UI 진입점**: 종목 카드 `⋮` 메뉴 → "다른 계좌로 이체" → 이체 다이얼로그 (대상 계좌 select + 수량 input). 계좌 1개일 때 메뉴 항목 숨김
+  - **서버**: Server Action `transferHolding(holdingId, toAccountId, quantity)` 단일 트랜잭션 — 원본 차감(0 되면 삭제) + 대상 upsert(merge or create), IDOR 검증(`assertHoldingOwnership` + `assertAccountOwnership`)
+  - **스냅샷 영향 없음**: 과거 스냅샷 불변, 다음 스냅샷부터 새 계좌 위치 반영
+  - **이체 로그**: Phase 1 에서는 별도 audit 테이블 만들지 않음 — Holding 수정 자체로 충분. 추후 필요 시 도입
 - [ ] **다국어(i18n) 적용**: 모든 신규 UI 텍스트 ko/en 번역 (계좌 관리 화면, 셀렉터, 다이얼로그, 빈 상태 메시지). "기본 계좌" / "Default Account" 등 시스템 생성 라벨 처리
 - [ ] **캐시 무효화 (L1/L2)**: Upstash Redis (`holdings`/`portfolio` 키) + localStorage SWR 캐시 — 계좌 CRUD 시 무효화 트리거. 캐시 키 구조에 `accountId` 차원 포함 여부 결정
 - [ ] **API 응답 스키마 확장**: `/api/holdings` 응답에 `accountId`/`accountName` 포함 (계좌별 모드 렌더링용). 기존 클라이언트는 새 필드 무시하므로 호환성 OK

@@ -6,6 +6,7 @@ import { createPortal } from 'react-dom'
 import { toast } from 'sonner'
 import Decimal from 'decimal.js'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { TransferHoldingDialog } from '@/components/dashboard/transfer-holding-dialog'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { holdingsApi } from '@/lib/api/client'
 import { formatCurrency, formatNumber, formatProfitRate } from '@/lib/utils/formatters'
@@ -21,7 +22,7 @@ import { PortfolioShareButton } from '@/components/dashboard/portfolio-share'
 import { BulkImportDialog } from '@/components/dashboard/bulk-import-dialog'
 import { ExchangeRateFootnote } from '@/components/dashboard/exchange-rate-footnote'
 import { AccountSelector, type BrokerageAccountOption } from '@/components/dashboard/account-selector'
-import { Plus, Edit2, Trash2, Check, X, Loader2, ArrowUp, ArrowDown, MoreVertical, Wallet, Upload } from 'lucide-react'
+import { Plus, Edit2, Trash2, Check, X, Loader2, ArrowUp, ArrowDown, MoreVertical, Wallet, Upload, ArrowLeftRight } from 'lucide-react'
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -429,6 +430,13 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
         [deleteTargetId, holdings]
     )
 
+    // 이체 다이얼로그 — 종목 카드 ⋮ → "다른 계좌로 이체"
+    const [transferTargetId, setTransferTargetId] = useState<string | null>(null)
+    const transferTargetHolding = useMemo(
+        () => (transferTargetId ? holdings.find(h => h.id === transferTargetId) ?? null : null),
+        [transferTargetId, holdings]
+    )
+
     const handleDelete = (id: string) => {
         setDeleteTargetId(id)
     }
@@ -511,6 +519,15 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                                 >
                                     <Edit2 className="w-4 h-4 mr-2" /> {t('edit')}
                                 </DropdownMenuItem>
+                                {accounts.length >= 2 && (
+                                    <DropdownMenuItem
+                                        onClick={() => setTransferTargetId(h.id)}
+                                        className="cursor-pointer"
+                                    >
+                                        <ArrowLeftRight className="w-4 h-4 mr-2" />
+                                        {language === 'ko' ? '다른 계좌로 이체' : 'Transfer to account'}
+                                    </DropdownMenuItem>
+                                )}
                                 <DropdownMenuItem
                                     onClick={() => handleDelete(h.id)}
                                     className="cursor-pointer text-destructive focus:text-destructive"
@@ -1003,6 +1020,14 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                 cancelLabel={language === 'ko' ? '취소' : 'Cancel'}
                 variant="destructive"
                 onConfirm={performDelete}
+            />
+            <TransferHoldingDialog
+                open={!!transferTargetId}
+                onOpenChange={(next) => { if (!next) setTransferTargetId(null) }}
+                holding={transferTargetHolding}
+                accounts={accounts}
+                onTransferred={refresh}
+                language={language}
             />
         </div>
     )

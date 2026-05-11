@@ -121,4 +121,10 @@ export const holdingsApi = {
     fetchApi<void>(`/holdings/${id}`, {
       method: 'DELETE',
     }),
+
+  transfer: (id: string, data: { toAccountId: string; quantity: number }) =>
+    fetchApi<{ merged: boolean; destHoldingId: string }>(`/holdings/${id}/transfer`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
 }
