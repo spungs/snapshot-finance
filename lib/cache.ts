@@ -3,11 +3,16 @@ import { Redis } from '@upstash/redis'
 // Upstash Redis 인스턴스 (lib/ratelimit.ts와 동일 환경변수 재사용)
 // fail-open 정책: Redis 장애 시 캐시 미스로 처리하고 원본 로직 실행.
 //
-// 환경변수 미설정 시 (대표적으로 .env.development.local 로컬 dev) 아예 비활성화 —
-// undefined token 으로 fetch 시도해 'TypeError: fetch failed' 가 SSR 로그를
-// 도배하는 것을 막는다. 운영에서는 두 변수 모두 세팅되어 정상 작동.
+// dev 환경에서는 절대 사용 안 함 — .env.development.local 에 UPSTASH_* 가 없어도
+// Next.js 가 .env 의 운영 UPSTASH_* 를 fallback 으로 로드해 dev next.js 가 운영
+// Redis 의 stale cache 를 hit 하는 문제 방지. (실제 사용자 보고: dev 에서 LG화학
+// 추가가 UI 에 안 나타나 silent fail 로 오인 — 사실은 dev DB 25 row vs 운영 Redis
+// cached 22 row 의 불일치였음.)
+const isProduction = process.env.NODE_ENV === 'production'
 const cacheEnabled =
-    !!process.env.UPSTASH_REDIS_REST_URL && !!process.env.UPSTASH_REDIS_REST_TOKEN
+    isProduction &&
+    !!process.env.UPSTASH_REDIS_REST_URL &&
+    !!process.env.UPSTASH_REDIS_REST_TOKEN
 
 const redis = cacheEnabled
     ? new Redis({
@@ -16,9 +21,9 @@ const redis = cacheEnabled
       })
     : null
 
-if (!cacheEnabled && process.env.NODE_ENV !== 'production') {
+if (!cacheEnabled && !isProduction) {
     console.info(
-        '[Cache] Upstash Redis disabled (UPSTASH_REDIS_REST_URL / TOKEN not set). Operating without cache.',
+        '[Cache] Upstash Redis disabled (non-production env). Operating without cache.',
     )
 }
 

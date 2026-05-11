@@ -72,6 +72,12 @@ export async function checkRateLimit(
     limiter: Ratelimit,
     identifier: string
 ): Promise<{ success: boolean; limit: number; remaining: number; reset: number } | null> {
+    // dev 환경에서는 rate limit 강제 통과 — .env.development.local 에 UPSTASH_* 빈 값이
+    // 있어도 Redis 인스턴스는 운영 URL 로 생성될 수 있어 호출 시 운영 ratelimit 의 stale
+    // count 를 사용하는 위험 방지. (cache.ts 와 동일한 dev/prod 분리 정책.)
+    if (process.env.NODE_ENV !== 'production') {
+        return null
+    }
     try {
         const { success, limit, remaining, reset } = await limiter.limit(identifier)
 
