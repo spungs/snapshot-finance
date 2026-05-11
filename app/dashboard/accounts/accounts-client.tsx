@@ -61,13 +61,16 @@ export function AccountsClient({ initialAccounts }: Props) {
     const { language } = useLanguage()
     const t = translations[language].accountManagement
 
-    // 낙관적 갱신용 로컬 상태 — server action 실패 시 router.refresh() 로 복원
+    // 낙관적 갱신용 로컬 상태. 같은 페이지 mutation 은 setAccounts 직접 호출로
+    // 즉시 반영하고, 다른 페이지로 갔다가 돌아오면 component remount 시점에
+    // initialAccounts 가 useState 초기값으로 자연 동기화된다.
+    //
+    // 주의: 과거 `useEffect(() => setAccounts(initialAccounts), [initialAccounts])`
+    // 패턴은 server action 후 router.refresh() 응답 timing race 로 인해
+    // 1) 사용자가 추가한 row 가 한 박자 사라졌다 다시 나타나는 flicker,
+    // 2) 사용자가 재시도해 중복 row 가 생기는 데이터 무결성 문제를 유발했다.
+    // 대신 mutation 후 setAccounts 를 직접 호출해 client state 가 단일 진실로 동작한다.
     const [accounts, setAccounts] = useState<AccountListItem[]>(initialAccounts)
-
-    // initialAccounts 가 외부 갱신될 때(SSR fetched) 동기화
-    useEffect(() => {
-        setAccounts(initialAccounts)
-    }, [initialAccounts])
 
     const [addOpen, setAddOpen] = useState(false)
     const [renameTarget, setRenameTarget] = useState<AccountListItem | null>(null)
@@ -89,14 +92,15 @@ export function AccountsClient({ initialAccounts }: Props) {
             const newIndex = accounts.findIndex((a) => a.id === over.id)
             if (oldIndex < 0 || newIndex < 0) return
 
+            const prev = accounts // rollback 용 backup
             const next = arrayMove(accounts, oldIndex, newIndex)
             setAccounts(next) // optimistic
 
             startTransition(async () => {
                 const result = await reorderAccounts(next.map((a) => a.id))
                 if (!result.success) {
+                    setAccounts(prev) // explicit rollback (useEffect 제거됨)
                     toast.error(t.reorderFailed)
-                    router.refresh()
                 }
             })
         },
