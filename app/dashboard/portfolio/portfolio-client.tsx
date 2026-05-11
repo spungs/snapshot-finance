@@ -174,13 +174,34 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
     // 다중 계좌에서는 다른 계좌에 같은 종목이 있어도 별개로 취급.
     const existingHolding = useMemo(() => {
         if (!newStock) return null
+
+        // DEBUG [C1.3 진단] — root cause 확정 후 제거
+        if (typeof window !== 'undefined') {
+            // eslint-disable-next-line no-console
+            console.log('[debug C1.3 existingHolding]', {
+                newStockId: newStock?.id,
+                newStockCode: newStock?.stockCode,
+                newStockName: newStock?.stockName,
+                newAccountId,
+                isMultiAccount,
+                accountsCount: accounts.length,
+                holdingsTotal: holdings.length,
+                matchingByStockId: holdings.filter(h => h.stockId === newStock?.id).map(h => ({
+                    accountId: h.accountId,
+                    accountName: h.accountName,
+                    quantity: h.quantity,
+                    averagePrice: h.averagePrice,
+                })),
+            })
+        }
+
         if (isMultiAccount) {
             if (!newAccountId) return null
             return holdings.find(h => h.stockId === newStock.id && h.accountId === newAccountId) ?? null
         }
         // 단일 계좌(또는 Phase A 미적용) — 기존 동작 유지: stockId 만으로 매칭
         return holdings.find(h => h.stockId === newStock.id) ?? null
-    }, [newStock, holdings, isMultiAccount, newAccountId])
+    }, [newStock, holdings, isMultiAccount, newAccountId, accounts.length])
 
     // Edit/delete
     const [editingId, setEditingId] = useState<string | null>(null)
