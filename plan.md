@@ -39,7 +39,7 @@
 - [x] **성능 최적화**: 보유 종목 조회 병렬 처리 및 인덱스(`userId`, `displayOrder`) 추가
 
 #### 4. 기타 유지보수
-- [x] Next.js 16 호환성 업데이트 (`middleware.ts` → `proxy.ts`)
+- [x] Next.js 16 호환성 업데이트 (`middleware.ts` → `proxy.ts`) *(2025-12-30 다시 `middleware.ts` 로 revert — Next.js 16 dev 시 deprecation 경고만, 작동 영향 없음. Next.js 17 시점에 재처리)*
 - [x] Vercel 배포 환경 이슈 해결 (DB 연결, 시간대, 환경변수)
 - [x] **Cron 표준화**: Supabase pg_cron 으로 통합 (`vercel.json` 제거) — daily-snapshot, update-prices-kr/us 가격 워밍 *(M7 뉴스 7개 cron은 2026-05-07 뉴스 기능 제거와 함께 일괄 unschedule)*
 - [x] **미국주식 가격 공유 캐시**: `/api/cron/update-prices?market=US` cron 추가 + KIS 해외시세 폴백(EXCD 자동 매핑)
