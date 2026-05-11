@@ -48,12 +48,13 @@ const nextConfig: NextConfig = {
   turbopack: {},
 
   // Next.js 16 RSC 클라이언트 캐시 유지 시간.
-  // 동일 라우트로 30초 안에 돌아오면 SSR 재실행 없이 캐시된 RSC 즉시 사용 →
-  // 홈 → 보유 → 홈 같은 토글 시 skeleton flash 제거. force-dynamic 페이지에도 적용됨.
+  // dynamic: 0 — CUD (계좌 추가/삭제/이름변경, 종목 변이) 결과가 다른 페이지로 이동
+  // 후 돌아왔을 때 즉시 반영되도록 client RSC cache 비활성. trade-off 로 동일 라우트
+  // 토글(홈↔보유) 시 skeleton flash 가능. 정확성 우선.
   // https://nextjs.org/docs/app/api-reference/next-config-js/staleTimes
   experimental: {
     staleTimes: {
-      dynamic: 30,
+      dynamic: 0,
       static: 180,
     },
   },
