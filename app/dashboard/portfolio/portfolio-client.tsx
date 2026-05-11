@@ -144,6 +144,7 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
     const [newStock, setNewStock] = useState<any>(null)
     const [newQty, setNewQty] = useState('')
     const [newPrice, setNewPrice] = useState('')
+    const [newPurchaseRate, setNewPurchaseRate] = useState('')
     const [newAccountId, setNewAccountId] = useState<string | null>(null)
     const [addMode, setAddMode] = useState<'merge' | 'overwrite'>('merge')
     const [adding, setAdding] = useState(false)
@@ -159,6 +160,7 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
             setNewStock(null)
             setNewQty('')
             setNewPrice('')
+            setNewPurchaseRate('')
             setAddMode('merge')
             // newAccountId 는 의도적으로 유지 — 드로어 재오픈 시 마지막 선택 계좌가 자연스럽게 남는다.
         }
@@ -168,6 +170,9 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
     const handleStockSelect = (s: any) => {
         setNewStock(s)
         setAddMode('merge')
+        // USD 종목이면 매입환율을 현재 환율로 자동 채움 — 사용자가 실제 매입 시점 환율로 수정 가능
+        const isUsd = s?.market && s.market !== 'KOSPI' && s.market !== 'KOSDAQ'
+        setNewPurchaseRate(isUsd && exRate ? exRate.toFixed(2) : '')
     }
 
     // 같은 계좌 + 같은 종목으로 이미 보유 중인 row 가 있는지 — 물타기/덮어쓰기 분기 기준.
@@ -349,6 +354,7 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
             return
         }
         setAdding(true)
+        const purchaseRateVal = newPurchaseRate ? parseFloat(newPurchaseRate.replace(/,/g, '')) : 0
         try {
             const res = await holdingsApi.create({
                 stockId: newStock.id,
@@ -356,11 +362,13 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                 averagePrice: parseFloat(newPrice.replace(/,/g, '')),
                 mode: existingHolding ? addMode : 'overwrite',
                 ...(newAccountId ? { accountId: newAccountId } : {}),
+                ...(purchaseRateVal > 0 ? { purchaseRate: purchaseRateVal } : {}),
             })
             if (res.success) {
                 setNewStock(null)
                 setNewQty('')
                 setNewPrice('')
+                setNewPurchaseRate('')
                 setShowAdd(false)
                 await refresh()
             } else {
@@ -962,6 +970,8 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                     setNewQty={setNewQty}
                     newPrice={newPrice}
                     setNewPrice={setNewPrice}
+                    newPurchaseRate={newPurchaseRate}
+                    setNewPurchaseRate={setNewPurchaseRate}
                     adding={adding}
                     handleAdd={handleAdd}
                     existingHolding={existingHolding}
@@ -1007,6 +1017,8 @@ interface AddHoldingFloatingProps {
     setNewQty: (s: string) => void
     newPrice: string
     setNewPrice: (s: string) => void
+    newPurchaseRate: string
+    setNewPurchaseRate: (s: string) => void
     adding: boolean
     handleAdd: () => void
     existingHolding: Holding | null
@@ -1024,12 +1036,14 @@ function AddHoldingFloating({
     newStock, setNewStock,
     newQty, setNewQty,
     newPrice, setNewPrice,
+    newPurchaseRate, setNewPurchaseRate,
     adding, handleAdd,
     existingHolding, addMode, setAddMode,
     accounts, accountId, setAccountId,
     t, language,
 }: AddHoldingFloatingProps) {
     const isKR = newStock?.market === 'KOSPI' || newStock?.market === 'KOSDAQ'
+    const isUSD = !!newStock && !isKR
     const pricePrefix = newStock ? (isKR ? '₩' : '$') : undefined
     const qtySuffix = language === 'ko' ? '주' : 'shr'
 
@@ -1140,6 +1154,14 @@ function AddHoldingFloating({
                                 disabled={adding}
                             />
                         </div>
+                        {isUSD && (
+                            <FormattedNumberInput
+                                label={language === 'ko' ? '매입환율 (₩/$)' : 'Buy rate (KRW/USD)'}
+                                value={newPurchaseRate}
+                                onChange={setNewPurchaseRate}
+                                disabled={adding}
+                            />
+                        )}
                         <button
                             type="button"
                             onClick={handleAdd}

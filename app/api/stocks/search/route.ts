@@ -173,6 +173,9 @@ export async function GET(request: NextRequest) {
             // Use singleton instance to share session/cookies and avoid rate limits
             const results = await yahooFinance.search(query)
 
+            // Yahoo 가 같은 ticker 의 다른 listing (ex: HIMS NYSE + HIMS NMS) 을 별개 quote 로
+            // 반환하는 경우가 있어 symbol+market 으로 dedup. 첫 등장만 유지.
+            const seenKeys = new Set<string>()
             const formattedResults = results.quotes
                 .filter((quote: any) =>
                     quote.quoteType === 'EQUITY' ||
@@ -186,6 +189,12 @@ export async function GET(request: NextRequest) {
                     type: quote.quoteType,
                     market: quote.exchange === 'KOE' ? 'KOSPI' : quote.exchange === 'KO' ? 'KOSDAQ' : 'US',
                 }))
+                .filter((r: any) => {
+                    const key = `${r.symbol}|${r.market}`
+                    if (seenKeys.has(key)) return false
+                    seenKeys.add(key)
+                    return true
+                })
 
             await cacheSet(cacheKey, formattedResults, SEARCH_CACHE_TTL_SECONDS)
 
@@ -214,6 +223,7 @@ export async function GET(request: NextRequest) {
                 const data = await response.json()
 
                 // Finnhub returns: { count, result: [{ description, displaySymbol, symbol, type }] }
+                const finnhubSeen = new Set<string>()
                 const formattedResults = (data.result || [])
                     .filter((item: any) =>
                         item.type === 'Common Stock' ||
@@ -229,6 +239,12 @@ export async function GET(request: NextRequest) {
                         market: 'US',
                         source: 'finnhub'
                     }))
+                    .filter((r: any) => {
+                        const key = `${r.symbol}|${r.market}`
+                        if (finnhubSeen.has(key)) return false
+                        finnhubSeen.add(key)
+                        return true
+                    })
 
                 // Cache Finnhub results too
                 await cacheSet(searchCacheKey(query), formattedResults, SEARCH_CACHE_TTL_SECONDS)
