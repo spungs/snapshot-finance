@@ -9,6 +9,7 @@ import { useLanguage } from '@/lib/i18n/context'
 import { SnapshotBottomPanel } from '@/components/dashboard/snapshots/snapshot-bottom-panel'
 import { EmptySnapshotState } from '@/components/dashboard/empty-snapshot-state'
 import { Loader2, Plus, MoreVertical, Eye, TrendingUp, Trash2 } from 'lucide-react'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -167,9 +168,17 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings }: Snapshots
     }
     const handleClearSelection = () => setSelectedIds([])
 
-    async function handleDelete(id: string, e: React.MouseEvent) {
+    // 삭제 확인: native confirm() 대신 ConfirmDialog 사용 (UX 일관성)
+    const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null)
+
+    function handleDelete(id: string, e: React.MouseEvent) {
         e.stopPropagation()
-        if (!confirm(t('confirmDelete'))) return
+        setDeleteTargetId(id)
+    }
+
+    async function performDelete() {
+        if (!deleteTargetId) return
+        const id = deleteTargetId
         setDeleting(id)
         try {
             const response = await snapshotsApi.delete(id)
@@ -180,12 +189,13 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings }: Snapshots
                     setActiveId(remaining[0]?.id ?? null)
                 }
             } else {
-                alert(response.error?.message || t('deleteFailed'))
+                toast.error(response.error?.message || t('deleteFailed'))
             }
         } catch {
-            alert(t('networkError'))
+            toast.error(t('networkError'))
         } finally {
             setDeleting(null)
+            setDeleteTargetId(null)
         }
     }
 
@@ -262,6 +272,18 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings }: Snapshots
                 snapshots={snapshots}
                 selectedIds={selectedIds}
                 onClearSelection={handleClearSelection}
+            />
+
+            {/* 스냅샷 삭제 확인 — native confirm() 대체 */}
+            <ConfirmDialog
+                open={!!deleteTargetId}
+                onOpenChange={(next) => { if (!next) setDeleteTargetId(null) }}
+                title={language === 'ko' ? '스냅샷 삭제' : 'Delete snapshot'}
+                description={t('confirmDelete')}
+                confirmLabel={language === 'ko' ? '삭제' : 'Delete'}
+                cancelLabel={language === 'ko' ? '취소' : 'Cancel'}
+                variant="destructive"
+                onConfirm={performDelete}
             />
         </div>
     )

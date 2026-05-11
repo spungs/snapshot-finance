@@ -11,6 +11,7 @@ import { useLanguage } from '@/lib/i18n/context'
 import { cn } from '@/lib/utils'
 import { FALLBACK_USD_RATE } from '@/lib/api/exchange-rate'
 import { ArrowLeft, Download, Loader2, Plus, Trash2 } from 'lucide-react'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
 interface HoldingInput {
   stockId: string
@@ -228,46 +229,51 @@ export default function NewSnapshotPage() {
     }
   }
 
-  async function loadCurrentHoldings() {
-    if (confirm(t('loadCurrentHoldingsConfirm'))) {
-      loadCurrentAbortRef.current?.abort()
-      const controller = new AbortController()
-      loadCurrentAbortRef.current = controller
+  // 불러오기 확인: native confirm() 대신 ConfirmDialog 사용 (UX 일관성)
+  const [loadConfirmOpen, setLoadConfirmOpen] = useState(false)
 
-      setLoading(true)
-      try {
-        const response = await holdingsApi.getList(controller.signal)
-        if (controller.signal.aborted) return
-        if (response.success && response.data) {
-          const newHoldings: HoldingInput[] = response.data.holdings.map((h: any) => {
-            const currency = h.currency || 'KRW'
-            const rawPurchaseRate = h.purchaseRate?.toString()
-            let purchaseRate = rawPurchaseRate || '1'
-            if (currency === 'USD' && (!rawPurchaseRate || rawPurchaseRate === '1')) {
-              purchaseRate = exchangeRate.toString()
-            }
+  function loadCurrentHoldings() {
+    setLoadConfirmOpen(true)
+  }
 
-            return {
-              stockId: h.stockId,
-              stockName: h.stockName,
-              stockCode: h.stockCode,
-              quantity: h.quantity.toString(),
-              averagePrice: h.averagePrice.toString(),
-              currentPrice: h.currentPrice.toString(),
-              currency,
-              purchaseRate,
-            }
-          })
-          setHoldings(newHoldings)
-        } else {
-          setError(t('loadFailed') || 'Failed to load holdings')
-        }
-      } catch (err) {
-        if ((err as Error).name === 'AbortError') return
-        setError(t('networkError'))
-      } finally {
-        if (!controller.signal.aborted) setLoading(false)
+  async function performLoadCurrentHoldings() {
+    loadCurrentAbortRef.current?.abort()
+    const controller = new AbortController()
+    loadCurrentAbortRef.current = controller
+
+    setLoading(true)
+    try {
+      const response = await holdingsApi.getList(controller.signal)
+      if (controller.signal.aborted) return
+      if (response.success && response.data) {
+        const newHoldings: HoldingInput[] = response.data.holdings.map((h: any) => {
+          const currency = h.currency || 'KRW'
+          const rawPurchaseRate = h.purchaseRate?.toString()
+          let purchaseRate = rawPurchaseRate || '1'
+          if (currency === 'USD' && (!rawPurchaseRate || rawPurchaseRate === '1')) {
+            purchaseRate = exchangeRate.toString()
+          }
+
+          return {
+            stockId: h.stockId,
+            stockName: h.stockName,
+            stockCode: h.stockCode,
+            quantity: h.quantity.toString(),
+            averagePrice: h.averagePrice.toString(),
+            currentPrice: h.currentPrice.toString(),
+            currency,
+            purchaseRate,
+          }
+        })
+        setHoldings(newHoldings)
+      } else {
+        setError(t('loadFailed') || 'Failed to load holdings')
       }
+    } catch (err) {
+      if ((err as Error).name === 'AbortError') return
+      setError(t('networkError'))
+    } finally {
+      if (!controller.signal.aborted) setLoading(false)
     }
   }
 
@@ -632,6 +638,16 @@ export default function NewSnapshotPage() {
           </button>
         </div>
       </form>
+      {/* 보유 종목 불러오기 확인 — native confirm() 대체 */}
+      <ConfirmDialog
+        open={loadConfirmOpen}
+        onOpenChange={setLoadConfirmOpen}
+        title={language === 'ko' ? '현재 보유 종목 불러오기' : 'Load current holdings'}
+        description={t('loadCurrentHoldingsConfirm')}
+        confirmLabel={language === 'ko' ? '불러오기' : 'Load'}
+        cancelLabel={language === 'ko' ? '취소' : 'Cancel'}
+        onConfirm={performLoadCurrentHoldings}
+      />
     </div>
   )
 }

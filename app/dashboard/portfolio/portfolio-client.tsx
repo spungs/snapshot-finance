@@ -3,7 +3,9 @@
 import { useState, useCallback, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createPortal } from 'react-dom'
+import { toast } from 'sonner'
 import Decimal from 'decimal.js'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { holdingsApi } from '@/lib/api/client'
 import { formatCurrency, formatNumber, formatProfitRate } from '@/lib/utils/formatters'
@@ -343,7 +345,7 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
         if (!newStock || !newQty || !newPrice) return
         // 다중 계좌면 accountId 필수
         if (isMultiAccount && !newAccountId) {
-            alert(language === 'ko' ? '계좌를 선택해주세요.' : 'Please select an account.')
+            toast.error(language === 'ko' ? '계좌를 선택해주세요.' : 'Please select an account.')
             return
         }
         setAdding(true)
@@ -362,10 +364,10 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                 setShowAdd(false)
                 await refresh()
             } else {
-                alert(res.error?.message || t('addStockFailed'))
+                toast.error(res.error?.message || t('addStockFailed'))
             }
         } catch {
-            alert(t('networkError'))
+            toast.error(t('networkError'))
         } finally {
             setAdding(false)
         }
@@ -401,28 +403,42 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                 setEditingId(null)
                 await refresh()
             } else {
-                alert(res.error?.message || t('genericUpdateFailed'))
+                toast.error(res.error?.message || t('genericUpdateFailed'))
             }
         } catch {
-            alert(t('networkError'))
+            toast.error(t('networkError'))
         } finally {
             setSavingRow(null)
         }
     }
 
-    const handleDelete = async (id: string) => {
-        if (!confirm(t('confirmDeleteHolding'))) return
-        setDeletingId(id)
+    // 종목 삭제 — native confirm() 대신 ConfirmDialog 사용.
+    // 1) 삭제 아이콘 클릭 → setDeleteTargetId 로 다이얼로그 열기만
+    // 2) ConfirmDialog 의 onConfirm 에서 실제 삭제 수행
+    const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null)
+    const deleteTargetHolding = useMemo(
+        () => (deleteTargetId ? holdings.find(h => h.id === deleteTargetId) ?? null : null),
+        [deleteTargetId, holdings]
+    )
+
+    const handleDelete = (id: string) => {
+        setDeleteTargetId(id)
+    }
+
+    const performDelete = useCallback(async () => {
+        if (!deleteTargetId) return
+        setDeletingId(deleteTargetId)
         try {
-            const res = await holdingsApi.delete(id)
+            const res = await holdingsApi.delete(deleteTargetId)
             if (res.success) await refresh()
-            else alert(res.error?.message || t('deleteFailed'))
+            else toast.error(res.error?.message || t('deleteFailed'))
         } catch {
-            alert(t('networkError'))
+            toast.error(t('networkError'))
         } finally {
             setDeletingId(null)
+            setDeleteTargetId(null)
         }
-    }
+    }, [deleteTargetId, refresh, t])
 
     const convert = (v: number) => baseCurrency === 'KRW' ? v : v / exRate
     const displayTotal = convert(currentSummary.totalValue)
@@ -959,6 +975,25 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                 />,
                 document.body,
             )}
+            {/* 종목 삭제 확인 — native confirm() 대체. 계좌 삭제 다이얼로그와 일관성 */}
+            <ConfirmDialog
+                open={!!deleteTargetId}
+                onOpenChange={(next) => { if (!next) setDeleteTargetId(null) }}
+                title={language === 'ko' ? '종목 삭제' : 'Delete holding'}
+                description={
+                    deleteTargetHolding
+                        ? language === 'ko'
+                            ? `"${deleteTargetHolding.stockName}"을(를) 삭제하시겠습니까?`
+                            : `Delete "${deleteTargetHolding.stockName}"?`
+                        : language === 'ko'
+                            ? '이 종목을 삭제하시겠습니까?'
+                            : 'Delete this holding?'
+                }
+                confirmLabel={language === 'ko' ? '삭제' : 'Delete'}
+                cancelLabel={language === 'ko' ? '취소' : 'Cancel'}
+                variant="destructive"
+                onConfirm={performDelete}
+            />
         </div>
     )
 }

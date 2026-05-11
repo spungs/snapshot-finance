@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, MoreVertical, Pencil, Trash2, Loader2, AlertCircle } from 'lucide-react'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
 import { useLanguage } from '@/lib/i18n/context'
 import { snapshotsApi } from '@/lib/api/client'
@@ -93,8 +94,14 @@ export default function SnapshotDetailClient({ snapshot }: Props) {
         return sum + valKRW
     }, 0)
 
-    async function handleDelete() {
-        if (!confirm(t('confirmDelete'))) return
+    // 삭제 확인: native confirm() 대신 ConfirmDialog 사용 (UX 일관성)
+    const [deleteOpen, setDeleteOpen] = useState(false)
+
+    function handleDelete() {
+        setDeleteOpen(true)
+    }
+
+    async function performDelete() {
         setIsDeleting(true)
         try {
             const res = await snapshotsApi.delete(snapshot.id)
@@ -370,6 +377,17 @@ export default function SnapshotDetailClient({ snapshot }: Props) {
                     })}
                 </div>
             )}
+            {/* 스냅샷 삭제 확인 — native confirm() 대체 */}
+            <ConfirmDialog
+                open={deleteOpen}
+                onOpenChange={setDeleteOpen}
+                title={language === 'ko' ? '스냅샷 삭제' : 'Delete snapshot'}
+                description={t('confirmDelete')}
+                confirmLabel={language === 'ko' ? '삭제' : 'Delete'}
+                cancelLabel={language === 'ko' ? '취소' : 'Cancel'}
+                variant="destructive"
+                onConfirm={performDelete}
+            />
         </div>
     )
 }
