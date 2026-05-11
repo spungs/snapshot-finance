@@ -79,6 +79,10 @@ async function PortfolioContent({
     // Agent 4 가 /api/holdings 응답에 추가한 필드 — holding-service 가 함께 제공.
     accountId: h.accountId ?? null,
     accountName: h.accountName ?? null,
+    // 주가 캐시 시점 — 헤더에 "주가 N분 전" 표시용. ISO string 으로 전달.
+    priceUpdatedAt: h.priceUpdatedAt
+      ? (typeof h.priceUpdatedAt === 'string' ? h.priceUpdatedAt : new Date(h.priceUpdatedAt).toISOString())
+      : null,
   }))
 
   const accounts = accountsRaw.map(a => ({ id: a.id, name: a.name }))

@@ -1,5 +1,49 @@
 import { prisma } from '@/lib/prisma'
 import { assertAccountOwnership as checkAccountOwnership } from '@/lib/auth-helpers'
+import { cacheGet, cacheSet, cacheDelete } from '@/lib/cache'
+
+// L2 (Upstash Redis) 캐시 — 사용자별 계좌 목록 + 보유 종목 수.
+// CUD / 종목 변이 시 invalidate(userId) 로 무효화. TTL 은 fail-safe (드물지만 invalidate 실패 시 자연 만료).
+const ACCOUNTS_CACHE_TTL_SECONDS = 3600 // 1 hour
+const accountsCacheKey = (userId: string) => `accounts:list:${userId}`
+
+export interface AccountListItem {
+    id: string
+    name: string
+    displayOrder: number
+    holdingsCount: number
+}
+
+export const accountService = {
+    async getList(userId: string): Promise<AccountListItem[]> {
+        const key = accountsCacheKey(userId)
+        const cached = await cacheGet<AccountListItem[]>(key)
+        if (cached) return cached
+
+        const rows = await prisma.brokerageAccount.findMany({
+            where: { userId },
+            orderBy: [{ displayOrder: 'asc' }, { createdAt: 'asc' }],
+            select: {
+                id: true,
+                name: true,
+                displayOrder: true,
+                _count: { select: { holdings: true } },
+            },
+        })
+        const mapped: AccountListItem[] = rows.map((a) => ({
+            id: a.id,
+            name: a.name,
+            displayOrder: a.displayOrder,
+            holdingsCount: a._count.holdings,
+        }))
+        await cacheSet(key, mapped, ACCOUNTS_CACHE_TTL_SECONDS)
+        return mapped
+    },
+
+    async invalidate(userId: string): Promise<void> {
+        await cacheDelete(accountsCacheKey(userId))
+    },
+}
 
 /**
  * 사용자에게 BrokerageAccount 가 한 개도 없으면 "기본 계좌" 를 새로 만들어 반환한다.

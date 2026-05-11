@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
 import { assertHoldingOwnership, assertAccountOwnership } from '@/lib/auth-helpers'
 import { holdingService } from '@/lib/services/holding-service'
+import { accountService } from '@/lib/services/account-service'
 import Decimal from 'decimal.js'
 
 function safeRevalidate() {
@@ -166,9 +167,12 @@ export async function POST(
             return { merged: false, destHoldingId: created.id }
         })
 
-        // L2 캐시 (Upstash) 무효화
+        // L2 캐시 (Upstash) 무효화 — holdings + accounts (두 계좌의 holdingsCount 모두 변경)
         await holdingService.invalidate(userId).catch((e) =>
-            console.warn('[holdings/transfer] cache invalidate failed:', e)
+            console.warn('[holdings/transfer] holdings cache invalidate failed:', e)
+        )
+        await accountService.invalidate(userId).catch((e) =>
+            console.warn('[holdings/transfer] accounts cache invalidate failed:', e)
         )
         safeRevalidate()
 

@@ -3,6 +3,7 @@ import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
 import { holdingService } from '@/lib/services/holding-service'
+import { accountService } from '@/lib/services/account-service'
 import { validateQuantity, validateAveragePrice, validateCurrency } from '@/lib/validation/portfolio-input'
 
 function safeRevalidate() {
@@ -79,6 +80,8 @@ export async function PATCH(
         })
 
         await holdingService.invalidate(session.user.id)
+        // accountId 변경 가능성 + 없어도 holdings 정합성 위해 accounts 캐시 무효화
+        await accountService.invalidate(session.user.id).catch((e) => console.warn('[holdings PATCH] accounts invalidate failed:', e))
         safeRevalidate()
         return NextResponse.json({ success: true, data: updated })
     } catch (error) {
@@ -121,6 +124,8 @@ export async function DELETE(
         await prisma.holding.delete({ where: { id } })
 
         await holdingService.invalidate(session.user.id)
+        // holdingsCount 감소 → accounts 캐시 무효화
+        await accountService.invalidate(session.user.id).catch((e) => console.warn('[holdings DELETE] accounts invalidate failed:', e))
         safeRevalidate()
         return NextResponse.json({ success: true, message: '종목이 삭제되었습니다.' })
     } catch (error) {

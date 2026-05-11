@@ -52,25 +52,71 @@ export interface AccountListItem {
     holdingsCount: number
 }
 
-interface Props {
-    initialAccounts: AccountListItem[]
+// L1 localStorage 캐시 키 — 다음 페이지 진입 시 mount 즉시 stale 표시(체감 0ms)용.
+// 다른 사용자가 같은 디바이스에 로그인하는 흔치 않은 경우, NextAuth signOut hook 이
+// 별도로 비우지 않더라도 자연스럽게 다음 fetch 결과로 덮어써짐.
+const LOCAL_CACHE_KEY = 'snapshot-finance:accounts:cache:v1'
+
+function loadCache(): AccountListItem[] | null {
+    if (typeof window === 'undefined') return null
+    try {
+        const raw = window.localStorage.getItem(LOCAL_CACHE_KEY)
+        return raw ? (JSON.parse(raw) as AccountListItem[]) : null
+    } catch { return null }
+}
+function saveCache(data: AccountListItem[]) {
+    if (typeof window === 'undefined') return
+    try {
+        window.localStorage.setItem(LOCAL_CACHE_KEY, JSON.stringify(data))
+    } catch { /* quota — 무시 */ }
 }
 
-export function AccountsClient({ initialAccounts }: Props) {
+export function AccountsClient() {
     const router = useRouter()
     const { language } = useLanguage()
     const t = translations[language].accountManagement
 
-    // 낙관적 갱신용 로컬 상태. 같은 페이지 mutation 은 setAccounts 직접 호출로
-    // 즉시 반영하고, 다른 페이지로 갔다가 돌아오면 component remount 시점에
-    // initialAccounts 가 useState 초기값으로 자연 동기화된다.
-    //
-    // 주의: 과거 `useEffect(() => setAccounts(initialAccounts), [initialAccounts])`
-    // 패턴은 server action 후 router.refresh() 응답 timing race 로 인해
-    // 1) 사용자가 추가한 row 가 한 박자 사라졌다 다시 나타나는 flicker,
-    // 2) 사용자가 재시도해 중복 row 가 생기는 데이터 무결성 문제를 유발했다.
-    // 대신 mutation 후 setAccounts 를 직접 호출해 client state 가 단일 진실로 동작한다.
-    const [accounts, setAccounts] = useState<AccountListItem[]>(initialAccounts)
+    // L1 SWR — 첫 렌더는 SSR 일관성 위해 빈 배열. mount 후 useEffect 가:
+    //   1) localStorage stale 즉시 표시 (체감 0ms)
+    //   2) /api/accounts (L2 Redis hit 시 ~20ms) 백그라운드 fetch
+    // 같은 페이지 mutation 은 setAccounts 직접 호출로 즉시 반영, localStorage 도 자동 갱신.
+    const [accounts, _setAccounts] = useState<AccountListItem[]>([])
+    const [bootstrapped, setBootstrapped] = useState(false)
+
+    // setAccounts wrapper — 호출될 때마다 localStorage 도 자동 갱신해 다음 진입 시 fresh.
+    const setAccounts = useCallback(
+        (updater: AccountListItem[] | ((prev: AccountListItem[]) => AccountListItem[])) => {
+            _setAccounts((prev) => {
+                const next = typeof updater === 'function'
+                    ? (updater as (p: AccountListItem[]) => AccountListItem[])(prev)
+                    : updater
+                saveCache(next)
+                return next
+            })
+        },
+        [],
+    )
+
+    // mount: L1 stale 즉시 표시 + 백그라운드 fresh fetch
+    useEffect(() => {
+        const cached = loadCache()
+        if (cached) _setAccounts(cached)
+        let cancelled = false
+        ;(async () => {
+            try {
+                const { accountsApi } = await import('@/lib/api/client')
+                const res = await accountsApi.getList()
+                if (!cancelled && res.success && res.data) {
+                    _setAccounts(res.data)
+                    saveCache(res.data)
+                }
+            } catch { /* network — stale 유지 */ }
+            finally {
+                if (!cancelled) setBootstrapped(true)
+            }
+        })()
+        return () => { cancelled = true }
+    }, [])
 
     const [addOpen, setAddOpen] = useState(false)
     const [renameTarget, setRenameTarget] = useState<AccountListItem | null>(null)

@@ -86,6 +86,19 @@ export const stocksApi = {
   getList: () => fetchApi<any[]>('/stocks'),
 }
 
+// 계좌 API
+export interface AccountListItem {
+  id: string
+  name: string
+  displayOrder: number
+  holdingsCount: number
+}
+
+export const accountsApi = {
+  getList: (signal?: AbortSignal) =>
+    fetchApi<AccountListItem[]>('/accounts', { cache: 'no-store', signal }),
+}
+
 // 잔고 API
 export const holdingsApi = {
   getList: (signal?: AbortSignal) =>

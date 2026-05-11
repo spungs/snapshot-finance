@@ -3,7 +3,7 @@
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
-import { ensureUserHasAccount, assertAccountOwnership } from '@/lib/services/account-service'
+import { ensureUserHasAccount, assertAccountOwnership, accountService } from '@/lib/services/account-service'
 import { holdingService } from '@/lib/services/holding-service'
 
 const MAX_NAME_LENGTH = 30
@@ -21,6 +21,12 @@ type ActionResult<T = undefined> =
  * 데이터 무결성 문제 발생. DB 는 이미 commit 됐으므로 cleanup 실패는 non-critical.
  */
 async function safeCleanup(userId: string, invalidateHoldings = false): Promise<void> {
+    // L2 (accounts) 캐시 무효화 — 모든 계좌 CUD 후 필수
+    try {
+        await accountService.invalidate(userId)
+    } catch (e) {
+        console.warn('[account-actions] accounts cache invalidate failed (non-critical):', e)
+    }
     if (invalidateHoldings) {
         try {
             await holdingService.invalidate(userId)

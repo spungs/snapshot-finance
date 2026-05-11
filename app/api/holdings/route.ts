@@ -5,6 +5,7 @@ import { auth } from '@/lib/auth'
 import { assertAccountOwnership } from '@/lib/auth-helpers'
 import { getUsdExchangeRate } from '@/lib/api/exchange-rate'
 import { holdingService } from '@/lib/services/holding-service'
+import { accountService } from '@/lib/services/account-service'
 import { kisClient } from '@/lib/api/kis-client'
 import { ratelimit, checkRateLimit } from '@/lib/ratelimit'
 import { validateQuantity, validateAveragePrice } from '@/lib/validation/portfolio-input'
@@ -257,6 +258,8 @@ export async function POST(request: NextRequest) {
         }
 
         await holdingService.invalidate(userId)
+        // holdingsCount 가 변하므로 accounts 캐시도 무효화
+        await accountService.invalidate(userId).catch((e) => console.warn('[holdings POST] accounts invalidate failed:', e))
         safeRevalidate()
         return NextResponse.json({ success: true, data: holding })
     } catch (error) {
