@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { createPortal } from 'react-dom'
 import Decimal from 'decimal.js'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -203,6 +204,7 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
         return cost > 0 ? ((value - cost) / cost) * 100 : 0
     }
 
+    const router = useRouter()
     const refresh = useCallback(async () => {
         const res = await holdingsApi.getList()
         if (res.success && res.data) {
@@ -210,7 +212,11 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
             setCurrentSummary(res.data.summary)
             setSelectedSegIdx(null)
         }
-    }, [])
+        // RSC payload cache 무효화 — F5 시 stale segment 가 재사용되어 추가/수정/삭제
+        // 결과가 보이지 않는 문제를 막는다. server action 이 아닌 REST API mutation 이라
+        // 자동 revalidate 가 일어나지 않아 명시적으로 호출.
+        router.refresh()
+    }, [router])
 
     // AI 챗 등 외부 컴포넌트에서 발행한 'portfolio:refresh' 이벤트를 받으면 보유 목록을 다시 가져온다.
     useEffect(() => {

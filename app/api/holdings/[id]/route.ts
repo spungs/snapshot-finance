@@ -1,8 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
 import { holdingService } from '@/lib/services/holding-service'
 import { validateQuantity, validateAveragePrice, validateCurrency } from '@/lib/validation/portfolio-input'
+
+function safeRevalidate() {
+    try {
+        revalidatePath('/dashboard/portfolio')
+        revalidatePath('/dashboard')
+    } catch (e) {
+        console.warn('[holdings/id] revalidatePath failed (non-critical):', e)
+    }
+}
 
 // PATCH /api/holdings/[id] - 종목 수정
 export async function PATCH(
@@ -69,6 +79,7 @@ export async function PATCH(
         })
 
         await holdingService.invalidate(session.user.id)
+        safeRevalidate()
         return NextResponse.json({ success: true, data: updated })
     } catch (error) {
         console.error('Holding update error:', error)
@@ -110,6 +121,7 @@ export async function DELETE(
         await prisma.holding.delete({ where: { id } })
 
         await holdingService.invalidate(session.user.id)
+        safeRevalidate()
         return NextResponse.json({ success: true, message: '종목이 삭제되었습니다.' })
     } catch (error) {
         console.error('Holding delete error:', error)

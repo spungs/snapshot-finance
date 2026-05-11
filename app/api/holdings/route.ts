@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
 import { assertAccountOwnership } from '@/lib/auth-helpers'
@@ -8,6 +9,20 @@ import { kisClient } from '@/lib/api/kis-client'
 import { ratelimit, checkRateLimit } from '@/lib/ratelimit'
 import { validateQuantity, validateAveragePrice } from '@/lib/validation/portfolio-input'
 import Decimal from 'decimal.js'
+
+/**
+ * Holding mutation 후 RSC payload cache 무효화 — F5 시도 fresh SSR 받도록.
+ * holdingService.invalidate 와 별개 (그건 Redis cache, 이건 Next.js route cache).
+ * 실패해도 mutation 자체는 성공이므로 fail-open.
+ */
+function safeRevalidate() {
+    try {
+        revalidatePath('/dashboard/portfolio')
+        revalidatePath('/dashboard')
+    } catch (e) {
+        console.warn('[holdings] revalidatePath failed (non-critical):', e)
+    }
+}
 
 
 // 현재가 조회 헬퍼 함수 (KIS API 사용)
@@ -242,6 +257,7 @@ export async function POST(request: NextRequest) {
         }
 
         await holdingService.invalidate(userId)
+        safeRevalidate()
         return NextResponse.json({ success: true, data: holding })
     } catch (error) {
         console.error('Holding create error:', error)
