@@ -130,48 +130,46 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
 
     // tick 도착 시 holdings 의 가격/평가금/수익 자동 갱신.
     // totalCost 는 매입가 × 수량이라 불변. summary 도 derive 해서 상단 총자산/도넛도 함께 갱신.
+    //
+    // 함수형 updater 안에서 외부 변수에 할당해 그 결과를 같은 effect 본문에서 읽으면 안 된다.
+    // React 18 의 함수형 updater 는 다음 렌더 시점에 호출되어 외부 변수가 늦게 채워진다.
+    // → effect 본문에서 미리 next 를 계산한 뒤, setHoldings/setCurrentSummary 를 나란히 호출한다.
     useEffect(() => {
         if (ticks.size === 0) return
-        let nextHoldings: Holding[] | null = null
-        setHoldings((prev) => {
-            let mutated = false
-            const next = prev.map((h) => {
-                const t = ticks.get(h.stockCode)
-                if (!t) return h
-                if (t.price === h.currentPrice) return h
-                mutated = true
-                const newValue = h.quantity * t.price
-                return {
-                    ...h,
-                    currentPrice: t.price,
-                    currentValue: newValue,
-                    profit: newValue - h.totalCost,
-                    profitRate: h.totalCost > 0 ? ((newValue - h.totalCost) / h.totalCost) * 100 : 0,
-                    priceUpdatedAt: new Date(t.ts).toISOString(),
-                }
-            })
-            if (mutated) nextHoldings = next
-            return mutated ? next : prev
+        let mutated = false
+        const next = holdings.map((h) => {
+            const t = ticks.get(h.stockCode)
+            if (!t) return h
+            if (t.price === h.currentPrice) return h
+            mutated = true
+            const newValue = h.quantity * t.price
+            return {
+                ...h,
+                currentPrice: t.price,
+                currentValue: newValue,
+                profit: newValue - h.totalCost,
+                profitRate: h.totalCost > 0 ? ((newValue - h.totalCost) / h.totalCost) * 100 : 0,
+                priceUpdatedAt: new Date(t.ts).toISOString(),
+            }
         })
-        // holdings 변경 후 summary 재계산 — 상단 도넛/총자산도 실시간 반영
-        if (nextHoldings) {
-            setCurrentSummary((prevSummary) => {
-                const rate = prevSummary.exchangeRate || FALLBACK_USD_RATE
-                let totalCost = 0
-                let totalValue = 0
-                for (const h of nextHoldings!) {
-                    const buyRate = h.currency === 'USD'
-                        ? (h.purchaseRate && h.purchaseRate !== 1 ? h.purchaseRate : rate)
-                        : 1
-                    totalCost += h.currency === 'USD' ? h.totalCost * buyRate : h.totalCost
-                    totalValue += h.currency === 'USD' ? h.currentValue * rate : h.currentValue
-                }
-                const totalProfit = totalValue - totalCost
-                const totalProfitRate = totalCost > 0 ? (totalProfit / totalCost) * 100 : 0
-                return { ...prevSummary, totalCost, totalValue, totalProfit, totalProfitRate }
-            })
-        }
-    }, [ticks])
+        if (!mutated) return
+        setHoldings(next)
+        setCurrentSummary((prevSummary) => {
+            const rate = prevSummary.exchangeRate || FALLBACK_USD_RATE
+            let totalCost = 0
+            let totalValue = 0
+            for (const h of next) {
+                const buyRate = h.currency === 'USD'
+                    ? (h.purchaseRate && h.purchaseRate !== 1 ? h.purchaseRate : rate)
+                    : 1
+                totalCost += h.currency === 'USD' ? h.totalCost * buyRate : h.totalCost
+                totalValue += h.currency === 'USD' ? h.currentValue * rate : h.currentValue
+            }
+            const totalProfit = totalValue - totalCost
+            const totalProfitRate = totalCost > 0 ? (totalProfit / totalCost) * 100 : 0
+            return { ...prevSummary, totalCost, totalValue, totalProfit, totalProfitRate }
+        })
+    }, [ticks, holdings])
 
     // 보기 모드: byAccount(계좌별 섹션) ↔ unified(통합 합산)
     // 단일 계좌일 때 토글 자체를 숨기고 모드는 무관 (UI 영향 없음).
