@@ -13,6 +13,10 @@ import {
     validateStockName,
 } from '@/lib/validation/portfolio-input'
 
+// 콜드 스타트(Vercel 함수 부팅 + Prisma 초기화) + Gemini 첫 호출 + 한글명 미스 시 Yahoo fallback
+// 합산이 hobby 디폴트 10초를 넘는 경우가 잦아 사용자가 generic 에러를 본다. 60초로 확장.
+export const maxDuration = 60
+
 const GOOGLE_AI_API_KEY = process.env.GOOGLE_AI_API_KEY
 if (!GOOGLE_AI_API_KEY) {
     // 빈 키로 SDK를 초기화하면 런타임에 모호한 401이 떨어진다 — 시작 시점에 명시적으로 경고.
