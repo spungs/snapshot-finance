@@ -1014,7 +1014,7 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                     <div
                         role="tablist"
                         aria-label={language === 'ko' ? '계좌 필터' : 'Account filter'}
-                        className="flex gap-1 overflow-x-auto pb-1 justify-end"
+                        className="flex gap-1 overflow-x-auto pb-1 justify-start"
                         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                     >
                         <button
