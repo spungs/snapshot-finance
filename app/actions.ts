@@ -44,20 +44,8 @@ export async function logout() {
     await signOut({ redirectTo: '/' })
 }
 
-export async function googleLogin(consented: boolean = false) {
-    // signin 페이지의 동의 체크박스를 거친 경우 임시 cookie 를 발급해
-    // OAuth 콜백 직후 events.signIn 에서 User.agreedAt 을 자동으로 세팅한다.
-    // cookie 가 없는 사용자는 dashboard 진입 시 /auth/consent 게이트를 탄다.
-    if (consented) {
-        const cookieStore = await cookies()
-        cookieStore.set('consent-pending', '1', {
-            httpOnly: true,
-            sameSite: 'lax',
-            secure: process.env.NODE_ENV === 'production',
-            path: '/',
-            maxAge: 600,
-        })
-    }
+export async function googleLogin() {
+    // 동의는 OAuth 완료 후 /auth/consent 게이트에서 1회 수집한다 (User.agreedAt).
     await signIn('google', { redirectTo: '/dashboard' }, { prompt: 'login select_account' })
 }
 

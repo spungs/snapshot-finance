@@ -2,7 +2,6 @@
 import NextAuth from "next-auth"
 import type { Adapter, AdapterAccount } from "@auth/core/adapters"
 import { PrismaAdapter } from "@auth/prisma-adapter"
-import { cookies } from "next/headers"
 import { prisma } from "@/lib/prisma"
 import { authConfig } from "./auth.config"
 
@@ -38,26 +37,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     providers: [
         ...authConfig.providers,
     ],
-    events: {
-        // signin 페이지에서 동의 체크박스를 거친 사용자는 'consent-pending' cookie 를
-        // 들고 들어온다. 콜백 직후 agreedAt 을 세팅해 /auth/consent 우회.
-        async signIn({ user }) {
-            if (!user?.id) return
-            try {
-                const cookieStore = await cookies()
-                const pending = cookieStore.get('consent-pending')?.value === '1'
-                if (pending) {
-                    await prisma.user.update({
-                        where: { id: user.id },
-                        data: { agreedAt: new Date() },
-                    })
-                    cookieStore.delete('consent-pending')
-                }
-            } catch {
-                // cookie 접근/삭제 실패는 무시 — dashboard layout 의 게이트가 fallback.
-            }
-        },
-    },
     callbacks: {
         ...authConfig.callbacks,
         async jwt({ token, user, trigger, session }) {
