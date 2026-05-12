@@ -92,6 +92,25 @@ function validateParsedAction(
         case 'update_holding': {
             const name = validateStockName(args.stockName)
             if (!name.ok) return name
+
+            // 부분 매도(intent='sell') 결과가 0주이면 사실상 전량 매도 = 삭제.
+            // AI 가 "보유수량 == 매도수량" 케이스에서 delete_holding 으로 라우팅하지 못하고
+            // quantity=0 으로 update_holding 을 호출하는 경우의 안전판.
+            if (args.intent === 'sell') {
+                const qNum = typeof args.quantity === 'number'
+                    ? args.quantity
+                    : typeof args.quantity === 'string' && args.quantity.trim() !== ''
+                        ? Number(args.quantity)
+                        : NaN
+                if (qNum === 0) {
+                    const accountName = pickAccountName(args.accountName)
+                    return {
+                        ok: true,
+                        value: { type: 'delete_holding', stockName: name.value, accountName },
+                    }
+                }
+            }
+
             let quantity: number | undefined
             let averagePrice: number | undefined
             if (args.quantity !== undefined) {
@@ -116,7 +135,7 @@ function validateParsedAction(
                 return { ok: false, error: '수정할 수량 또는 평단가를 알려주세요.' }
             }
             if (intent === 'sell' && quantity === undefined) {
-                return { ok: false, error: '매도할 수량을 알려주세요.' }
+                return { ok: false, error: '줄일 수량을 알려주세요.' }
             }
             const accountName = pickAccountName(args.accountName)
             return {
@@ -260,11 +279,9 @@ function describeAction(name: string, args: Record<string, unknown>): string {
     const stock = typeof args.stockName === 'string' ? args.stockName : ''
     switch (name) {
         case 'add_holding':
-            return `${acc}${stock} ${args.quantity ?? ''}주 매수`.trim()
+            return `${acc}${stock} ${args.quantity ?? ''}주 추가`.trim()
         case 'update_holding':
-            return args.intent === 'sell'
-                ? `${acc}${stock} ${args.quantity ?? ''}주 매도`.trim()
-                : `${acc}${stock} 수정`.trim()
+            return `${acc}${stock} 수정`.trim()
         case 'delete_holding':
             return `${acc}${stock} 삭제`.trim()
         default:
@@ -286,9 +303,13 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ success: false, error: '인증이 필요합니다.' }, { status: 401 })
         }
 
+        // admin 은 비용/남용 우려 대상이 아니므로 AI 레이트리밋(burst/daily) 전면 통과.
+        // role 은 DB UPDATE 로만 부여 가능 (lib/auth-helpers.ts 정책).
+        const isAdmin = session.user.role === 'admin'
+
         // user.id 기준 rate limit (Gemini API 비용/남용 방지)
         // 1) burst: 10회/분 — 단기 남용 차단
-        const rateLimitResult = await checkRateLimit(ratelimit.ai, session.user.id)
+        const rateLimitResult = isAdmin ? null : await checkRateLimit(ratelimit.ai, session.user.id)
         if (rateLimitResult && !rateLimitResult.success) {
             return NextResponse.json(
                 { success: false, error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
@@ -303,8 +324,8 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        // 2) daily: 50회/24h — 일일 비용 한도. reset 은 epoch seconds.
-        const dailyLimitResult = await checkRateLimit(ratelimit.aiDaily, session.user.id)
+        // 2) daily: 3회/24h — 일일 비용 한도. reset 은 epoch seconds.
+        const dailyLimitResult = isAdmin ? null : await checkRateLimit(ratelimit.aiDaily, session.user.id)
         if (dailyLimitResult && !dailyLimitResult.success) {
             return NextResponse.json(
                 {
@@ -364,7 +385,8 @@ export async function POST(request: NextRequest) {
 - "X 매수" / "X N주 추가" → add_holding (이미 보유 중이면 서버가 가중평균으로 합산)
 - "X 평단가 N으로" / "X 수량 N주로" → update_holding(intent='update')
 - "X N주 매도" (부분 매도) → update_holding(intent='sell', quantity=보유수량 - 매도수량). 평단가는 절대 전송하지 마세요. 매도 가격이 언급되어도 무시하세요.
-- "X 전량 매도" / "X 삭제" → delete_holding
+- **단, (보유수량 - 매도수량) === 0 이면 반드시 delete_holding 을 호출하세요. update_holding 을 quantity=0 으로 호출하지 마세요.** 예: NVDA 1주 보유 중 "NVDA 1주 매도" → delete_holding.
+- "X 전량 매도" / "X 삭제" → delete_holding (보유수량을 신경 쓰지 말고 무조건 delete_holding)
 
 ## 동작 규칙
 1. **통화 추론** — currency 미지정 시 한국 주식은 KRW, 미국 주식은 USD. 단 서버가 KIS 검색으로 최종 결정하므로 모르면 비워둬도 됩니다.

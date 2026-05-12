@@ -191,7 +191,7 @@ function AddHoldingCard({
     const officialName = action.stockOfficialName ?? action.stockName ?? ''
 
     return (
-        <CardShell title="종목 추가 (매수)">
+        <CardShell title="종목 추가">
             {accounts.length >= 2 && (
                 <Field label="계좌">
                     <Select value={accountId} onValueChange={setAccountId}>
@@ -260,7 +260,7 @@ function AddHoldingCard({
             <Actions
                 executing={executing}
                 disabled={!canSubmit}
-                confirmLabel="매수"
+                confirmLabel="추가"
                 onConfirm={() =>
                     onConfirm({
                         type: 'add_holding',
@@ -426,14 +426,14 @@ function SellHoldingCard({
 
     if (matches.length === 0) {
         return (
-            <CardShell title="부분 매도">
+            <CardShell title="수량 줄이기">
                 <p className="text-xs text-muted-foreground">
                     보유 종목을 찾을 수 없습니다.
                 </p>
                 <Actions
                     executing={executing}
                     disabled
-                    confirmLabel="매도"
+                    confirmLabel="수정"
                     onConfirm={() => {}}
                     onCancel={onCancel}
                     hideConfirm
@@ -453,7 +453,7 @@ function SellHoldingCard({
         Boolean(holdingId) && sellQty != null && sellQty > 0 && !exceeds
 
     return (
-        <CardShell title="부분 매도">
+        <CardShell title="수량 줄이기">
             <Field label="대상">
                 <HoldingSelect
                     value={holdingId}
@@ -462,7 +462,7 @@ function SellHoldingCard({
                 />
             </Field>
 
-            <Field label="매도 수량">
+            <Field label="줄일 수량">
                 <div className="flex items-center gap-1.5">
                     <Input
                         type="number"
@@ -471,7 +471,7 @@ function SellHoldingCard({
                         value={sellQuantity}
                         onChange={e => setSellQuantity(e.target.value)}
                         className="h-8 text-xs"
-                        placeholder="매도 수량"
+                        placeholder="줄일 수량"
                     />
                     {holding && (
                         <span className="text-[11px] text-muted-foreground shrink-0">
@@ -483,7 +483,7 @@ function SellHoldingCard({
 
             {remainingAfter != null && !exceeds && (
                 <p className="text-[11px] text-muted-foreground">
-                    매도 후 {formatNumber(remainingAfter.toString(), 0)}주
+                    수정 후 {formatNumber(remainingAfter.toString(), 0)}주
                 </p>
             )}
 
@@ -493,20 +493,20 @@ function SellHoldingCard({
 
             {exceeds && (
                 <p className="text-[11px] text-destructive">
-                    보유 수량보다 많이 매도할 수 없습니다.
+                    보유 수량보다 많이 줄일 수 없습니다.
                 </p>
             )}
 
             <div className="rounded-md bg-muted/50 px-2 py-1.5">
                 <p className="text-[11px] text-muted-foreground leading-snug">
-                    💡 매도 금액은 기록되지 않습니다. 예수금은 [홈]의 예수금 카드에서 직접 업데이트해주세요.
+                    💡 예수금은 자동으로 변경되지 않습니다. [홈]의 예수금 카드에서 직접 업데이트해주세요.
                 </p>
             </div>
 
             <Actions
                 executing={executing}
                 disabled={!canSubmit}
-                confirmLabel="매도"
+                confirmLabel="수정"
                 onConfirm={() => {
                     if (!holding || sellQty == null) return
                     // PATCH 본문에 평단가 미포함 → 평단가 유지. quantity 는 차감 후 값.
@@ -582,7 +582,7 @@ function DeleteHoldingCard({
             </p>
             <div className="rounded-md bg-muted/50 px-2 py-1.5">
                 <p className="text-[11px] text-muted-foreground leading-snug">
-                    💡 매도 금액은 기록되지 않습니다. 예수금은 [홈]에서 직접 업데이트해주세요.
+                    💡 예수금은 자동으로 변경되지 않습니다. [홈]의 예수금 카드에서 직접 업데이트해주세요.
                 </p>
             </div>
 
