@@ -950,7 +950,7 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                 <span className="eyebrow">
                     {language === 'ko' ? '보유 종목' : 'Holdings'} · {baseHoldings.length}
                 </span>
-                <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-2 flex-wrap justify-end ml-auto">
                     {isMultiAccount && (
                         <div
                             role="tablist"
