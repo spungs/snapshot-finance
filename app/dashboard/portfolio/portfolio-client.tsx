@@ -945,13 +945,13 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                 </CashBalanceDialog>
             </section>
 
-            {/* Holdings header — count + (다중 계좌 시) view-mode toggle + sort */}
-            <div className="px-6 pb-3 flex justify-between items-center gap-2 flex-wrap">
-                <div className="flex items-center gap-2 flex-wrap">
-                    <span className="eyebrow">
-                        {language === 'ko' ? '보유 종목' : 'Holdings'} · {baseHoldings.length}
-                    </span>
-                    {isMultiAccount && (
+            {/* Holdings header — Row1: 카운트 / Row2: (다중계좌) 좌 토글-우 정렬 또는 (단일계좌) 우 정렬 */}
+            <div className="px-6 pb-3 space-y-2">
+                <div className="eyebrow">
+                    {language === 'ko' ? '보유 종목' : 'Holdings'} · {baseHoldings.length}
+                </div>
+                {isMultiAccount ? (
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
                         <div
                             role="tablist"
                             aria-label={language === 'ko' ? '보기 방식' : 'View mode'}
@@ -986,28 +986,49 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                                 {language === 'ko' ? '통합' : 'Unified'}
                             </button>
                         </div>
-                    )}
-                </div>
-                <div className="flex items-center gap-2 flex-wrap justify-end ml-auto">
-                    <SortToggle
-                        active={sortKey === 'currentValue'}
-                        dir={sortDir}
-                        label={language === 'ko' ? '평가금' : 'Value'}
-                        onClick={() => handleSort('currentValue')}
-                    />
-                    <SortToggle
-                        active={sortKey === 'totalCost'}
-                        dir={sortDir}
-                        label={language === 'ko' ? '매입금' : 'Cost'}
-                        onClick={() => handleSort('totalCost')}
-                    />
-                    <SortToggle
-                        active={sortKey === 'profit'}
-                        dir={sortDir}
-                        label={language === 'ko' ? '수익금' : 'P/L'}
-                        onClick={() => handleSort('profit')}
-                    />
-                </div>
+                        <div className="flex items-center gap-2 flex-wrap justify-end">
+                            <SortToggle
+                                active={sortKey === 'currentValue'}
+                                dir={sortDir}
+                                label={language === 'ko' ? '평가금' : 'Value'}
+                                onClick={() => handleSort('currentValue')}
+                            />
+                            <SortToggle
+                                active={sortKey === 'totalCost'}
+                                dir={sortDir}
+                                label={language === 'ko' ? '매입금' : 'Cost'}
+                                onClick={() => handleSort('totalCost')}
+                            />
+                            <SortToggle
+                                active={sortKey === 'profit'}
+                                dir={sortDir}
+                                label={language === 'ko' ? '수익금' : 'P/L'}
+                                onClick={() => handleSort('profit')}
+                            />
+                        </div>
+                    </div>
+                ) : (
+                    <div className="flex items-center gap-2 flex-wrap justify-end">
+                        <SortToggle
+                            active={sortKey === 'currentValue'}
+                            dir={sortDir}
+                            label={language === 'ko' ? '평가금' : 'Value'}
+                            onClick={() => handleSort('currentValue')}
+                        />
+                        <SortToggle
+                            active={sortKey === 'totalCost'}
+                            dir={sortDir}
+                            label={language === 'ko' ? '매입금' : 'Cost'}
+                            onClick={() => handleSort('totalCost')}
+                        />
+                        <SortToggle
+                            active={sortKey === 'profit'}
+                            dir={sortDir}
+                            label={language === 'ko' ? '수익금' : 'P/L'}
+                            onClick={() => handleSort('profit')}
+                        />
+                    </div>
+                )}
             </div>
 
             {/* 계좌 탭 필터 — 계좌별 모드에서만 노출, 다중 계좌 한정 */}
