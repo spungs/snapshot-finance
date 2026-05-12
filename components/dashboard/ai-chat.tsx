@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
-import { Sparkles, SendHorizonal, Loader2, Check } from 'lucide-react'
+import { Sparkles, SendHorizonal, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
@@ -69,6 +69,52 @@ async function callApi<T = unknown>(input: RequestInfo, init?: RequestInit): Pro
 // 포트폴리오 데이터 변경 후 portfolio-client가 자체 갱신하도록 신호.
 // portfolio-client는 useState(initialHoldings)로 로컬 상태를 들고 있어 router.refresh()만으로는 갱신되지 않는다.
 const PORTFOLIO_REFRESH_EVENT = 'portfolio:refresh'
+
+// confirmed 시 msg.content 를 결과 요약으로 덮어써 "아래 카드를 확인해주세요"가 남는 모순 제거.
+// 계좌가 2개 이상일 때만 계좌명을 노출 — 단일 계좌면 불필요한 노이즈.
+function formatActionResult(
+    data: ConfirmData,
+    holdings: HoldingContext[],
+    accounts: AccountSummary[],
+): string {
+    switch (data.type) {
+        case 'add_holding': {
+            const account = accounts.find(a => a.id === data.accountId)
+            const accountText = account && accounts.length > 1 ? `${account.name}에 ` : ''
+            const currencySymbol = data.currency === 'USD' ? '$' : '₩'
+            const priceText = `@${currencySymbol}${data.averagePrice.toLocaleString()}`
+            return `✓ ${accountText}**${data.stockName}** ${data.quantity}주(${priceText}) 추가했어요.`
+        }
+        case 'update_holding': {
+            const holding = holdings.find(h => h.id === data.holdingId)
+            const stockName = holding?.stockName ?? '종목'
+            // 평단가 변경 없이 수량만 감소 = SellHoldingCard 경로(수량 줄이기). 별도 문구로 의도 전달.
+            const isReductionOnly =
+                holding != null &&
+                data.averagePrice === undefined &&
+                data.quantity !== undefined &&
+                data.quantity < holding.quantity
+            if (isReductionOnly) {
+                return `✓ **${stockName}** 수량 ${data.quantity}주로 줄였어요.`
+            }
+            const parts: string[] = []
+            if (data.quantity !== undefined) parts.push(`수량 ${data.quantity}주`)
+            if (data.averagePrice !== undefined) parts.push(`평단가 ${data.averagePrice.toLocaleString()}`)
+            const detail = parts.length > 0 ? ` (${parts.join(', ')})` : ''
+            return `✓ **${stockName}** 수정했어요.${detail}`
+        }
+        case 'delete_holding': {
+            const holding = holdings.find(h => h.id === data.holdingId)
+            const stockName = holding?.stockName ?? '종목'
+            return `✓ **${stockName}** 삭제했어요.`
+        }
+    }
+}
+
+function formatActionCancel(action: ParsedAction): string {
+    const name = action.stockOfficialName ?? action.stockName ?? '요청'
+    return `✕ **${name}** 취소했어요.`
+}
 
 export function AiChat({ isAuthenticated = false }: AiChatProps) {
     const [holdings, setHoldings] = useState<HoldingContext[]>([])
@@ -279,8 +325,13 @@ export function AiChat({ isAuthenticated = false }: AiChatProps) {
                     }
                 }
 
+                const resultContent = formatActionResult(data, holdings, accounts)
                 setMessages(prev =>
-                    prev.map((m, i) => (i === msgIndex ? { ...m, actionState: 'confirmed' } : m)),
+                    prev.map((m, i) =>
+                        i === msgIndex
+                            ? { ...m, actionState: 'confirmed', content: resultContent }
+                            : m,
+                    ),
                 )
                 await fetchHoldingsData()
                 await fetchAccountsData()
@@ -296,12 +347,16 @@ export function AiChat({ isAuthenticated = false }: AiChatProps) {
                 setExecuting(false)
             }
         },
-        [router, fetchHoldingsData, fetchAccountsData],
+        [router, fetchHoldingsData, fetchAccountsData, holdings, accounts],
     )
 
     const rejectAction = (msgIndex: number) => {
         setMessages(prev =>
-            prev.map((m, i) => (i === msgIndex ? { ...m, actionState: 'rejected' } : m)),
+            prev.map((m, i) => {
+                if (i !== msgIndex) return m
+                const cancelContent = m.action ? formatActionCancel(m.action) : m.content
+                return { ...m, actionState: 'rejected', content: cancelContent }
+            }),
         )
     }
 
@@ -383,14 +438,6 @@ export function AiChat({ isAuthenticated = false }: AiChatProps) {
                                                 onCancel={() => rejectAction(i)}
                                             />
                                         </div>
-                                    )}
-                                    {msg.actionState === 'confirmed' && (
-                                        <p className="mt-1 text-xs opacity-60 flex items-center gap-1">
-                                            <Check className="w-3 h-3" /> 완료
-                                        </p>
-                                    )}
-                                    {msg.actionState === 'rejected' && (
-                                        <p className="mt-1 text-xs opacity-60">취소됨</p>
                                     )}
                                 </div>
                             </div>
