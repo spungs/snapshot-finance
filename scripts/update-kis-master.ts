@@ -21,9 +21,19 @@ const DOWNLOAD_DIR = path.join(process.cwd(), 'tmp')
 const BASE_URL = 'https://new.real.download.dws.co.kr/common/master'
 
 // KIS Master File Specs
-const MARKETS = [
-    { name: 'kospi', file: 'kospi_code.mst.zip', target: 'kospi_code.mst' },
-    { name: 'kosdaq', file: 'kosdaq_code.mst.zip', target: 'kosdaq_code.mst' },
+// KR: EUC-KR 인코딩 + fixed-width. shortCode(0..9) + name(21..)
+// US: CP949 인코딩 + 탭 구분 23개 컬럼. Symbol(4), Korea name(6), English name(7).
+//     공식 KIS open-trading-api Python sample 의 컬럼 spec 참조.
+type MarketSpec =
+    | { region: 'kr'; name: string; file: string; target: string; dbMarket: string }
+    | { region: 'us'; name: string; file: string; target: string; dbMarket: string }
+
+const MARKETS: MarketSpec[] = [
+    { region: 'kr', name: 'kospi', file: 'kospi_code.mst.zip', target: 'kospi_code.mst', dbMarket: 'KOSPI' },
+    { region: 'kr', name: 'kosdaq', file: 'kosdaq_code.mst.zip', target: 'kosdaq_code.mst', dbMarket: 'KOSDAQ' },
+    { region: 'us', name: 'nasd', file: 'nasmst.cod.zip', target: 'nasmst.cod', dbMarket: 'NASD' },
+    { region: 'us', name: 'nyse', file: 'nysmst.cod.zip', target: 'nysmst.cod', dbMarket: 'NYSE' },
+    { region: 'us', name: 'amex', file: 'amsmst.cod.zip', target: 'amsmst.cod', dbMarket: 'AMEX' },
 ]
 
 async function downloadFile(url: string, dest: string): Promise<void> {
@@ -42,93 +52,55 @@ async function downloadFile(url: string, dest: string): Promise<void> {
     })
 }
 
-async function processMasterFile(marketName: string, filePath: string) {
-    console.log(`Processing ${marketName} master file...`)
+// zip 내부 파일명이 예상과 다를 수 있어 확장자 기준 fallback 으로 첫 매칭 파일을 찾는다.
+function resolveExtractedFile(extractPath: string, expectedTarget: string): string | null {
+    const direct = path.join(extractPath, expectedTarget)
+    if (fs.existsSync(direct)) return direct
 
-    // Clear existing data for this market to ensure updates
-    await prisma.kisStockMaster.deleteMany({
-        where: { market: marketName.toUpperCase() }
-    })
-    console.log(`Cleared existing ${marketName} data.`)
+    const ext = path.extname(expectedTarget).toLowerCase()
+    if (!ext) return null
+    try {
+        const entries = fs.readdirSync(extractPath)
+        const match = entries.find((e) => path.extname(e).toLowerCase() === ext)
+        return match ? path.join(extractPath, match) : null
+    } catch {
+        return null
+    }
+}
 
-    // Read file with EUC-KR encoding
+// 한국 마스터: EUC-KR + fixed-width.
+async function processKrMasterFile(dbMarket: string, filePath: string) {
+    console.log(`Processing ${dbMarket} master file (KR fixed-width)...`)
+
+    await prisma.kisStockMaster.deleteMany({ where: { market: dbMarket } })
+    console.log(`Cleared existing ${dbMarket} data.`)
+
     const buffer = fs.readFileSync(filePath)
     const content = iconv.decode(buffer, 'EUC-KR')
     const lines = content.split('\n')
 
-    const stocks = []
+    const stocks: { stockCode: string; stockName: string; market: string; engName: string | null }[] = []
 
     for (const line of lines) {
         if (line.length < 10) continue
 
-        // Parse based on fixed width (approximate based on common KIS spec)
-        // KOSPI/KOSDAQ: 
-        // Code: 0-9 (usually 6 digits + spaces) -> actually standard code is 9 chars in file usually
-        // Let's use tab split or fixed width. KIS master is usually fixed width.
-        // Spec:
-        // 1. Short Code (9)
-        // 2. Standard Code (12)
-        // 3. Name (Hangul) (variable? usually fixed)
-
-        // Actually, let's try to split by some delimiter if possible, but .mst is usually fixed width.
-        // Based on KIS GitHub sample:
-        // length: row[0:9] -> short code
-        // row[21:something] -> name
-
-        // Let's try a safer approach: standard code is usually at the beginning.
-        // Let's assume:
-        // Col 1: Short Code (9 bytes)
-        // Col 2: Standard Code (12 bytes)
-        // Col 3: Name (Hangul) (variable length, but usually follows)
-
-        // Wait, KIS provides a python sample. Let's use the logic from there if possible.
-        // Python sample:
-        // mksc_shrn_iscd = row[0:9]  (Short Code)
-        // hts_kor_isnm = row[21:].strip() (Korean Name - simplified)
-
-        // Let's try to parse:
         const shortCode = line.substring(0, 9).trim()
-        // const standardCode = line.substring(9, 21).trim()
-
-        // Name parsing:
-        // The name starts at index 21.
-        // It is followed by padding spaces and then other fields (garbage).
-        // We split by 2 or more spaces to separate the name from the rest.
-        let namePart = line.substring(21);
-
-        // Split by multiple spaces to isolate the name
-        // This handles cases like "Samsung Elec   ST..." -> "Samsung Elec"
-        const cleanName = namePart.split(/\s{2,}/)[0].trim();
-
-        // Name might contain other info at the end, but usually it's the name.
-        // Let's take the name part. KIS master file structure is complex.
-        // For now, let's try to extract name. 
-        // Actually, let's look at the file content structure by logging first few lines if this fails.
-        // But for now, let's assume the name starts at 21.
-
-        // We need to be careful about English name. It might not be in this file.
-        // KIS master file usually has:
-        // 0-9: Short Code
-        // 9-21: Standard Code
-        // 21-?: Korean Name
-
-        // Let's just save short code and name for now.
-        // We need to filter out futures/options if mixed, but kospi_code.mst usually has equities.
+        const namePart = line.substring(21)
+        // 이름 뒤에 2칸 이상 공백을 구분자로 가비지(시장 코드 등) 제거.
+        const cleanName = namePart.split(/\s{2,}/)[0].trim()
 
         if (shortCode && cleanName) {
             stocks.push({
-                stockCode: shortCode, // We use short code (e.g. 005930) for search usually
-                stockName: cleanName, // This might need trimming of trailing garbage
-                market: marketName.toUpperCase(),
-                engName: null // Master file might not have it easily accessible in this simple parse
+                stockCode: shortCode,
+                stockName: cleanName,
+                market: dbMarket,
+                engName: null,
             })
         }
     }
 
-    console.log(`Found ${stocks.length} stocks in ${marketName}.`)
+    console.log(`Found ${stocks.length} stocks in ${dbMarket}.`)
 
-    // Batch insert
-    // Prisma createMany is efficient
     const BATCH_SIZE = 1000
     for (let i = 0; i < stocks.length; i += BATCH_SIZE) {
         const batch = stocks.slice(i, i + BATCH_SIZE)
@@ -137,7 +109,58 @@ async function processMasterFile(marketName: string, filePath: string) {
             skipDuplicates: true,
         })
     }
-    console.log(`Saved ${marketName} stocks to DB.`)
+    console.log(`Saved ${dbMarket} stocks to DB.`)
+}
+
+// 미국 마스터: CP949 + 탭 구분 23 컬럼. KIS open-trading-api Python sample 의 컬럼 spec:
+// 0 National code | 1 Exchange id | 2 Exchange code | 3 Exchange name | 4 Symbol | 5 realtime symbol
+// 6 Korea name | 7 English name | 8 Security type | 9 Currency | 10~ Bid/Ask/Tick 등
+async function processUsMasterFile(dbMarket: string, filePath: string) {
+    console.log(`Processing ${dbMarket} master file (US tab-delimited)...`)
+
+    await prisma.kisStockMaster.deleteMany({ where: { market: dbMarket } })
+    console.log(`Cleared existing ${dbMarket} data.`)
+
+    const buffer = fs.readFileSync(filePath)
+    const content = iconv.decode(buffer, 'CP949')
+    const lines = content.split('\n')
+
+    const stocks: { stockCode: string; stockName: string; market: string; engName: string | null }[] = []
+    const seen = new Set<string>()
+
+    for (const line of lines) {
+        if (!line.trim()) continue
+        const cols = line.split('\t')
+        if (cols.length < 8) continue
+
+        const symbol = (cols[4] ?? '').trim()
+        const koreaName = (cols[6] ?? '').trim()
+        const englishName = (cols[7] ?? '').trim()
+        if (!symbol) continue
+
+        // 같은 dbMarket 안에서 symbol 중복 방지 — 마스터 파일에 동일 행이 가끔 들어옴.
+        if (seen.has(symbol)) continue
+        seen.add(symbol)
+
+        stocks.push({
+            stockCode: symbol,
+            stockName: koreaName || englishName || symbol,
+            engName: englishName || null,
+            market: dbMarket,
+        })
+    }
+
+    console.log(`Found ${stocks.length} stocks in ${dbMarket}.`)
+
+    const BATCH_SIZE = 1000
+    for (let i = 0; i < stocks.length; i += BATCH_SIZE) {
+        const batch = stocks.slice(i, i + BATCH_SIZE)
+        await prisma.kisStockMaster.createMany({
+            data: batch,
+            skipDuplicates: true,
+        })
+    }
+    console.log(`Saved ${dbMarket} stocks to DB.`)
 }
 
 async function main() {
@@ -150,21 +173,27 @@ async function main() {
             const zipPath = path.join(DOWNLOAD_DIR, market.file)
             const extractPath = path.join(DOWNLOAD_DIR, market.name)
 
-            console.log(`Downloading ${market.name}...`)
+            console.log(`\n=== ${market.dbMarket} ===`)
+            console.log(`Downloading ${market.file}...`)
             await downloadFile(`${BASE_URL}/${market.file}`, zipPath)
 
             console.log(`Unzipping ${market.name}...`)
             const zip = new AdmZip(zipPath)
             zip.extractAllTo(extractPath, true)
 
-            const mstFile = path.join(extractPath, market.target)
-            if (fs.existsSync(mstFile)) {
-                await processMasterFile(market.name, mstFile)
+            const mstFile = resolveExtractedFile(extractPath, market.target)
+            if (!mstFile) {
+                console.error(`Master file not found in ${extractPath} (expected ${market.target}). Skipping.`)
+                continue
+            }
+
+            if (market.region === 'kr') {
+                await processKrMasterFile(market.dbMarket, mstFile)
             } else {
-                console.error(`Master file not found: ${mstFile}`)
+                await processUsMasterFile(market.dbMarket, mstFile)
             }
         }
-        console.log('All done!')
+        console.log('\nAll done!')
     } catch (error) {
         console.error('Error:', error)
     } finally {
