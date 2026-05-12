@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth'
 import { redirect, notFound } from 'next/navigation'
 import { snapshotService } from '@/lib/services/snapshot-service'
 import { FALLBACK_USD_RATE } from '@/lib/api/exchange-rate'
+import type { CashAccount } from '@/types/cash'
 import SnapshotDetailClient from './snapshot-detail-client'
 import { SnapshotDetailSkeleton } from './snapshot-detail-skeleton'
 
@@ -52,6 +53,7 @@ async function SnapshotDetailContent({
     totalProfit: snapshot.totalProfit.toNumber(),
     profitRate: snapshot.profitRate.toNumber(),
     cashBalance: snapshot.cashBalance.toNumber(),
+    cashAccounts: (snapshot.cashAccounts as CashAccount[] | null) ?? null,
     exchangeRate: snapshot.exchangeRate ? snapshot.exchangeRate.toNumber() : FALLBACK_USD_RATE,
     holdings: snapshot.holdings.map((holding) => ({
       id: holding.id,

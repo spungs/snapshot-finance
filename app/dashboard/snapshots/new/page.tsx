@@ -12,6 +12,13 @@ import { cn } from '@/lib/utils'
 import { FALLBACK_USD_RATE } from '@/lib/api/exchange-rate'
 import { ArrowLeft, Download, Loader2, Plus, Trash2 } from 'lucide-react'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import {
+  CashAccountEditor,
+  type CashAccountRow,
+  toEditorRows,
+  fromEditorRows,
+} from '@/components/dashboard/cash-account-editor'
+import type { CashAccount } from '@/types/cash'
 
 interface HoldingInput {
   stockId: string
@@ -32,7 +39,9 @@ export default function NewSnapshotPage() {
   const [holdings, setHoldings] = useState<HoldingInput[]>([
     { stockId: '', stockName: '', stockCode: '', quantity: '', averagePrice: '', currentPrice: '', currency: 'KRW', purchaseRate: '1' },
   ])
-  const [cashBalance, setCashBalance] = useState('')
+  // 예수금은 계좌별 행으로 관리. 신규 스냅샷은 빈 상태로 시작하고,
+  // "현재 잔고 불러오기" 시 사용자의 cashAccounts 또는 cashBalance 합계로 시드한다.
+  const [cashRows, setCashRows] = useState<CashAccountRow[]>([])
   const [note, setNote] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -266,6 +275,21 @@ export default function NewSnapshotPage() {
           }
         })
         setHoldings(newHoldings)
+
+        // 예수금 시드: 사용자의 cashAccounts 가 있으면 그대로, 없으면 합계만 1행으로.
+        const summary = response.data.summary as { cashBalance?: number; cashAccounts?: CashAccount[] | null } | undefined
+        const stored = summary?.cashAccounts
+        if (stored && stored.length > 0) {
+          setCashRows(toEditorRows(stored, 'KRW', exchangeRate))
+        } else if (summary?.cashBalance && summary.cashBalance > 0) {
+          setCashRows(toEditorRows(
+            [{ id: 'legacy-seed', label: language === 'ko' ? '예수금' : 'Cash', amount: String(summary.cashBalance) }],
+            'KRW',
+            exchangeRate,
+          ))
+        } else {
+          setCashRows([])
+        }
       } else {
         setError(t('loadFailed') || 'Failed to load holdings')
       }
@@ -332,6 +356,7 @@ export default function NewSnapshotPage() {
     setLoading(true)
 
     try {
+      const cashAccountsPayload = fromEditorRows(cashRows, 'KRW', exchangeRate)
       const response = await snapshotsApi.create({
         snapshotDate,
         exchangeRate,
@@ -343,7 +368,7 @@ export default function NewSnapshotPage() {
           currency: h.currency,
           purchaseRate: parseFloat(h.purchaseRate),
         })),
-        cashBalance: parseFloat(cashBalance) || 0,
+        cashAccounts: cashAccountsPayload,
         note: note || undefined,
       })
 
@@ -511,6 +536,19 @@ export default function NewSnapshotPage() {
             )
           })}
         </div>
+
+        {/* Cash accounts — 계좌별 예수금. 합계는 에디터 하단에 자동 표시. */}
+        <div className="px-6 pb-3">
+          <span className="eyebrow">{t('cash')}</span>
+        </div>
+        <section className="mx-4 mb-4 p-4 bg-card border border-border">
+          <CashAccountEditor
+            accounts={cashRows}
+            onChange={setCashRows}
+            currency="KRW"
+            disabled={loading}
+          />
+        </section>
 
         {/* Memo */}
         <div className="px-6 pb-3">

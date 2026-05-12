@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { holdingService } from '@/lib/services/holding-service'
 import { FALLBACK_USD_RATE } from '@/lib/api/exchange-rate'
 import { prisma } from '@/lib/prisma'
+import type { CashAccount } from '@/types/cash'
 import { PortfolioClient } from './portfolio-client'
 import { PortfolioSkeleton } from './portfolio-skeleton'
 import { AiChat } from '@/components/dashboard/ai-chat'
@@ -59,6 +60,7 @@ async function PortfolioContent({
     exchangeRate: Number(data?.summary?.exchangeRate ?? FALLBACK_USD_RATE),
     exchangeRateUpdatedAt: data?.summary?.exchangeRateUpdatedAt ?? null,
     cashBalance: Number(data?.summary?.cashBalance ?? 0),
+    cashAccounts: (data?.summary?.cashAccounts as CashAccount[] | null) ?? null,
   }
 
   const holdings = (data?.holdings ?? []).map((h: any) => ({

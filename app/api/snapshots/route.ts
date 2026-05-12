@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { calculateProfitRate, calculateProfit, calculateCurrentValue, calculateTotalCost } from '@/lib/utils/calculations'
 
@@ -6,7 +7,14 @@ import Decimal from 'decimal.js'
 import { getUsdExchangeRate, FALLBACK_USD_RATE } from '@/lib/api/exchange-rate'
 import { snapshotService } from '@/lib/services/snapshot-service'
 import { auth } from '@/lib/auth'
-import { validateQuantity, validateAveragePrice, validateCashAmount } from '@/lib/validation/portfolio-input'
+import {
+  validateQuantity,
+  validateAveragePrice,
+  validateCashAmount,
+  validateCashAccounts,
+  sumCashAccounts,
+} from '@/lib/validation/portfolio-input'
+import type { CashAccount } from '@/types/cash'
 
 const MAX_HOLDINGS_PER_SNAPSHOT = 200
 
@@ -24,7 +32,7 @@ export async function POST(request: NextRequest) {
     const userId = session.user.id
 
     const body = await request.json()
-    const { holdings, cashBalance, note, snapshotDate, exchangeRate: providedExchangeRate } = body
+    const { holdings, cashBalance, cashAccounts: cashAccountsInput, note, snapshotDate, exchangeRate: providedExchangeRate } = body
 
     if (!Array.isArray(holdings) || holdings.length === 0) {
       return NextResponse.json(
@@ -51,7 +59,21 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (cashBalance !== undefined) {
+    // 예수금: cashAccounts 가 있으면 그 합계를 신뢰 (UI 가 계좌별 입력에서 산출),
+    // 없으면 단일 cashBalance 값만 검증해 그대로 사용.
+    let finalCashBalance: Decimal = new Decimal(0)
+    let finalCashAccounts: CashAccount[] | null = null
+    if (cashAccountsInput !== undefined && cashAccountsInput !== null) {
+      const accountsCheck = validateCashAccounts(cashAccountsInput)
+      if (!accountsCheck.ok) {
+        return NextResponse.json(
+          { success: false, error: { code: 'INVALID_REQUEST', message: accountsCheck.error } },
+          { status: 400 }
+        )
+      }
+      finalCashAccounts = accountsCheck.value.length > 0 ? accountsCheck.value : null
+      finalCashBalance = sumCashAccounts(accountsCheck.value)
+    } else if (cashBalance !== undefined) {
       const cashCheck = validateCashAmount(cashBalance)
       if (!cashCheck.ok) {
         return NextResponse.json(
@@ -59,6 +81,7 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         )
       }
+      finalCashBalance = new Decimal(cashCheck.value)
     }
 
     // 환율은 양수만 허용 — Decimal(10,2) 컬럼 한도 + 0/음수/NaN 방어
@@ -167,7 +190,10 @@ export async function POST(request: NextRequest) {
         totalCost,
         totalProfit,
         profitRate,
-        cashBalance: new Decimal(cashBalance || 0),
+        cashBalance: finalCashBalance,
+        cashAccounts: finalCashAccounts
+          ? (finalCashAccounts as unknown as Prisma.InputJsonValue)
+          : Prisma.DbNull,
         exchangeRate: new Decimal(exchangeRate || FALLBACK_USD_RATE),
         note,
         holdings: {

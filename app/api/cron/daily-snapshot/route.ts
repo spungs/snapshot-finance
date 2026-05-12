@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { kisClient } from '@/lib/api/kis-client'
 import { getUsdExchangeRate } from '@/lib/api/exchange-rate'
@@ -136,6 +137,10 @@ export async function GET(request: NextRequest) {
                             totalProfit,
                             profitRate,
                             cashBalance: user.cashBalance || new Decimal(0), // Capture current cash balance
+                            // 계좌별 분해 동결 — 없으면 SQL NULL (스냅샷 상세 UI 측 fallback)
+                            cashAccounts: user.cashAccounts
+                                ? (user.cashAccounts as Prisma.InputJsonValue)
+                                : Prisma.DbNull,
                             exchangeRate: usdRateDec,
                             note: `Auto Snapshot (${new Date().toLocaleDateString('ko-KR')})`,
                             holdings: {

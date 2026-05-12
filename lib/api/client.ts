@@ -49,6 +49,7 @@ export const snapshotsApi = {
       currentPrice: number
     }>
     cashBalance?: number
+    cashAccounts?: Array<{ id?: string; label: string; amount: string }>
     note?: string
   }) =>
     fetchApi<any>('/snapshots', {
@@ -68,6 +69,7 @@ export const snapshotsApi = {
       purchaseRate?: number
     }>
     cashBalance?: number
+    cashAccounts?: Array<{ id?: string; label: string; amount: string }>
     note?: string
   }) =>
     fetchApi<any>(`/snapshots/${id}`, {

@@ -101,12 +101,14 @@ const holdingServiceInternal = {
                 }),
                 prisma.user.findUnique({
                     where: { id: userId },
-                    select: { cashBalance: true, targetAsset: true }
+                    select: { cashBalance: true, cashAccounts: true, targetAsset: true }
                 })
             ])
 
             const cashBalance = user?.cashBalance ? new Decimal(user.cashBalance.toString()) : new Decimal(0)
             const targetAsset = user?.targetAsset ? new Decimal(user.targetAsset.toString()) : new Decimal(0)
+            // cashAccounts 는 JSON 컬럼 — null/legacy 사용자는 빈 배열로 정규화.
+            const cashAccounts = Array.isArray(user?.cashAccounts) ? user.cashAccounts : null
 
             // Fetch FX rate and per-stock prices in a single parallel batch.
             // 둘 다 내부적으로 Redis(공유 캐시) 우선 조회 후 미스 시 직접 호출 —
@@ -255,6 +257,7 @@ const holdingServiceInternal = {
                         exchangeRate,
                         exchangeRateUpdatedAt,
                         cashBalance: cashBalance.toNumber(),
+                        cashAccounts,
                         targetAsset: targetAsset.toNumber(),
                     },
                 },

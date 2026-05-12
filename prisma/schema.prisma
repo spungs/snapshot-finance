@@ -16,6 +16,7 @@ model User {
   image                 String?
   isAutoSnapshotEnabled Boolean             @default(false)
   cashBalance           Decimal             @default(0) @db.Decimal(15, 2)
+  cashAccounts          Json?
   targetAsset           Decimal             @default(0) @db.Decimal(15, 2)
   role                  String              @default("user")
   accounts              Account[]
@@ -63,6 +64,7 @@ model PortfolioSnapshot {
   totalProfit  Decimal           @db.Decimal(15, 2)
   profitRate   Decimal           @db.Decimal(10, 4)
   cashBalance  Decimal           @db.Decimal(15, 2)
+  cashAccounts Json?
   note         String?
   createdAt    DateTime          @default(now())
   exchangeRate Decimal           @default(1435) @db.Decimal(10, 2)

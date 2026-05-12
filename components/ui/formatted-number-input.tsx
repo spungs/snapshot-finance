@@ -80,12 +80,19 @@ export const FormattedNumberInput = React.forwardRef<HTMLInputElement, Formatted
                     </span>
                 )}
                 {prefix && isFloated && (
-                    <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center pt-5 pb-1.5 text-base md:text-sm text-muted-foreground numeric">
+                    <span className={cn(
+                        "pointer-events-none absolute inset-y-0 left-3 flex items-center text-base md:text-sm text-muted-foreground numeric",
+                        // 라벨이 있을 때만 패딩으로 input baseline 에 맞춤. 라벨 없으면 flex 만으로 수직 중앙 정렬.
+                        label && "pt-5 pb-1.5",
+                    )}>
                         {prefix}
                     </span>
                 )}
                 {suffix && isFloated && (
-                    <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center pt-5 pb-1.5 text-base md:text-sm text-muted-foreground">
+                    <span className={cn(
+                        "pointer-events-none absolute inset-y-0 right-3 flex items-center text-base md:text-sm text-muted-foreground",
+                        label && "pt-5 pb-1.5",
+                    )}>
                         {suffix}
                     </span>
                 )}

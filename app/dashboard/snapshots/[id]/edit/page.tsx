@@ -12,6 +12,13 @@ import { formatCurrency } from '@/lib/utils/formatters'
 import { useLanguage } from '@/lib/i18n/context'
 import { cn } from '@/lib/utils'
 import { FALLBACK_USD_RATE } from '@/lib/api/exchange-rate'
+import {
+    CashAccountEditor,
+    type CashAccountRow,
+    toEditorRows,
+    fromEditorRows,
+} from '@/components/dashboard/cash-account-editor'
+import type { CashAccount } from '@/types/cash'
 
 interface HoldingInput {
     stockId: string
@@ -32,7 +39,8 @@ export default function EditSnapshotPage() {
     const today = new Date().toISOString().split('T')[0]
     const [snapshotDate, setSnapshotDate] = useState<string>(today)
     const [holdings, setHoldings] = useState<HoldingInput[]>([])
-    const [cashBalance, setCashBalance] = useState('')
+    // 예수금: snapshot.cashAccounts 가 있으면 그대로 시드, 없으면 cashBalance 1행 fallback (legacy 호환).
+    const [cashRows, setCashRows] = useState<CashAccountRow[]>([])
     const [note, setNote] = useState('')
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
@@ -69,7 +77,19 @@ export default function EditSnapshotPage() {
                 if (controller.signal.aborted) return
                 if (response.success && response.data) {
                     const snapshot = response.data
-                    setCashBalance(snapshot.cashBalance.toString())
+                    const stored = (snapshot.cashAccounts as CashAccount[] | null | undefined) ?? null
+                    if (stored && stored.length > 0) {
+                        setCashRows(toEditorRows(stored, 'KRW', Number(snapshot.exchangeRate) || FALLBACK_USD_RATE))
+                    } else if (Number(snapshot.cashBalance) > 0) {
+                        // legacy: 분해 없는 기존 스냅샷 — 합계를 단일 행으로 표시.
+                        setCashRows(toEditorRows(
+                            [{ id: 'legacy-seed', label: language === 'ko' ? '예수금' : 'Cash', amount: snapshot.cashBalance.toString() }],
+                            'KRW',
+                            Number(snapshot.exchangeRate) || FALLBACK_USD_RATE,
+                        ))
+                    } else {
+                        setCashRows([])
+                    }
                     setNote(snapshot.note || '')
                     setExchangeRate(Number(snapshot.exchangeRate) || FALLBACK_USD_RATE)
 
@@ -308,6 +328,7 @@ export default function EditSnapshotPage() {
 
         setSaving(true)
         try {
+            const cashAccountsPayload = fromEditorRows(cashRows, 'KRW', exchangeRate)
             const response = await snapshotsApi.update(params.id as string, {
                 snapshotDate,
                 exchangeRate,
@@ -319,7 +340,7 @@ export default function EditSnapshotPage() {
                     currency: h.currency,
                     purchaseRate: parseFloat(h.purchaseRate),
                 })),
-                cashBalance: parseFloat(cashBalance) || 0,
+                cashAccounts: cashAccountsPayload,
                 note: note || undefined,
             })
 
@@ -514,6 +535,19 @@ export default function EditSnapshotPage() {
                         disabled={saving}
                         onChange={(e) => setNote(e.target.value)}
                         className="w-full bg-transparent font-serif text-base md:text-[14px] text-foreground outline-none placeholder:text-muted-foreground/60"
+                    />
+                </section>
+
+                {/* Cash accounts — 계좌별 예수금 편집. 합계는 에디터 하단에 자동 표시. */}
+                <div className="px-6 pb-3">
+                    <span className="eyebrow">{t('cash')}</span>
+                </div>
+                <section className="mx-4 mb-4 p-4 bg-card border border-border">
+                    <CashAccountEditor
+                        accounts={cashRows}
+                        onChange={setCashRows}
+                        currency="KRW"
+                        disabled={saving}
                     />
                 </section>
 

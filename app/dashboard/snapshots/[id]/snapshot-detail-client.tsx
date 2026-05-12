@@ -11,6 +11,7 @@ import { snapshotsApi } from '@/lib/api/client'
 import { formatCurrency, formatDate, formatNumber } from '@/lib/utils/formatters'
 import { cn } from '@/lib/utils'
 import { FALLBACK_USD_RATE } from '@/lib/api/exchange-rate'
+import type { CashAccount } from '@/types/cash'
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -42,6 +43,7 @@ interface Snapshot {
     totalProfit: number
     profitRate: number
     cashBalance: number
+    cashAccounts?: CashAccount[] | null
     exchangeRate: number
     holdings: SnapshotHolding[]
 }
@@ -261,6 +263,21 @@ export default function SnapshotDetailClient({ snapshot }: Props) {
                     <div className="font-serif text-lg font-semibold text-foreground mt-1.5 numeric">
                         {formatCurrency(cashBalance, currency)}
                     </div>
+                    {/* 계좌별 분해 — 있으면 표시 (스냅샷 시점에 동결된 정보). 없으면 합계만 (legacy). */}
+                    {snapshot.cashAccounts && snapshot.cashAccounts.length > 0 && (
+                        <ul className="mt-2 pt-2 border-t border-border/60 space-y-1">
+                            {snapshot.cashAccounts.map((a) => {
+                                const krw = Number(a.amount) || 0
+                                const display = conv(krw)
+                                return (
+                                    <li key={a.id} className="flex items-baseline justify-between gap-2 text-[10px]">
+                                        <span className="text-muted-foreground truncate">{a.label}</span>
+                                        <span className="numeric text-foreground shrink-0">{formatCurrency(display, currency)}</span>
+                                    </li>
+                                )
+                            })}
+                        </ul>
+                    )}
                     {isEn && (
                         <div className="text-[10px] text-muted-foreground tracking-[0.5px] mt-2 pt-2 border-t border-border/60 flex justify-between">
                             <span>Rate</span>

@@ -289,7 +289,14 @@ export function AiChat({ isAuthenticated = false }: AiChatProps) {
 
                 case 'update_cash_balance': {
                     const result = await updateCashBalance(action.amount!)
-                    if (!result.success) throw new Error(result.error || '예수금 변경에 실패했습니다.')
+                    if (!result.success) {
+                        // 여러 계좌로 분리된 예수금을 AI 가 자의적으로 합치지 않도록 차단 (B안).
+                        // 사용자는 다이얼로그에서 직접 행별로 수정해야 한다.
+                        if (result.code === 'MULTIPLE_ACCOUNTS') {
+                            throw new Error(result.error)
+                        }
+                        throw new Error(result.error || '예수금 변경에 실패했습니다.')
+                    }
                     toast.success(`예수금이 ${action.amount?.toLocaleString()}원으로 변경되었습니다.`)
                     break
                 }

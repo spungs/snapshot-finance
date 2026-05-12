@@ -5,7 +5,14 @@ import Decimal from 'decimal.js'
 import { auth } from '@/lib/auth'
 import { snapshotService } from '@/lib/services/snapshot-service'
 import { FALLBACK_USD_RATE } from '@/lib/api/exchange-rate'
-import { validateQuantity, validateAveragePrice, validateCashAmount } from '@/lib/validation/portfolio-input'
+import {
+  validateQuantity,
+  validateAveragePrice,
+  validateCashAmount,
+  validateCashAccounts,
+  sumCashAccounts,
+} from '@/lib/validation/portfolio-input'
+import type { CashAccount } from '@/types/cash'
 
 const MAX_HOLDINGS_PER_SNAPSHOT = 200
 
@@ -162,7 +169,7 @@ export async function PUT(
     }
 
     const body = await request.json()
-    const { holdings, cashBalance, note, snapshotDate, exchangeRate } = body
+    const { holdings, cashBalance, cashAccounts: cashAccountsInput, note, snapshotDate, exchangeRate } = body
 
     if (!Array.isArray(holdings)) {
       return NextResponse.json(
@@ -181,7 +188,20 @@ export async function PUT(
     const fxNum = exchangeRate !== undefined ? Number(exchangeRate) : NaN
     const effectiveExchangeRate = Number.isFinite(fxNum) && fxNum > 0 ? fxNum : FALLBACK_USD_RATE
 
-    if (cashBalance !== undefined) {
+    // 예수금: cashAccounts 가 있으면 그 합계를 신뢰, 없으면 단일 cashBalance 검증.
+    let finalCashBalance: Decimal | null = null
+    let finalCashAccounts: CashAccount[] | null = null
+    if (cashAccountsInput !== undefined && cashAccountsInput !== null) {
+      const accountsCheck = validateCashAccounts(cashAccountsInput)
+      if (!accountsCheck.ok) {
+        return NextResponse.json(
+          { success: false, error: { code: 'INVALID_INPUT', message: accountsCheck.error } },
+          { status: 400 }
+        )
+      }
+      finalCashAccounts = accountsCheck.value.length > 0 ? accountsCheck.value : null
+      finalCashBalance = sumCashAccounts(accountsCheck.value)
+    } else if (cashBalance !== undefined) {
       const cashCheck = validateCashAmount(cashBalance)
       if (!cashCheck.ok) {
         return NextResponse.json(
@@ -189,6 +209,7 @@ export async function PUT(
           { status: 400 }
         )
       }
+      finalCashBalance = new Decimal(cashCheck.value)
     }
 
     // 1. 종목별 계산 — Decimal로 통일해 부동소수점 오차 제거
@@ -267,8 +288,9 @@ export async function PUT(
 
     const totalProfit = totalValue.minus(totalCost)
     const profitRate = totalCost.isZero() ? new Decimal(0) : totalProfit.div(totalCost).times(100)
-    const finalCashBalance = new Decimal(Number(cashBalance) || 0)
-    const finalTotalValue = totalValue.plus(finalCashBalance)
+    // 위에서 검증된 finalCashBalance 가 null 이면(요청에 누락) 0 으로 fallback.
+    const effectiveCashBalance = finalCashBalance ?? new Decimal(0)
+    const finalTotalValue = totalValue.plus(effectiveCashBalance)
 
     // Transaction: Update Snapshot + Replace Holdings
     await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
@@ -281,7 +303,16 @@ export async function PUT(
           totalCost: totalCost,
           totalProfit: totalProfit,
           profitRate: profitRate,
-          cashBalance: finalCashBalance,
+          cashBalance: effectiveCashBalance,
+          // cashAccountsInput 이 명시적으로 전달된 경우에만 갱신.
+          // 누락된 요청은 기존 분해 정보를 보존한다 (불변성 친화 + 의도 보호).
+          ...(cashAccountsInput !== undefined
+            ? {
+                cashAccounts: finalCashAccounts
+                  ? (finalCashAccounts as unknown as Prisma.InputJsonValue)
+                  : Prisma.DbNull,
+              }
+            : {}),
           note: note,
         },
       })
