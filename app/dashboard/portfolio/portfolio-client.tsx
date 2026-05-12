@@ -9,6 +9,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { TransferHoldingDialog } from '@/components/dashboard/transfer-holding-dialog'
 import { useRelativeTime } from '@/lib/hooks/use-relative-time'
 import { useStockTicks } from '@/lib/hooks/use-stock-ticks'
+import { isAnyMarketOpen, normalizeMarket, type Market } from '@/lib/utils/market-hours'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { holdingsApi } from '@/lib/api/client'
 import { formatCurrency, formatNumber, formatProfitRate } from '@/lib/utils/formatters'
@@ -1121,6 +1122,7 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                             let groupValueKrw = 0
                             let groupCostKrw = 0
                             let groupOldestPriceTime: string | null = null
+                            const groupMarketSet = new Set<Market>()
                             for (const r of group.rows) {
                                 const buyRate = r.currency === 'USD'
                                     ? (r.purchaseRate && r.purchaseRate !== 1 ? r.purchaseRate : exRate)
@@ -1130,7 +1132,10 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                                 if (r.priceUpdatedAt && (!groupOldestPriceTime || new Date(r.priceUpdatedAt) < new Date(groupOldestPriceTime))) {
                                     groupOldestPriceTime = r.priceUpdatedAt
                                 }
+                                const nm = normalizeMarket(r.market)
+                                if (nm) groupMarketSet.add(nm)
                             }
+                            const groupMarkets = Array.from(groupMarketSet)
                             const groupProfitKrw = groupValueKrw - groupCostKrw
                             const groupValueDisplay = baseCurrency === 'KRW' ? groupValueKrw : groupValueKrw / exRate
                             const groupCostDisplay = baseCurrency === 'KRW' ? groupCostKrw : groupCostKrw / exRate
@@ -1142,7 +1147,7 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                                     <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm flex items-start justify-between gap-2 py-2 px-1 border-b border-border">
                                         <div className="flex flex-col gap-0 truncate pt-0.5 min-w-0">
                                             <span className="eyebrow truncate">{group.name}</span>
-                                            <PriceUpdatedFootnote iso={groupOldestPriceTime} language={language} />
+                                            <PriceUpdatedFootnote iso={groupOldestPriceTime} language={language} markets={groupMarkets} />
                                         </div>
                                         <div className="flex flex-col items-end gap-0 shrink-0 leading-tight">
                                             <div className="flex items-baseline gap-1">
@@ -1189,14 +1194,17 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                         const totalCostDisplay = convert(currentSummary.totalCost)
                         const totalProfitDisplay = convert(currentSummary.totalProfit)
                         const isProfit = currentSummary.totalProfit >= 0
-                        // 전체 종목 중 가장 오래된 주가 갱신 시점 — 사용자에게 캐시 시점 안내
+                        // 전체 종목 중 가장 오래된 주가 갱신 시점 — 시장 개장 중 + stale 일 때만 안내
                         let oldestPriceTime: string | null = null
+                        const allMarketSet = new Set<Market>()
                         for (const h of holdings) {
-                            if (!h.priceUpdatedAt) continue
-                            if (!oldestPriceTime || new Date(h.priceUpdatedAt) < new Date(oldestPriceTime)) {
+                            if (h.priceUpdatedAt && (!oldestPriceTime || new Date(h.priceUpdatedAt) < new Date(oldestPriceTime))) {
                                 oldestPriceTime = h.priceUpdatedAt
                             }
+                            const nm = normalizeMarket(h.market)
+                            if (nm) allMarketSet.add(nm)
                         }
+                        const allMarkets = Array.from(allMarketSet)
                         return (
                             <>
                                 <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm flex items-start justify-between gap-2 py-2 px-1 border-b border-border">
@@ -1204,7 +1212,7 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                                         <span className="eyebrow truncate">
                                             {language === 'ko' ? '전체' : 'Total'}
                                         </span>
-                                        <PriceUpdatedFootnote iso={oldestPriceTime} language={language} />
+                                        <PriceUpdatedFootnote iso={oldestPriceTime} language={language} markets={allMarkets} />
                                     </div>
                                     <div className="flex flex-col items-end gap-0 shrink-0 leading-tight">
                                         <div className="flex items-baseline gap-1">
@@ -1474,22 +1482,49 @@ function AddHoldingFloating({
     )
 }
 
+const STALE_THRESHOLD_MS = 5 * 60_000
+
 /**
- * 합계/그룹 헤더 좌측 라벨 아래에 "주가 3분 전" 표시.
- * 실시간 시세가 아닌 캐시 시점임을 사용자에게 안내해 증권사 앱과의 평가금 차이 컴플레인 예방.
- * useRelativeTime 이 1분 간격으로 자동 재계산.
+ * 합계/그룹 헤더 좌측 라벨 아래에 시세 신선도 안내.
+ *
+ * 사용자 관점 (증권앱 UX 관례):
+ *   - 장 중 + 5분 이내 tick: 아무것도 표시 안 함 (실시간 깜빡임이 곧 신호)
+ *   - 장 중 + 5분 이상 stale: "주가 N분 전 · 시세 지연" (실제 문제 상황)
+ *   - 장 마감 (평일 시간 외): "장 마감"
+ *   - 휴장 (주말): "휴장"
+ *
+ * iso 가 그룹 내 가장 오래된 priceUpdatedAt, markets 가 그룹 내 보유 종목 시장 집합.
  */
 function PriceUpdatedFootnote({
-    iso, language,
+    iso, language, markets,
 }: {
     iso: string | null
     language: 'ko' | 'en'
+    markets: Market[]
 }) {
     const relative = useRelativeTime(iso)
-    if (!iso || !relative) return null
+    const anyOpen = isAnyMarketOpen(markets)
+
+    if (anyOpen) {
+        if (!iso) return null
+        const age = Date.now() - new Date(iso).getTime()
+        if (!Number.isFinite(age) || age < STALE_THRESHOLD_MS) return null
+        if (!relative) return null
+        return (
+            <span className="text-[10px] text-loss/70 truncate">
+                {language === 'ko' ? `주가 ${relative} · 시세 지연` : `Price ${relative} · delayed`}
+            </span>
+        )
+    }
+
+    // 장 마감 — 평일 시간 외와 주말 구분
+    const dow = new Date().getDay()
+    const isWeekend = dow === 0 || dow === 6
     return (
         <span className="text-[10px] text-muted-foreground truncate">
-            {language === 'ko' ? `주가 ${relative}` : `Price ${relative}`}
+            {isWeekend
+                ? (language === 'ko' ? '휴장' : 'Closed')
+                : (language === 'ko' ? '장 마감' : 'Market closed')}
         </span>
     )
 }
