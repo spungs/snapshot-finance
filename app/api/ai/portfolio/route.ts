@@ -202,30 +202,55 @@ interface KisSearchHit {
  * - 동일 후보 다수면 ETF/ETN 후순위, 종목코드 짧을수록 우선.
  * - DB 미스 시 null — 라우트는 텍스트로 사용자에게 재입력 요청.
  */
+interface KisCandidate {
+    stockCode: string
+    stockName: string
+    engName: string | null
+    market: string
+}
+
 async function searchKisMaster(query: string): Promise<KisSearchHit | null> {
     const trimmed = query.trim()
     if (!trimmed) return null
 
     const hasKorean = /[ㄱ-힝]/.test(trimmed)
 
-    const candidates = await prisma.kisStockMaster.findMany({
-        where: hasKorean
-            ? { stockName: { contains: trimmed, mode: 'insensitive' } }
-            : {
-                  OR: [
-                      { engName: { contains: trimmed, mode: 'insensitive' } },
-                      { stockCode: { contains: trimmed } },
-                  ],
-              },
-        take: 50,
-    })
+    let candidates: KisCandidate[]
+    if (hasKorean) {
+        // 한글 입력은 공백 변형 흡수 — 사용자 "더치브로스" 와 DB "더치 브로스" 매칭.
+        // 양쪽 공백 제거 후 ILIKE. ~16k row 풀스캔이지만 카테고리 사이즈상 허용 범위.
+        const normalized = trimmed.replace(/\s+/g, '')
+        const pattern = `%${normalized}%`
+        candidates = await prisma.$queryRaw<KisCandidate[]>`
+            SELECT "stockCode", "stockName", "engName", "market"
+            FROM kis_stock_masters
+            WHERE REPLACE("stockName", ' ', '') ILIKE ${pattern}
+            LIMIT 50
+        `
+    } else {
+        candidates = await prisma.kisStockMaster.findMany({
+            where: {
+                OR: [
+                    { engName: { contains: trimmed, mode: 'insensitive' } },
+                    { stockCode: { contains: trimmed } },
+                ],
+            },
+            take: 50,
+            select: { stockCode: true, stockName: true, engName: true, market: true },
+        })
+    }
 
     if (candidates.length === 0) return null
 
     // 정확 일치 우선 — KIS Master 에는 같은 이름의 ETF/원종목이 공존할 수 있어 일반 종목 우선화는 별도 단계로.
+    // 한글은 후보 검색과 동일하게 공백 제거 비교 (예: "더치브로스" ↔ "더치 브로스" 도 exact 로 인정).
     const q = trimmed.toLowerCase()
+    const qStripped = hasKorean ? q.replace(/\s+/g, '') : q
     const exactMatch = candidates.find(c => {
-        return c.stockName.toLowerCase() === q
+        const stockNameCmp = hasKorean
+            ? c.stockName.toLowerCase().replace(/\s+/g, '')
+            : c.stockName.toLowerCase()
+        return stockNameCmp === qStripped
             || (c.engName?.toLowerCase() ?? '') === q
             || c.stockCode === trimmed
     })
@@ -243,7 +268,7 @@ async function searchKisMaster(query: string): Promise<KisSearchHit | null> {
 
     const best = ranked[0]
     const market = best.market || ''
-    // KIS Master 의 market 컬럼은 KOSPI/KOSDAQ 등 한국 거래소 코드. 미국 종목 마스터는 별도 분리되어 있지 않다.
+    // market 컬럼: KOSPI/KOSDAQ(국내) 또는 NYSE/NASD/AMEX 등(미국). 국내만 KRW, 나머지 USD.
     const currency: 'KRW' | 'USD' = market === 'KOSPI' || market === 'KOSDAQ' ? 'KRW' : 'USD'
     const officialName = hasKorean
         ? best.stockName || best.engName || trimmed
@@ -252,7 +277,7 @@ async function searchKisMaster(query: string): Promise<KisSearchHit | null> {
     return { officialName, market, currency }
 }
 
-// KisStockMaster 는 KOSPI/KOSDAQ 만 — "테슬라"/"애플"/"TSLA" 같은 미국 종목은 Yahoo 로 fallback.
+// KIS Master 미스(미등록 종목·공백 변형 외 한글 표기차) 시 Yahoo 로 fallback.
 async function searchYahoo(query: string): Promise<KisSearchHit | null> {
     const trimmed = query.trim()
     if (!trimmed) return null
@@ -559,7 +584,7 @@ export async function POST(request: NextRequest) {
             }
 
             // add_holding 만 종목 검색으로 보강 — update/delete 는 보유 중 종목 매칭 결과를 클라가 사용.
-            // KIS Master 는 한국 종목만 다루므로 미국 종목은 Yahoo 로 fallback.
+            // KIS Master 미스(미등록 종목·해결 안 된 한글 표기차) 시 Yahoo 로 fallback.
             if (action.type === 'add_holding') {
                 let hit = await searchKisMaster(action.stockName)
                 if (!hit) hit = await searchYahoo(action.stockName)
