@@ -497,12 +497,6 @@ function SellHoldingCard({
                 </p>
             )}
 
-            <div className="rounded-md bg-muted/50 px-2 py-1.5">
-                <p className="text-[11px] text-muted-foreground leading-snug">
-                    💡 예수금은 자동으로 변경되지 않습니다. [홈]의 예수금 카드에서 직접 업데이트해주세요.
-                </p>
-            </div>
-
             <Actions
                 executing={executing}
                 disabled={!canSubmit}
@@ -580,11 +574,6 @@ function DeleteHoldingCard({
             <p className="text-[11px] text-destructive">
                 ⚠️ 삭제 후 복구할 수 없습니다.
             </p>
-            <div className="rounded-md bg-muted/50 px-2 py-1.5">
-                <p className="text-[11px] text-muted-foreground leading-snug">
-                    💡 예수금은 자동으로 변경되지 않습니다. [홈]의 예수금 카드에서 직접 업데이트해주세요.
-                </p>
-            </div>
 
             <Actions
                 executing={executing}
