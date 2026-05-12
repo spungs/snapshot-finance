@@ -52,9 +52,11 @@ async function fetchCurrentPrice(stockCode: string, market: string): Promise<num
 // DB 보유 종목 조회를 재실행하지 않고 결과 재사용. Mutation 시 invalidate() 호출.
 // 이전 in-memory Map은 Vercel Serverless에서 인스턴스간 공유 안 되어 효과 미미했음.
 //
-// TTL 60초: 사용자 행동 단위(탭 토글/페이지 이동)에 충분한 캐시 히트 보장.
+// TTL 5초: 60초가 너무 길어 worker 가 실시간으로 갱신한 stock:price 캐시(L2)가
+// 새로고침에 반영되지 않는 문제가 있었다. 5초면 연타 탭 전환은 캐시 히트(빠른 응답)
+// 유지, 명시적 새로고침은 L2 의 신선한 가격을 거의 항상 받는다.
 // 변이(보유 추가/삭제/예수금 등)는 invalidate() 가 즉시 무효화하므로 stale 위험 없음.
-const HOLDINGS_CACHE_TTL_SECONDS = 60
+const HOLDINGS_CACHE_TTL_SECONDS = 5
 const holdingsCacheKey = (userId: string) => `holdings:list:${userId}`
 
 type HoldingsListResult = Awaited<ReturnType<typeof computeList>>

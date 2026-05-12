@@ -44,7 +44,7 @@ async function HomeContent({ userId }: { userId: string }) {
     stockName: h.stockName,
     market: h.market || 'Unknown',
     currency: h.currency,
-    // 실시간 tick 으로 재계산 위해 필요한 원자 필드들
+    // 평가/원가/손익 원자 필드
     quantity: Number(h.quantity),
     currentPrice: Number(h.currentPrice),
     totalCost: Number(h.totalCost),
@@ -52,6 +52,10 @@ async function HomeContent({ userId }: { userId: string }) {
     currentValue: Number(h.currentValue),
     profit: Number(h.profit),
     profitRate: Number(h.profitRate),
+    // 가격 신선도 footnote 용 — Date 객체 또는 ISO 문자열 모두 받아 normalize
+    priceUpdatedAt: h.priceUpdatedAt
+      ? (typeof h.priceUpdatedAt === 'string' ? h.priceUpdatedAt : new Date(h.priceUpdatedAt).toISOString())
+      : null,
   }))
 
   const recentSnapshots = (snapshotsData ?? []).map((s: any) => ({

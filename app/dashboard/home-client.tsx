@@ -8,6 +8,8 @@ import { useLanguage } from '@/lib/i18n/context'
 import { useCurrency } from '@/lib/currency/context'
 import { FALLBACK_USD_RATE } from '@/lib/api/exchange-rate'
 import { useLocalStorage } from '@/lib/hooks/use-local-storage'
+import { normalizeMarket, type Market } from '@/lib/utils/market-hours'
+import { PriceUpdatedFootnote } from '@/components/dashboard/price-updated-footnote'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -19,7 +21,7 @@ interface Holding {
     stockName: string
     market: string
     currency: string
-    // 실시간 tick 재계산에 필요한 원자 필드
+    // 평가/원가/손익 원자 필드
     quantity: number
     currentPrice: number
     totalCost: number
@@ -27,6 +29,8 @@ interface Holding {
     currentValue: number
     profit: number
     profitRate: number
+    /** 가격이 마지막으로 갱신된 시점 (ISO). 가격 신선도 footnote 에 사용. */
+    priceUpdatedAt?: string | null
 }
 
 interface SnapshotLite {
@@ -116,13 +120,28 @@ export function HomeClient({ summary, holdings, recentSnapshots, initialChartDat
         .sort((a, b) => b.profitRate - a.profitRate)
         .slice(0, 4)
 
+    // 가격 신선도 footnote 용 — 전체 종목 중 가장 오래된 priceUpdatedAt + 보유 시장 집합
+    let oldestPriceTime: string | null = null
+    const marketSet = new Set<Market>()
+    for (const h of holdings) {
+        if (h.priceUpdatedAt && (!oldestPriceTime || new Date(h.priceUpdatedAt) < new Date(oldestPriceTime))) {
+            oldestPriceTime = h.priceUpdatedAt
+        }
+        const nm = normalizeMarket(h.market)
+        if (nm) marketSet.add(nm)
+    }
+    const markets = Array.from(marketSet)
+
     return (
         <div className="max-w-[480px] md:max-w-2xl mx-auto w-full">
             {/* Hero — Big serif amount + ▲ rate */}
             <section className="px-6 pt-3 pb-6">
                 {/* 날짜 좌측 / 환율(USD 보유 시) 우측 — 메타 정보를 한 줄에 병렬 배치 */}
                 <div className="flex items-baseline justify-between gap-2 mb-2">
-                    <div className="eyebrow">{todayLabel}</div>
+                    <div className="flex flex-col gap-0 min-w-0">
+                        <div className="eyebrow">{todayLabel}</div>
+                        <PriceUpdatedFootnote iso={oldestPriceTime} language={language} markets={markets} />
+                    </div>
                     {hasUsdHolding && (
                         <div className="text-xs text-muted-foreground numeric">
                             1 USD ≈ {formatCurrency(exRate, 'KRW')}
