@@ -8,6 +8,12 @@ on:
 jobs:
   update:
     runs-on: ubuntu-latest
+    # job 전체에 env 주입 — npm ci 의 postinstall(prisma generate) 도 prisma.config.ts 의
+    # env("DIRECT_URL") 을 읽으므로 ci 단계부터 필요.
+    # DIRECT_URL secret 이 없으면 DATABASE_URL 로 fallback (둘 다 같은 DB 면 generate 만 통과시키면 충분).
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DIRECT_URL: ${{ secrets.DIRECT_URL || secrets.DATABASE_URL }}
     steps:
       - uses: actions/checkout@v4
 
@@ -19,11 +25,9 @@ jobs:
       - run: npm ci
 
       - run: npm run seed:kis
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
       # KIS Master 동기화 실패는 침묵 실패가 가장 위험 — 매주 자동이라 누구도 보지 않으면 stale 데이터 누적.
-      # DISCORD_WEBHOOK_URL secret 이 없으면 step skip (curl 자체는 invalid URL 로 실패하므로 가드).
+      # DISCORD_WEBHOOK_URL secret 이 없으면 step skip.
       - name: Notify on failure
         if: failure()
         env:
