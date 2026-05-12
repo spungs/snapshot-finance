@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
 import { randomUUID } from "crypto"
 import { holdingService } from "@/lib/services/holding-service"
+import { accountService } from "@/lib/services/account-service"
 import {
     validateCashAmount,
     validateCashAccounts,
@@ -18,12 +19,21 @@ export type CashActionResult =
     | { success: true }
     | { success: false; error: string; code?: 'MULTIPLE_ACCOUNTS' | 'UNAUTHORIZED' | 'VALIDATION' | 'DB_FAILED' }
 
+// 다이얼로그에서 사용하는 라벨 정규화와 동일 규칙 — BrokerageAccount.name 과 매칭에 사용.
+function normalizeLabel(s: string): string {
+    return s.trim().toLowerCase()
+}
+
 // 다이얼로그용: 계좌별 예수금 배열을 받아 합계와 함께 한 트랜잭션으로 저장한다.
+// 양방향 동기화(추가만): 라벨이 기존 BrokerageAccount 와 매칭되지 않는 행은 새 계좌로 함께 생성.
+// - 삭제는 동기화하지 않는다 (보유 종목까지 cascade 로 사라질 위험 회피 — 명시적 삭제는 설정 페이지에서).
+// - DEFAULT_CASH_LABEL("예수금") 은 라벨 미지정 의미이므로 계좌 생성 대상에서 제외.
 export async function updateCashAccounts(accounts: unknown): Promise<CashActionResult> {
     const session = await auth()
     if (!session?.user?.id) {
         return { success: false, error: "Unauthorized", code: 'UNAUTHORIZED' }
     }
+    const userId = session.user.id
 
     const validated = validateCashAccounts(accounts)
     if (!validated.ok) {
@@ -32,16 +42,53 @@ export async function updateCashAccounts(accounts: unknown): Promise<CashActionR
 
     try {
         const total = sumCashAccounts(validated.value)
-        await prisma.user.update({
-            where: { id: session.user.id },
-            data: {
-                cashBalance: total,
-                cashAccounts: validated.value.length > 0
-                    ? (validated.value as unknown as Prisma.InputJsonValue)
-                    : Prisma.DbNull,
-            },
+
+        // 기존 BrokerageAccount 와 매칭되지 않는 라벨을 추출.
+        const existingAccounts = await prisma.brokerageAccount.findMany({
+            where: { userId },
+            select: { name: true, displayOrder: true },
+            orderBy: { displayOrder: 'desc' },
         })
-        await holdingService.invalidate(session.user.id)
+        const existingNames = new Set(existingAccounts.map(a => normalizeLabel(a.name)))
+        const maxOrder = existingAccounts.length > 0 ? existingAccounts[0].displayOrder : -1
+
+        const seen = new Set<string>()
+        const newLabels: string[] = []
+        for (const a of validated.value) {
+            if (a.label === DEFAULT_CASH_LABEL) continue
+            const key = normalizeLabel(a.label)
+            if (existingNames.has(key) || seen.has(key)) continue
+            seen.add(key)
+            newLabels.push(a.label)
+        }
+
+        await prisma.$transaction(async (tx) => {
+            for (let i = 0; i < newLabels.length; i++) {
+                await tx.brokerageAccount.create({
+                    data: {
+                        userId,
+                        name: newLabels[i],
+                        displayOrder: maxOrder + 1 + i,
+                    },
+                })
+            }
+            await tx.user.update({
+                where: { id: userId },
+                data: {
+                    cashBalance: total,
+                    cashAccounts: validated.value.length > 0
+                        ? (validated.value as unknown as Prisma.InputJsonValue)
+                        : Prisma.DbNull,
+                },
+            })
+        })
+
+        await holdingService.invalidate(userId)
+        if (newLabels.length > 0) {
+            await accountService.invalidate(userId)
+            revalidatePath('/dashboard/accounts')
+            revalidatePath('/dashboard/portfolio')
+        }
         revalidatePath('/dashboard')
         return { success: true }
     } catch (error) {
