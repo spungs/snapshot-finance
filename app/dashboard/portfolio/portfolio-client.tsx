@@ -930,6 +930,7 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                 <CashBalanceDialog
                     initialBalance={currentSummary.cashBalance}
                     initialAccounts={currentSummary.cashAccounts ?? null}
+                    brokerageAccounts={accounts ?? []}
                     currency={baseCurrency}
                     exchangeRate={exRate}
                     onSuccess={refresh}
@@ -1013,7 +1014,7 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                     <div
                         role="tablist"
                         aria-label={language === 'ko' ? '계좌 필터' : 'Account filter'}
-                        className="flex gap-1 overflow-x-auto pb-1"
+                        className="flex gap-1 overflow-x-auto pb-1 justify-end"
                         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                     >
                         <button
