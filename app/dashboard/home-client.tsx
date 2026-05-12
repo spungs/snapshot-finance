@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { PerformanceChart } from '@/components/dashboard/performance-chart'
 import { formatCurrency, formatDate } from '@/lib/utils/formatters'
@@ -8,6 +9,7 @@ import { useLanguage } from '@/lib/i18n/context'
 import { useCurrency } from '@/lib/currency/context'
 import { FALLBACK_USD_RATE } from '@/lib/api/exchange-rate'
 import { useLocalStorage } from '@/lib/hooks/use-local-storage'
+import { useStockTicks } from '@/lib/hooks/use-stock-ticks'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -19,6 +21,11 @@ interface Holding {
     stockName: string
     market: string
     currency: string
+    // 실시간 tick 재계산에 필요한 원자 필드
+    quantity: number
+    currentPrice: number
+    totalCost: number
+    purchaseRate: number
     currentValue: number
     profit: number
     profitRate: number
@@ -75,9 +82,68 @@ function UpDown({ value, big = false }: { value: number; big?: boolean }) {
     )
 }
 
-export function HomeClient({ summary, holdings, recentSnapshots, initialChartData, todayLabel }: HomeClientProps) {
+export function HomeClient({ summary: initialSummary, holdings: initialHoldings, recentSnapshots, initialChartData, todayLabel }: HomeClientProps) {
     const { t, language } = useLanguage()
     const { baseCurrency } = useCurrency()
+
+    // 실시간 시세 통합 — portfolio 와 동일 패턴.
+    // env 없거나 워커 미가동 시 ticks 빈 Map → SSR 값 그대로 유지 (graceful).
+    const [holdings, setHoldings] = useState(initialHoldings)
+    const [summary, setSummary] = useState(initialSummary)
+    const tickSubscriptions = useMemo(
+        () => holdings.map(h => {
+            const m = h.market?.toUpperCase()
+            const market: 'KR' | 'US' | null =
+                m === 'KOSPI' || m === 'KOSDAQ' || m === 'KS' || m === 'KQ' ? 'KR'
+                    : m === 'US' || m === 'NASD' || m === 'NAS' || m === 'NYSE' || m === 'NYS' || m === 'AMEX' || m === 'AMS' ? 'US'
+                        : null
+            return market ? { code: h.stockCode, market } : null
+        }).filter((x): x is { code: string; market: 'KR' | 'US' } => x !== null),
+        [holdings],
+    )
+    const ticks = useStockTicks(tickSubscriptions)
+
+    useEffect(() => {
+        if (ticks.size === 0) return
+        let nextHoldings: Holding[] | null = null
+        setHoldings((prev) => {
+            let mutated = false
+            const next = prev.map((h) => {
+                const t = ticks.get(h.stockCode)
+                if (!t) return h
+                if (t.price === h.currentPrice) return h
+                mutated = true
+                const newValue = h.quantity * t.price
+                return {
+                    ...h,
+                    currentPrice: t.price,
+                    currentValue: newValue,
+                    profit: newValue - h.totalCost,
+                    profitRate: h.totalCost > 0 ? ((newValue - h.totalCost) / h.totalCost) * 100 : 0,
+                }
+            })
+            if (mutated) nextHoldings = next
+            return mutated ? next : prev
+        })
+        if (nextHoldings) {
+            setSummary((prevSummary) => {
+                const rate = prevSummary.exchangeRate || FALLBACK_USD_RATE
+                let totalCost = 0
+                let totalValue = 0
+                for (const h of nextHoldings!) {
+                    const buyRate = h.currency === 'USD'
+                        ? (h.purchaseRate && h.purchaseRate !== 1 ? h.purchaseRate : rate)
+                        : 1
+                    totalCost += h.currency === 'USD' ? h.totalCost * buyRate : h.totalCost
+                    totalValue += h.currency === 'USD' ? h.currentValue * rate : h.currentValue
+                }
+                const totalProfit = totalValue - totalCost
+                const totalProfitRate = totalCost > 0 ? (totalProfit / totalCost) * 100 : 0
+                return { ...prevSummary, totalCost, totalValue, totalProfit, totalProfitRate }
+            })
+        }
+    }, [ticks])
+
     const exRate = summary.exchangeRate || FALLBACK_USD_RATE
 
     const convert = (v: number) => baseCurrency === 'KRW' ? v : v / exRate

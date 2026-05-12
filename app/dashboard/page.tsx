@@ -44,6 +44,11 @@ async function HomeContent({ userId }: { userId: string }) {
     stockName: h.stockName,
     market: h.market || 'Unknown',
     currency: h.currency,
+    // 실시간 tick 으로 재계산 위해 필요한 원자 필드들
+    quantity: Number(h.quantity),
+    currentPrice: Number(h.currentPrice),
+    totalCost: Number(h.totalCost),
+    purchaseRate: Number(h.purchaseRate ?? 0),
     currentValue: Number(h.currentValue),
     profit: Number(h.profit),
     profitRate: Number(h.profitRate),
