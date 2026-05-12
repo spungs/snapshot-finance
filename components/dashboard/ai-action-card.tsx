@@ -571,10 +571,6 @@ function DeleteHoldingCard({
                 />
             </Field>
 
-            <p className="text-[11px] text-destructive">
-                ⚠️ 삭제 후 복구할 수 없습니다.
-            </p>
-
             <Actions
                 executing={executing}
                 disabled={!canSubmit}
