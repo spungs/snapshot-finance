@@ -125,9 +125,9 @@ function normalizeMarket(raw: string | null | undefined): MarketKind | null {
 }
 
 function nowInKstParts() {
-    const now = new Date()
-    const utcMs = now.getTime() + now.getTimezoneOffset() * 60_000
-    const kst = new Date(utcMs + 9 * 3600_000)
+    // Date.now() 는 시스템 timezone 과 무관한 UTC epoch ms.
+    // KST = UTC + 9h (DST 없음) — 단순히 9시간 더한 뒤 UTC* 메서드로 값 읽기.
+    const kst = new Date(Date.now() + 9 * 3600_000)
     return {
         weekday: kst.getUTCDay(),  // 0=Sun ... 6=Sat
         hour: kst.getUTCHours(),
@@ -310,8 +310,11 @@ class KisSession {
     async start() {
         // 장 외 시간이면 connect 안 함 — 5분 간격으로 재체크
         if (!anyMarketOpen()) {
+            const p = nowInKstParts()
             const nextAt = new Date(Date.now() + 5 * 60_000).toLocaleTimeString('ko-KR', { hour12: false })
-            console.log(`[kis-ws] 장 외 시간 — 다음 체크 ${nextAt}`)
+            console.log(
+                `[kis-ws] 장 외 시간 — KST ${String(p.hour).padStart(2, '0')}:${String(p.minute).padStart(2, '0')} (weekday=${p.weekday}), KR_open=${isMarketOpen('KR')} US_open=${isMarketOpen('US')}, 다음 체크 ${nextAt}`
+            )
             this.marketCheckHandle = setTimeout(() => this.start(), 5 * 60_000)
             return
         }
