@@ -1191,7 +1191,9 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                     // 통합 모드 또는 단일 계좌 — 합계 헤더 + 평탄한 카드 리스트
                     // 계좌별 모드의 그룹 헤더와 동일 디자인 (라벨 "전체"/"Total")
                     (() => {
-                        const totalValueDisplay = convert(currentSummary.totalValue)
+                        // 합계 헤더 '평가' 는 보유 종목만 합산 (예수금 제외) — 매입/수익과 의미 일치.
+                        // 도넛 옆 '총 자산' 은 별개로 예수금 포함된 totalValue 를 그대로 사용.
+                        const totalStockValueDisplay = convert(currentSummary.totalValue - currentSummary.cashBalance)
                         const totalCostDisplay = convert(currentSummary.totalCost)
                         const totalProfitDisplay = convert(currentSummary.totalProfit)
                         const isProfit = currentSummary.totalProfit >= 0
@@ -1221,7 +1223,7 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                                                 {language === 'ko' ? '평가' : 'Value'}
                                             </span>
                                             <span className="text-[12px] font-bold numeric text-foreground">
-                                                {formatCurrency(totalValueDisplay, baseCurrency)}
+                                                {formatCurrency(totalStockValueDisplay, baseCurrency)}
                                             </span>
                                         </div>
                                         <div className="flex items-baseline gap-1">
