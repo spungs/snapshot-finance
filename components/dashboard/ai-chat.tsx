@@ -70,6 +70,21 @@ async function callApi<T = unknown>(input: RequestInfo, init?: RequestInit): Pro
 // portfolio-client는 useState(initialHoldings)로 로컬 상태를 들고 있어 router.refresh()만으로는 갱신되지 않는다.
 const PORTFOLIO_REFRESH_EVENT = 'portfolio:refresh'
 
+// msg.content 를 innerHTML 로 렌더하기 전 5문자 HTML 이스케이프.
+// AI 응답·종목명에 사용자 입력이 섞일 수 있어 raw 삽입 금지. **bold** 변환은 escape 이후에 적용.
+function escapeHtml(s: string): string {
+    return s
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+}
+
+function renderMessageHtml(content: string): string {
+    return escapeHtml(content).replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+}
+
 // confirmed 시 msg.content 를 결과 요약으로 덮어써 "아래 카드를 확인해주세요"가 남는 모순 제거.
 // 계좌가 2개 이상일 때만 계좌명을 노출 — 단일 계좌면 불필요한 노이즈.
 function formatActionResult(
@@ -82,8 +97,8 @@ function formatActionResult(
             const account = accounts.find(a => a.id === data.accountId)
             const accountText = account && accounts.length > 1 ? `${account.name}에 ` : ''
             const currencySymbol = data.currency === 'USD' ? '$' : '₩'
-            const priceText = `@${currencySymbol}${data.averagePrice.toLocaleString()}`
-            return `✓ ${accountText}**${data.stockName}** ${data.quantity}주(${priceText}) 추가했어요.`
+            const priceText = `${currencySymbol}${data.averagePrice.toLocaleString()}`
+            return `✓ ${accountText}**${data.stockName}** ${data.quantity}주 ${priceText} 추가했어요.`
         }
         case 'update_holding': {
             const holding = holdings.find(h => h.id === data.holdingId)
@@ -126,6 +141,10 @@ export function AiChat({ isAuthenticated = false }: AiChatProps) {
     const [executing, setExecuting] = useState(false)
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const inputRef = useRef<HTMLInputElement>(null)
+    // 다이얼로그 열린 상태에서 인-챗 결과 메시지로 충분 — toast 는 닫힌 상태에서만 띄움.
+    // closure 캡처 문제를 피해 ref 로 최신 open 상태 참조 (mid-flight 종료 케이스).
+    const openRef = useRef(open)
+    useEffect(() => { openRef.current = open }, [open])
     const router = useRouter()
 
     useEffect(() => {
@@ -296,12 +315,12 @@ export function AiChat({ isAuthenticated = false }: AiChatProps) {
                                 quantity: data.quantity,
                                 averagePrice: data.averagePrice,
                                 currency: data.currency,
-                                // "매수" 의 자연스러운 의미 = 기존 보유에 더해짐 — 평단가 손실 방지.
+                                // 동명 종목 재추가는 기존 보유에 합산 — 평단가 덮어쓰기로 인한 손실 방지.
                                 mode: 'merge',
                             }),
                         })
 
-                        toast.success(`${data.stockName} ${data.quantity}주가 추가되었습니다.`)
+                        if (!openRef.current) toast.success(`${data.stockName} ${data.quantity}주가 추가되었습니다.`)
                         break
                     }
 
@@ -314,13 +333,13 @@ export function AiChat({ isAuthenticated = false }: AiChatProps) {
                                 ...(data.averagePrice !== undefined && { averagePrice: data.averagePrice }),
                             }),
                         })
-                        toast.success('보유 종목이 수정되었습니다.')
+                        if (!openRef.current) toast.success('보유 종목이 수정되었습니다.')
                         break
                     }
 
                     case 'delete_holding': {
                         await callApi(`/api/holdings/${data.holdingId}`, { method: 'DELETE' })
-                        toast.success('보유 종목이 삭제되었습니다.')
+                        if (!openRef.current) toast.success('보유 종목이 삭제되었습니다.')
                         break
                     }
                 }
@@ -390,9 +409,9 @@ export function AiChat({ isAuthenticated = false }: AiChatProps) {
                                 <Sparkles className="w-8 h-8 mx-auto opacity-20" />
                                 <p className="font-medium text-sm">종목 추가·수정·삭제만 가능합니다</p>
                                 <div className="space-y-1 opacity-70">
-                                    <p>{'"NH에 삼성전자 100주 75000원 매수"'}</p>
+                                    <p>{'"NH에 삼성전자 100주 75000원 추가"'}</p>
                                     <p>{'"키움 삼성전자 평단가 76000원으로 수정"'}</p>
-                                    <p>{'"테슬라 5주 매도"'}</p>
+                                    <p>{'"테슬라 5주 줄이기"'}</p>
                                     <p>{'"테슬라 삭제"'}</p>
                                 </div>
                                 <div className="space-y-0.5 opacity-60 pt-2 border-t border-border/40 mx-6">
@@ -419,10 +438,7 @@ export function AiChat({ isAuthenticated = false }: AiChatProps) {
                                         <p
                                             className="whitespace-pre-wrap"
                                             dangerouslySetInnerHTML={{
-                                                __html: msg.content.replace(
-                                                    /\*\*(.*?)\*\*/g,
-                                                    '<strong>$1</strong>',
-                                                ),
+                                                __html: renderMessageHtml(msg.content),
                                             }}
                                         />
                                     )}

@@ -156,7 +156,7 @@ export function AiActionCard({
     return <></>
 }
 
-// ───────────────────────── Card 1: 매수 ─────────────────────────
+// ───────────────────────── Card 1: 추가 ─────────────────────────
 
 function AddHoldingCard({
     action,
@@ -254,7 +254,7 @@ function AddHoldingCard({
             )}
 
             <p className="text-[11px] text-muted-foreground leading-snug">
-                💡 이미 보유 중이면 가중평균 평단가로 합산됩니다 (물타기 모드)
+                💡 이미 보유 중이면 가중평균 평단가로 합산됩니다.
             </p>
 
             <Actions
@@ -382,7 +382,7 @@ function UpdateHoldingCard({
     )
 }
 
-// ───────────────────────── Card 2 (부분 매도) ─────────────────────────
+// ───────────────────────── Card 2: 수량 줄이기 ─────────────────────────
 
 function SellHoldingCard({
     action,
