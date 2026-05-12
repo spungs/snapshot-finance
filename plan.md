@@ -1,7 +1,7 @@
 # Snapshot Finance
 
 **작성일:** 2025-11-25  
-**최종 업데이트:** 2026-05-10 (Phase A 완료 — BrokerageAccount 마이그레이션 적용/검증 완료 dev DB, 운영 동기화, seed.ts 운영 wipe 가드 추가. Phase B 코드 작업 대기 중. **운영 DB 미적용 — Vercel 배포 금지 구간**)  
+**최종 업데이트:** 2026-05-12 (계좌별 예수금 입력 풀스택 통합 — User/PortfolioSnapshot.cashAccounts JSON 컬럼 + CashAccountEditor + BrokerageAccount 라벨 자동 시드 + 스냅샷 동결 + AI 다중 계좌 안전장치. legacy `예수금` 라벨 → 첫 BrokerageAccount 이름 이관 마이그레이션 로컬/Supabase 양쪽 적용 완료)  
 **목표:** 개인용 주식 잔고 관리 MVP (무료 플랜)
 
 ---
@@ -74,6 +74,18 @@
         - [x] UI: 대시보드에서 예수금 직접 수정 (천단위 포맷팅, 다국어/통화 자동 변환)
         - [x] UX: 수정 시 로딩 상태 표시 및 즉각적인 UI 반영
         - [x] 다국어 지원: 주식 평가액, 예수금, 평가손익(투자) 라벨 및 메시지 처리
+        - [x] **계좌별 예수금 입력 (2026-05-12)**:
+            - [x] `User.cashAccounts` / `PortfolioSnapshot.cashAccounts` JSON 컬럼 추가 (합계는 `cashBalance` 캐시로 유지 → 차트/스냅샷/AI 등 기존 코드 무변경)
+            - [x] `types/cash.ts`(CashAccount) + `validateCashAccounts` (≤20개, 라벨 ≤50자, 빈 라벨은 "예수금" 폴백, 합계 ≤10조 한도)
+            - [x] 신규 `updateCashAccounts(rows)` server action + 기존 `updateCashBalance(amount)` 에 B안(다중 계좌 분리 시 거부, code: MULTIPLE_ACCOUNTS) 적용
+            - [x] **CashAccountEditor** 공통 컴포넌트 — 라벨+금액 행 추가/삭제/실시간 합계. 다이얼로그·스냅샷 생성·스냅샷 편집 폼 3곳에서 재사용
+            - [x] **BrokerageAccount 자동 시드** — 다이얼로그 진입 시 사용자의 증권 계좌 이름이 빈 금액 행으로 자동 등장, 기존 cashAccount 라벨 매칭 시 금액 자동 채움, 매칭 안 되는 항목(legacy "예수금" 등)은 orphan 행으로 보존
+            - [x] **AI 챗 안전장치** — 다중 계좌 분리 상태에서 자연어로 합계 단일 수정 시 거부하고 다이얼로그 안내 토스트
+            - [x] **스냅샷 동결** — 일간 cron `daily-snapshot` 이 `user.cashAccounts` 도 함께 저장, snapshot POST/PUT API 가 cashAccounts 입력 수용 (합계는 서버에서 sum 으로 검증/계산), 상세 페이지에 계좌별 분해 라벨/금액 표시 (legacy 스냅샷은 합계만 표시 폴백)
+            - [x] FormattedNumberInput 정렬 버그 수정 — 라벨 없는 케이스에서 `₩` prefix 가 패딩 때문에 input 텍스트와 어긋나던 문제 해결
+            - [x] 마이그레이션 2 종 (로컬/Supabase 양쪽 적용):
+                - `20260512000000_add_cash_accounts` — 컬럼 추가 + 기존 `cashBalance > 0` 사용자를 `[{label:"예수금", amount:<기존값>}]` 1행으로 백필
+                - `20260512000001_migrate_legacy_cash_label` — legacy `예수금` 라벨을 사용자의 첫 BrokerageAccount (`displayOrder` + `createdAt` 순) 이름으로 이관, 동명 라벨이 이미 있으면 amount 합산해 단일 행으로 통합 (멱등성 보장)
     - [x] **모바일 반응형 레이아웃 디테일 수정**: 
         - [x] 모바일용 카드 뷰(Card View) 구현 완료 (보유 종목, 스냅샷 목록)
         - [x] 대시보드 헤더 및 포트폴리오 요약 카드 모바일 최적화
