@@ -9,7 +9,7 @@
     "lint": "eslint",
     "seed": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts",
     "seed:dev": "dotenv -e .env.development.local -- ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts",
-    "seed:kis": "ts-node scripts/update-kis-master.ts",
+    "seed:kis": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' scripts/update-kis-master.ts",
     "migrate:dev": "dotenv -e .env.development.local -- prisma migrate dev",
     "migrate:dev:create": "dotenv -e .env.development.local -- prisma migrate dev --create-only",
     "migrate:dev:status": "dotenv -e .env.development.local -- prisma migrate status",
