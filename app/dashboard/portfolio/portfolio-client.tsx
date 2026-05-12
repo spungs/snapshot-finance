@@ -947,10 +947,10 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
 
             {/* Holdings header — count + (다중 계좌 시) view-mode toggle + sort */}
             <div className="px-6 pb-3 flex justify-between items-center gap-2 flex-wrap">
-                <span className="eyebrow">
-                    {language === 'ko' ? '보유 종목' : 'Holdings'} · {baseHoldings.length}
-                </span>
-                <div className="flex items-center gap-2 flex-wrap justify-end ml-auto">
+                <div className="flex items-center gap-2 flex-wrap">
+                    <span className="eyebrow">
+                        {language === 'ko' ? '보유 종목' : 'Holdings'} · {baseHoldings.length}
+                    </span>
                     {isMultiAccount && (
                         <div
                             role="tablist"
@@ -987,6 +987,8 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                             </button>
                         </div>
                     )}
+                </div>
+                <div className="flex items-center gap-2 flex-wrap justify-end ml-auto">
                     <SortToggle
                         active={sortKey === 'currentValue'}
                         dir={sortDir}
