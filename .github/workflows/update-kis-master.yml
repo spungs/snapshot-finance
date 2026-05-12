@@ -21,3 +21,18 @@ jobs:
       - run: npm run seed:kis
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      # KIS Master 동기화 실패는 침묵 실패가 가장 위험 — 매주 자동이라 누구도 보지 않으면 stale 데이터 누적.
+      # DISCORD_WEBHOOK_URL secret 이 없으면 step skip (curl 자체는 invalid URL 로 실패하므로 가드).
+      - name: Notify on failure
+        if: failure()
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          if [ -z "$WEBHOOK" ]; then
+            echo "DISCORD_WEBHOOK_URL not set, skipping notification"
+            exit 0
+          fi
+          curl -s -X POST -H 'Content-Type: application/json' \
+            -d "{\"content\": \"🚨 KIS Master sync 실패\n run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
+            "$WEBHOOK"

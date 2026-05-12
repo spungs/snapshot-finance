@@ -177,6 +177,20 @@ model KisStockMaster {
   @@map("kis_stock_masters")
 }
 
+model KisMasterSyncLog {
+  id           String    @id @default(cuid())
+  startedAt    DateTime  @default(now()) @db.Timestamptz(6)
+  finishedAt   DateTime? @db.Timestamptz(6)
+  status       String    // 'running' | 'success' | 'failed' | 'aborted'
+  rowCounts    Json?     // { KOSPI: 2523, KOSDAQ: 1823, NASD: 4967, ... }
+  errorMessage String?   @db.Text
+  triggeredBy  String    // 'github-actions' | 'manual'
+
+  @@index([startedAt])
+  @@index([status])
+  @@map("kis_master_sync_logs")
+}
+
 model CronLog {
   id        String   @id @default(cuid())
   jobName   String
