@@ -118,3 +118,5 @@ import.log
 
 # Raw migration SQL (prisma migrate diff temp output)
 *_migration_raw.sql
+# Obsidian vault metadata
+.obsidian/

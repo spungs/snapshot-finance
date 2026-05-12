@@ -1,20 +1,33 @@
 
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, ExternalLink } from 'lucide-react'
 import Link from 'next/link'
 import { googleLogin } from '@/app/actions'
+import { useLanguage } from '@/lib/i18n/context'
+import { translations } from '@/lib/i18n/translations'
 
 export default function SignIn() {
-    const [isSigningIn, setIsSigningIn] = useState(false)
+    const { language } = useLanguage()
+    const t = translations[language].landing
 
-    // Alternative: Using standard NextAuth flow for robustness
+    const [isSigningIn, setIsSigningIn] = useState(false)
+    const [agreedTerms, setAgreedTerms] = useState(false)
+    const [agreedPrivacy, setAgreedPrivacy] = useState(false)
+    const allAgreed = agreedTerms && agreedPrivacy
+
     const handleGoogleSignIn = async () => {
+        if (!allAgreed) return
         setIsSigningIn(true)
-        await googleLogin()
+        await googleLogin(allAgreed)
+    }
+
+    const toggleAll = (checked: boolean) => {
+        setAgreedTerms(checked)
+        setAgreedPrivacy(checked)
     }
 
     return (
@@ -30,11 +43,64 @@ export default function SignIn() {
                     <CardTitle className="text-2xl">Snapshot Finance</CardTitle>
                     <CardDescription>Sign in to manage your portfolio</CardDescription>
                 </CardHeader>
-                <CardContent className="flex flex-col items-center space-y-4">
+                <CardContent className="flex flex-col items-stretch space-y-4">
+                    <div className="flex flex-col gap-2 rounded-md border border-border bg-muted/40 p-3 text-sm">
+                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                            <input
+                                type="checkbox"
+                                checked={allAgreed}
+                                onChange={(e) => toggleAll(e.target.checked)}
+                                className="h-4 w-4 accent-primary"
+                            />
+                            <span className="font-medium">{t.agreeAll}</span>
+                        </label>
+                        <div className="h-px bg-border/70" />
+                        <div className="flex items-center justify-between gap-2">
+                            <label className="flex items-center gap-2 cursor-pointer select-none flex-1 min-w-0">
+                                <input
+                                    type="checkbox"
+                                    checked={agreedTerms}
+                                    onChange={(e) => setAgreedTerms(e.target.checked)}
+                                    className="h-4 w-4 accent-primary"
+                                />
+                                <span className="truncate">{t.agreeTermsCheckbox}</span>
+                            </label>
+                            <Link
+                                href="/terms"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                aria-label={t.termsOfService}
+                                className="text-muted-foreground hover:text-foreground shrink-0"
+                            >
+                                <ExternalLink className="h-4 w-4" />
+                            </Link>
+                        </div>
+                        <div className="flex items-center justify-between gap-2">
+                            <label className="flex items-center gap-2 cursor-pointer select-none flex-1 min-w-0">
+                                <input
+                                    type="checkbox"
+                                    checked={agreedPrivacy}
+                                    onChange={(e) => setAgreedPrivacy(e.target.checked)}
+                                    className="h-4 w-4 accent-primary"
+                                />
+                                <span className="truncate">{t.agreePrivacyCheckbox}</span>
+                            </label>
+                            <Link
+                                href="/privacy"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                aria-label={t.privacyPolicy}
+                                className="text-muted-foreground hover:text-foreground shrink-0"
+                            >
+                                <ExternalLink className="h-4 w-4" />
+                            </Link>
+                        </div>
+                    </div>
+
                     <button
                         onClick={handleGoogleSignIn}
-                        disabled={isSigningIn}
-                        className={`flex items-center justify-center w-full px-4 py-2 space-x-2 text-gray-700 transition-colors border border-gray-300 rounded-md hover:bg-gray-50 dark:text-gray-200 dark:border-gray-700 dark:hover:bg-gray-800 ${isSigningIn ? 'opacity-50 cursor-not-allowed' : ''
+                        disabled={isSigningIn || !allAgreed}
+                        className={`flex items-center justify-center w-full px-4 py-2 space-x-2 text-gray-700 transition-colors border border-gray-300 rounded-md hover:bg-gray-50 dark:text-gray-200 dark:border-gray-700 dark:hover:bg-gray-800 ${(isSigningIn || !allAgreed) ? 'opacity-50 cursor-not-allowed' : ''
                             }`}
                     >
                         {isSigningIn ? (
@@ -65,6 +131,11 @@ export default function SignIn() {
                         <span>{isSigningIn ? '로그인 중...' : 'Sign in with Google'}</span>
                     </button>
 
+                    {!allAgreed && (
+                        <p className="text-xs text-muted-foreground text-center">
+                            {t.consentRequiredHint}
+                        </p>
+                    )}
                 </CardContent>
             </Card>
         </div>

@@ -19,6 +19,7 @@ model User {
   cashAccounts          Json?
   targetAsset           Decimal             @default(0) @db.Decimal(15, 2)
   role                  String              @default("user")
+  agreedAt              DateTime?
   accounts              Account[]
   brokerageAccounts     BrokerageAccount[]
   holdings              Holding[]
