@@ -19,9 +19,18 @@
  */
 
 import WebSocket from 'ws'
-import { PrismaClient } from '@prisma/client'
 import { createClient as createSupabaseClient, type SupabaseClient } from '@supabase/supabase-js'
 import { Redis } from '@upstash/redis'
+import { prisma } from '@/lib/prisma'
+
+// 모든 console 출력에 [HH:MM:SS] prefix 자동 추가 — 장 외 sleep / 재연결 등 시점 파악 용이
+const _origLog = console.log.bind(console)
+const _origWarn = console.warn.bind(console)
+const _origError = console.error.bind(console)
+const tsPrefix = () => `[${new Date().toLocaleTimeString('ko-KR', { hour12: false })}]`
+console.log = (...args: unknown[]) => _origLog(tsPrefix(), ...args)
+console.warn = (...args: unknown[]) => _origWarn(tsPrefix(), ...args)
+console.error = (...args: unknown[]) => _origError(tsPrefix(), ...args)
 
 // ---------------------------------------------------------------------------
 // 환경변수 / 상수
@@ -57,9 +66,8 @@ const US_MARKET_CLOSE_KST = { hour: 5, minute: 0 }    // 다음날 새벽
 
 // ---------------------------------------------------------------------------
 // 의존성 초기화 (env 없으면 graceful skip)
+// Prisma 는 lib/prisma 의 싱글톤 재사용 — 7.x 는 adapter 필수라 직접 인스턴스화 X
 // ---------------------------------------------------------------------------
-const prisma = new PrismaClient()
-
 let supabase: SupabaseClient | null = null
 if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
     supabase = createSupabaseClient(
@@ -302,7 +310,8 @@ class KisSession {
     async start() {
         // 장 외 시간이면 connect 안 함 — 5분 간격으로 재체크
         if (!anyMarketOpen()) {
-            console.log('[kis-ws] 장 외 시간 — 5분 후 재체크')
+            const nextAt = new Date(Date.now() + 5 * 60_000).toLocaleTimeString('ko-KR', { hour12: false })
+            console.log(`[kis-ws] 장 외 시간 — 다음 체크 ${nextAt}`)
             this.marketCheckHandle = setTimeout(() => this.start(), 5 * 60_000)
             return
         }
@@ -333,7 +342,8 @@ class KisSession {
             // 장 외 시간 자동 전환 체크
             this.marketCheckHandle = setInterval(() => {
                 if (!anyMarketOpen()) {
-                    console.log('[kis-ws] 장 마감 감지 — 연결 종료, 5분 후 재체크')
+                    const nextAt = new Date(Date.now() + 5 * 60_000).toLocaleTimeString('ko-KR', { hour12: false })
+                    console.log(`[kis-ws] 장 마감 감지 — 연결 종료, 다음 체크 ${nextAt}`)
                     this.shutdownConnection(false)
                     this.marketCheckHandle = setTimeout(() => this.start(), 5 * 60_000)
                 }
