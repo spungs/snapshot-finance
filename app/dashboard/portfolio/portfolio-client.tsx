@@ -20,6 +20,7 @@ import { StockSearchCombobox } from '@/components/dashboard/stock-search-combobo
 import { FormattedNumberInput } from '@/components/ui/formatted-number-input'
 import { DonutChart } from '@/components/dashboard/donut-chart'
 import { CashBalanceDialog } from '@/components/dashboard/cash-balance-dialog'
+import type { CashAccount } from '@/types/cash'
 import { PortfolioShareButton } from '@/components/dashboard/portfolio-share'
 import { BulkImportDialog } from '@/components/dashboard/bulk-import-dialog'
 import { ExchangeRateFootnote } from '@/components/dashboard/exchange-rate-footnote'
@@ -75,6 +76,7 @@ interface Summary {
     exchangeRate: number
     exchangeRateUpdatedAt?: string | null
     cashBalance: number
+    cashAccounts?: CashAccount[] | null
 }
 
 type SortKey = 'currentValue' | 'totalCost' | 'profit'
@@ -126,9 +128,10 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
     const ticks = useStockTicks(tickSubscriptions)
 
     // tick 도착 시 holdings 의 가격/평가금/수익 자동 갱신.
-    // totalCost 는 매입가 × 수량이라 불변, summary 는 다음 server fetch 시 동기화.
+    // totalCost 는 매입가 × 수량이라 불변. summary 도 derive 해서 상단 총자산/도넛도 함께 갱신.
     useEffect(() => {
         if (ticks.size === 0) return
+        let nextHoldings: Holding[] | null = null
         setHoldings((prev) => {
             let mutated = false
             const next = prev.map((h) => {
@@ -146,8 +149,27 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                     priceUpdatedAt: new Date(t.ts).toISOString(),
                 }
             })
+            if (mutated) nextHoldings = next
             return mutated ? next : prev
         })
+        // holdings 변경 후 summary 재계산 — 상단 도넛/총자산도 실시간 반영
+        if (nextHoldings) {
+            setCurrentSummary((prevSummary) => {
+                const rate = prevSummary.exchangeRate || FALLBACK_USD_RATE
+                let totalCost = 0
+                let totalValue = 0
+                for (const h of nextHoldings!) {
+                    const buyRate = h.currency === 'USD'
+                        ? (h.purchaseRate && h.purchaseRate !== 1 ? h.purchaseRate : rate)
+                        : 1
+                    totalCost += h.currency === 'USD' ? h.totalCost * buyRate : h.totalCost
+                    totalValue += h.currency === 'USD' ? h.currentValue * rate : h.currentValue
+                }
+                const totalProfit = totalValue - totalCost
+                const totalProfitRate = totalCost > 0 ? (totalProfit / totalCost) * 100 : 0
+                return { ...prevSummary, totalCost, totalValue, totalProfit, totalProfitRate }
+            })
+        }
     }, [ticks])
 
     // 보기 모드: byAccount(계좌별 섹션) ↔ unified(통합 합산)
@@ -907,6 +929,7 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                 </div>
                 <CashBalanceDialog
                     initialBalance={currentSummary.cashBalance}
+                    initialAccounts={currentSummary.cashAccounts ?? null}
                     currency={baseCurrency}
                     exchangeRate={exRate}
                     onSuccess={refresh}
