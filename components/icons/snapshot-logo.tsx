@@ -1,4 +1,4 @@
-// Snapshot Finance 브랜드 로고 — 카메라 바디 + 렌즈 안에 3개의 캔들스틱.
+// Snapshot Finance 브랜드 로고 — 카메라 바디 + 4개의 캔들스틱 + 우상향 화살표.
 // 인라인 SVG 라 어떤 사이즈에서도 sharp, currentColor 로 테마 자동 적응
 // (다크/라이트), 패딩 없음 → 헤더 wordmark 와의 spacing 자연스러움.
 
@@ -16,28 +16,32 @@ export function SnapshotLogo({ className, size = 24 }: SnapshotLogoProps) {
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
-            strokeWidth="1.8"
+            strokeWidth="1.6"
             strokeLinecap="round"
             strokeLinejoin="round"
             className={className}
             aria-hidden
         >
-            {/* Camera body — 좌상단에 뷰파인더 돌출 + 좌측 작은 dot */}
-            <path d="M14.5 4.5h-5L7 7H4a2 2 0 0 0-2 2v8.5a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z" />
-            {/* 우상단 셔터 dot */}
-            <circle cx="18.5" cy="5.5" r="0.4" fill="currentColor" stroke="none" />
-            {/* 렌즈 */}
-            <circle cx="12" cy="13" r="3.6" />
-            {/* 캔들스틱 3개 — 좌·중·우, 가운데가 가장 김. wick(thin line) + body(filled rect) */}
-            {/* 좌 (짧음) */}
-            <line x1="10.2" y1="11.6" x2="10.2" y2="14.4" strokeWidth="0.6" />
-            <rect x="9.85" y="12.1" width="0.7" height="1.8" fill="currentColor" stroke="none" />
-            {/* 중 (가장 김) */}
-            <line x1="12" y1="10.5" x2="12" y2="15.5" strokeWidth="0.6" />
-            <rect x="11.65" y="11.2" width="0.7" height="2.6" fill="currentColor" stroke="none" />
-            {/* 우 (중간) */}
-            <line x1="13.8" y1="11.2" x2="13.8" y2="14.8" strokeWidth="0.6" />
-            <rect x="13.45" y="11.8" width="0.7" height="2.2" fill="currentColor" stroke="none" />
+            {/* 카메라 바디 — 상단 뷰파인더 돌출 + 우측 셔터 dot */}
+            <path d="M 4 8 h 4 l 1.2 -2 h 5.6 l 1.2 2 h 4 a 2 2 0 0 1 2 2 v 9 a 2 2 0 0 1 -2 2 h -16 a 2 2 0 0 1 -2 -2 v -9 a 2 2 0 0 1 2 -2 z" />
+            <circle cx="19" cy="9.5" r="0.4" fill="currentColor" stroke="none" />
+
+            {/* 캔들스틱 4개 — 좌→우 점진 상승 (wick + body) */}
+            <line x1="6" y1="13.5" x2="6" y2="17" strokeWidth="0.6" />
+            <rect x="5.5" y="14" width="1" height="2.5" fill="currentColor" stroke="none" />
+
+            <line x1="9.5" y1="12" x2="9.5" y2="17" strokeWidth="0.6" />
+            <rect x="9" y="12.5" width="1" height="4" fill="currentColor" stroke="none" />
+
+            <line x1="13" y1="10.5" x2="13" y2="17" strokeWidth="0.6" />
+            <rect x="12.5" y="11" width="1" height="5" fill="currentColor" stroke="none" />
+
+            <line x1="16.5" y1="9.5" x2="16.5" y2="17" strokeWidth="0.6" />
+            <rect x="16" y="10" width="1" height="6" fill="currentColor" stroke="none" />
+
+            {/* 우상향 추세선 — 캔들 정점들을 가로지른 후 우상단 화살촉 */}
+            <path d="M 6 13 L 9.5 11.5 L 13 10 L 18 9" strokeWidth="1.2" />
+            <path d="M 16 8.5 L 18 9 L 17.5 11" strokeWidth="1.2" />
         </svg>
     )
 }
