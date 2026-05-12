@@ -9,6 +9,7 @@ import { PortfolioClient } from './portfolio-client'
 import { PortfolioSkeleton } from './portfolio-skeleton'
 import { AiChat } from '@/components/dashboard/ai-chat'
 import { FloatingContainer } from '@/components/ui/floating-container'
+import { isProUser } from '@/lib/billing/subscription'
 
 export const dynamic = 'force-dynamic'
 
@@ -40,7 +41,7 @@ async function PortfolioContent({
 }) {
   // 보유 종목과 계좌 목록을 병렬 조회. 계좌 목록은 셀렉터 / 보기 토글의 기반 데이터.
   // (Phase A 통합 후 prisma.brokerageAccount 가 제공된다.)
-  const [{ data }, accountsRaw] = await Promise.all([
+  const [{ data }, accountsRaw, pro] = await Promise.all([
     holdingService.getList(userId),
     prisma.brokerageAccount
       .findMany({
@@ -49,6 +50,7 @@ async function PortfolioContent({
         orderBy: { createdAt: 'asc' },
       })
       .catch(() => [] as Array<{ id: string; name: string }>),
+    isProUser(userId),
   ])
 
   const summary = {
@@ -98,7 +100,7 @@ async function PortfolioContent({
         accounts={accounts}
       />
       <FloatingContainer>
-        <AiChat isAuthenticated />
+        <AiChat isAuthenticated isPro={pro} />
       </FloatingContainer>
     </>
   )

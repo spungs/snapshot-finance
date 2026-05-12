@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
-import { Sparkles, SendHorizonal, Loader2 } from 'lucide-react'
+import { Sparkles, SendHorizonal, Loader2, Lock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
@@ -23,6 +23,7 @@ interface Message {
 
 interface AiChatProps {
     isAuthenticated?: boolean
+    isPro?: boolean
 }
 
 // KIS 마스터 검색 결과의 symbol은 `005930.KS` 형태이지만 Stock.stockCode는 raw 6자리로 저장됨.
@@ -131,7 +132,7 @@ function formatActionCancel(action: ParsedAction): string {
     return `✕ **${name}** 취소했어요.`
 }
 
-export function AiChat({ isAuthenticated = false }: AiChatProps) {
+export function AiChat({ isAuthenticated = false, isPro = false }: AiChatProps) {
     const [holdings, setHoldings] = useState<HoldingContext[]>([])
     const [accounts, setAccounts] = useState<AccountSummary[]>([])
     const [open, setOpen] = useState(false)
@@ -381,14 +382,32 @@ export function AiChat({ isAuthenticated = false }: AiChatProps) {
 
     if (!isAuthenticated) return null
 
+    const handleFabClick = () => {
+        if (!isPro) {
+            toast('AI 어시스턴트는 PRO 플랜 전용 기능입니다.', {
+                description: '곧 출시 예정이에요. 조금만 기다려주세요!',
+            })
+            return
+        }
+        setOpen(true)
+    }
+
     return (
         <>
             <button
-                onClick={() => setOpen(true)}
-                className="z-40 w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all duration-150"
-                aria-label="AI 어시스턴트 열기"
+                onClick={handleFabClick}
+                className="relative z-40 w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all duration-150"
+                aria-label={isPro ? 'AI 어시스턴트 열기' : 'AI 어시스턴트 (PRO 전용)'}
             >
                 <Sparkles className="w-5 h-5" />
+                {!isPro && (
+                    <span
+                        className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-foreground text-background flex items-center justify-center ring-2 ring-background"
+                        aria-hidden
+                    >
+                        <Lock className="w-3 h-3" />
+                    </span>
+                )}
             </button>
 
             <Dialog open={open} onOpenChange={setOpen}>

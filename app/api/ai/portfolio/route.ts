@@ -4,6 +4,7 @@ import Decimal from 'decimal.js'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ratelimit, checkRateLimit } from '@/lib/ratelimit'
+import { isProUser } from '@/lib/billing/subscription'
 import { getUsdExchangeRate } from '@/lib/api/exchange-rate'
 import yahooFinance from '@/lib/yahoo-finance'
 import {
@@ -335,6 +336,14 @@ export async function POST(request: NextRequest) {
         // admin 은 비용/남용 우려 대상이 아니므로 AI 레이트리밋(burst/daily) 전면 통과.
         // role 은 DB UPDATE 로만 부여 가능 (lib/auth-helpers.ts 정책).
         const isAdmin = session.user.role === 'admin'
+
+        // PRO 전용 기능 — UI 잠금 우회 방지용 서버 가드. admin 은 isProUser 안에서 통과.
+        if (!(await isProUser(session.user.id))) {
+            return NextResponse.json(
+                { success: false, error: 'AI 어시스턴트는 PRO 플랜 전용 기능입니다.', code: 'PRO_REQUIRED' },
+                { status: 403 }
+            )
+        }
 
         // user.id 기준 rate limit (Gemini API 비용/남용 방지)
         // 1) burst: 10회/분 — 단기 남용 차단
