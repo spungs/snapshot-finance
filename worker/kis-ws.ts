@@ -264,14 +264,18 @@ async function pushTick(t: ParsedTick) {
     }
 
     // Realtime broadcast (env 없으면 skip).
-    // 워커는 단발성 broadcast 만 보내므로 httpSend() 로 REST 명시 (send() 의 fallback 경고 회피).
-    // httpSend 는 channel.subscribe() 필요 없음 — REST 호출만.
+    // 워커는 단발성 broadcast 만 보내므로 REST 사용:
+    //   - 최신 SDK: ch.httpSend(event, payload) — 별도 시그니처
+    //   - 구버전: ch.send({type, event, payload}) — fallback
     if (supabase) {
         try {
             const ch = supabase.channel(`stock:${t.market}:${t.code}`)
-            // SDK 버전에 따라 httpSend 미지원 가능성 — runtime fallback
-            const send = (ch as unknown as { httpSend?: typeof ch.send }).httpSend ?? ch.send.bind(ch)
-            await send({ type: 'broadcast', event: 'tick', payload })
+            const chAny = ch as unknown as { httpSend?: (event: string, payload: unknown) => Promise<unknown> }
+            if (typeof chAny.httpSend === 'function') {
+                await chAny.httpSend('tick', payload)
+            } else {
+                await ch.send({ type: 'broadcast', event: 'tick', payload })
+            }
             tickStats.broadcast++
         } catch (e) {
             console.warn(`[push] supabase ${t.code} failed:`, (e as Error).message)
