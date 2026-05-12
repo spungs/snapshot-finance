@@ -58,8 +58,11 @@ export async function GET(request: NextRequest) {
             if (stocks.length > 0) {
                 // 일반 주식을 ETF보다 우선 표시 (영문 검색과 동일한 로직)
                 const sortedStocks = stocks.sort((a, b) => {
-                    const aIsEtf = a.stockCode.length !== 6 || /ETF|ETN/i.test(a.engName || '')
-                    const bIsEtf = b.stockCode.length !== 6 || /ETF|ETN/i.test(b.engName || '')
+                    // ETF 판별: 한국 종목은 stockCode 6자리 룰 + ETF/ETN regex, 미국 종목은 regex 만 (ticker 가 4자라 길이 룰 부적용)
+                    const aIsKr = a.market === 'KOSPI' || a.market === 'KOSDAQ'
+                    const bIsKr = b.market === 'KOSPI' || b.market === 'KOSDAQ'
+                    const aIsEtf = (aIsKr && a.stockCode.length !== 6) || /ETF|ETN/i.test(a.engName || '')
+                    const bIsEtf = (bIsKr && b.stockCode.length !== 6) || /ETF|ETN/i.test(b.engName || '')
 
                     if (aIsEtf !== bIsEtf) {
                         return aIsEtf ? 1 : -1
@@ -137,9 +140,11 @@ export async function GET(request: NextRequest) {
                 return aEngLen - bEngLen
             })
 
-            // 일반 주식이 하나라도 있는지 확인
+            // 일반 주식이 하나라도 있는지 확인 — 미국 종목은 ticker 가 짧으니 한국 종목에만 길이 룰 적용.
             const hasNonEtf = sortedStocks.some(stock => {
-                return stock.stockCode.length === 6 && !/ETF|ETN/i.test(stock.engName || '')
+                const isKr = stock.market === 'KOSPI' || stock.market === 'KOSDAQ'
+                const lenOk = isKr ? stock.stockCode.length === 6 : true
+                return lenOk && !/ETF|ETN/i.test(stock.engName || '')
             })
 
             // 일반 주식이 있으면 상위 10개 반환, 없으면 Yahoo Finance로 fallback
