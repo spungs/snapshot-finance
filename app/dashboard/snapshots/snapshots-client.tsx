@@ -41,7 +41,9 @@ interface SnapshotsClientProps {
 }
 
 function getDisplay(snapshot: Snapshot, language: string) {
-    let displayValue = Number(snapshot.totalValue)
+    // snapshot.totalValue는 주식 평가금만 누적된 값. "총 자산"은 예수금(cashBalance)을 더해야
+    // 상세 페이지(snapshot-detail-client.tsx)와 일치한다.
+    let displayValue = Number(snapshot.totalValue) + Number(snapshot.cashBalance)
     let displayProfit = Number(snapshot.totalProfit)
     let currency: 'KRW' | 'USD' = 'KRW'
     if (language === 'en' && snapshot.exchangeRate) {
