@@ -157,16 +157,19 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
         setCurrentSummary((prevSummary) => {
             const rate = prevSummary.exchangeRate || FALLBACK_USD_RATE
             let totalCost = 0
-            let totalValue = 0
+            let totalStockValue = 0
             for (const h of next) {
                 const buyRate = h.currency === 'USD'
                     ? (h.purchaseRate && h.purchaseRate !== 1 ? h.purchaseRate : rate)
                     : 1
                 totalCost += h.currency === 'USD' ? h.totalCost * buyRate : h.totalCost
-                totalValue += h.currency === 'USD' ? h.currentValue * rate : h.currentValue
+                totalStockValue += h.currency === 'USD' ? h.currentValue * rate : h.currentValue
             }
-            const totalProfit = totalValue - totalCost
+            // 손익은 주식 부분만 (예수금은 평가차이 없음). totalValue 는 총자산 = 주식 + 예수금
+            // — 서버 holding-service.ts 의 totalValueKRW 계산과 일관성 유지.
+            const totalProfit = totalStockValue - totalCost
             const totalProfitRate = totalCost > 0 ? (totalProfit / totalCost) * 100 : 0
+            const totalValue = totalStockValue + prevSummary.cashBalance
             return { ...prevSummary, totalCost, totalValue, totalProfit, totalProfitRate }
         })
     }, [ticks, holdings])

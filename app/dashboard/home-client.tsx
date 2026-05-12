@@ -1,6 +1,5 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { PerformanceChart } from '@/components/dashboard/performance-chart'
 import { formatCurrency, formatDate } from '@/lib/utils/formatters'
@@ -9,7 +8,6 @@ import { useLanguage } from '@/lib/i18n/context'
 import { useCurrency } from '@/lib/currency/context'
 import { FALLBACK_USD_RATE } from '@/lib/api/exchange-rate'
 import { useLocalStorage } from '@/lib/hooks/use-local-storage'
-import { useStockTicks } from '@/lib/hooks/use-stock-ticks'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -82,68 +80,13 @@ function UpDown({ value, big = false }: { value: number; big?: boolean }) {
     )
 }
 
-export function HomeClient({ summary: initialSummary, holdings: initialHoldings, recentSnapshots, initialChartData, todayLabel }: HomeClientProps) {
+export function HomeClient({ summary, holdings, recentSnapshots, initialChartData, todayLabel }: HomeClientProps) {
     const { t, language } = useLanguage()
     const { baseCurrency } = useCurrency()
 
-    // 실시간 시세 통합 — portfolio 와 동일 패턴.
-    // env 없거나 워커 미가동 시 ticks 빈 Map → SSR 값 그대로 유지 (graceful).
-    const [holdings, setHoldings] = useState(initialHoldings)
-    const [summary, setSummary] = useState(initialSummary)
-    const tickSubscriptions = useMemo(
-        () => holdings.map(h => {
-            const m = h.market?.toUpperCase()
-            const market: 'KR' | 'US' | null =
-                m === 'KOSPI' || m === 'KOSDAQ' || m === 'KS' || m === 'KQ' ? 'KR'
-                    : m === 'US' || m === 'NASD' || m === 'NAS' || m === 'NYSE' || m === 'NYS' || m === 'AMEX' || m === 'AMS' ? 'US'
-                        : null
-            return market ? { code: h.stockCode, market } : null
-        }).filter((x): x is { code: string; market: 'KR' | 'US' } => x !== null),
-        [holdings],
-    )
-    const ticks = useStockTicks(tickSubscriptions)
-
-    useEffect(() => {
-        if (ticks.size === 0) return
-        let nextHoldings: Holding[] | null = null
-        setHoldings((prev) => {
-            let mutated = false
-            const next = prev.map((h) => {
-                const t = ticks.get(h.stockCode)
-                if (!t) return h
-                if (t.price === h.currentPrice) return h
-                mutated = true
-                const newValue = h.quantity * t.price
-                return {
-                    ...h,
-                    currentPrice: t.price,
-                    currentValue: newValue,
-                    profit: newValue - h.totalCost,
-                    profitRate: h.totalCost > 0 ? ((newValue - h.totalCost) / h.totalCost) * 100 : 0,
-                }
-            })
-            if (mutated) nextHoldings = next
-            return mutated ? next : prev
-        })
-        if (nextHoldings) {
-            setSummary((prevSummary) => {
-                const rate = prevSummary.exchangeRate || FALLBACK_USD_RATE
-                let totalCost = 0
-                let totalValue = 0
-                for (const h of nextHoldings!) {
-                    const buyRate = h.currency === 'USD'
-                        ? (h.purchaseRate && h.purchaseRate !== 1 ? h.purchaseRate : rate)
-                        : 1
-                    totalCost += h.currency === 'USD' ? h.totalCost * buyRate : h.totalCost
-                    totalValue += h.currency === 'USD' ? h.currentValue * rate : h.currentValue
-                }
-                const totalProfit = totalValue - totalCost
-                const totalProfitRate = totalCost > 0 ? (totalProfit / totalCost) * 100 : 0
-                return { ...prevSummary, totalCost, totalValue, totalProfit, totalProfitRate }
-            })
-        }
-    }, [ticks])
-
+    // 홈은 추이가 메인이라 실시간 tick 갱신을 의도적으로 하지 않는다.
+    // 새로고침(router.refresh / 페이지 진입) 시점의 SSR 값으로 고정 — 잦은 깜빡임 방지.
+    // 실시간 변동은 보유 페이지에서 확인.
     const exRate = summary.exchangeRate || FALLBACK_USD_RATE
 
     const convert = (v: number) => baseCurrency === 'KRW' ? v : v / exRate
