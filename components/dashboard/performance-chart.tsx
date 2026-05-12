@@ -266,7 +266,7 @@ export function PerformanceChart({ initialChartData }: PerformanceChartProps) {
                   type="button"
                   onClick={() => mutate()}
                   disabled={isValidating}
-                  className="inline-flex items-center gap-0.5 ml-1 font-semibold text-primary hover:underline disabled:opacity-50"
+                  className="inline-flex items-center gap-0.5 ml-1 font-semibold text-primary hover:underline disabled:opacity-50 shrink-0 whitespace-nowrap"
                 >
                   <RotateCcw className={cn('w-2.5 h-2.5', isValidating && 'animate-spin')} />
                   {language === 'ko' ? '다시 시도' : 'Retry'}
