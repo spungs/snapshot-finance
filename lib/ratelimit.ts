@@ -41,12 +41,20 @@ export const ratelimit = {
         prefix: '@upstash/ratelimit/simulation',
     }),
 
-    // AI 챗 (Gemini API 호출 비용/남용 방지): 10 요청 / 60초
+    // AI 챗 burst (Gemini API 단기 남용 방지): 10 요청 / 60초
     ai: new Ratelimit({
         redis,
         limiter: Ratelimit.slidingWindow(10, '60 s'),
         analytics: true,
         prefix: '@upstash/ratelimit/ai',
+    }),
+
+    // AI 챗 일일 한도 (비용 통제): 50 요청 / 24시간 — 사용자별
+    aiDaily: new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(50, '1 d'),
+        analytics: true,
+        prefix: '@upstash/ratelimit/ai-daily',
     }),
 }
 
