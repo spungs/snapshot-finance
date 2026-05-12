@@ -269,7 +269,9 @@ async function pushTick(t: ParsedTick) {
     if (supabase) {
         try {
             const ch = supabase.channel(`stock:${t.market}:${t.code}`)
-            await ch.send({ type: 'broadcast', event: 'tick', payload })
+            // SDK 버전에 따라 httpSend 미지원 가능성 — runtime fallback
+            const send = (ch as unknown as { httpSend?: typeof ch.send }).httpSend ?? ch.send.bind(ch)
+            await send({ type: 'broadcast', event: 'tick', payload })
             tickStats.broadcast++
         } catch (e) {
             console.warn(`[push] supabase ${t.code} failed:`, (e as Error).message)
@@ -296,14 +298,15 @@ async function pushTick(t: ParsedTick) {
     }
 }
 
-// tick 통계 — 1분마다 출력해 동작 가시화
+// tick 통계 — 15초마다 출력해 동작 가시화 (장 외/장중 빠른 확인)
 const tickStats = { received: 0, broadcast: 0 }
+const STATS_INTERVAL_MS = 15_000
 setInterval(() => {
     if (tickStats.received === 0 && tickStats.broadcast === 0) return
-    console.log(`[stats] tick=${tickStats.received} broadcast=${tickStats.broadcast} (지난 1분)`)
+    console.log(`[stats] tick=${tickStats.received} broadcast=${tickStats.broadcast} (지난 ${STATS_INTERVAL_MS / 1000}s)`)
     tickStats.received = 0
     tickStats.broadcast = 0
-}, 60_000)
+}, STATS_INTERVAL_MS)
 
 // ---------------------------------------------------------------------------
 // WebSocket 세션
