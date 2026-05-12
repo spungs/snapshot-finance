@@ -49,10 +49,10 @@ export const ratelimit = {
         prefix: '@upstash/ratelimit/ai',
     }),
 
-    // AI 챗 일일 한도 (비용 통제): 50 요청 / 24시간 — 사용자별
+    // AI 챗 일일 한도 (비용 통제): 3 요청 / 24시간 — 사용자별 (무료 티어)
     aiDaily: new Ratelimit({
         redis,
-        limiter: Ratelimit.slidingWindow(50, '1 d'),
+        limiter: Ratelimit.slidingWindow(3, '1 d'),
         analytics: true,
         prefix: '@upstash/ratelimit/ai-daily',
     }),
