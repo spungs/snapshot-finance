@@ -181,18 +181,8 @@ export function PerformanceChart({ initialChartData }: PerformanceChartProps) {
           </div>
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-            {/* 수동 재검증 — Vercel cold start / 세션 만료 등으로 차트 데이터 fetch 가 실패했을 때 사용자가 직접 재시도. */}
-            <button
-              type="button"
-              onClick={() => mutate()}
-              disabled={isValidating}
-              aria-label={language === 'ko' ? '차트 새로고침' : 'Refresh chart'}
-              title={language === 'ko' ? '차트 새로고침' : 'Refresh chart'}
-              className="self-start sm:self-auto inline-flex items-center justify-center w-7 h-7 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-accent-soft transition-colors disabled:opacity-50"
-            >
-              <RotateCcw className={cn('w-3.5 h-3.5', isValidating && 'animate-spin')} />
-            </button>
-
+            {/* 정상 상태의 새로고침은 전역 대시보드 헤더가 담당. 차트 카드 내부의 재시도는
+                staleWarning 인라인 영역과 fatalError 화면에만 노출 (중복 affordance 제거). */}
             <div className="flex rounded-md border border-border overflow-hidden text-xs self-start sm:self-auto">
               <button
                 onClick={() => setMode('profitRate')}
@@ -262,7 +252,8 @@ export function PerformanceChart({ initialChartData }: PerformanceChartProps) {
           </div>
         ) : (
           <>
-            {/* SWR revalidate 실패했지만 fallback/캐시 데이터로 차트는 그대로 표시 — 사용자가 빈 화면을 보지 않게. */}
+            {/* SWR revalidate 실패했지만 fallback/캐시 데이터로 차트는 그대로 표시 — 사용자가 빈 화면을 보지 않게.
+                재시도 버튼은 여기에서만 노출 (정상 상태엔 전역 새로고침으로 충분). */}
             {staleWarning && (
               <div className="flex items-center gap-1.5 mb-2 text-[11px] text-muted-foreground">
                 <AlertCircle className="h-3 w-3 text-loss/70 shrink-0" />
@@ -271,6 +262,15 @@ export function PerformanceChart({ initialChartData }: PerformanceChartProps) {
                     ? '최신 데이터를 가져오지 못해 마지막 캐시를 표시 중입니다.'
                     : 'Showing last cached data — failed to fetch latest.'}
                 </span>
+                <button
+                  type="button"
+                  onClick={() => mutate()}
+                  disabled={isValidating}
+                  className="inline-flex items-center gap-0.5 ml-1 font-semibold text-primary hover:underline disabled:opacity-50"
+                >
+                  <RotateCcw className={cn('w-2.5 h-2.5', isValidating && 'animate-spin')} />
+                  {language === 'ko' ? '다시 시도' : 'Retry'}
+                </button>
               </div>
             )}
             {periodChange !== null && data.length >= 2 && (
