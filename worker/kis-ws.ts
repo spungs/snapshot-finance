@@ -27,7 +27,13 @@ import { prisma } from '@/lib/prisma'
 const _origLog = console.log.bind(console)
 const _origWarn = console.warn.bind(console)
 const _origError = console.error.bind(console)
-const tsPrefix = () => `[${new Date().toLocaleTimeString('ko-KR', { hour12: false })}]`
+const tsPrefix = () => {
+    const d = new Date()
+    const hh = String(d.getHours()).padStart(2, '0')
+    const mm = String(d.getMinutes()).padStart(2, '0')
+    const ss = String(d.getSeconds()).padStart(2, '0')
+    return `[${hh}:${mm}:${ss}]`
+}
 console.log = (...args: unknown[]) => _origLog(tsPrefix(), ...args)
 console.warn = (...args: unknown[]) => _origWarn(tsPrefix(), ...args)
 console.error = (...args: unknown[]) => _origError(tsPrefix(), ...args)
@@ -257,18 +263,16 @@ async function pushTick(t: ParsedTick) {
         ts: Date.now(),
     }
 
-    // Realtime broadcast (env 없으면 skip)
+    // Realtime broadcast (env 없으면 skip).
+    // 워커는 단발성 broadcast 만 보내므로 httpSend() 로 REST 명시 (send() 의 fallback 경고 회피).
+    // httpSend 는 channel.subscribe() 필요 없음 — REST 호출만.
     if (supabase) {
-        const channelName = `stock:${t.market}:${t.code}`
         try {
-            const ch = supabase.channel(channelName)
-            await ch.subscribe()
+            const ch = supabase.channel(`stock:${t.market}:${t.code}`)
             await ch.send({ type: 'broadcast', event: 'tick', payload })
-            // 채널 reuse 하려면 유지가 좋으나 broadcast 만 보내고 즉시 unsubscribe 도 OK
-            // 단순화: 매 tick 마다 subscribe/send/unsubscribe 는 비싸므로 cache 한다
-            channelCache.set(channelName, ch)
+            tickStats.broadcast++
         } catch (e) {
-            console.warn(`[push] supabase ${channelName} failed:`, (e as Error).message)
+            console.warn(`[push] supabase ${t.code} failed:`, (e as Error).message)
         }
     }
 
@@ -292,8 +296,14 @@ async function pushTick(t: ParsedTick) {
     }
 }
 
-// 종목별 channel 캐시 — 재사용해 매 tick subscribe overhead 회피
-const channelCache = new Map<string, ReturnType<NonNullable<typeof supabase>['channel']>>()
+// tick 통계 — 1분마다 출력해 동작 가시화
+const tickStats = { received: 0, broadcast: 0 }
+setInterval(() => {
+    if (tickStats.received === 0 && tickStats.broadcast === 0) return
+    console.log(`[stats] tick=${tickStats.received} broadcast=${tickStats.broadcast} (지난 1분)`)
+    tickStats.received = 0
+    tickStats.broadcast = 0
+}, 60_000)
 
 // ---------------------------------------------------------------------------
 // WebSocket 세션
@@ -311,7 +321,8 @@ class KisSession {
         // 장 외 시간이면 connect 안 함 — 5분 간격으로 재체크
         if (!anyMarketOpen()) {
             const p = nowInKstParts()
-            const nextAt = new Date(Date.now() + 5 * 60_000).toLocaleTimeString('ko-KR', { hour12: false })
+            const next = new Date(Date.now() + 5 * 60_000)
+            const nextAt = `${String(next.getHours()).padStart(2, '0')}:${String(next.getMinutes()).padStart(2, '0')}:${String(next.getSeconds()).padStart(2, '0')}`
             console.log(
                 `[kis-ws] 장 외 시간 — KST ${String(p.hour).padStart(2, '0')}:${String(p.minute).padStart(2, '0')} (weekday=${p.weekday}), KR_open=${isMarketOpen('KR')} US_open=${isMarketOpen('US')}, 다음 체크 ${nextAt}`
             )
@@ -345,7 +356,8 @@ class KisSession {
             // 장 외 시간 자동 전환 체크
             this.marketCheckHandle = setInterval(() => {
                 if (!anyMarketOpen()) {
-                    const nextAt = new Date(Date.now() + 5 * 60_000).toLocaleTimeString('ko-KR', { hour12: false })
+                    const next = new Date(Date.now() + 5 * 60_000)
+            const nextAt = `${String(next.getHours()).padStart(2, '0')}:${String(next.getMinutes()).padStart(2, '0')}:${String(next.getSeconds()).padStart(2, '0')}`
                     console.log(`[kis-ws] 장 마감 감지 — 연결 종료, 다음 체크 ${nextAt}`)
                     this.shutdownConnection(false)
                     this.marketCheckHandle = setTimeout(() => this.start(), 5 * 60_000)
@@ -389,6 +401,7 @@ class KisSession {
         if (trId === 'H0STCNT0') tick = parseKrTick(payload)
         else if (trId === 'HDFSCNT0') tick = parseUsTick(payload)
         if (!tick) return
+        tickStats.received++
         // push (fire and forget)
         void pushTick(tick)
     }
@@ -465,6 +478,7 @@ class KisSession {
 // ---------------------------------------------------------------------------
 // Bootstrap
 // ---------------------------------------------------------------------------
+console.log(`[kis-ws] mode=${MODE} ws=${KIS_WS_URL[MODE]}`)
 const session = new KisSession()
 void session.start()
 
