@@ -18,7 +18,7 @@ import { formatCurrency } from '@/lib/utils/formatters'
 import { formatDate } from '@/lib/utils/formatters'
 import { useLanguage } from '@/lib/i18n/context'
 import { useCurrency } from '@/lib/currency/context'
-import { TrendingUp, TrendingDown, BarChart2 } from 'lucide-react'
+import { TrendingUp, TrendingDown, BarChart2, RotateCcw, AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -125,7 +125,7 @@ export function PerformanceChart({ initialChartData }: PerformanceChartProps) {
 
   // SWR — 서버에서 prefetch 된 initialChartData 를 fallback 으로 사용해 첫 페인트
   // 부터 차트가 보인다. 이후엔 stale-while-revalidate 패턴으로 백그라운드 재검증.
-  const { data: allData, error, isLoading } = useSWR<ChartDataPoint[]>(
+  const { data: allData, error, isLoading, isValidating, mutate } = useSWR<ChartDataPoint[]>(
     '/api/snapshots/chart-data',
     {
       fallbackData: initialChartData,
@@ -141,7 +141,11 @@ export function PerformanceChart({ initialChartData }: PerformanceChartProps) {
   }, [allData, period])
 
   const loading = isLoading && !allData
-  const errorMsg = error ? (language === 'ko' ? '차트 데이터를 불러오지 못했습니다.' : 'Failed to load chart data.') : null
+  // 에러는 데이터가 전혀 없을 때만 전체 화면을 차지. 캐시/SSR fallback 이 있으면 인라인 경고로 격하.
+  const hasFallback = (allData?.length ?? 0) > 0
+  const fatalError = !!error && !hasFallback
+  const staleWarning = !!error && hasFallback
+  const errorMsg = fatalError ? (language === 'ko' ? '차트 데이터를 불러오지 못했습니다.' : 'Failed to load chart data.') : null
 
   const firstPoint = data[0]
   const lastPoint = data[data.length - 1]
@@ -177,6 +181,18 @@ export function PerformanceChart({ initialChartData }: PerformanceChartProps) {
           </div>
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            {/* 수동 재검증 — Vercel cold start / 세션 만료 등으로 차트 데이터 fetch 가 실패했을 때 사용자가 직접 재시도. */}
+            <button
+              type="button"
+              onClick={() => mutate()}
+              disabled={isValidating}
+              aria-label={language === 'ko' ? '차트 새로고침' : 'Refresh chart'}
+              title={language === 'ko' ? '차트 새로고침' : 'Refresh chart'}
+              className="self-start sm:self-auto inline-flex items-center justify-center w-7 h-7 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-accent-soft transition-colors disabled:opacity-50"
+            >
+              <RotateCcw className={cn('w-3.5 h-3.5', isValidating && 'animate-spin')} />
+            </button>
+
             <div className="flex rounded-md border border-border overflow-hidden text-xs self-start sm:self-auto">
               <button
                 onClick={() => setMode('profitRate')}
@@ -226,8 +242,18 @@ export function PerformanceChart({ initialChartData }: PerformanceChartProps) {
         {loading ? (
           <Skeleton className="h-[240px] w-full rounded-md" />
         ) : errorMsg ? (
-          <div className="h-[240px] flex items-center justify-center text-muted-foreground text-sm">
-            {errorMsg}
+          <div className="h-[240px] flex flex-col items-center justify-center gap-2 text-muted-foreground text-sm">
+            <AlertCircle className="h-6 w-6 opacity-50" />
+            <p>{errorMsg}</p>
+            <button
+              type="button"
+              onClick={() => mutate()}
+              disabled={isValidating}
+              className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline disabled:opacity-50"
+            >
+              <RotateCcw className={cn('w-3 h-3', isValidating && 'animate-spin')} />
+              {language === 'ko' ? '다시 시도' : 'Retry'}
+            </button>
           </div>
         ) : isEmpty ? (
           <div className="h-[240px] flex flex-col items-center justify-center gap-2 text-muted-foreground text-sm">
@@ -236,6 +262,17 @@ export function PerformanceChart({ initialChartData }: PerformanceChartProps) {
           </div>
         ) : (
           <>
+            {/* SWR revalidate 실패했지만 fallback/캐시 데이터로 차트는 그대로 표시 — 사용자가 빈 화면을 보지 않게. */}
+            {staleWarning && (
+              <div className="flex items-center gap-1.5 mb-2 text-[11px] text-muted-foreground">
+                <AlertCircle className="h-3 w-3 text-loss/70 shrink-0" />
+                <span>
+                  {language === 'ko'
+                    ? '최신 데이터를 가져오지 못해 마지막 캐시를 표시 중입니다.'
+                    : 'Showing last cached data — failed to fetch latest.'}
+                </span>
+              </div>
+            )}
             {periodChange !== null && data.length >= 2 && (
               <div className="flex items-center gap-4 mb-3 text-xs text-muted-foreground">
                 <span>
