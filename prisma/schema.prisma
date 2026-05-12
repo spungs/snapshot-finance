@@ -24,6 +24,9 @@ model User {
   brokerageAccounts     BrokerageAccount[]
   holdings              Holding[]
   snapshots             PortfolioSnapshot[]
+  subscription          Subscription?
+  payments              Payment[]
+  usageCounters         UsageCounter[]
   deletedAt             DateTime?
 
   @@map("users")
@@ -201,5 +204,65 @@ model CronLog {
 
   @@index([createdAt])
   @@map("cron_logs")
+}
+
+// 유료 구독 — 사용자당 1개 (FREE/PRO)
+model Subscription {
+  id                 String    @id @default(cuid())
+  userId             String    @unique
+  plan               String    @default("FREE") // 'FREE' | 'PRO'
+  status             String    @default("ACTIVE") // 'ACTIVE' | 'CANCELED' | 'EXPIRED' | 'PAST_DUE'
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  billingKey         String?
+  pgProvider         String? // 'PORTONE' | 'TOSS' 등
+  canceledAt         DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payments           Payment[]
+
+  @@index([status, currentPeriodEnd]) // 갱신 7일 전 알림 cron 용
+  @@map("subscriptions")
+}
+
+// 결제 영수증 — PG 트랜잭션 단위, pgTxId 가 멱등키
+model Payment {
+  id             String        @id @default(cuid())
+  userId         String
+  subscriptionId String?
+  amount         Decimal       @db.Decimal(15, 2)
+  currency       String        @default("KRW")
+  status         String // 'SUCCEEDED' | 'FAILED' | 'REFUNDED' | 'PENDING'
+  pgTxId         String?       @unique // PG 트랜잭션 ID, 멱등키
+  pgProvider     String?
+  paidAt         DateTime?
+  refundedAt     DateTime?
+  failureReason  String?       @db.Text
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscription   Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+
+  @@index([userId, paidAt(sort: Desc)])
+  @@index([subscriptionId])
+  @@map("payments")
+}
+
+// 사용량 카운터 — 일/월 단위 quota 추적
+model UsageCounter {
+  id          String   @id @default(cuid())
+  userId      String
+  kind        String // 'AI_DAILY' | 'SIMULATION_MONTHLY' 등
+  count       Int      @default(0)
+  periodStart DateTime
+  periodEnd   DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, kind, periodStart])
+  @@index([userId, kind])
+  @@map("usage_counters")
 }
 
