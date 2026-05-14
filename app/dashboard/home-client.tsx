@@ -14,6 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Wallet } from 'lucide-react'
+import { findPreviousSnapshot, calcChange, type ChangeResult } from '@/lib/utils/snapshot-comparison'
 
 interface Holding {
     id: string
@@ -106,6 +107,24 @@ export function HomeClient({ summary, holdings, recentSnapshots, initialChartDat
     const diffFromLatest = latestSnap ? summary.totalProfitRate - latestRate : 0
     const hasChart = recentSnapshots.length >= 2
 
+    // 일간/주간 변동 계산
+    // 현재 상태(실시간 잔고)를 SnapshotPoint로 래핑 후 chartData의 과거 스냅샷과 비교
+    const today = new Date()
+    const currentPoint = {
+        date: today,
+        totalValue: summary.totalValue,
+        profitRate: summary.totalProfitRate,
+    }
+    const dailyChange: ChangeResult | null = calcChange(
+        currentPoint,
+        findPreviousSnapshot(initialChartData, today, 1),
+    )
+    const weeklyChange: ChangeResult | null = calcChange(
+        currentPoint,
+        findPreviousSnapshot(initialChartData, today, 7),
+    )
+    const hasChangeData = dailyChange !== null || weeklyChange !== null
+
     // USD 종목 한 개라도 보유 시 환율 footnote 노출 — 의미 없으면(전부 KRW) 노이즈가 되므로 숨김
     const hasUsdHolding = holdings.some(h => h.currency === 'USD')
 
@@ -163,6 +182,49 @@ export function HomeClient({ summary, holdings, recentSnapshots, initialChartDat
             {hasChart && (
                 <section className="mx-4 mb-4">
                     <PerformanceChart initialChartData={initialChartData} />
+                </section>
+            )}
+
+            {/* 일간/주간 변동 — 토스증권 스타일: 전일·1주 전 대비 수익률·평가금 변동 */}
+            {hasChangeData && (
+                <section className="mx-4 mb-4 grid grid-cols-2 gap-2">
+                    {[
+                        { label: language === 'ko' ? '일간 변동' : 'Daily', change: dailyChange },
+                        { label: language === 'ko' ? '주간 변동' : 'Weekly', change: weeklyChange },
+                    ].map(({ label, change }) => {
+                        const isUp = change ? change.profitRateDiff >= 0 : true
+                        const valueIsUp = change ? change.totalValueDiff >= 0 : true
+                        const displayValueDiff = change
+                            ? convert(Math.abs(change.totalValueDiff))
+                            : 0
+                        return (
+                            <div key={label} className="p-4 bg-card border border-border">
+                                <div className="text-[10px] font-bold text-muted-foreground tracking-[1px] uppercase mb-1.5">
+                                    {label}
+                                </div>
+                                {change ? (
+                                    <>
+                                        <div className={cn(
+                                            'numeric font-bold text-[15px] tracking-tight inline-flex items-center gap-0.5',
+                                            isUp ? 'text-profit' : 'text-loss',
+                                        )}>
+                                            <span aria-hidden>{isUp ? '▲' : '▼'}</span>
+                                            <span>{Math.abs(change.profitRateDiff).toFixed(2)}%p</span>
+                                        </div>
+                                        <div className={cn(
+                                            'text-[11px] font-semibold numeric mt-0.5',
+                                            valueIsUp ? 'text-profit' : 'text-loss',
+                                        )}>
+                                            {valueIsUp ? '+' : '−'}
+                                            {formatCurrency(displayValueDiff, baseCurrency, { compact: true })}
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="text-[15px] font-bold text-muted-foreground">—</div>
+                                )}
+                            </div>
+                        )
+                    })}
                 </section>
             )}
 
