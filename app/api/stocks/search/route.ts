@@ -10,6 +10,42 @@ import { cacheGet, cacheSet } from '@/lib/cache'
 const SEARCH_CACHE_TTL_SECONDS = 60 * 60 * 6 // 6 hours
 const searchCacheKey = (query: string) => `stocks:search:${query.toLowerCase()}`
 
+// Yahoo/Finnhub 결과에는 한글명이 없으므로, KIS 마스터 DB에서 ticker 기준으로 보완.
+// US 종목 한정 (NASD/NYSE/AMEX) — 단일 IN 쿼리로 배치 처리.
+const US_MASTER_MARKETS = ['NASD', 'NYSE', 'AMEX']
+
+async function enrichWithKisMaster(
+    results: Array<{ symbol: string; nameKo?: string | null; nameEn?: string | null; [key: string]: unknown }>
+): Promise<typeof results> {
+    // nameKo가 이미 있는 항목은 스킵 (KIS DB 경로로 온 결과)
+    const missingSymbols = results
+        .filter(r => !r.nameKo)
+        .map(r => r.symbol)
+
+    if (missingSymbols.length === 0) return results
+
+    const masters = await prisma.kisStockMaster.findMany({
+        where: {
+            stockCode: { in: missingSymbols },
+            market: { in: US_MASTER_MARKETS },
+        },
+        select: { stockCode: true, stockName: true, engName: true },
+    })
+
+    const masterMap = new Map(masters.map(m => [m.stockCode, m]))
+
+    return results.map(r => {
+        if (r.nameKo) return r
+        const master = masterMap.get(r.symbol)
+        if (!master) return r
+        return {
+            ...r,
+            nameKo: master.stockName || null,
+            nameEn: master.engName || (r.name as string) || null,
+        }
+    })
+}
+
 export async function GET(request: NextRequest) {
     // Rate limiting
     const ip = getIP(request)
@@ -168,11 +204,14 @@ export async function GET(request: NextRequest) {
         // 2. English Search - Use Yahoo Finance
         try {
             // Check Redis cache first
+            // 캐시된 결과도 KIS 마스터로 보완 — 캐시 기록 당시 nameKo 가 없었던 경우 대비.
+            // enrichWithKisMaster 가 nameKo 있는 항목은 스킵하므로 이중 DB 조회 없음.
             const cacheKey = searchCacheKey(query)
             const cached = await cacheGet<any[]>(cacheKey)
 
             if (cached) {
-                return NextResponse.json({ success: true, data: cached, source: 'cache' })
+                const enriched = await enrichWithKisMaster(cached)
+                return NextResponse.json({ success: true, data: enriched, source: 'cache' })
             }
 
             // Use singleton instance to share session/cookies and avoid rate limits
@@ -181,7 +220,7 @@ export async function GET(request: NextRequest) {
             // Yahoo 가 같은 ticker 의 다른 listing (ex: HIMS NYSE + HIMS NMS) 을 별개 quote 로
             // 반환하는 경우가 있어 symbol+market 으로 dedup. 첫 등장만 유지.
             const seenKeys = new Set<string>()
-            const formattedResults = results.quotes
+            const rawResults = results.quotes
                 .filter((quote: any) =>
                     quote.quoteType === 'EQUITY' ||
                     quote.quoteType === 'ETF' ||
@@ -201,6 +240,8 @@ export async function GET(request: NextRequest) {
                     return true
                 })
 
+            // KIS 마스터에서 한글명 보완 후 캐시 (한글명 포함 상태로 저장)
+            const formattedResults = await enrichWithKisMaster(rawResults)
             await cacheSet(cacheKey, formattedResults, SEARCH_CACHE_TTL_SECONDS)
 
             return NextResponse.json({ success: true, data: formattedResults })
@@ -229,7 +270,7 @@ export async function GET(request: NextRequest) {
 
                 // Finnhub returns: { count, result: [{ description, displaySymbol, symbol, type }] }
                 const finnhubSeen = new Set<string>()
-                const formattedResults = (data.result || [])
+                const rawFinnhubResults = (data.result || [])
                     .filter((item: any) =>
                         item.type === 'Common Stock' ||
                         item.type === 'ETP' || // ETF/ETN
@@ -251,7 +292,8 @@ export async function GET(request: NextRequest) {
                         return true
                     })
 
-                // Cache Finnhub results too
+                // KIS 마스터에서 한글명 보완 후 캐시
+                const formattedResults = await enrichWithKisMaster(rawFinnhubResults)
                 await cacheSet(searchCacheKey(query), formattedResults, SEARCH_CACHE_TTL_SECONDS)
 
                 console.log(`Finnhub Search Success: ${formattedResults.length} results`)
