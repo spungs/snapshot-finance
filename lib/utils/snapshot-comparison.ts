@@ -65,11 +65,14 @@ export function findPreviousSnapshot(
   const idealDate = new Date(targetDate)
   idealDate.setDate(idealDate.getDate() - daysAgo)
 
-  // targetDate 이전 스냅샷만 후보로
-  // (currentSnapshot과 동일 날짜는 제외)
+  // targetDate보다 UTC day 기준으로 이전 스냅샷만 후보로.
+  // ms 단위 비교(d < targetDate)를 사용하면 오늘 생성된 스냅샷
+  // (예: cron이 KST 17:00 실행 → UTC 08:00 저장)도 candidates에
+  // 포함되어 "오늘 실시간 vs 오늘 스냅샷" 비교가 발생한다.
+  // daysDiff < 0 은 UTC day 기준 strictly before 임을 의미한다.
   const candidates = snapshots.filter((s) => {
     const d = toDate(s.date)
-    return d < targetDate
+    return daysDiff(d, targetDate) < 0
   })
 
   if (candidates.length === 0) return null

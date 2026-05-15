@@ -35,6 +35,20 @@ export function HomeSkeleton() {
                 <Bar className="h-[180px] w-full" />
             </section>
 
+            {/* 일간/주간 변동 — HomeClient 와 동일한 2열 레이아웃 */}
+            <section className="mx-4 mb-4 grid grid-cols-2 gap-2">
+                <div className="p-4 bg-card border border-border">
+                    <Bar className="h-2.5 w-14 mb-2" />
+                    <Bar className="h-5 w-20 mb-1" />
+                    <Bar className="h-3 w-16" />
+                </div>
+                <div className="p-4 bg-card border border-border">
+                    <Bar className="h-2.5 w-14 mb-2" />
+                    <Bar className="h-5 w-20 mb-1" />
+                    <Bar className="h-3 w-16" />
+                </div>
+            </section>
+
             {/* Two-up — 매입금 / 평가손익금 */}
             <section className="mx-4 mb-2 grid grid-cols-2 gap-2">
                 <div className="p-4 bg-card border border-border">
