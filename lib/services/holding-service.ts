@@ -158,6 +158,7 @@ const holdingServiceInternal = {
                     stockId: holding.stockId,
                     stockCode: holding.stock.stockCode,
                     stockName: holding.stock.stockName,
+                    engName: holding.stock.engName ?? null,
                     market: holding.stock.market,
                     accountId: holding.accountId,
                     accountName: holding.account?.name ?? null,

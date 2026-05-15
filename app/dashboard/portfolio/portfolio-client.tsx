@@ -49,6 +49,7 @@ interface Holding {
     stockId: string
     stockCode: string
     stockName: string
+    engName?: string | null
     market: string
     quantity: number
     averagePrice: number
@@ -373,6 +374,7 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                 stockId,
                 stockCode: first.stockCode,
                 stockName: first.stockName,
+                engName: first.engName,
                 market: first.market,
                 quantity: totalQty.toNumber(),
                 averagePrice: avgPrice.toNumber(),
@@ -589,8 +591,15 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
             >
                 {/* Row 1: 종목명 (full) + overflow menu */}
                 <div className="flex items-start justify-between gap-2">
-                    <div className="font-serif text-[15px] font-semibold text-foreground leading-snug break-keep flex-1 min-w-0">
-                        {h.stockName}
+                    <div className="flex-1 min-w-0">
+                        <div className="font-serif text-[15px] font-semibold text-foreground leading-snug break-keep">
+                            {h.stockName}
+                        </div>
+                        {h.engName && h.engName !== h.stockName && (
+                            <div className="text-[11px] text-muted-foreground mt-0.5 truncate">
+                                {h.engName}
+                            </div>
+                        )}
                     </div>
                     {!isEditing && !isVirtual && (
                         <DropdownMenu>
