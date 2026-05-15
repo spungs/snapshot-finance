@@ -668,7 +668,7 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                 {/* Edit row */}
                 {isEditing ? (
                     <div className="mt-3 pt-3 border-t border-border space-y-2">
-                        <div className={cn('grid gap-2', h.currency === 'USD' ? 'grid-cols-3' : 'grid-cols-2')}>
+                        <div className="grid grid-cols-2 gap-2">
                             <FormattedNumberInput
                                 label={t('quantity')}
                                 suffix={language === 'ko' ? '주' : 'shr'}
@@ -683,7 +683,9 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                                 onChange={v => setEditValues(p => ({ ...p, averagePrice: v }))}
                                 disabled={savingRow !== null}
                             />
-                            {h.currency === 'USD' && (
+                        </div>
+                        {h.currency === 'USD' && (
+                            <div>
                                 <FormattedNumberInput
                                     label={language === 'ko' ? '매입환율' : 'Buy rate'}
                                     prefix="₩"
@@ -691,8 +693,8 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                                     onChange={v => setEditValues(p => ({ ...p, purchaseRate: v }))}
                                     disabled={savingRow !== null}
                                 />
-                            )}
-                        </div>
+                            </div>
+                        )}
                         <div className="flex justify-end gap-2">
                             <button
                                 type="button"
@@ -1078,7 +1080,7 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
             )}
 
             {/* Holdings list */}
-            <div className="px-4 pb-4 space-y-1.5">
+            <div className="px-4 pb-28 space-y-1.5">
                 {holdingsWithWeight.length === 0 ? (
                     <div className="py-12 text-center">
                         <div className="text-sm text-muted-foreground">
