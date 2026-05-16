@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { PerformanceChart } from '@/components/dashboard/performance-chart'
 import { formatCurrency, formatDate } from '@/lib/utils/formatters'
@@ -8,12 +9,14 @@ import { useLanguage } from '@/lib/i18n/context'
 import { useCurrency } from '@/lib/currency/context'
 import { FALLBACK_USD_RATE } from '@/lib/api/exchange-rate'
 import { useLocalStorage } from '@/lib/hooks/use-local-storage'
+import { useStockTicks } from '@/lib/hooks/use-stock-ticks'
+import type { StockTick } from '@/lib/hooks/use-stock-tick'
 import { normalizeMarket, type Market } from '@/lib/utils/market-hours'
 import { PriceUpdatedFootnote } from '@/components/dashboard/price-updated-footnote'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Wallet } from 'lucide-react'
+import { Wallet, Loader2 } from 'lucide-react'
 import { findPreviousSnapshot, calcChange, type ChangeResult } from '@/lib/utils/snapshot-comparison'
 
 interface Holding {
@@ -22,7 +25,6 @@ interface Holding {
     stockName: string
     market: string
     currency: string
-    // 평가/원가/손익 원자 필드
     quantity: number
     currentPrice: number
     totalCost: number
@@ -85,35 +87,127 @@ function UpDown({ value, big = false }: { value: number; big?: boolean }) {
     )
 }
 
-export function HomeClient({ summary, holdings, recentSnapshots, initialChartData, todayLabel }: HomeClientProps) {
+export function HomeClient({
+    summary: ssrSummary,
+    holdings: ssrHoldings,
+    recentSnapshots,
+    initialChartData,
+    todayLabel,
+}: HomeClientProps) {
     const { t, language } = useLanguage()
     const { baseCurrency } = useCurrency()
 
-    // 홈은 추이가 메인이라 실시간 tick 갱신을 의도적으로 하지 않는다.
-    // 새로고침(router.refresh / 페이지 진입) 시점의 SSR 값으로 고정 — 잦은 깜빡임 방지.
-    // 실시간 변동은 보유 페이지에서 확인.
-    const exRate = summary.exchangeRate || FALLBACK_USD_RATE
+    // 홈 = "캐시값 즉시 표시 → 모든 종목 첫 tick 일괄 commit → 그 후 고정" (NH 패턴).
+    // 보유 페이지의 매 tick 깜빡임은 의도적으로 피한다. 부분 도착(3초 안에 일부만) 시
+    // 받은 만큼만 일괄 commit, 못 받은 종목은 SSR 값 + footnote 의 stale 안내로 처리.
+    const tickSubs = useMemo(
+        () => ssrHoldings.map((h) => {
+            const m = h.market?.toUpperCase()
+            const market: 'KR' | 'US' | null =
+                m === 'KOSPI' || m === 'KOSDAQ' || m === 'KS' || m === 'KQ' ? 'KR'
+                    : m === 'US' || m === 'NASD' || m === 'NAS' || m === 'NYSE' || m === 'NYS' || m === 'AMEX' || m === 'AMS' ? 'US'
+                        : null
+            return market ? { code: h.stockCode, market } : null
+        }).filter((x): x is { code: string; market: 'KR' | 'US' } => x !== null),
+        [ssrHoldings],
+    )
+
+    // committedTicks === null 동안엔 SSR 값 표시 + 스피너 노출.
+    // null 아닌 값으로 전이되는 순간 1회 일괄 commit. 그 후 변경 없음.
+    const [committedTicks, setCommittedTicks] = useState<ReadonlyMap<string, StockTick> | null>(null)
+    const activeSubs = useMemo(
+        () => (committedTicks !== null ? [] : tickSubs),
+        [committedTicks, tickSubs],
+    )
+    const ticks = useStockTicks(activeSubs)
+
+    // timeout closure 안에서 ticks 의 최신 스냅샷을 안전하게 읽기 위한 ref.
+    // setState 의 함수형 updater 만으로는 외부 변수(ticks)에 접근 못 함.
+    const ticksRef = useRef(ticks)
+    ticksRef.current = ticks
+
+    // 모든 보유 종목이 첫 tick 을 받으면 즉시 commit. 종목 0개면 빈 commit 으로 스피너 종료.
+    useEffect(() => {
+        if (committedTicks !== null) return
+        if (tickSubs.length === 0) {
+            setCommittedTicks(new Map())
+            return
+        }
+        if (tickSubs.every((s) => ticks.has(s.code))) {
+            setCommittedTicks(new Map(ticks))
+        }
+    }, [ticks, tickSubs, committedTicks])
+
+    // 3초 timeout — 일부 종목이 안 오면 그 시점의 ticks 로 부분 commit.
+    useEffect(() => {
+        if (committedTicks !== null || tickSubs.length === 0) return
+        const timer = setTimeout(() => {
+            setCommittedTicks((prev) => prev ?? new Map(ticksRef.current))
+        }, 3000)
+        return () => clearTimeout(timer)
+    }, [committedTicks, tickSubs.length])
+
+    const isRefreshing = tickSubs.length > 0 && committedTicks === null
+
+    // tick 으로 보강한 라이브 holdings. commit 전엔 SSR 그대로.
+    const liveHoldings = useMemo(() => {
+        if (!committedTicks || committedTicks.size === 0) return ssrHoldings
+        return ssrHoldings.map((h) => {
+            const t = committedTicks.get(h.stockCode)
+            if (!t || t.price === h.currentPrice) return h
+            const newValue = h.quantity * t.price
+            return {
+                ...h,
+                currentPrice: t.price,
+                currentValue: newValue,
+                profit: newValue - h.totalCost,
+                profitRate: h.totalCost > 0 ? ((newValue - h.totalCost) / h.totalCost) * 100 : 0,
+                priceUpdatedAt: new Date(t.ts).toISOString(),
+            }
+        })
+    }, [ssrHoldings, committedTicks])
+
+    // 라이브 summary — 보유탭과 동일 공식.
+    // USD 종목: 매입 시점 환율을 cost 에, 현재 환율을 value 에 적용. totalValue 는 주식+예수금.
+    const liveSummary = useMemo(() => {
+        if (!committedTicks || committedTicks.size === 0) return ssrSummary
+        const rate = ssrSummary.exchangeRate || FALLBACK_USD_RATE
+        let totalCost = 0
+        let totalStockValue = 0
+        for (const h of liveHoldings) {
+            const buyRate = h.currency === 'USD'
+                ? (h.purchaseRate && h.purchaseRate !== 1 ? h.purchaseRate : rate)
+                : 1
+            totalCost += h.currency === 'USD' ? h.totalCost * buyRate : h.totalCost
+            totalStockValue += h.currency === 'USD' ? h.currentValue * rate : h.currentValue
+        }
+        const totalProfit = totalStockValue - totalCost
+        const totalProfitRate = totalCost > 0 ? (totalProfit / totalCost) * 100 : 0
+        const totalValue = totalStockValue + ssrSummary.cashBalance
+        return { ...ssrSummary, totalCost, totalValue, totalProfit, totalProfitRate }
+    }, [liveHoldings, ssrSummary, committedTicks])
+
+    const exRate = liveSummary.exchangeRate || FALLBACK_USD_RATE
 
     const convert = (v: number) => baseCurrency === 'KRW' ? v : v / exRate
-    const isProfit = summary.totalProfit >= 0
+    const isProfit = liveSummary.totalProfit >= 0
 
-    const displayValue = convert(summary.totalValue)
-    const displayCost = convert(summary.totalCost)
-    const displayProfit = convert(summary.totalProfit)
-    const displayCash = convert(summary.cashBalance)
+    const displayValue = convert(liveSummary.totalValue)
+    const displayCost = convert(liveSummary.totalCost)
+    const displayProfit = convert(liveSummary.totalProfit)
+    const displayCash = convert(liveSummary.cashBalance)
 
     const latestSnap = recentSnapshots[0]
     const latestRate = latestSnap ? Number(latestSnap.profitRate) : 0
-    const diffFromLatest = latestSnap ? summary.totalProfitRate - latestRate : 0
+    const diffFromLatest = latestSnap ? liveSummary.totalProfitRate - latestRate : 0
     const hasChart = recentSnapshots.length >= 2
 
-    // 일간/주간 변동 계산
-    // 현재 상태(실시간 잔고)를 SnapshotPoint로 래핑 후 chartData의 과거 스냅샷과 비교
+    // 일간/주간 변동 — 현재 잔고를 한 점으로 래핑해 chartData 의 과거 스냅샷과 비교.
     const today = new Date()
     const currentPoint = {
         date: today,
-        totalValue: summary.totalValue,
-        profitRate: summary.totalProfitRate,
+        totalValue: liveSummary.totalValue,
+        profitRate: liveSummary.totalProfitRate,
     }
     const dailyChange: ChangeResult | null = calcChange(
         currentPoint,
@@ -125,24 +219,24 @@ export function HomeClient({ summary, holdings, recentSnapshots, initialChartDat
     )
     const hasChangeData = dailyChange !== null || weeklyChange !== null
 
-    // USD 종목 한 개라도 보유 시 환율 footnote 노출 — 의미 없으면(전부 KRW) 노이즈가 되므로 숨김
-    const hasUsdHolding = holdings.some(h => h.currency === 'USD')
+    // USD 종목 한 개라도 보유 시 환율 footnote 노출 — 의미 없으면 노이즈가 되므로 숨김.
+    const hasUsdHolding = liveHoldings.some(h => h.currency === 'USD')
 
-    // 이자 환산 원금 — 사용자가 설정한 연 이자율(기본 3%)을 기준으로 "이 수익을 예금 이자로 받으려면 얼마가 필요한가" 환산.
-    // 동기부여 시그널 (예: "내 수익 = 5억 정기예금 1년치 이자"). localStorage 영속.
+    // 이자 환산 원금 — 사용자가 설정한 연 이자율(기본 3%)을 기준으로
+    // "이 수익을 예금 이자로 받으려면 얼마가 필요한가" 환산. localStorage 영속.
     const [interestRate, setInterestRate] = useLocalStorage('interestRate', 3)
     const safeRate = Math.max(0.01, interestRate)
     const interestPrincipal = displayProfit / (safeRate / 100)
 
     // Top returns — 평가수익률 상위 4개 (큰 순)
-    const topReturns = [...holdings]
+    const topReturns = [...liveHoldings]
         .sort((a, b) => b.profitRate - a.profitRate)
         .slice(0, 4)
 
-    // 가격 신선도 footnote 용 — 전체 종목 중 가장 오래된 priceUpdatedAt + 보유 시장 집합
+    // 가격 신선도 footnote — 전체 종목 중 가장 오래된 priceUpdatedAt 으로 stale 안내.
     let oldestPriceTime: string | null = null
     const marketSet = new Set<Market>()
-    for (const h of holdings) {
+    for (const h of liveHoldings) {
         if (h.priceUpdatedAt && (!oldestPriceTime || new Date(h.priceUpdatedAt) < new Date(oldestPriceTime))) {
             oldestPriceTime = h.priceUpdatedAt
         }
@@ -167,11 +261,18 @@ export function HomeClient({ summary, holdings, recentSnapshots, initialChartDat
                         </div>
                     )}
                 </div>
-                <div className="hero-serif text-[40px] sm:text-5xl text-foreground numeric">
-                    {formatCurrency(displayValue, baseCurrency)}
+                <div className="hero-serif text-[40px] sm:text-5xl text-foreground numeric flex items-center gap-2.5">
+                    <span>{formatCurrency(displayValue, baseCurrency)}</span>
+                    {isRefreshing && (
+                        <Loader2
+                            className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-muted-foreground/70 animate-spin shrink-0"
+                            strokeWidth={2}
+                            aria-label={language === 'ko' ? '실시간 가격 확인 중' : 'Checking live prices'}
+                        />
+                    )}
                 </div>
                 <div className="flex gap-2 items-center mt-2.5">
-                    <UpDown value={summary.totalProfitRate} big />
+                    <UpDown value={liveSummary.totalProfitRate} big />
                     <span className={cn('text-[13px] font-semibold numeric', isProfit ? 'text-profit' : 'text-loss')}>
                         {isProfit ? '+' : ''}{formatCurrency(displayProfit, baseCurrency)}
                     </span>
@@ -249,7 +350,7 @@ export function HomeClient({ summary, holdings, recentSnapshots, initialChartDat
                         {isProfit ? '+' : ''}{formatCurrency(displayProfit, baseCurrency, { compact: true })}
                     </div>
                     {/* 수익 발생 시 — "이 수익 = 연 N% 예금 X원 의 1년치 이자" 동기부여 시그널 */}
-                    {summary.totalProfit > 0 && (
+                    {liveSummary.totalProfit > 0 && (
                         <div className="mt-2 text-[11px] text-muted-foreground numeric flex items-baseline gap-1 flex-wrap">
                             <span aria-hidden>≈</span>
                             <Popover>
