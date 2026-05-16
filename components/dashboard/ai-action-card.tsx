@@ -40,6 +40,8 @@ export type ConfirmData =
           averagePrice: number
           currency: 'KRW' | 'USD'
           stockMarket?: string
+          // USD 종목 한정 — 사용자가 비우면 undefined → 서버가 현재 환율로 폴백.
+          purchaseRate?: number
       }
     | {
           type: 'update_holding'
@@ -182,11 +184,21 @@ function AddHoldingCard({
     const [averagePrice, setAveragePrice] = useState<string>(
         action.averagePrice != null ? String(action.averagePrice) : '',
     )
+    // 환율은 USD 종목 한정 — 빈 값이면 placeholder(현재 환율)로 폴백.
+    const [exchangeRate, setExchangeRate] = useState<string>('')
 
     const q = parsePositiveNumber(quantity)
     const ap = parsePositiveNumber(averagePrice)
     const currency = action.currency ?? 'KRW'
+    const customRate = parsePositiveNumber(exchangeRate)
+    const effectiveRate = customRate ?? action.exchangeRate
     const canSubmit = Boolean(accountId) && q != null && ap != null
+
+    // USD 종목일 때 사용자가 입력한 환율(또는 placeholder)로 매입금액(KRW)을 실시간 재계산.
+    const estimatedTotalKrw =
+        currency === 'USD' && q != null && ap != null && effectiveRate != null
+            ? new Decimal(q).times(ap).times(effectiveRate).toDecimalPlaces(0)
+            : null
 
     const officialName = action.stockOfficialName ?? action.stockName ?? ''
 
@@ -244,17 +256,37 @@ function AddHoldingCard({
                 </div>
             </Field>
 
-            {currency === 'USD' && action.exchangeRate != null && (
+            {currency === 'USD' && (
+                <Field label="환율">
+                    <div className="flex items-center gap-1.5">
+                        <Input
+                            type="number"
+                            inputMode="decimal"
+                            min={0}
+                            value={exchangeRate}
+                            onChange={e => setExchangeRate(e.target.value)}
+                            className="h-8 text-xs"
+                            placeholder={
+                                action.exchangeRate != null
+                                    ? `현재 ${formatNumber(action.exchangeRate, 0)}`
+                                    : '현재 환율'
+                            }
+                        />
+                        <span className="text-xs text-muted-foreground shrink-0">
+                            KRW/$
+                        </span>
+                    </div>
+                </Field>
+            )}
+
+            {estimatedTotalKrw != null && (
                 <p className="text-[11px] text-muted-foreground leading-snug">
-                    환율: {formatNumber(action.exchangeRate, 0)} KRW/$
-                    {action.estimatedTotalKrw != null && (
-                        <> · 매입금액 약 ₩{formatNumber(action.estimatedTotalKrw, 0)}</>
-                    )}
+                    매입금액 약 ₩{formatNumber(estimatedTotalKrw.toString(), 0)}
                 </p>
             )}
 
             <p className="text-[11px] text-muted-foreground leading-snug">
-                💡 이미 보유 중이면 가중평균 평단가로 합산됩니다.
+                이미 보유 중이면 가중평균 평단가로 합산됩니다.
             </p>
 
             <Actions
@@ -270,6 +302,8 @@ function AddHoldingCard({
                         averagePrice: ap!,
                         currency,
                         stockMarket: action.stockMarket,
+                        // USD 종목에서 사용자가 입력한 환율이 있을 때만 전송 — 미입력 시 서버가 현재 환율로 적용.
+                        purchaseRate: currency === 'USD' ? customRate : undefined,
                     })
                 }
                 onCancel={onCancel}

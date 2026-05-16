@@ -316,6 +316,8 @@ export function AiChat({ isAuthenticated = false, isPro = false }: AiChatProps) 
                                 quantity: data.quantity,
                                 averagePrice: data.averagePrice,
                                 currency: data.currency,
+                                // USD 종목에서 사용자가 직접 입력한 환율만 전송 — 미입력 시 서버가 현재 환율로 폴백.
+                                ...(data.purchaseRate != null && { purchaseRate: data.purchaseRate }),
                                 // 동명 종목 재추가는 기존 보유에 합산 — 평단가 덮어쓰기로 인한 손실 방지.
                                 mode: 'merge',
                             }),
@@ -411,7 +413,12 @@ export function AiChat({ isAuthenticated = false, isPro = false }: AiChatProps) 
             </button>
 
             <Dialog open={open} onOpenChange={setOpen}>
-                <DialogContent className="!flex !flex-col !gap-0 !p-0 sm:max-w-md h-[min(480px,70dvh)] overflow-hidden">
+                <DialogContent
+                    // Radix 기본 동작은 첫 focusable(여기선 input)에 포커스 → 모바일에서 다이얼로그가
+                    // 열리자마자 키보드가 튀어 오른다. 사용자가 input을 직접 탭할 때만 키보드가 뜨도록 차단.
+                    onOpenAutoFocus={(e) => e.preventDefault()}
+                    className="!flex !flex-col !gap-0 !p-0 sm:max-w-md h-[min(480px,70dvh)] overflow-hidden"
+                >
                     <div className="flex items-center px-4 py-3 border-b shrink-0">
                         <DialogTitle className="flex items-center gap-2 font-semibold text-sm m-0">
                             <Sparkles className="w-4 h-4 text-primary" />
