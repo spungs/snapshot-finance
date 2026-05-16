@@ -310,7 +310,7 @@ export function HomeClient({
                                             isUp ? 'text-profit' : 'text-loss',
                                         )}>
                                             <span aria-hidden>{isUp ? '▲' : '▼'}</span>
-                                            <span>{Math.abs(change.profitRateDiff).toFixed(2)}%p</span>
+                                            <span>{Math.abs(change.profitRateDiff).toFixed(2)}%</span>
                                         </div>
                                         <div className={cn(
                                             'text-[11px] font-semibold numeric mt-0.5',
