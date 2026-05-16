@@ -105,6 +105,12 @@ public/swe-worker-*.js.map
 public/workbox-*.js
 public/workbox-*.js.map
 
+# Archived public assets
+public/old/
+
+# Local HTML scratch
+html/
+
 # Claude Code
 .claude/
 
