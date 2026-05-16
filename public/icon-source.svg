@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Snapshot Finance 앱 아이콘 소스 (1024×1024 square).
+  SnapshotLogo(24×24) 디자인을 정사각 캔버스 중앙에 안전 여백을 두고 배치.
+  - 배경: 흰색 (iOS/Android 홈스크린에서 시인성 확보)
+  - 로고: 브랜드 그린 #0a7c4a
+  - app-icons 스킬로 PNG 세트(192/512/180/32) 생성용.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <rect width="1024" height="1024" fill="#ffffff"/>
+  <g transform="translate(192 192) scale(26.667)" fill="none" stroke="#0a7c4a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 4 8 h 4 l 1.2 -2 h 5.6 l 1.2 2 h 4 a 2 2 0 0 1 2 2 v 9 a 2 2 0 0 1 -2 2 h -16 a 2 2 0 0 1 -2 -2 v -9 a 2 2 0 0 1 2 -2 z"/>
+    <circle cx="19" cy="10.5" r="0.6" fill="#0a7c4a" stroke="none"/>
+    <rect x="5.25" y="14" width="1.5" height="3" rx="0.2" fill="#0a7c4a" stroke="none"/>
+    <rect x="8.75" y="12.5" width="1.5" height="4.5" rx="0.2" fill="#0a7c4a" stroke="none"/>
+    <rect x="12.25" y="11" width="1.5" height="6" rx="0.2" fill="#0a7c4a" stroke="none"/>
+    <rect x="15.75" y="9.5" width="1.5" height="7.5" rx="0.2" fill="#0a7c4a" stroke="none"/>
+  </g>
+</svg>
