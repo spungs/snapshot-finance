@@ -30,8 +30,10 @@ function safeRevalidate() {
 async function fetchCurrentPrice(stockCode: string, market: string): Promise<number> {
     try {
         // 시장 타입 매핑 (US, KOSPI, KOSDAQ)
+        // KIS Master DB는 NASD/NYSE/AMEX, KIS API 내부 코드는 NAS/NYS/AMS — 양쪽 모두 인식
         let marketType: 'KOSPI' | 'KOSDAQ' | 'US' = 'KOSPI'
-        if (market === 'US' || market === 'NAS' || market === 'NYS' || market === 'AMS') {
+        if (market === 'US' || market === 'NAS' || market === 'NYS' || market === 'AMS'
+            || market === 'NASD' || market === 'NYSE' || market === 'AMEX') {
             marketType = 'US'
         } else if (market === 'KOSDAQ' || market === 'KQ') {
             marketType = 'KOSDAQ'
@@ -172,8 +174,9 @@ export async function POST(request: NextRequest) {
             if (isNaN(currentPrice)) currentPrice = 0
 
             // 통화 자동 감지 (입력된 통화가 없으면 시장 정보로 판단)
+            // KIS Master는 NASD/NYSE/AMEX, KIS API 내부는 NAS/NYS/AMS — 양쪽 다 미국으로 인식
             if (!currency) {
-                const usMarkets = ['US', 'NAS', 'NYS', 'AMS']
+                const usMarkets = ['US', 'NAS', 'NYS', 'AMS', 'NASD', 'NYSE', 'AMEX']
                 currency = usMarkets.includes(stock.market || '') ? 'USD' : 'KRW'
             }
 

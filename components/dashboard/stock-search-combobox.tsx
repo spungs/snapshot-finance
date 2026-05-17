@@ -174,6 +174,7 @@ export function StockSearchCombobox({
                 collisionPadding={12}
                 style={{
                     ...(triggerWidth ? { width: triggerWidth } : {}),
+                    height: 'var(--radix-popover-content-available-height)',
                     maxHeight: 'var(--radix-popover-content-available-height)',
                 }}
                 onOpenAutoFocus={(e) => e.preventDefault()}
@@ -181,10 +182,7 @@ export function StockSearchCombobox({
                 <Command shouldFilter={false} className="flex-1 min-h-0 flex flex-col">
                     <CommandList
                         className="flex-1 min-h-0 max-h-none overflow-y-auto overscroll-contain order-1"
-                        style={{
-                            maxHeight: 'calc(var(--radix-popover-content-available-height) - 56px)',
-                            WebkitOverflowScrolling: 'touch',
-                        }}
+                        style={{ WebkitOverflowScrolling: 'touch' }}
                     >
                         {loading && (
                             <div className="py-6 text-center text-sm text-muted-foreground">

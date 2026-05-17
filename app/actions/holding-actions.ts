@@ -28,8 +28,10 @@ type ActionResult<T = unknown> =
 
 async function fetchCurrentPrice(stockCode: string, market: string): Promise<number> {
     try {
+        // KIS Master는 NASD/NYSE/AMEX, KIS API 내부 코드는 NAS/NYS/AMS — 양쪽 모두 인식
         let marketType: 'KOSPI' | 'KOSDAQ' | 'US' = 'KOSPI'
-        if (market === 'US' || market === 'NAS' || market === 'NYS' || market === 'AMS') {
+        if (market === 'US' || market === 'NAS' || market === 'NYS' || market === 'AMS'
+            || market === 'NASD' || market === 'NYSE' || market === 'AMEX') {
             marketType = 'US'
         } else if (market === 'KOSDAQ' || market === 'KQ') {
             marketType = 'KOSDAQ'
@@ -99,7 +101,7 @@ export async function createHolding(input: CreateHoldingInput): Promise<ActionRe
     }
 
     if (!currency) {
-        const usMarkets = ['US', 'NAS', 'NYS', 'AMS']
+        const usMarkets = ['US', 'NAS', 'NYS', 'AMS', 'NASD', 'NYSE', 'AMEX']
         currency = usMarkets.includes(stock.market || '') ? 'USD' : 'KRW'
     }
 
