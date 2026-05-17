@@ -1,14 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Snapshot Finance 앱 아이콘 소스 (1024×1024 square).
-  카메라 + 지그재그 주가 라인 + 끝점 dot. SnapshotLogo 와 동일 디자인.
-  app-icons 스킬로 PNG 세트(192/512/180/32) 생성용.
+  Snapshot Finance 앱 아이콘 SVG 소스 (1024×1024 square).
+  3D 금괴 + 각인 3줄. logo_final.png 와 동일한 디자인을 벡터로 보관.
+  PNG 아이콘은 logo_final.png 에서 sips 다운샘플로 생성되지만,
+  이 SVG 는 향후 재생성·다른 매체(스플래시, OG 등) 활용용.
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
   <rect width="1024" height="1024" fill="#ffffff"/>
-  <g transform="translate(192 192) scale(26.667)" fill="none" stroke="#0a7c4a" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M 4 8 h 4 l 1.2 -2 h 5.6 l 1.2 2 h 4 a 2 2 0 0 1 2 2 v 9 a 2 2 0 0 1 -2 2 h -16 a 2 2 0 0 1 -2 -2 v -9 a 2 2 0 0 1 2 -2 z" stroke-width="2"/>
-    <path d="M 5.5 17.5 L 8 14.5 L 10.5 16 L 13 12.5 L 15.5 14 L 18.5 10" stroke-width="1.6"/>
-    <circle cx="18.5" cy="10" r="1" fill="#0a7c4a" stroke="none"/>
+  <g transform="translate(122 122) scale(7.8)" fill="none" stroke="#0a7c4a" stroke-linejoin="round" stroke-linecap="round">
+    <!-- 상단면 -->
+    <path d="M 28 38 L 38 28 L 80 28 L 70 38 Z" stroke-width="5"/>
+    <!-- 정면 -->
+    <path d="M 28 38 L 70 38 L 70 76 L 28 76 Z" stroke-width="5"/>
+    <!-- 우측면 -->
+    <path d="M 70 38 L 80 28 L 80 66 L 70 76 Z" stroke-width="5"/>
+    <!-- 각인 3줄 -->
+    <path d="M 36 50 H 50 M 36 58 H 58 M 36 66 H 46" stroke-width="3"/>
   </g>
 </svg>
