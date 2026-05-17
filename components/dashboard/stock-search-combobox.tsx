@@ -167,7 +167,7 @@ export function StockSearchCombobox({
                 </Button>
             </PopoverTrigger>
             <PopoverContent
-                className="p-0 flex flex-col"
+                className="p-0 flex flex-col overflow-hidden"
                 align="start"
                 side="top"
                 sideOffset={6}
@@ -179,7 +179,13 @@ export function StockSearchCombobox({
                 onOpenAutoFocus={(e) => e.preventDefault()}
             >
                 <Command shouldFilter={false} className="flex-1 min-h-0 flex flex-col">
-                    <CommandList className="flex-1 min-h-0 max-h-none overflow-y-auto overscroll-contain order-1">
+                    <CommandList
+                        className="flex-1 min-h-0 max-h-none overflow-y-auto overscroll-contain order-1"
+                        style={{
+                            maxHeight: 'calc(var(--radix-popover-content-available-height) - 56px)',
+                            WebkitOverflowScrolling: 'touch',
+                        }}
+                    >
                         {loading && (
                             <div className="py-6 text-center text-sm text-muted-foreground">
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin inline" />

@@ -130,75 +130,55 @@ export async function GET(request: NextRequest) {
         }
 
         // 2. English or Stock Code Search - Use DB first, then Yahoo Finance
-        // Check DB for English name or stock code match
+        // 정렬 우선순위: ticker(stockCode) 완전 일치 > prefix > 포함
+        //                > stockName/engName prefix > 포함
+        // alphabet 컷오프(K~Z 잘림) 방지 위해 후보를 넉넉히 확보 후 JS 정렬
         const dbStocks = await prisma.kisStockMaster.findMany({
             where: {
                 OR: [
-                    {
-                        engName: {
-                            contains: query,
-                            mode: 'insensitive'  // 대소문자 구분 없이
-                        }
-                    },
-                    {
-                        stockCode: {
-                            contains: query
-                        }
-                    }
+                    { engName: { contains: query, mode: 'insensitive' } },
+                    { stockName: { contains: query, mode: 'insensitive' } },
+                    { stockCode: { contains: query, mode: 'insensitive' } },
                 ]
             },
-            orderBy: [
-                // 1. 종목코드 길이 (짧을수록 주요 종목 - ETF는 보통 길다)
-                { stockCode: 'asc' },
-            ],
-            take: 50,  // 더 많은 결과를 가져온 후 필터링
+            take: 300,
         })
 
         if (dbStocks.length > 0) {
-            // 일반 주식을 ETF보다 우선 표시
-            const sortedStocks = dbStocks.sort((a, b) => {
-                // ETF/ETN 여부 확인 (종목코드가 6자리가 아니거나, 영문명에 ETF/ETN 포함)
-                const aIsEtf = a.stockCode.length !== 6 || /ETF|ETN/i.test(a.engName || '')
-                const bIsEtf = b.stockCode.length !== 6 || /ETF|ETN/i.test(b.engName || '')
+            const q = query.toLowerCase()
+            const scoreOf = (s: typeof dbStocks[number]) => {
+                const code = s.stockCode.toLowerCase()
+                const name = (s.stockName || '').toLowerCase()
+                const eng = (s.engName || '').toLowerCase()
+                if (code === q) return 0
+                if (code.startsWith(q)) return 1
+                if (code.includes(q)) return 2
+                if (name.startsWith(q) || eng.startsWith(q)) return 3
+                return 4
+            }
 
-                if (aIsEtf !== bIsEtf) {
-                    return aIsEtf ? 1 : -1  // 일반 주식 우선
-                }
-
-                // 같은 타입이면 종목코드 길이순 (짧을수록 주요 종목)
-                if (a.stockCode.length !== b.stockCode.length) {
-                    return a.stockCode.length - b.stockCode.length
-                }
-
-                // 종목코드 길이가 같으면 영문명 길이순 (짧을수록 주요 종목)
-                const aEngLen = (a.engName || '').length
-                const bEngLen = (b.engName || '').length
-                return aEngLen - bEngLen
-            })
-
-            // 일반 주식이 하나라도 있는지 확인 — 미국 종목은 ticker 가 짧으니 한국 종목에만 길이 룰 적용.
-            const hasNonEtf = sortedStocks.some(stock => {
-                const isKr = stock.market === 'KOSPI' || stock.market === 'KOSDAQ'
-                const lenOk = isKr ? stock.stockCode.length === 6 : true
-                return lenOk && !/ETF|ETN/i.test(stock.engName || '')
-            })
-
-            // 일반 주식이 있으면 상위 10개 반환, 없으면 Yahoo Finance로 fallback
-            if (hasNonEtf) {
-                const formattedResults = sortedStocks.slice(0, 50).map(stock => ({
+            const formattedResults = dbStocks
+                .map(stock => ({ stock, score: scoreOf(stock) }))
+                .sort((a, b) => {
+                    if (a.score !== b.score) return a.score - b.score
+                    if (a.stock.stockCode.length !== b.stock.stockCode.length) {
+                        return a.stock.stockCode.length - b.stock.stockCode.length
+                    }
+                    return (a.stock.engName || '').length - (b.stock.engName || '').length
+                })
+                .slice(0, 50)
+                .map(({ stock }) => ({
                     symbol: stock.stockCode,
-                    name: stock.engName || stock.stockName,  // 기본 표시명 (영문명 우선)
-                    nameKo: stock.stockName,                 // 한글명
-                    nameEn: stock.engName,                   // 영문명
+                    name: stock.engName || stock.stockName,
+                    nameKo: stock.stockName,
+                    nameEn: stock.engName,
                     exchange: stock.market === 'KOSPI' ? 'KSC' : 'KOE',
                     market: stock.market,
                     type: 'EQUITY',
-                    isDbResult: true
+                    isDbResult: true,
                 }))
 
-                return NextResponse.json({ success: true, data: formattedResults })
-            }
-            // hasNonEtf가 false이면 아래 Yahoo Finance 로직으로 fallthrough
+            return NextResponse.json({ success: true, data: formattedResults })
         }
 
         // 2. English Search - Use Yahoo Finance
