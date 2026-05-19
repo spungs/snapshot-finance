@@ -50,7 +50,7 @@ async function resolveUsExcd(stockCode: string, market?: string | null): Promise
             return 'AMS'
     }
     try {
-        const master = await prisma.kisStockMaster.findUnique({
+        const master = await prisma.stock.findUnique({
             where: { stockCode },
             select: { market: true },
         })

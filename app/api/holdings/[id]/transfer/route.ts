@@ -84,7 +84,7 @@ export async function POST(
                 where: { id: holdingId },
                 select: {
                     id: true, quantity: true, averagePrice: true, purchaseRate: true,
-                    currency: true, currentPrice: true, stockId: true, priceUpdatedAt: true,
+                    currency: true, currentPrice: true, stockCode: true, priceUpdatedAt: true,
                 },
             })
             if (!src) throw new Error('SOURCE_NOT_FOUND')
@@ -108,7 +108,7 @@ export async function POST(
 
             // 대상: 같은 종목 있으면 merge, 없으면 새 row
             const dest = await tx.holding.findUnique({
-                where: { accountId_stockId: { accountId: toAccountId, stockId: src.stockId } },
+                where: { accountId_stockCode: { accountId: toAccountId, stockCode: src.stockCode } },
             })
 
             if (dest) {
@@ -155,7 +155,7 @@ export async function POST(
                 data: {
                     userId,
                     accountId: toAccountId,
-                    stockId: src.stockId,
+                    stockCode: src.stockCode,
                     quantity: transferQty,
                     averagePrice: src.averagePrice,
                     purchaseRate: src.purchaseRate,

@@ -186,8 +186,8 @@ function buildTrKey(code: string, market: MarketKind, rawMarket: string | null):
 
 async function fetchTargetSubscriptions(): Promise<Subscription[]> {
     const rows = await prisma.holding.findMany({
-        select: { stock: { select: { stockCode: true, market: true } } },
-        distinct: ['stockId'],
+        include: { stock: { select: { stockCode: true, market: true } } },
+        distinct: ['stockCode'],
     })
     const seen = new Set<string>()
     const subs: Subscription[] = []

@@ -33,9 +33,8 @@ async function SnapshotsContent({ userId }: { userId: string }) {
 
   const currentHoldings = currentHoldingsRaw.map(h => ({
     id: h.id,
-    stockId: h.stockId,
     stockCode: h.stock.stockCode,
-    stockName: h.stock.stockName,
+    stockName: h.stock.nameKo,
     quantity: h.quantity,
   }))
 
@@ -52,11 +51,11 @@ async function SnapshotsContent({ userId }: { userId: string }) {
     note: snapshot.note || null,
     holdings: snapshot.holdings.map((h: any) => ({
       id: h.id,
-      stockId: h.stockId,
+      stockCode: h.stockCode,
       quantity: h.quantity,
 
       stock: {
-        stockName: h.stock.stockName,
+        stockName: h.stock.nameKo,
         stockCode: h.stock.stockCode
       },
     })),

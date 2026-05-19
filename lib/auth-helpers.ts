@@ -46,10 +46,10 @@ export async function assertAccountOwnership(
 export async function assertHoldingOwnership(
     holdingId: string,
     userId: string,
-): Promise<{ id: string; userId: string; accountId: string; stockId: string } | null> {
+): Promise<{ id: string; userId: string; accountId: string; stockCode: string } | null> {
     const holding = await prisma.holding.findFirst({
         where: { id: holdingId, userId },
-        select: { id: true, userId: true, accountId: true, stockId: true },
+        select: { id: true, userId: true, accountId: true, stockCode: true },
     })
     return holding
 }

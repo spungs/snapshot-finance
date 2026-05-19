@@ -58,13 +58,13 @@ async function SnapshotDetailContent({
     holdings: snapshot.holdings.map((holding) => ({
       id: holding.id,
       snapshotId: holding.snapshotId,
-      stockId: holding.stockId,
+      stockCode: holding.stockCode,
       quantity: holding.quantity,
       createdAt: holding.createdAt.toISOString(),
       currency: holding.currency,
       stock: {
         stockCode: holding.stock.stockCode,
-        stockName: holding.stock.stockName,
+        stockName: holding.stock.nameKo,
       },
       // Decimals converted to numbers
       averagePrice: holding.averagePrice.toNumber(),

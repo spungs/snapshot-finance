@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
                         : gainKRW.dividedBy(originalValueKRW).times(100)
 
                     return {
-                        stockName: holding.stock.stockName,
+                        stockName: holding.stock.nameKo,
                         stockCode: holding.stock.stockCode,
                         quantity: quantity.toNumber(),
                         currency: isUsd ? 'USD' : 'KRW',
@@ -143,9 +143,9 @@ export async function POST(request: NextRequest) {
                         gainRateKRW: gainRateKRW.toNumber()
                     }
                 } catch (error) {
-                    console.error(`Failed to simulate ${holding.stock.stockName}:`, error)
+                    console.error(`Failed to simulate ${holding.stock.nameKo}:`, error)
                     return {
-                        stockName: holding.stock.stockName,
+                        stockName: holding.stock.nameKo,
                         stockCode: holding.stock.stockCode,
                         quantity: Number(holding.quantity),
                         error: 'Failed to fetch price',

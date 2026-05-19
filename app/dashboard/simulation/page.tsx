@@ -47,7 +47,7 @@ export default async function SimulationPage() {
         holdings: snap.holdings.map((h) => ({
             id: h.id,
             snapshotId: h.snapshotId,
-            stockId: h.stockId,
+            stockCode: h.stockCode,
             stock: h.stock,
             createdAt: h.createdAt,
             currency: h.currency,

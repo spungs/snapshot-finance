@@ -21,7 +21,6 @@ import {
 import type { CashAccount } from '@/types/cash'
 
 interface HoldingInput {
-  stockId: string
   stockName: string
   stockCode: string
   quantity: string
@@ -37,7 +36,7 @@ export default function NewSnapshotPage() {
   const today = new Date().toISOString().split('T')[0]
   const [snapshotDate, setSnapshotDate] = useState(today)
   const [holdings, setHoldings] = useState<HoldingInput[]>([
-    { stockId: '', stockName: '', stockCode: '', quantity: '', averagePrice: '', currentPrice: '', currency: 'KRW', purchaseRate: '1' },
+    { stockName: '', stockCode: '', quantity: '', averagePrice: '', currentPrice: '', currency: 'KRW', purchaseRate: '1' },
   ])
   // 예수금은 계좌별 행으로 관리. 신규 스냅샷은 빈 상태로 시작하고,
   // "현재 잔고 불러오기" 시 사용자의 cashAccounts 또는 cashBalance 합계로 시드한다.
@@ -111,7 +110,7 @@ export default function NewSnapshotPage() {
           }
         }
 
-        if (holdings.length > 0 && !(holdings.length === 1 && !holdings[0].stockId)) {
+        if (holdings.length > 0 && !(holdings.length === 1 && !holdings[0].stockCode)) {
           const updatedHoldings = await Promise.all(holdings.map(async (h) => {
             if (!h.stockCode) return h
 
@@ -156,7 +155,6 @@ export default function NewSnapshotPage() {
     setHoldings([
       ...holdings,
       {
-        stockId: '',
         stockName: '',
         stockCode: '',
         quantity: '',
@@ -179,12 +177,11 @@ export default function NewSnapshotPage() {
     setHoldings(updated)
   }
 
-  async function handleStockSelect(index: number, stock: { id: string; stockName: string; stockCode: string; market?: string }) {
+  async function handleStockSelect(index: number, stock: { stockCode: string; nameKo: string; stockName?: string; market?: string }) {
     const updated = [...holdings]
     updated[index] = {
       ...updated[index],
-      stockId: stock.id,
-      stockName: stock.stockName,
+      stockName: stock.stockName ?? stock.nameKo,
       stockCode: stock.stockCode,
     }
     setHoldings(updated)
@@ -220,7 +217,7 @@ export default function NewSnapshotPage() {
 
       setHoldings((prev) => {
         const current = [...prev]
-        if (!current[index] || current[index].stockId !== stock.id) return prev
+        if (!current[index] || current[index].stockCode !== stock.stockCode) return prev
 
         current[index] = {
           ...current[index],
@@ -264,7 +261,6 @@ export default function NewSnapshotPage() {
           }
 
           return {
-            stockId: h.stockId,
             stockName: h.stockName,
             stockCode: h.stockCode,
             quantity: h.quantity.toString(),
@@ -342,7 +338,7 @@ export default function NewSnapshotPage() {
 
     const validHoldings = holdings.filter(
       (h) =>
-        h.stockId &&
+        h.stockCode &&
         parseFloat(h.quantity) > 0 &&
         parseFloat(h.averagePrice) > 0 &&
         parseFloat(h.currentPrice) > 0,
@@ -361,7 +357,7 @@ export default function NewSnapshotPage() {
         snapshotDate,
         exchangeRate,
         holdings: validHoldings.map((h) => ({
-          stockId: h.stockId,
+          stockCode: h.stockCode,
           quantity: parseInt(h.quantity),
           averagePrice: parseFloat(h.averagePrice),
           currentPrice: parseFloat(h.currentPrice),
@@ -486,7 +482,7 @@ export default function NewSnapshotPage() {
               <div
                 key={index}
                 className="bg-card border border-border p-4"
-                style={{ borderLeftWidth: '3px', borderLeftColor: holding.stockId ? 'var(--primary)' : 'var(--border)' }}
+                style={{ borderLeftWidth: '3px', borderLeftColor: holding.stockCode ? 'var(--primary)' : 'var(--border)' }}
               >
                 <div className="flex items-center justify-between mb-2.5">
                   <span className="text-[10px] font-bold text-muted-foreground tracking-[1px] uppercase">

@@ -125,7 +125,7 @@ const holdingServiceInternal = {
                     fetchedPrice = await fetchCurrentPrice(holding.stock.stockCode, holding.stock.market || 'Unknown')
                     if (!Number.isFinite(fetchedPrice)) fetchedPrice = 0
                 } catch (e) {
-                    console.warn(`Price fetch failed for ${holding.stock.stockName}`, e)
+                    console.warn(`Price fetch failed for ${holding.stock.nameKo}`, e)
                 }
 
                 const storedPrice = new Decimal(holding.currentPrice.toString())
@@ -155,10 +155,9 @@ const holdingServiceInternal = {
 
                 return {
                     id: holding.id,
-                    stockId: holding.stockId,
                     stockCode: holding.stock.stockCode,
-                    stockName: holding.stock.stockName,
-                    engName: holding.stock.engName ?? null,
+                    stockName: holding.stock.nameKo,
+                    engName: holding.stock.nameEn ?? null,
                     market: holding.stock.market,
                     accountId: holding.accountId,
                     accountName: holding.account?.name ?? null,
@@ -174,7 +173,7 @@ const holdingServiceInternal = {
                     profitRate: profitRate.toNumber(),
                     // 부작용 처리용 메타 — 응답에는 포함하지 않는다
                     _holdingId: holding.id,
-                    _stockId: holding.stockId,
+                    _stockCode: holding.stockCode,
                     _shouldUpdateDb: fetchedPrice > 0 && !new Decimal(fetchedPrice).equals(storedPrice),
                     _fetchedPrice: fetchedPrice,
                 }
@@ -186,19 +185,19 @@ const holdingServiceInternal = {
             const exRate = new Decimal(exchangeRate || 0)
 
             // 시세 변동분만 모아 한 번에 update — N+1 race 회피.
-            // 같은 stockId 의 모든 Holding row(여러 계좌에 분산되어 있을 수 있음)에 동일 가격 반영.
-            // 동일 stockId 가 여러 행에 있으면 첫 항목만 picking 해 stockId 단위 update 발행.
-            const seenStockIds = new Set<string>()
+            // 같은 stockCode 의 모든 Holding row(여러 계좌에 분산되어 있을 수 있음)에 동일 가격 반영.
+            // 동일 stockCode 가 여러 행에 있으면 첫 항목만 picking 해 stockCode 단위 update 발행.
+            const seenStockCodes = new Set<string>()
             const updates = holdingsWithPriceRaw
                 .filter(h => h._shouldUpdateDb)
                 .filter(h => {
-                    if (seenStockIds.has(h._stockId)) return false
-                    seenStockIds.add(h._stockId)
+                    if (seenStockCodes.has(h._stockCode)) return false
+                    seenStockCodes.add(h._stockCode)
                     return true
                 })
                 .map(h =>
                     prisma.holding.updateMany({
-                        where: { stockId: h._stockId },
+                        where: { stockCode: h._stockCode },
                         data: { currentPrice: h._fetchedPrice, priceUpdatedAt: new Date() },
                     })
                 )
@@ -217,7 +216,7 @@ const holdingServiceInternal = {
             }
 
             // 응답 필드만 남기고 메타 필드는 제거
-            const holdingsWithPrice = holdingsWithPriceRaw.map(({ _holdingId, _stockId, _shouldUpdateDb, _fetchedPrice, ...rest }) => rest)
+            const holdingsWithPrice = holdingsWithPriceRaw.map(({ _holdingId, _stockCode, _shouldUpdateDb, _fetchedPrice, ...rest }) => rest)
 
             // KRW 기준 합계 계산 — Decimal 누적
             let totalCostKRW = new Decimal(0)

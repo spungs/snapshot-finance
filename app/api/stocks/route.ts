@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
-import { requireAdmin } from '@/lib/auth-helpers'
 
 // GET /api/stocks - 종목 목록 조회 (페이지네이션 강제)
 export async function GET(request: NextRequest) {
@@ -19,7 +18,7 @@ export async function GET(request: NextRequest) {
     const limit = Number.isFinite(rawLimit) ? Math.max(1, Math.min(rawLimit, 200)) : 100
 
     const stocks = await prisma.stock.findMany({
-      orderBy: { stockName: 'asc' },
+      orderBy: { nameKo: 'asc' },
       take: limit,
     })
 
@@ -39,52 +38,50 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/stocks - 종목 추가 (admin 전용)
-// 새 종목 'create'만 허용. 기존 종목 덮어쓰기는 마스터 데이터를 오염시킬 수 있어
-// upsert를 의도적으로 빼고, 이미 존재하는 종목은 그대로 반환한다.
+// POST /api/stocks - stockCode 로 마스터에서 종목 lookup.
+// stocks 통합 후 모든 종목은 KIS 마스터에서 사전 주입되므로 'create' 경로는 제거.
+// 클라이언트 종목 검색 결과 선택 시, ticker 가 마스터에 있는지 검증하고 그 row 를 그대로 반환한다.
 export async function POST(request: NextRequest) {
-  const guard = await requireAdmin()
-  if (guard.error) {
+  const session = await auth()
+  if (!session?.user?.id) {
     return NextResponse.json(
-      { success: false, error: { code: guard.error, message: guard.error === 'UNAUTHORIZED' ? '인증이 필요합니다.' : '권한이 없습니다.' } },
-      { status: guard.status }
+      { success: false, error: { code: 'UNAUTHORIZED', message: '인증이 필요합니다.' } },
+      { status: 401 }
     )
   }
 
   try {
     const body = await request.json()
-    const { stockCode, stockName, engName, market, sector } = body
+    const { stockCode } = body
 
-    if (typeof stockCode !== 'string' || typeof stockName !== 'string' || !stockCode.trim() || !stockName.trim()) {
+    if (typeof stockCode !== 'string' || !stockCode.trim()) {
       return NextResponse.json(
-        { success: false, error: { code: 'INVALID_INPUT', message: 'stockCode, stockName이 필요합니다.' } },
+        { success: false, error: { code: 'INVALID_INPUT', message: 'stockCode가 필요합니다.' } },
         { status: 400 }
       )
     }
 
     const trimmedCode = stockCode.trim()
-    if (trimmedCode.length > 20 || stockName.length > 200) {
+    if (trimmedCode.length > 20) {
       return NextResponse.json(
         { success: false, error: { code: 'INVALID_INPUT', message: '입력값이 너무 깁니다.' } },
         { status: 400 }
       )
     }
 
-    // 이미 존재하는 종목은 덮어쓰지 않고 그대로 반환 — 다른 사용자의 보유 정보 표시가 깨지지 않도록 보호
     const existing = await prisma.stock.findUnique({ where: { stockCode: trimmedCode } })
-    if (existing) {
-      return NextResponse.json({ success: true, data: existing })
+    if (!existing) {
+      return NextResponse.json(
+        { success: false, error: { code: 'STOCK_NOT_FOUND', message: '종목 마스터에 없는 ticker 입니다.' } },
+        { status: 404 }
+      )
     }
 
-    const stock = await prisma.stock.create({
-      data: { stockCode: trimmedCode, stockName, engName, market, sector },
-    })
-
-    return NextResponse.json({ success: true, data: stock })
+    return NextResponse.json({ success: true, data: existing })
   } catch (error) {
-    console.error('Stock create error:', error)
+    console.error('Stock lookup error:', error)
     return NextResponse.json(
-      { success: false, error: { code: 'STOCK_CREATE_FAILED', message: 'Failed to create stock' } },
+      { success: false, error: { code: 'STOCK_LOOKUP_FAILED', message: 'Failed to look up stock' } },
       { status: 500 }
     )
   }

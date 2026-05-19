@@ -25,8 +25,8 @@ const US_FILES = [
 
 interface StockData {
     stockCode: string
-    stockName: string
-    engName: string | null
+    nameKo: string
+    nameEn: string | null
     market: string
 }
 
@@ -67,8 +67,8 @@ async function parseMasterFile(filePath: string, market: string): Promise<StockD
 
         stocks.push({
             stockCode: stockCode,
-            stockName: koreanName || englishName || stockCode, // Prefer Korean, fallback to English or code
-            engName: englishName || null,
+            nameKo: koreanName || englishName || stockCode, // Prefer Korean, fallback to English or code
+            nameEn: englishName || null,
             market: market,
         })
     }
@@ -89,12 +89,6 @@ async function main() {
 
             console.log(`\n=== Processing ${fileInfo.name} (${fileInfo.market}) ===`)
 
-            // Clear existing data for this market
-            await prisma.kisStockMaster.deleteMany({
-                where: { market: fileInfo.market }
-            })
-            console.log(`Cleared existing ${fileInfo.market} data.`)
-
             // Parse file
             const stocks = await parseMasterFile(filePath, fileInfo.market)
 
@@ -103,15 +97,23 @@ async function main() {
                 continue
             }
 
-            // Save to DB in batches
+            // 새 ticker 만 추가. 기존 row 는 hold 의 FK 보호 위해 유지. 이름 변경은 별도 update.
             const BATCH_SIZE = 500
             for (let i = 0; i < stocks.length; i += BATCH_SIZE) {
                 const batch = stocks.slice(i, i + BATCH_SIZE)
-                await prisma.kisStockMaster.createMany({
+                await prisma.stock.createMany({
                     data: batch,
                     skipDuplicates: true,
                 })
-                console.log(`  Saved batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(stocks.length / BATCH_SIZE)}`)
+                console.log(`  Inserted batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(stocks.length / BATCH_SIZE)} (new only)`)
+            }
+
+            // 이름/시장 변경분 반영
+            for (const s of stocks) {
+                await prisma.stock.update({
+                    where: { stockCode: s.stockCode },
+                    data: { nameKo: s.nameKo, nameEn: s.nameEn, market: s.market },
+                }).catch(() => {})
             }
 
             console.log(`✓ Saved ${stocks.length} ${fileInfo.market} stocks to DB.`)
@@ -122,7 +124,7 @@ async function main() {
         const counts = await Promise.all(
             US_FILES.map(async (f) => ({
                 market: f.market,
-                count: await prisma.kisStockMaster.count({ where: { market: f.market } })
+                count: await prisma.stock.count({ where: { market: f.market } })
             }))
         )
         counts.forEach(c => console.log(`  ${c.market}: ${c.count} stocks`))

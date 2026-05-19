@@ -43,7 +43,7 @@ export const snapshotsApi = {
     snapshotDate?: string
     exchangeRate?: number
     holdings: Array<{
-      stockId: string
+      stockCode: string
       quantity: number
       averagePrice: number
       currentPrice: number
@@ -61,7 +61,7 @@ export const snapshotsApi = {
     snapshotDate?: string
     exchangeRate?: number
     holdings?: Array<{
-      stockId: string
+      stockCode: string
       quantity: number
       averagePrice: number
       currentPrice: number
@@ -107,7 +107,7 @@ export const holdingsApi = {
     fetchApi<{ holdings: any[]; summary: any }>('/holdings', { cache: 'no-store', signal }),
 
   create: (data: {
-    stockId: string
+    stockCode: string
     quantity: number
     averagePrice: number
     currency?: string

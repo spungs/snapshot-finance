@@ -205,8 +205,8 @@ interface KisSearchHit {
  */
 interface KisCandidate {
     stockCode: string
-    stockName: string
-    engName: string | null
+    nameKo: string
+    nameEn: string | null
     market: string
 }
 
@@ -223,36 +223,36 @@ async function searchKisMaster(query: string): Promise<KisSearchHit | null> {
         const normalized = trimmed.replace(/\s+/g, '')
         const pattern = `%${normalized}%`
         candidates = await prisma.$queryRaw<KisCandidate[]>`
-            SELECT "stockCode", "stockName", "engName", "market"
-            FROM kis_stock_masters
-            WHERE REPLACE("stockName", ' ', '') ILIKE ${pattern}
+            SELECT "stockCode", "nameKo", "nameEn", "market"
+            FROM stocks
+            WHERE REPLACE("nameKo", ' ', '') ILIKE ${pattern}
             LIMIT 50
         `
     } else {
-        candidates = await prisma.kisStockMaster.findMany({
+        candidates = await prisma.stock.findMany({
             where: {
                 OR: [
-                    { engName: { contains: trimmed, mode: 'insensitive' } },
+                    { nameEn: { contains: trimmed, mode: 'insensitive' } },
                     { stockCode: { contains: trimmed } },
                 ],
             },
             take: 50,
-            select: { stockCode: true, stockName: true, engName: true, market: true },
+            select: { stockCode: true, nameKo: true, nameEn: true, market: true },
         })
     }
 
     if (candidates.length === 0) return null
 
-    // 정확 일치 우선 — KIS Master 에는 같은 이름의 ETF/원종목이 공존할 수 있어 일반 종목 우선화는 별도 단계로.
+    // 정확 일치 우선 — Stock 마스터 에는 같은 이름의 ETF/원종목이 공존할 수 있어 일반 종목 우선화는 별도 단계로.
     // 한글은 후보 검색과 동일하게 공백 제거 비교 (예: "더치브로스" ↔ "더치 브로스" 도 exact 로 인정).
     const q = trimmed.toLowerCase()
     const qStripped = hasKorean ? q.replace(/\s+/g, '') : q
     const exactMatch = candidates.find(c => {
-        const stockNameCmp = hasKorean
-            ? c.stockName.toLowerCase().replace(/\s+/g, '')
-            : c.stockName.toLowerCase()
-        return stockNameCmp === qStripped
-            || (c.engName?.toLowerCase() ?? '') === q
+        const nameCmp = hasKorean
+            ? c.nameKo.toLowerCase().replace(/\s+/g, '')
+            : c.nameKo.toLowerCase()
+        return nameCmp === qStripped
+            || (c.nameEn?.toLowerCase() ?? '') === q
             || c.stockCode === trimmed
     })
 
@@ -260,11 +260,11 @@ async function searchKisMaster(query: string): Promise<KisSearchHit | null> {
         // 한국 종목은 stockCode 6자리 룰 적용. 미국 종목 ticker 는 짧으니 ETF/ETN regex 만으로 판별.
         const aIsKr = a.market === 'KOSPI' || a.market === 'KOSDAQ'
         const bIsKr = b.market === 'KOSPI' || b.market === 'KOSDAQ'
-        const aIsEtf = (aIsKr && a.stockCode.length !== 6) || /ETF|ETN/i.test(a.engName || '')
-        const bIsEtf = (bIsKr && b.stockCode.length !== 6) || /ETF|ETN/i.test(b.engName || '')
+        const aIsEtf = (aIsKr && a.stockCode.length !== 6) || /ETF|ETN/i.test(a.nameEn || '')
+        const bIsEtf = (bIsKr && b.stockCode.length !== 6) || /ETF|ETN/i.test(b.nameEn || '')
         if (aIsEtf !== bIsEtf) return aIsEtf ? 1 : -1
         if (a.stockCode.length !== b.stockCode.length) return a.stockCode.length - b.stockCode.length
-        return (a.engName || '').length - (b.engName || '').length
+        return (a.nameEn || '').length - (b.nameEn || '').length
     })
 
     const best = ranked[0]
@@ -272,8 +272,8 @@ async function searchKisMaster(query: string): Promise<KisSearchHit | null> {
     // market 컬럼: KOSPI/KOSDAQ(국내) 또는 NYSE/NASD/AMEX 등(미국). 국내만 KRW, 나머지 USD.
     const currency: 'KRW' | 'USD' = market === 'KOSPI' || market === 'KOSDAQ' ? 'KRW' : 'USD'
     const officialName = hasKorean
-        ? best.stockName || best.engName || trimmed
-        : best.engName || best.stockName || trimmed
+        ? best.nameKo || best.nameEn || trimmed
+        : best.nameEn || best.nameKo || trimmed
 
     return { officialName, market, currency }
 }

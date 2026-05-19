@@ -126,12 +126,14 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         )
       }
-      if (typeof h.stockId !== 'string' || !h.stockId) {
+      const sc = (h as { stockCode?: unknown; stockId?: unknown }).stockCode ?? (h as { stockId?: unknown }).stockId
+      if (typeof sc !== 'string' || !sc) {
         return NextResponse.json(
-          { success: false, error: { code: 'INVALID_REQUEST', message: 'stockId가 누락되었습니다.' } },
+          { success: false, error: { code: 'INVALID_REQUEST', message: 'stockCode가 누락되었습니다.' } },
           { status: 400 }
         )
       }
+      ;(h as { stockCode: string }).stockCode = sc
       validatedHoldings.push({ raw: h, qty: qty.value, avg: avg.value, cp: cpNum })
     }
 
@@ -164,7 +166,7 @@ export async function POST(request: NextRequest) {
       totalValue = totalValue.plus(valueKRW)
 
       return {
-        stockId: h.stockId,
+        stockCode: (h as { stockCode: string }).stockCode,
         quantity,
         averagePrice,
         currentPrice,

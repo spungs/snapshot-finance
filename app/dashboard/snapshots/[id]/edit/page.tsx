@@ -21,7 +21,6 @@ import {
 import type { CashAccount } from '@/types/cash'
 
 interface HoldingInput {
-    stockId: string
     stockName: string
     stockCode: string
     quantity: string
@@ -100,7 +99,7 @@ export default function EditSnapshotPage() {
                     setSnapshotDate(dateStr)
 
                     const mappedHoldings = snapshot.holdings.map((h: {
-                        stockId: string
+                        stockCode: string
                         stock: { stockName: string; stockCode: string }
                         quantity: number | string
                         averagePrice: number | string
@@ -114,7 +113,6 @@ export default function EditSnapshotPage() {
                             purchaseRate = String(FALLBACK_USD_RATE)
                         }
                         return {
-                            stockId: h.stockId,
                             stockName: h.stock.stockName,
                             stockCode: h.stock.stockCode,
                             quantity: h.quantity.toString(),
@@ -165,7 +163,7 @@ export default function EditSnapshotPage() {
                     }
                 }
 
-                if (holdings.length > 0 && !(holdings.length === 1 && !holdings[0].stockId)) {
+                if (holdings.length > 0 && !(holdings.length === 1 && !holdings[0].stockCode)) {
                     const updatedHoldings = await Promise.all(holdings.map(async (h) => {
                         if (!h.stockCode) return h
                         const market = isNaN(Number(h.stockCode)) ? 'US' : 'KOSPI'
@@ -202,7 +200,6 @@ export default function EditSnapshotPage() {
         setHoldings([
             ...holdings,
             {
-                stockId: '',
                 stockName: '',
                 stockCode: '',
                 quantity: '',
@@ -227,13 +224,12 @@ export default function EditSnapshotPage() {
 
     async function handleStockSelect(
         index: number,
-        stock: { id: string; stockName: string; stockCode: string; market?: string }
+        stock: { stockCode: string; nameKo: string; stockName?: string; market?: string }
     ) {
         const updated = [...holdings]
         updated[index] = {
             ...updated[index],
-            stockId: stock.id,
-            stockName: stock.stockName,
+            stockName: stock.stockName ?? stock.nameKo,
             stockCode: stock.stockCode,
         }
         setHoldings(updated)
@@ -261,7 +257,7 @@ export default function EditSnapshotPage() {
 
             setHoldings((prev) => {
                 const current = [...prev]
-                if (!current[index] || current[index].stockId !== stock.id) return prev
+                if (!current[index] || current[index].stockCode !== stock.stockCode) return prev
                 current[index] = {
                     ...current[index],
                     currentPrice: price === '0' ? current[index].currentPrice : price,
@@ -315,7 +311,7 @@ export default function EditSnapshotPage() {
 
         const validHoldings = holdings.filter(
             (h) =>
-                h.stockId &&
+                h.stockCode &&
                 parseFloat(h.quantity) > 0 &&
                 parseFloat(h.averagePrice) > 0 &&
                 parseFloat(h.currentPrice) > 0,
@@ -333,7 +329,7 @@ export default function EditSnapshotPage() {
                 snapshotDate,
                 exchangeRate,
                 holdings: validHoldings.map((h) => ({
-                    stockId: h.stockId,
+                    stockCode: h.stockCode,
                     quantity: parseInt(h.quantity),
                     averagePrice: parseFloat(h.averagePrice),
                     currentPrice: parseFloat(h.currentPrice),
@@ -612,7 +608,7 @@ export default function EditSnapshotPage() {
                                 className="bg-card border border-border p-4"
                                 style={{
                                     borderLeftWidth: '3px',
-                                    borderLeftColor: holding.stockId ? 'var(--primary)' : 'var(--border)',
+                                    borderLeftColor: holding.stockCode ? 'var(--primary)' : 'var(--border)',
                                 }}
                             >
                                 <div className="flex items-center justify-between mb-2.5">

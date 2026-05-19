@@ -3,36 +3,36 @@ import { cacheGet, cacheSet, cacheDelete } from '@/lib/cache'
 import Decimal from 'decimal.js'
 
 /**
- * 사용자의 여러 계좌에 분산된 Holding 을 stockId 단위로 통합.
+ * 사용자의 여러 계좌에 분산된 Holding 을 stockCode 단위로 통합.
  *
  * 통합 규칙(사용자 결정에 따라 계좌 분리 없이 단일 스냅샷):
  *  - quantity: 단순 합계
  *  - averagePrice: 가중평균 = Σ(avgPrice * quantity) / Σ(quantity)
- *  - currency / purchaseRate: 같은 stockId 면 동일하다는 가정. 다르면 첫 행 값 사용.
+ *  - currency / purchaseRate: 같은 stockCode 면 동일하다는 가정. 다르면 첫 행 값 사용.
  *
  * 입력 holdings 는 prisma 의 Holding[] (stock 포함). 빈 배열도 허용.
- * 반환은 stockId 단위로 group 된 정규화된 행 배열.
+ * 반환은 stockCode 단위로 group 된 정규화된 행 배열.
  */
 export interface MergedHoldingRow {
-    stockId: string
+    stockCode: string
     quantity: number
     averagePrice: Decimal
     currency: string
     purchaseRate: Decimal
     stock: {
         stockCode: string
-        stockName: string
+        nameKo: string
         market: string | null
     }
 }
 
 interface RawHoldingForMerge {
-    stockId: string
+    stockCode: string
     quantity: number
     averagePrice: { toString(): string } | string | number
     currency: string
     purchaseRate: { toString(): string } | string | number
-    stock: { stockCode: string; stockName: string; market: string | null }
+    stock: { stockCode: string; nameKo: string; market: string | null }
 }
 
 export function mergeHoldingsByStock(holdings: RawHoldingForMerge[]): MergedHoldingRow[] {
@@ -50,13 +50,13 @@ export function mergeHoldingsByStock(holdings: RawHoldingForMerge[]): MergedHold
         const pr = new Decimal(h.purchaseRate.toString())
         const cost = avg.times(qty)
 
-        const cur = buckets.get(h.stockId)
+        const cur = buckets.get(h.stockCode)
         if (cur) {
             cur.quantitySum += qty
             cur.weightedCostSum = cur.weightedCostSum.plus(cost)
             // currency/purchaseRate 는 첫 행 값 유지 (사실상 동일하다는 가정)
         } else {
-            buckets.set(h.stockId, {
+            buckets.set(h.stockCode, {
                 quantitySum: qty,
                 weightedCostSum: cost,
                 currency: h.currency,
@@ -67,12 +67,12 @@ export function mergeHoldingsByStock(holdings: RawHoldingForMerge[]): MergedHold
     }
 
     const merged: MergedHoldingRow[] = []
-    for (const [stockId, b] of buckets.entries()) {
+    for (const [stockCode, b] of buckets.entries()) {
         const avgPrice = b.quantitySum > 0
             ? b.weightedCostSum.div(b.quantitySum)
             : new Decimal(0)
         merged.push({
-            stockId,
+            stockCode,
             quantity: b.quantitySum,
             averagePrice: avgPrice,
             currency: b.currency,

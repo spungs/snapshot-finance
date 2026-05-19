@@ -105,11 +105,13 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json()
-        const { stockId, accountId: rawAccountId, quantity: rawQuantity, averagePrice: rawAveragePrice, mode = 'overwrite' } = body
+        // 신규 계약: stockCode (ticker) 를 받는다. 이전 클라이언트는 stockId 로 보냈는데, 값은 항상 ticker 였음.
+        const stockCode: string | undefined = body.stockCode ?? body.stockId
+        const { accountId: rawAccountId, quantity: rawQuantity, averagePrice: rawAveragePrice, mode = 'overwrite' } = body
         let { purchaseRate, currency } = body
         if (!purchaseRate) purchaseRate = 1
 
-        if (!stockId || !rawQuantity || !rawAveragePrice) {
+        if (!stockCode || !rawQuantity || !rawAveragePrice) {
             return NextResponse.json(
                 { success: false, error: { code: 'INVALID_INPUT', message: '필수 필드가 누락되었습니다.' } },
                 { status: 400 }
@@ -167,7 +169,7 @@ export async function POST(request: NextRequest) {
         const averagePrice = priceResult.value
 
         // 현재가 조회
-        const stock = await prisma.stock.findUnique({ where: { id: stockId } })
+        const stock = await prisma.stock.findUnique({ where: { stockCode } })
         let currentPrice = 0
         if (stock) {
             currentPrice = await fetchCurrentPrice(stock.stockCode, stock.market || 'Unknown')
@@ -192,13 +194,13 @@ export async function POST(request: NextRequest) {
 
         let holding
 
-        // 물타기 모드이고 기존 보유분이 있을 경우 처리 (해당 계좌 + stockId 단위)
+        // 물타기 모드이고 기존 보유분이 있을 경우 처리 (해당 계좌 + stockCode 단위)
         if (mode === 'merge') {
             const existing = await prisma.holding.findUnique({
                 where: {
-                    accountId_stockId: {
+                    accountId_stockCode: {
                         accountId,
-                        stockId,
+                        stockCode,
                     },
                 },
             })
@@ -232,9 +234,9 @@ export async function POST(request: NextRequest) {
         if (!holding) {
             holding = await prisma.holding.upsert({
                 where: {
-                    accountId_stockId: {
+                    accountId_stockCode: {
                         accountId,
-                        stockId,
+                        stockCode,
                     },
                 },
                 update: {
@@ -248,7 +250,7 @@ export async function POST(request: NextRequest) {
                 create: {
                     user: { connect: { id: userId } },
                     account: { connect: { id: accountId } },
-                    stock: { connect: { id: stockId } },
+                    stock: { connect: { stockCode } },
                     quantity,
                     averagePrice,
                     currentPrice,

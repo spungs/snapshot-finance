@@ -292,17 +292,13 @@ export function AiChat({ isAuthenticated = false, isPro = false }: AiChatProps) 
 
                         const stockResult = searchData.data[0]
 
-                        const stockData = await callApi<{ success: boolean; data: { id: string } }>(
+                        const stockData = await callApi<{ success: boolean; data: { stockCode: string } }>(
                             '/api/stocks',
                             {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({
                                     stockCode: normalizeStockCode(stockResult.symbol, stockResult.market),
-                                    stockName: stockResult.nameKo || stockResult.name,
-                                    engName: stockResult.nameEn,
-                                    market: stockResult.market,
-                                    sector: stockResult.type,
                                 }),
                             },
                         )
@@ -311,7 +307,7 @@ export function AiChat({ isAuthenticated = false, isPro = false }: AiChatProps) 
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
-                                stockId: stockData.data.id,
+                                stockCode: stockData.data.stockCode,
                                 accountId: data.accountId,
                                 quantity: data.quantity,
                                 averagePrice: data.averagePrice,

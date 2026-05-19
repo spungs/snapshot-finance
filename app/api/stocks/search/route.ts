@@ -24,12 +24,12 @@ async function enrichWithKisMaster(
 
     if (missingSymbols.length === 0) return results
 
-    const masters = await prisma.kisStockMaster.findMany({
+    const masters = await prisma.stock.findMany({
         where: {
             stockCode: { in: missingSymbols },
             market: { in: US_MASTER_MARKETS },
         },
-        select: { stockCode: true, stockName: true, engName: true },
+        select: { stockCode: true, nameKo: true, nameEn: true },
     })
 
     const masterMap = new Map(masters.map(m => [m.stockCode, m]))
@@ -40,8 +40,8 @@ async function enrichWithKisMaster(
         if (!master) return r
         return {
             ...r,
-            nameKo: master.stockName || null,
-            nameEn: master.engName || (r.name as string) || null,
+            nameKo: master.nameKo || null,
+            nameEn: master.nameEn || (r.name as string) || null,
         }
     })
 }
@@ -78,9 +78,9 @@ export async function GET(request: NextRequest) {
 
         if (hasKorean) {
             // Search in DB (KIS Master)
-            const stocks = await prisma.kisStockMaster.findMany({
+            const stocks = await prisma.stock.findMany({
                 where: {
-                    stockName: {
+                    nameKo: {
                         contains: query,
                         mode: 'insensitive',
                     }
@@ -97,8 +97,8 @@ export async function GET(request: NextRequest) {
                     // ETF 판별: 한국 종목은 stockCode 6자리 룰 + ETF/ETN regex, 미국 종목은 regex 만 (ticker 가 4자라 길이 룰 부적용)
                     const aIsKr = a.market === 'KOSPI' || a.market === 'KOSDAQ'
                     const bIsKr = b.market === 'KOSPI' || b.market === 'KOSDAQ'
-                    const aIsEtf = (aIsKr && a.stockCode.length !== 6) || /ETF|ETN/i.test(a.engName || '')
-                    const bIsEtf = (bIsKr && b.stockCode.length !== 6) || /ETF|ETN/i.test(b.engName || '')
+                    const aIsEtf = (aIsKr && a.stockCode.length !== 6) || /ETF|ETN/i.test(a.nameEn || '')
+                    const bIsEtf = (bIsKr && b.stockCode.length !== 6) || /ETF|ETN/i.test(b.nameEn || '')
 
                     if (aIsEtf !== bIsEtf) {
                         return aIsEtf ? 1 : -1
@@ -108,16 +108,16 @@ export async function GET(request: NextRequest) {
                         return a.stockCode.length - b.stockCode.length
                     }
 
-                    const aEngLen = (a.engName || '').length
-                    const bEngLen = (b.engName || '').length
+                    const aEngLen = (a.nameEn || '').length
+                    const bEngLen = (b.nameEn || '').length
                     return aEngLen - bEngLen
                 }).slice(0, 10)
 
                 const formattedResults = sortedStocks.map(stock => ({
                     symbol: stock.stockCode,
-                    name: stock.engName || stock.stockName,  // 기본 표시명 (영문명 우선)
-                    nameKo: stock.stockName,                 // 한글명
-                    nameEn: stock.engName,                   // 영문명
+                    name: stock.nameEn || stock.nameKo,  // 기본 표시명 (영문명 우선)
+                    nameKo: stock.nameKo,                 // 한글명
+                    nameEn: stock.nameEn,                 // 영문명
                     exchange: stock.market === 'KOSPI' ? 'KSC' : 'KOE',
                     market: stock.market,
                     type: 'EQUITY',
@@ -131,13 +131,13 @@ export async function GET(request: NextRequest) {
 
         // 2. English or Stock Code Search - Use DB first, then Yahoo Finance
         // 정렬 우선순위: ticker(stockCode) 완전 일치 > prefix > 포함
-        //                > stockName/engName prefix > 포함
+        //                > nameKo/nameEn prefix > 포함
         // alphabet 컷오프(K~Z 잘림) 방지 위해 후보를 넉넉히 확보 후 JS 정렬
-        const dbStocks = await prisma.kisStockMaster.findMany({
+        const dbStocks = await prisma.stock.findMany({
             where: {
                 OR: [
-                    { engName: { contains: query, mode: 'insensitive' } },
-                    { stockName: { contains: query, mode: 'insensitive' } },
+                    { nameEn: { contains: query, mode: 'insensitive' } },
+                    { nameKo: { contains: query, mode: 'insensitive' } },
                     { stockCode: { contains: query, mode: 'insensitive' } },
                 ]
             },
@@ -148,8 +148,8 @@ export async function GET(request: NextRequest) {
             const q = query.toLowerCase()
             const scoreOf = (s: typeof dbStocks[number]) => {
                 const code = s.stockCode.toLowerCase()
-                const name = (s.stockName || '').toLowerCase()
-                const eng = (s.engName || '').toLowerCase()
+                const name = (s.nameKo || '').toLowerCase()
+                const eng = (s.nameEn || '').toLowerCase()
                 if (code === q) return 0
                 if (code.startsWith(q)) return 1
                 if (code.includes(q)) return 2
@@ -164,14 +164,14 @@ export async function GET(request: NextRequest) {
                     if (a.stock.stockCode.length !== b.stock.stockCode.length) {
                         return a.stock.stockCode.length - b.stock.stockCode.length
                     }
-                    return (a.stock.engName || '').length - (b.stock.engName || '').length
+                    return (a.stock.nameEn || '').length - (b.stock.nameEn || '').length
                 })
                 .slice(0, 50)
                 .map(({ stock }) => ({
                     symbol: stock.stockCode,
-                    name: stock.engName || stock.stockName,
-                    nameKo: stock.stockName,
-                    nameEn: stock.engName,
+                    name: stock.nameEn || stock.nameKo,
+                    nameKo: stock.nameKo,
+                    nameEn: stock.nameEn,
                     exchange: stock.market === 'KOSPI' ? 'KSC' : 'KOE',
                     market: stock.market,
                     type: 'EQUITY',

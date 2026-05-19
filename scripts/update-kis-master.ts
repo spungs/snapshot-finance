@@ -56,8 +56,8 @@ const MARKETS: MarketSpec[] = [
 
 interface ParsedStock {
     stockCode: string
-    stockName: string
-    engName: string | null
+    nameKo: string
+    nameEn: string | null
     market: string
 }
 
@@ -113,8 +113,8 @@ function parseKrMasterFile(dbMarket: string, filePath: string): ParsedStock[] {
         if (shortCode && cleanName) {
             stocks.push({
                 stockCode: shortCode,
-                stockName: cleanName,
-                engName: null,
+                nameKo: cleanName,
+                nameEn: null,
                 market: dbMarket,
             })
         }
@@ -149,8 +149,8 @@ function parseUsMasterFile(dbMarket: string, filePath: string): ParsedStock[] {
 
         stocks.push({
             stockCode: symbol,
-            stockName: koreaName || englishName || symbol,
-            engName: englishName || null,
+            nameKo: koreaName || englishName || symbol,
+            nameEn: englishName || null,
             market: dbMarket,
         })
     }
@@ -202,7 +202,7 @@ async function validateAll(parsedByMarket: Record<string, ParsedStock[]>): Promi
             throw new Error(`[${dbMarket}] only ${parsed.length} rows (expected ≥${min}) — aborting all`)
         }
 
-        const prevCount = await prisma.kisStockMaster.count({ where: { market: dbMarket } })
+        const prevCount = await prisma.stock.count({ where: { market: dbMarket } })
         if (prevCount > 0 && parsed.length < prevCount * ANOMALY_DROP_RATIO) {
             const pct = Math.round((1 - parsed.length / prevCount) * 100)
             throw new Error(
@@ -212,19 +212,27 @@ async function validateAll(parsedByMarket: Record<string, ParsedStock[]>): Promi
     }
 }
 
-// market 단위 트랜잭션으로 delete + insert. advisory lock 으로 동시 실행 가드.
+// market 단위 트랜잭션으로 upsert. delete 후 insert 방식은 holdings/snapshot_holdings FK 위반.
+// 이름이 바뀐 ticker 는 update, 새 ticker 는 insert, 사라진 ticker 는 보존(보유 가능성).
 async function applyMarket(dbMarket: string, stocks: ParsedStock[]): Promise<void> {
     await prisma.$transaction(
         async (tx) => {
-            // 트랜잭션 범위 advisory lock — 같은 키를 다른 인스턴스가 잡고 있으면 대기.
             await tx.$executeRaw`SELECT pg_advisory_xact_lock(${ADVISORY_LOCK_KEY})`
 
-            await tx.kisStockMaster.deleteMany({ where: { market: dbMarket } })
+            // 1) 새 ticker 일괄 삽입 — 기존 row 는 skipDuplicates 로 건너뜀
             for (const batch of chunk(stocks, 1000)) {
-                await tx.kisStockMaster.createMany({ data: batch, skipDuplicates: true })
+                await tx.stock.createMany({ data: batch, skipDuplicates: true })
+            }
+
+            // 2) 이름/시장 변경분 반영 — 같은 stockCode 의 row 갱신
+            for (const s of stocks) {
+                await tx.stock.update({
+                    where: { stockCode: s.stockCode },
+                    data: { nameKo: s.nameKo, nameEn: s.nameEn, market: s.market },
+                }).catch(() => {})
             }
         },
-        { timeout: 60_000, maxWait: 10_000 },
+        { timeout: 120_000, maxWait: 10_000 },
     )
 }
 

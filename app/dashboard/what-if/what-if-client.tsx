@@ -19,11 +19,11 @@ import { useLanguage } from '@/lib/i18n/context'
 import { FALLBACK_USD_RATE } from '@/lib/api/exchange-rate'
 
 interface Stock {
-    id: string
     stockCode: string
-    stockName: string
-    engName?: string
-    market?: string
+    stockName?: string
+    nameKo: string
+    nameEn?: string | null
+    market: string
 }
 
 interface ChartData {
@@ -242,7 +242,7 @@ export function WhatIfClient() {
 
     const areaColor = isProfit ? PROFIT_COLOR : LOSS_COLOR
     const stockDisplayName = selectedStock
-        ? (language === 'ko' ? selectedStock.stockName : (selectedStock.engName || selectedStock.stockName))
+        ? (language === 'ko' ? (selectedStock.stockName ?? selectedStock.nameKo) : (selectedStock.nameEn || selectedStock.stockName || selectedStock.nameKo))
         : ''
 
     const periodLabel = chartData.length > 0

@@ -14,11 +14,11 @@ import { useMediaQuery } from '@/lib/hooks/use-media-query'
 import { useLanguage } from '@/lib/i18n/context'
 
 interface Stock {
-    id: string
     stockCode: string
-    stockName: string
-    engName?: string
-    market?: string
+    stockName?: string         // nameKo alias for legacy client compatibility
+    nameKo: string
+    nameEn?: string | null
+    market: string
 }
 
 interface SearchResult {
@@ -141,18 +141,12 @@ export function StockSearchCombobox({
             const res = await fetch('/api/stocks', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    stockCode: result.symbol,
-                    stockName: result.nameKo || result.name,
-                    engName: result.nameEn,
-                    market: result.market,
-                    sector: result.type,
-                }),
+                body: JSON.stringify({ stockCode: result.symbol }),
             })
             const data = await res.json()
 
             if (data.success) {
-                onSelect(data.data)
+                onSelect({ ...data.data, stockName: data.data.nameKo })
                 if (inline) {
                     // 인라인 모드는 open state 가 없으므로 검색 상태를 직접 초기화.
                     setQuery('')

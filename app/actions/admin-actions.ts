@@ -100,7 +100,6 @@ export type ImportItem = {
 
 export type AnalyzedItem = {
     identifier: string // The raw input text
-    stockId?: string
     stockName?: string
     stockCode?: string
     market?: string
@@ -155,102 +154,32 @@ export async function analyzeBulkImport(items: ImportItem[]): Promise<ImportAnal
     try {
         for (const item of items) {
             const cleanIdentifier = item.identifier.trim()
-            // Try explicit by code or name (EXACT match first)
+            // stocks 통합 후: ticker / 한글명 / contains 한 번에 조회. 결과 없으면 unresolved.
             let stock = await prisma.stock.findFirst({
                 where: {
                     OR: [
                         { stockCode: cleanIdentifier },
-                        { stockName: cleanIdentifier }
+                        { nameKo: cleanIdentifier },
+                        { nameKo: { contains: cleanIdentifier } },
+                        { nameEn: { equals: cleanIdentifier, mode: 'insensitive' } },
                     ]
                 }
             })
 
-            // If not found in Stock, try to match by partial name or stripped whitespace name
-            if (!stock) {
-                // Try finding in Stock with whitespace removed (e.g. "LG 디스플레이" vs "LG디스플레이")
-                // Prisma doesn't support regex replace in query easily, so we fallback to contains if short enough, or exact match variants.
-                // Actually, let's just use contains for name in Stock first before going to master
-                stock = await prisma.stock.findFirst({
-                    where: {
-                        stockName: { contains: cleanIdentifier }
-                    }
-                })
-            }
-
-            if (!stock) {
-                // Check Master (ONLY FOR KOREAN STOCKS - 6 digits OR Korean characters)
-                // If it looks like a KR identifier (6 digits) OR contains Hangul
-                if (/^\d{6}$/.test(cleanIdentifier) || /[가-힣]/.test(cleanIdentifier) || (cleanIdentifier.toUpperCase() === cleanIdentifier && !/^[A-Z0-9]+$/.test(cleanIdentifier))) {
-                    // For Master search, we want to be generous
-                    const master = await prisma.kisStockMaster.findFirst({
-                        where: {
-                            OR: [
-                                { stockCode: cleanIdentifier },
-                                { stockName: cleanIdentifier },
-                                { stockName: { contains: cleanIdentifier } },  // e.g. "LG디스플" -> "LG디스플레이"
-                                { stockName: { startsWith: cleanIdentifier } }
-                            ]
-                        }
-                    })
-
-                    if (master) {
-                        // Check if actually exists in Stock by code
-                        stock = await prisma.stock.findUnique({ where: { stockCode: master.stockCode } })
-
-                        // If not in Stock but in Master, we consider it 'resolved' (will be created on execute)
-                        if (!stock) {
-                            // Virtual stock object for UI display
-                            stock = {
-                                id: 'pending-creation',
-                                stockCode: master.stockCode,
-                                stockName: master.stockName,
-                                market: master.market
-                            } as any
-                        }
-                    }
-                }
-
-                // US Fallback
-                if (!stock && /^[A-Z]{1,5}$/i.test(cleanIdentifier)) {
-                    // ... US logic ...
-                    // If not in DB and looks like US stock, Create "Virtual" US Stock
-                    // PROVISIONAL: We assume it's a valid US ticker if it matches the pattern
-                    // In a real app, we'd verify against a US api.
-                    stock = {
-                        id: 'pending-creation-us', // Special ID to note it's US
-                        stockCode: item.identifier.toUpperCase(),
-                        stockName: item.identifier.toUpperCase(), // Temporary Name
-                        market: 'Unknown'
-                    } as any
-                }
-            }
-
             if (stock) {
-                // Enhance: If stock exists but market is Unknown, check Master (KR Only logic)
-                let market = stock.market
-                if ((market === 'Unknown' || !market) && /^\d{6}$/.test(stock.stockCode)) {
-                    const master = await prisma.kisStockMaster.findUnique({ where: { stockCode: stock.stockCode } })
-                    if (master) {
-                        market = master.market
-                        // We will update this in execute phase, but for prediction let's use it
-                    }
-                }
+                const market = stock.market
 
-                // Check current holding — Phase A 이후 unique key 는 [accountId, stockId].
-                // 분석 단계에서는 "이 사용자가 어디든 보유 중인 가장 최근 행"을 보여 주는 것으로 충분하다.
-                // (정확한 충돌 판정은 execute 단계에서 선택된 accountId 와 함께 다시 확인한다.)
+                // Check current holding — stockCode 단위로 사용자 보유 row 확인.
                 let currentQty = 0
                 let currentPrice = 0
 
-                if (stock.id !== 'pending-creation' && stock.id !== 'pending-creation-us') {
-                    const holding = await prisma.holding.findFirst({
-                        where: { userId, stockId: stock.id },
-                        orderBy: { updatedAt: 'desc' },
-                    })
-                    if (holding) {
-                        currentQty = holding.quantity
-                        currentPrice = Number(holding.averagePrice)
-                    }
+                const holding = await prisma.holding.findFirst({
+                    where: { userId, stockCode: stock.stockCode },
+                    orderBy: { updatedAt: 'desc' },
+                })
+                if (holding) {
+                    currentQty = holding.quantity
+                    currentPrice = Number(holding.averagePrice)
                 }
 
                 const currency = getCurrencyForMarket(market, stock.stockCode)
@@ -274,9 +203,8 @@ export async function analyzeBulkImport(items: ImportItem[]): Promise<ImportAnal
 
                 resolvedItems.push({
                     identifier: item.identifier,
-                    stockId: stock.id,
-                    stockName: stock.stockName,
                     stockCode: stock.stockCode,
+                    stockName: stock.nameKo,
                     market: market ?? undefined,
                     currency,
                     inputQty: item.quantity,
@@ -369,35 +297,8 @@ export async function executeBulkImport(
             const errors: { identifier: string; message: string }[] = []
 
             for (const item of items) {
-                // 1. Final Resolve (Should be robust now)
-                let stock = await tx.stock.findUnique({ where: { stockCode: item.identifier } })
-
-                if (!stock) {
-                    // Try User Creation for US stocks explicitly
-                    if (/^[A-Z]{1,5}$/i.test(item.identifier)) {
-                        stock = await tx.stock.create({
-                            data: {
-                                stockCode: item.identifier.toUpperCase(),
-                                stockName: item.identifier.toUpperCase(),
-                                market: 'NAS',
-                                sector: 'Unknown'
-                            }
-                        })
-                    } else {
-                        // KOREAN Logic
-                        const master = await tx.kisStockMaster.findUnique({ where: { stockCode: item.identifier } })
-                        if (master) {
-                            stock = await tx.stock.create({
-                                data: {
-                                    stockCode: master.stockCode,
-                                    stockName: master.stockName,
-                                    market: master.market,
-                                    sector: 'Unknown'
-                                }
-                            })
-                        }
-                    }
-                }
+                // stocks 통합 후: 마스터 lookup 한 번이면 충분. 없으면 unresolved.
+                const stock = await tx.stock.findUnique({ where: { stockCode: item.identifier } })
 
                 if (!stock) {
                     // Soft failure: 종목을 식별할 수 없는 항목은 스킵 (트랜잭션은 유지)
@@ -405,18 +306,7 @@ export async function executeBulkImport(
                     continue
                 }
 
-                // Self-Healing (KR Only)
-                let market = stock.market
-                if ((market === 'Unknown' || !market) && /^\d{6}$/.test(stock.stockCode)) {
-                    const master = await tx.kisStockMaster.findUnique({ where: { stockCode: stock.stockCode } })
-                    if (master) {
-                        market = master.market
-                        await tx.stock.update({
-                            where: { id: stock.id },
-                            data: { market: master.market }
-                        })
-                    }
-                }
+                const market = stock.market
 
                 const currency = getCurrencyForMarket(market, stock.stockCode)
 
@@ -434,7 +324,7 @@ export async function executeBulkImport(
                 // 2. Logic based on Strategy
                 if (strategy === 'overwrite') {
                     await tx.holding.upsert({
-                        where: { accountId_stockId: { accountId, stockId: stock.id } },
+                        where: { accountId_stockCode: { accountId, stockCode: stock.stockCode } },
                         update: {
                             quantity: item.quantity,
                             averagePrice: item.averagePrice,
@@ -444,7 +334,7 @@ export async function executeBulkImport(
                         create: {
                             userId,
                             accountId,
-                            stockId: stock.id,
+                            stockCode: stock.stockCode,
                             quantity: item.quantity,
                             averagePrice: item.averagePrice,
                             currency,
@@ -453,7 +343,7 @@ export async function executeBulkImport(
                     })
                 } else { // 'add'
                     const existing = await tx.holding.findUnique({
-                        where: { accountId_stockId: { accountId, stockId: stock.id } }
+                        where: { accountId_stockCode: { accountId, stockCode: stock.stockCode } }
                     })
 
                     if (existing) {
@@ -474,7 +364,7 @@ export async function executeBulkImport(
                         }
 
                         await tx.holding.update({
-                            where: { accountId_stockId: { accountId, stockId: stock.id } },
+                            where: { accountId_stockCode: { accountId, stockCode: stock.stockCode } },
                             data: {
                                 quantity: totalQty,
                                 averagePrice: newAvgPrice,
@@ -487,7 +377,7 @@ export async function executeBulkImport(
                             data: {
                                 userId,
                                 accountId,
-                                stockId: stock.id,
+                                stockCode: stock.stockCode,
                                 quantity: item.quantity,
                                 averagePrice: item.averagePrice,
                                 currency,

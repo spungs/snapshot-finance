@@ -217,7 +217,7 @@ export async function PUT(
     let totalCost = new Decimal(0)
     let totalValue = new Decimal(0)
     const processedHoldings: Array<{
-      stockId: string
+      stockCode: string
       quantity: number
       averagePrice: Decimal
       currentPrice: Decimal
@@ -273,7 +273,7 @@ export async function PUT(
       totalValue = totalValue.plus(holdingValue)
 
       processedHoldings.push({
-        stockId: String(h.stockId),
+        stockCode: String((h as { stockCode?: unknown; stockId?: unknown }).stockCode ?? (h as { stockId?: unknown }).stockId),
         quantity,
         averagePrice,
         currentPrice,
@@ -323,7 +323,7 @@ export async function PUT(
         await tx.snapshotHolding.createMany({
           data: processedHoldings.map(h => ({
             snapshotId: id,
-            stockId: h.stockId,
+            stockCode: h.stockCode,
             quantity: h.quantity,
             averagePrice: h.averagePrice,
             currentPrice: h.currentPrice,

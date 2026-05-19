@@ -45,7 +45,6 @@ const SEGMENT_COLORS = [
 
 interface Holding {
     id: string
-    stockId: string
     stockCode: string
     stockName: string
     engName?: string | null
@@ -285,10 +284,10 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
         if (!newStock) return null
         if (isMultiAccount) {
             if (!newAccountId) return null
-            return holdings.find(h => h.stockId === newStock.id && h.accountId === newAccountId) ?? null
+            return holdings.find(h => h.stockCode === newStock.stockCode && h.accountId === newAccountId) ?? null
         }
-        // 단일 계좌(또는 Phase A 미적용) — 기존 동작 유지: stockId 만으로 매칭
-        return holdings.find(h => h.stockId === newStock.id) ?? null
+        // 단일 계좌 — stockCode 만으로 매칭
+        return holdings.find(h => h.stockCode === newStock.stockCode) ?? null
     }, [newStock, holdings, isMultiAccount, newAccountId])
 
     // Edit/delete
@@ -336,22 +335,22 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
         return () => window.removeEventListener('portfolio:refresh', handler)
     }, [refresh])
 
-    // 통합 모드 — 같은 stockId 의 여러 계좌 row 를 합쳐 가중평균 평단으로 표시.
+    // 통합 모드 — 같은 stockCode 의 여러 계좌 row 를 합쳐 가중평균 평단으로 표시.
     // Decimal.js 사용 — 누적 부동소수점 오차 방지 (평단가는 한 번 어긋나면 영구 오류).
     const unifiedHoldings = useMemo<Holding[]>(() => {
         const groups = new Map<string, Holding[]>()
         for (const h of holdings) {
-            const list = groups.get(h.stockId) ?? []
+            const list = groups.get(h.stockCode) ?? []
             list.push(h)
-            groups.set(h.stockId, list)
+            groups.set(h.stockCode, list)
         }
         const merged: Holding[] = []
-        for (const [stockId, list] of groups) {
+        for (const [, list] of groups) {
             if (list.length === 1) {
                 merged.push(list[0])
                 continue
             }
-            // 같은 stockId 의 여러 row 합산. currency/market 은 첫 항목 기준 (동일 종목이므로 동일).
+            // 같은 stockCode 의 여러 row 합산. currency/market 은 첫 항목 기준 (동일 종목이므로 동일).
             const first = list[0]
             let totalQty = new Decimal(0)
             let totalCostByCurrency = new Decimal(0)
@@ -377,9 +376,8 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
             const profit = currentValue - totalCost
             const profitRate = totalCost > 0 ? (profit / totalCost) * 100 : 0
             merged.push({
-                // unified-{stockId} 를 가상 ID 로 — 실제 row id 가 아님 (편집/삭제 불가하다는 신호)
-                id: `unified-${stockId}`,
-                stockId,
+                // unified-{stockCode} 를 가상 ID 로 — 실제 row id 가 아님 (편집/삭제 불가하다는 신호)
+                id: `unified-${first.stockCode}`,
                 stockCode: first.stockCode,
                 stockName: first.stockName,
                 engName: first.engName,
@@ -462,7 +460,7 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
         const purchaseRateVal = newPurchaseRate ? parseFloat(newPurchaseRate.replace(/,/g, '')) : 0
         try {
             const res = await holdingsApi.create({
-                stockId: newStock.id,
+                stockCode: newStock.stockCode,
                 quantity: parseInt(newQty.replace(/,/g, '')),
                 averagePrice: parseFloat(newPrice.replace(/,/g, '')),
                 mode: existingHolding ? addMode : 'overwrite',

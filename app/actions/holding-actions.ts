@@ -60,7 +60,7 @@ async function assertAccountOwnership(
 
 interface CreateHoldingInput {
     accountId: string
-    stockId: string
+    stockCode: string
     quantity: number | string
     averagePrice: number | string
     currency?: 'KRW' | 'USD'
@@ -79,9 +79,10 @@ export async function createHolding(input: CreateHoldingInput): Promise<ActionRe
     const ownership = await assertAccountOwnership(input.accountId, userId)
     if (!ownership.ok) return { success: false, error: ownership.error }
 
-    if (!input.stockId || typeof input.stockId !== 'string') {
+    if (!input.stockCode || typeof input.stockCode !== 'string') {
         return { success: false, error: '종목 정보가 누락되었습니다.' }
     }
+    const stockCode = input.stockCode
 
     const qtyResult = validateQuantity(input.quantity)
     if (!qtyResult.ok) return { success: false, error: qtyResult.error }
@@ -95,7 +96,7 @@ export async function createHolding(input: CreateHoldingInput): Promise<ActionRe
         currency = r.value
     }
 
-    const stock = await prisma.stock.findUnique({ where: { id: input.stockId } })
+    const stock = await prisma.stock.findUnique({ where: { stockCode } })
     if (!stock) {
         return { success: false, error: '종목을 찾을 수 없습니다.' }
     }
@@ -122,7 +123,7 @@ export async function createHolding(input: CreateHoldingInput): Promise<ActionRe
         // 같은 계좌 + 같은 종목 unique 제약 ([accountId, stockId]) — 기존 row 가 있으면
         // mode 에 따라 처리.
         const existing = await prisma.holding.findFirst({
-            where: { userId, accountId: input.accountId, stockId: input.stockId },
+            where: { userId, accountId: input.accountId, stockCode },
         })
 
         if (existing && mode === 'merge') {
@@ -160,12 +161,12 @@ export async function createHolding(input: CreateHoldingInput): Promise<ActionRe
             })
         } else {
             // mode === 'new' 또는 신규
-            // unique 제약 ([accountId, stockId]) 위반 시 prisma 가 에러 — 호출자가 mode='new' 를 잘못 보낸 것.
+            // unique 제약 ([accountId, stockCode]) 위반 시 prisma 가 에러 — 호출자가 mode='new' 를 잘못 보낸 것.
             await prisma.holding.create({
                 data: {
                     userId,
                     accountId: input.accountId,
-                    stockId: input.stockId,
+                    stockCode,
                     quantity,
                     averagePrice,
                     currentPrice: safeCurrentPrice,

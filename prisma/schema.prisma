@@ -84,7 +84,7 @@ model PortfolioSnapshot {
 model SnapshotHolding {
   id           String            @id @default(cuid())
   snapshotId   String
-  stockId      String
+  stockCode    String
   quantity     Int
   averagePrice Decimal           @db.Decimal(15, 2)
   currentPrice Decimal           @db.Decimal(15, 2)
@@ -96,26 +96,27 @@ model SnapshotHolding {
   currency     String            @default("KRW")
   purchaseRate Decimal           @default(1) @db.Decimal(10, 2)
   snapshot     PortfolioSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
-  stock        Stock             @relation(fields: [stockId], references: [id])
+  stock        Stock             @relation(fields: [stockCode], references: [stockCode])
 
   @@index([snapshotId])
-  @@index([stockId])
+  @@index([stockCode])
   @@map("snapshot_holdings")
 }
 
+// 통합된 종목 마스터 (구 kis_stock_masters + 구 stocks 가 합쳐짐).
+// KIS 마스터에서 정기 동기화되며, holdings/snapshot_holdings 가 stockCode 로 직접 참조한다.
 model Stock {
-  id           String            @id @default(cuid())
-  stockCode    String            @unique
-  stockName    String
-  engName      String?           // 영문 종목명
-  market       String?
-  sector       String?
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
+  stockCode String   @id        // ticker — KIS 마스터의 row 가 그대로 들어옴
+  nameKo    String              // 한글 표시명 (구 KIS stockName)
+  nameEn    String?             // 풀네임 영문명 (구 KIS engName)
+  market    String              // KOSPI | KOSDAQ | NASD | NYSE | AMEX
+  updatedAt DateTime @updatedAt
+
   liveHoldings Holding[]
   holdings     SnapshotHolding[]
 
-  @@index([stockCode])
+  @@index([nameKo])
+  @@index([nameEn])
   @@map("stocks")
 }
 
@@ -137,7 +138,7 @@ model Holding {
   id             String           @id @default(cuid())
   userId         String
   accountId      String
-  stockId        String
+  stockCode      String
   quantity       Int
   averagePrice   Decimal          @db.Decimal(15, 2)
   currentPrice   Decimal          @default(0) @db.Decimal(15, 2)
@@ -146,14 +147,14 @@ model Holding {
   priceUpdatedAt DateTime?
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
-  stock          Stock            @relation(fields: [stockId], references: [id])
+  stock          Stock            @relation(fields: [stockCode], references: [stockCode])
   user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   account        BrokerageAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
 
-  @@unique([accountId, stockId])
+  @@unique([accountId, stockCode])
   @@index([userId])
   @@index([accountId])
-  @@index([stockId])
+  @@index([stockCode])
   @@map("holdings")
 }
 
@@ -168,17 +169,7 @@ model ApiToken {
   @@map("api_tokens")
 }
 
-model KisStockMaster {
-  stockCode String   @id
-  stockName String
-  engName   String?
-  market    String
-  updatedAt DateTime @updatedAt
-
-  @@index([stockName])
-  @@index([engName])
-  @@map("kis_stock_masters")
-}
+// (구 KisStockMaster 모델 제거 — Stock 모델로 통합됨)
 
 model KisMasterSyncLog {
   id           String    @id @default(cuid())

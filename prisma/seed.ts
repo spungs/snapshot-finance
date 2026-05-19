@@ -29,18 +29,18 @@ async function main() {
   }
 
 
-  // 주요 종목 마스터 데이터
+  // 주요 종목 마스터 데이터 (실 데이터는 scripts/update-kis-master.ts 에서 동기화)
   const stocks = [
-    { stockCode: '005930', stockName: '삼성전자', market: 'KOSPI', sector: '전기전자' },
-    { stockCode: '000660', stockName: 'SK하이닉스', market: 'KOSPI', sector: '전기전자' },
-    { stockCode: '035420', stockName: 'NAVER', market: 'KOSPI', sector: 'IT' },
-    { stockCode: '005380', stockName: '현대차', market: 'KOSPI', sector: '자동차' },
-    { stockCode: '051910', stockName: 'LG화학', market: 'KOSPI', sector: '화학' },
-    { stockCode: '035720', stockName: '카카오', market: 'KOSPI', sector: 'IT' },
-    { stockCode: '373220', stockName: 'LG에너지솔루션', market: 'KOSPI', sector: '전기전자' },
-    { stockCode: '207940', stockName: '삼성바이오로직스', market: 'KOSPI', sector: '바이오' },
-    { stockCode: '006400', stockName: '삼성SDI', market: 'KOSPI', sector: '전기전자' },
-    { stockCode: '003670', stockName: '포스코퓨처엠', market: 'KOSPI', sector: '철강' },
+    { stockCode: '005930', nameKo: '삼성전자', market: 'KOSPI' },
+    { stockCode: '000660', nameKo: 'SK하이닉스', market: 'KOSPI' },
+    { stockCode: '035420', nameKo: 'NAVER', market: 'KOSPI' },
+    { stockCode: '005380', nameKo: '현대차', market: 'KOSPI' },
+    { stockCode: '051910', nameKo: 'LG화학', market: 'KOSPI' },
+    { stockCode: '035720', nameKo: '카카오', market: 'KOSPI' },
+    { stockCode: '373220', nameKo: 'LG에너지솔루션', market: 'KOSPI' },
+    { stockCode: '207940', nameKo: '삼성바이오로직스', market: 'KOSPI' },
+    { stockCode: '006400', nameKo: '삼성SDI', market: 'KOSPI' },
+    { stockCode: '003670', nameKo: '포스코퓨처엠', market: 'KOSPI' },
   ]
 
   for (const stock of stocks) {
