@@ -64,9 +64,11 @@ export function StockSearchCombobox({
     const triggerRef = React.useRef<HTMLButtonElement>(null)
     const [triggerWidth, setTriggerWidth] = React.useState<number>()
 
-    // 자동 debounce 검색은 제거 — 사용자가 Enter 또는 검색 버튼을 명시적으로 눌러야만 호출.
+    // 입력 후 300ms idle 시 자동 검색. Enter/돋보기 클릭은 즉시 검색 (debounce 무시).
     // 검색 중에 새로운 검색이 들어오면 이전 요청은 취소하고 최신 요청만 반영한다.
     const abortRef = React.useRef<AbortController | null>(null)
+    const DEBOUNCE_MS = 300
+    const MIN_QUERY_LEN = 1
 
     const searchStocks = React.useCallback(async (q: string) => {
         const trimmed = q.trim()
@@ -115,6 +117,17 @@ export function StockSearchCombobox({
     }, [t])
 
     React.useEffect(() => () => abortRef.current?.abort(), [])
+
+    // debounce: query 가 일정 시간 변하지 않으면 자동 검색.
+    // 빈 쿼리는 결과 비움 (searchStocks 내부에서 처리). MIN_QUERY_LEN 미만이면 검색 안 함.
+    React.useEffect(() => {
+        const trimmed = query.trim()
+        if (trimmed.length < MIN_QUERY_LEN) return
+        const id = window.setTimeout(() => {
+            searchStocks(trimmed)
+        }, DEBOUNCE_MS)
+        return () => window.clearTimeout(id)
+    }, [query, searchStocks])
 
     React.useEffect(() => {
         if (open && triggerRef.current) {
