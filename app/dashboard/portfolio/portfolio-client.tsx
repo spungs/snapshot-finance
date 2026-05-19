@@ -34,7 +34,6 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 
-const RECENT_ACCOUNT_STORAGE_KEY = 'holdings:recent-account'
 const VIEW_MODE_STORAGE_KEY = 'holdings-view-mode'
 const ACCOUNT_FILTER_STORAGE_KEY = 'holdings-account-filter'
 
@@ -258,7 +257,16 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
             setNewPrice('')
             setNewPurchaseRate('')
             setAddMode('merge')
-            // newAccountId 는 의도적으로 유지 — 드로어 재오픈 시 마지막 선택 계좌가 자연스럽게 남는다.
+        } else if (accounts.length > 0) {
+            // 드로어 오픈 시 현재 보고 있는 계좌를 기본값으로 — byAccount 모드에서
+            // 특정 계좌 탭을 보고 있으면 그 계좌, 'all' 이거나 unified 모드면 첫 번째 계좌.
+            const viewing =
+                viewMode === 'byAccount' &&
+                accountFilter !== 'all' &&
+                accounts.some(a => a.id === accountFilter)
+                    ? accountFilter
+                    : accounts[0].id
+            setNewAccountId(viewing)
         }
         setShowAdd(next)
     }
@@ -1399,12 +1407,11 @@ function AddHoldingFloating({
                             inline
                         />
                         {/* 계좌 셀렉터 — 단일 계좌 사용자에게는 자동으로 숨김 (AccountSelector 자체 처리).
-                            마지막 사용 계좌를 localStorage 에 영속화. */}
+                            기본값은 드로어 오픈 시 부모가 현재 보고 있는 계좌로 seed. */}
                         <AccountSelector
                             accounts={accounts}
                             value={accountId}
                             onChange={setAccountId}
-                            rememberKey={RECENT_ACCOUNT_STORAGE_KEY}
                             disabled={adding}
                             label={language === 'ko' ? '계좌' : 'Account'}
                         />
