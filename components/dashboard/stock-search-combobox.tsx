@@ -314,10 +314,12 @@ export function StockSearchCombobox({
                         <Search className="h-4 w-4" />
                     </Button>
                 </div>
-                {/* 결과 — 검색이 한 번이라도 일어났거나 진행 중일 때만 노출 */}
+                {/* 결과 — 검색이 한 번이라도 일어났거나 진행 중일 때만 노출.
+                    별도 카드 룩 대신 폼 내부의 한 영역으로 자연스럽게 통합:
+                    bg-muted/30 으로 살짝 구분, border 는 제거. */}
                 {(loading || error || hasSearched) && (
                     <div
-                        className="w-full min-w-0 overflow-y-auto overscroll-contain rounded-md border"
+                        className="w-full min-w-0 overflow-y-auto overscroll-contain rounded-md bg-muted/30"
                         style={{
                             maxHeight: 'min(40vh, 320px)',
                             WebkitOverflowScrolling: 'touch',

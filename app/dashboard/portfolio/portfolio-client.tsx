@@ -1376,7 +1376,11 @@ function AddHoldingFloating({
             </button>
 
             <Dialog open={open} onOpenChange={onOpenChange}>
-                <DialogContent className="sm:max-w-[420px]">
+                {/* grid-cols-[minmax(0,1fr)]: shadcn DialogContent 의 기본 `grid` 가
+                    minmax(auto, 1fr) 트랙이라 자식 콘텐츠(긴 영문 종목명)가
+                    트랙을 늘려 Dialog 가 viewport 폭을 넘어 잘리는 사고 방지.
+                    overflow-x-hidden 은 만일을 대비한 안전망. */}
+                <DialogContent className="sm:max-w-[420px] grid-cols-[minmax(0,1fr)] overflow-x-hidden">
                     <DialogHeader>
                         <DialogTitle>{language === 'ko' ? '종목 추가' : 'Add holding'}</DialogTitle>
                         <DialogDescription className="sr-only">
