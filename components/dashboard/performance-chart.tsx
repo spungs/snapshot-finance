@@ -166,7 +166,7 @@ export function PerformanceChart({ initialChartData }: PerformanceChartProps) {
   return (
     <Card>
       <CardHeader className="pb-2">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <BarChart2 className="h-4 w-4 text-muted-foreground" />
             <CardTitle className="text-base">
@@ -180,14 +180,14 @@ export function PerformanceChart({ initialChartData }: PerformanceChartProps) {
             )}
           </div>
 
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          <div className="flex flex-row items-center gap-2 flex-wrap">
             {/* 정상 상태의 새로고침은 전역 대시보드 헤더가 담당. 차트 카드 내부의 재시도는
                 staleWarning 인라인 영역과 fatalError 화면에만 노출 (중복 affordance 제거). */}
-            <div className="flex rounded-md border border-border overflow-hidden text-xs self-start sm:self-auto">
+            <div className="flex rounded-md border border-border overflow-hidden text-xs">
               <button
                 onClick={() => setMode('profitRate')}
                 className={cn(
-                  'px-2.5 py-1 transition-colors',
+                  'px-2.5 py-1 whitespace-nowrap transition-colors',
                   mode === 'profitRate'
                     ? 'bg-primary text-primary-foreground'
                     : 'text-muted-foreground hover:text-foreground'
@@ -198,7 +198,7 @@ export function PerformanceChart({ initialChartData }: PerformanceChartProps) {
               <button
                 onClick={() => setMode('totalAsset')}
                 className={cn(
-                  'px-2.5 py-1 transition-colors',
+                  'px-2.5 py-1 whitespace-nowrap transition-colors',
                   mode === 'totalAsset'
                     ? 'bg-primary text-primary-foreground'
                     : 'text-muted-foreground hover:text-foreground'
@@ -208,13 +208,13 @@ export function PerformanceChart({ initialChartData }: PerformanceChartProps) {
               </button>
             </div>
 
-            <div className="flex rounded-md border border-border overflow-hidden text-xs self-start sm:self-auto">
+            <div className="flex rounded-md border border-border overflow-hidden text-xs">
               {PERIODS.map((p) => (
                 <button
                   key={p}
                   onClick={() => setPeriod(p)}
                   className={cn(
-                    'px-2.5 py-1 transition-colors',
+                    'px-2.5 py-1 whitespace-nowrap transition-colors',
                     period === p
                       ? 'bg-primary text-primary-foreground'
                       : 'text-muted-foreground hover:text-foreground'
