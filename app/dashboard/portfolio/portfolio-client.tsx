@@ -1519,9 +1519,15 @@ function SortToggle({
     label: string
     onClick: () => void
 }) {
+    // 정렬 키 선택 + 방향 표시. 활성 시 dir(asc/desc) 정보를 스크린리더에도 전달.
+    const ariaLabel = active
+        ? `${label} 기준 ${dir === 'desc' ? '내림차순' : '오름차순'} 정렬됨`
+        : `${label} 기준 정렬`
     return (
         <button
             type="button"
+            aria-pressed={active}
+            aria-label={ariaLabel}
             onClick={onClick}
             className={cn(
                 'text-[11px] font-bold tracking-wide px-2 py-1 inline-flex items-center gap-0.5 transition-colors',
@@ -1530,8 +1536,8 @@ function SortToggle({
         >
             {label}
             {active && (dir === 'desc'
-                ? <ArrowDown className="w-3 h-3" />
-                : <ArrowUp className="w-3 h-3" />
+                ? <ArrowDown className="w-3 h-3" aria-hidden />
+                : <ArrowUp className="w-3 h-3" aria-hidden />
             )}
         </button>
     )

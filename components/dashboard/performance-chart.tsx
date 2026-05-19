@@ -183,8 +183,14 @@ export function PerformanceChart({ initialChartData }: PerformanceChartProps) {
           <div className="flex flex-row items-center gap-2 flex-wrap">
             {/* 정상 상태의 새로고침은 전역 대시보드 헤더가 담당. 차트 카드 내부의 재시도는
                 staleWarning 인라인 영역과 fatalError 화면에만 노출 (중복 affordance 제거). */}
-            <div className="flex rounded-md border border-border overflow-hidden text-xs">
+            <div
+              role="group"
+              aria-label={language === 'ko' ? '차트 메트릭 선택' : 'Chart metric'}
+              className="flex rounded-md border border-border overflow-hidden text-xs"
+            >
               <button
+                type="button"
+                aria-pressed={mode === 'profitRate'}
                 onClick={() => setMode('profitRate')}
                 className={cn(
                   'px-2.5 py-1 whitespace-nowrap transition-colors',
@@ -196,6 +202,8 @@ export function PerformanceChart({ initialChartData }: PerformanceChartProps) {
                 {language === 'ko' ? '수익률' : 'Return'}
               </button>
               <button
+                type="button"
+                aria-pressed={mode === 'totalAsset'}
                 onClick={() => setMode('totalAsset')}
                 className={cn(
                   'px-2.5 py-1 whitespace-nowrap transition-colors',
@@ -208,10 +216,16 @@ export function PerformanceChart({ initialChartData }: PerformanceChartProps) {
               </button>
             </div>
 
-            <div className="flex rounded-md border border-border overflow-hidden text-xs">
+            <div
+              role="group"
+              aria-label={language === 'ko' ? '기간 선택' : 'Period'}
+              className="flex rounded-md border border-border overflow-hidden text-xs"
+            >
               {PERIODS.map((p) => (
                 <button
                   key={p}
+                  type="button"
+                  aria-pressed={period === p}
                   onClick={() => setPeriod(p)}
                   className={cn(
                     'px-2.5 py-1 whitespace-nowrap transition-colors',
