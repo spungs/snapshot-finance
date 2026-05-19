@@ -5,6 +5,7 @@ import { kisClient } from '@/lib/api/kis-client'
 import { getUsdExchangeRate } from '@/lib/api/exchange-rate'
 import { mergeHoldingsByStock } from '@/lib/services/snapshot-service'
 import Decimal from 'decimal.js'
+import { format } from 'date-fns'
 
 // Unified Cron Job: Daily Snapshot + User Maintenance
 // Schedule: 22:30 UTC Mon-Fri (07:30 KST Tue-Sat / 화~토)
@@ -77,7 +78,7 @@ export async function GET(request: NextRequest) {
                         return { userId: user.id, status: 'skipped', reason: 'No holdings' }
                     }
 
-                    // 여러 계좌에 분산된 같은 종목을 stockId 단위로 통합 (가중평균 평단 + 합계 수량)
+                    // 여러 계좌에 분산된 같은 종목을 stockCode 단위로 통합 (가중평균 평단 + 합계 수량)
                     const merged = mergeHoldingsByStock(user.holdings)
 
                     // Fetch prices and calculate values (Real-time) — 모든 합계는 Decimal로
@@ -111,7 +112,7 @@ export async function GET(request: NextRequest) {
                             const hProfitRate = cost.isZero() ? new Decimal(0) : hProfit.div(cost).times(100)
 
                             return {
-                                stockId: holding.stockId,
+                                stockCode: holding.stockCode,
                                 quantity: quantity,
                                 averagePrice: avgPrice,
                                 currentPrice: cur,
@@ -142,7 +143,7 @@ export async function GET(request: NextRequest) {
                                 ? (user.cashAccounts as Prisma.InputJsonValue)
                                 : Prisma.DbNull,
                             exchangeRate: usdRateDec,
-                            note: `Auto Snapshot (${new Date().toLocaleDateString('ko-KR')})`,
+                            note: `자동 · ${format(new Date(), 'yyyy-MM-dd')}`,
                             holdings: {
                                 create: snapshotHoldingsData,
                             },

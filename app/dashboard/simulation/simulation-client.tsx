@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { formatCurrency, formatDate, formatNumber } from '@/lib/utils/formatters'
+import { formatCurrency, formatDate, formatNumber, formatSnapshotNote } from '@/lib/utils/formatters'
 import { cn } from '@/lib/utils'
 import { Loader2, AlertCircle } from 'lucide-react'
 import { useLanguage } from '@/lib/i18n/context'
@@ -179,7 +179,8 @@ export default function SimulationClient({ initialSnapshots }: SimulationClientP
                             }
                             const dateStr = formatDate(snap.snapshotDate)
                             const assetStr = `${t('totalAssets')}: ${formatCurrency(displayValue, currency)}`
-                            const label = snap.note ? `${dateStr} | ${snap.note}` : dateStr
+                            const prettyNote = formatSnapshotNote(snap.note, isEn ? 'en' : 'ko')
+                            const label = prettyNote ? `${dateStr} · ${prettyNote}` : dateStr
                             return (
                                 <SelectItem key={snap.id} value={snap.id}>
                                     <span className="block truncate max-w-[260px] sm:max-w-none">

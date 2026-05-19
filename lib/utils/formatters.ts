@@ -94,6 +94,33 @@ export function formatDate(date: Date | string, formatStr = 'yyyy-MM-dd HH:mm'):
 }
 
 /**
+ * 스냅샷 메모 표시용 포맷터.
+ * 자동 스냅샷의 legacy 포맷("Auto Snapshot (2026. 5. 8.)")과
+ * 신규 포맷("자동 · 2026-05-08") 둘 다 인지해 언어에 맞게 변환한다.
+ * 사용자가 직접 적은 메모는 변형 없이 그대로 반환.
+ */
+export function formatSnapshotNote(
+  note: string | null | undefined,
+  language: 'ko' | 'en' = 'ko'
+): string {
+  if (!note) return ''
+
+  const legacy = note.match(/^Auto Snapshot \((\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\.?\)$/)
+  if (legacy) {
+    const [, y, m, d] = legacy
+    const date = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`
+    return language === 'en' ? `Auto · ${date}` : `자동 · ${date}`
+  }
+
+  const next = note.match(/^자동 · (\d{4}-\d{2}-\d{2})$/)
+  if (next) {
+    return language === 'en' ? `Auto · ${next[1]}` : note
+  }
+
+  return note
+}
+
+/**
  * 상대적 날짜 표시 (예: 오늘, 어제, 3일 전)
  */
 export function formatRelativeDate(date: Date | string): string {
