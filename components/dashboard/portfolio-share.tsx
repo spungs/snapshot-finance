@@ -274,7 +274,7 @@ function ShareCard({ holdings, summary, userName, baseCurrency, language }: Shar
                     </div>
                     <div
                         className="font-serif numeric text-foreground"
-                        style={{ fontSize: '28px', fontWeight: 600, lineHeight: 1.1, marginTop: '4px' }}
+                        style={{ fontSize: '28px', fontWeight: 600, lineHeight: 1.1, marginTop: '4px', whiteSpace: 'nowrap' }}
                     >
                         {formatCurrency(totalValueBase, baseCurrency)}
                     </div>
@@ -284,6 +284,7 @@ function ShareCard({ holdings, summary, userName, baseCurrency, language }: Shar
                             fontSize: '13px',
                             fontWeight: 700,
                             marginTop: '6px',
+                            whiteSpace: 'nowrap',
                             color: totalProfitBase >= 0 ? 'var(--profit, #16a34a)' : 'var(--loss, #dc2626)',
                         }}
                     >
@@ -352,13 +353,26 @@ function ShareCard({ holdings, summary, userName, baseCurrency, language }: Shar
                                     <div style={{ flex: 1, minWidth: 0 }}>
                                         <div
                                             className="font-serif text-foreground"
-                                            style={{ fontSize: '14px', fontWeight: 600, lineHeight: 1.25 }}
+                                            style={{
+                                                fontSize: '14px',
+                                                fontWeight: 600,
+                                                lineHeight: 1.25,
+                                                wordBreak: 'keep-all',
+                                                overflowWrap: 'anywhere',
+                                            }}
                                         >
                                             {h.stockName}
                                         </div>
                                         <div
                                             className="text-muted-foreground numeric"
-                                            style={{ fontSize: '10px', letterSpacing: '0.5px', marginTop: '3px' }}
+                                            style={{
+                                                fontSize: '10px',
+                                                letterSpacing: '0.5px',
+                                                marginTop: '3px',
+                                                whiteSpace: 'nowrap',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                            }}
                                         >
                                             {h.stockCode} · {formatNumber(h.quantity)}
                                             {language === 'ko' ? '주' : 'shr'}
@@ -368,14 +382,21 @@ function ShareCard({ holdings, summary, userName, baseCurrency, language }: Shar
                                         </div>
                                         <div
                                             className="text-muted-foreground numeric"
-                                            style={{ fontSize: '10px', letterSpacing: '0.5px', marginTop: '2px' }}
+                                            style={{
+                                                fontSize: '10px',
+                                                letterSpacing: '0.5px',
+                                                marginTop: '2px',
+                                                whiteSpace: 'nowrap',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                            }}
                                         >
                                             {language === 'ko' ? '비중' : 'Wt'} {weight.toFixed(1)}%
                                             {' · '}
                                             {language === 'ko' ? '매입' : 'Cost'} {formatCurrency(cost, baseCurrency)}
                                         </div>
                                     </div>
-                                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                                    <div style={{ textAlign: 'right', flexShrink: 0, whiteSpace: 'nowrap' }}>
                                         <div
                                             className="numeric text-foreground"
                                             style={{ fontSize: '13px', fontWeight: 700 }}
@@ -445,7 +466,7 @@ function ShareCard({ holdings, summary, userName, baseCurrency, language }: Shar
 
 function SummaryCell({ label, value }: { label: string; value: string }) {
     return (
-        <div>
+        <div style={{ minWidth: 0 }}>
             <div
                 className="text-muted-foreground"
                 style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase' }}
@@ -454,7 +475,7 @@ function SummaryCell({ label, value }: { label: string; value: string }) {
             </div>
             <div
                 className="numeric text-foreground"
-                style={{ fontSize: '13px', fontWeight: 600, marginTop: '2px' }}
+                style={{ fontSize: '13px', fontWeight: 600, marginTop: '2px', whiteSpace: 'nowrap' }}
             >
                 {value}
             </div>
