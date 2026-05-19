@@ -35,12 +35,21 @@ interface StockSearchComboboxProps {
     value: string
     onSelect: (stock: Stock) => void
     disabled?: boolean
+    /**
+     * 부모가 이미 Radix `Dialog` / Vaul `Drawer` 등 modal 컨테이너인 경우 `true` 로 둔다.
+     * - Popover/Drawer 트리거 없이 검색 input + 결과 리스트를 그 자리에 인라인 렌더한다.
+     * - 외부 Radix Dialog 의 `react-remove-scroll` 가 Popover/Drawer Portal 자식의
+     *   wheel/touch 이벤트를 가로채 결과 리스트가 스크롤되지 않는 알려진 충돌을 회피.
+     *   (Radix #1159 / #2028 / #3423, shadcn #6988, Vaul #366, tigerabrodi.blog 2026-03)
+     */
+    inline?: boolean
 }
 
 export function StockSearchCombobox({
     value,
     onSelect,
     disabled,
+    inline = false,
 }: StockSearchComboboxProps) {
     const { t, language } = useLanguage()
     // PC 는 Popover, 모바일은 Drawer — Radix Popover + cmdk + iOS 가상키보드 조합에서
@@ -144,7 +153,15 @@ export function StockSearchCombobox({
 
             if (data.success) {
                 onSelect(data.data)
-                setOpen(false)
+                if (inline) {
+                    // 인라인 모드는 open state 가 없으므로 검색 상태를 직접 초기화.
+                    setQuery('')
+                    setResults([])
+                    setHasSearched(false)
+                    setError(null)
+                } else {
+                    setOpen(false)
+                }
             }
         } catch (error) {
             console.error('Failed to select stock:', error)
@@ -252,6 +269,34 @@ export function StockSearchCombobox({
             </ul>
         </>
     )
+
+    // ★ 인라인 모드 — 부모가 이미 Dialog/Drawer 인 경우.
+    //   Popover/Drawer Portal 을 만들지 않고 검색 input + 결과 리스트만 그 자리에 렌더한다.
+    //   외부 Radix Dialog 의 RemoveScroll 이 자기 자식인 결과 리스트의 wheel/touch 를
+    //   허용 영역으로 인식해 스크롤이 정상 동작한다.
+    if (inline) {
+        return (
+            <div className="flex flex-col rounded-md border bg-popover text-popover-foreground">
+                {/* 선택된 종목 표시 (있는 경우에만) — 부모가 보통 별도로 표시하지만 안전망. */}
+                {value && (
+                    <div className="px-3 py-1.5 text-xs text-muted-foreground border-b shrink-0">
+                        {language === 'ko' ? '선택됨' : 'Selected'}: <span className="font-medium text-foreground">{value}</span>
+                    </div>
+                )}
+                <div className="border-b py-2 shrink-0">{searchBar}</div>
+                <div
+                    className="overflow-y-auto overscroll-contain"
+                    style={{
+                        maxHeight: 'min(40vh, 320px)',
+                        WebkitOverflowScrolling: 'touch',
+                    }}
+                    role="listbox"
+                >
+                    {resultList}
+                </div>
+            </div>
+        )
+    }
 
     if (!isDesktop) {
         return (

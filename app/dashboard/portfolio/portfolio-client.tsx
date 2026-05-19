@@ -1388,6 +1388,11 @@ function AddHoldingFloating({
                             value={newStock?.stockName || ''}
                             onSelect={(s: any) => setNewStock(s)}
                             disabled={adding}
+                            // Radix Dialog 안에서 Popover/Drawer Portal 을 만들면
+                            // 외부 Dialog 의 react-remove-scroll 이 결과 리스트의
+                            // wheel/touch 를 가로채 스크롤이 막힌다 (Radix #1159 / Vaul #366).
+                            // 인라인 모드로 강제하여 한 단계 modal 만 사용한다.
+                            inline
                         />
                         {/* 계좌 셀렉터 — 단일 계좌 사용자에게는 자동으로 숨김 (AccountSelector 자체 처리).
                             마지막 사용 계좌를 localStorage 에 영속화. */}
