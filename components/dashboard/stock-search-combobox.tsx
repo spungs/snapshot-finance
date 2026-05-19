@@ -275,6 +275,9 @@ export function StockSearchCombobox({
         )
     }
 
+    // PC: 결과 영역에 명시적 max-height 를 직접 박는다. PopoverContent 의
+    // maxHeight 만으로는 자식 flex-1 이 늘어날 부모 height 가 없어
+    // 스크롤 영역이 생기지 않는 패턴을 피한다.
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>{trigger}</PopoverTrigger>
@@ -284,13 +287,10 @@ export function StockSearchCombobox({
                 side="top"
                 sideOffset={6}
                 collisionPadding={12}
-                style={{
-                    ...(triggerWidth ? { width: triggerWidth } : {}),
-                    maxHeight: 'min(var(--radix-popover-content-available-height), 420px)',
-                }}
+                style={triggerWidth ? { width: triggerWidth } : undefined}
                 onOpenAutoFocus={(e) => e.preventDefault()}
             >
-                <div className="flex-1 min-h-0 overflow-y-auto order-1">
+                <div className="overflow-y-auto order-1 max-h-[360px]">
                     {resultList}
                 </div>
                 <div className="border-t py-2 order-2 shrink-0">{searchBar}</div>
