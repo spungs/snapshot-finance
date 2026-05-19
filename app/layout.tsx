@@ -95,9 +95,10 @@ export default async function RootLayout({
         className={`${jetbrainsMono.variable} ${sourceSerif.variable} ${notoSerifKr.variable} font-sans antialiased`}
       >
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
+          {/* GSI One Tap 비활성 (auto_prompt=false). login_uri 는 GSI 가 절대 URL 만 허용 → metadataBase 와 동일한 fallback 도메인 사용. */}
           <div id="g_id_onload"
             data-client_id={process.env.GOOGLE_CLIENT_ID}
-            data-login_uri={`${process.env.NEXT_PUBLIC_APP_URL || ''}/api/auth/callback/google`}
+            data-login_uri={`${process.env.NEXT_PUBLIC_APP_URL || 'https://snapshot-finance.vercel.app'}/api/auth/callback/google`}
             data-auto_prompt="false">
           </div>
           <HistoryInit />
