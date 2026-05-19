@@ -1094,8 +1094,10 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                 </div>
             )}
 
-            {/* Holdings list */}
-            <div className="px-4 pb-28 space-y-1.5">
+            {/* Holdings list.
+                pb-44 : 두 FAB(종목 추가 + AI 어시스턴트) + gap + safe-area 만큼의 spacer.
+                pb-28 이었으나 마지막 카드 우측이 FAB 와 시각적으로 겹쳐 보이던 문제 회피. */}
+            <div className="px-4 pb-44 space-y-1.5">
                 {holdingsWithWeight.length === 0 ? (
                     <div className="py-12 text-center">
                         <div className="text-sm text-muted-foreground">
