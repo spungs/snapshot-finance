@@ -231,7 +231,7 @@ export function StockSearchCombobox({
                     {t('searchEmpty')}
                 </div>
             )}
-            <ul className="p-1">
+            <ul className="w-full min-w-0 p-1">
                 {results.map((result, index) => {
                     const primaryName = language === 'ko'
                         ? (result.nameKo || result.name)
@@ -271,29 +271,62 @@ export function StockSearchCombobox({
     )
 
     // ★ 인라인 모드 — 부모가 이미 Dialog/Drawer 인 경우.
-    //   Popover/Drawer Portal 을 만들지 않고 검색 input + 결과 리스트만 그 자리에 렌더한다.
+    //   Popover/Drawer Portal 없이 검색 input + 결과 리스트를 그 자리에 렌더한다.
     //   외부 Radix Dialog 의 RemoveScroll 이 자기 자식인 결과 리스트의 wheel/touch 를
     //   허용 영역으로 인식해 스크롤이 정상 동작한다.
+    //
+    //   ⚠ min-w-0 / w-full 은 필수: DialogContent 가 `grid` 라서 grid item 의 기본
+    //   min-width 가 auto. 결과 button 의 긴 영문명이 부모 폭을 강제로 늘려
+    //   Dialog 가 viewport 밖으로 빠져나가는 사고를 막는다.
     if (inline) {
         return (
-            <div className="flex flex-col rounded-md border bg-popover text-popover-foreground">
-                {/* 선택된 종목 표시 (있는 경우에만) — 부모가 보통 별도로 표시하지만 안전망. */}
+            <div className="flex w-full min-w-0 flex-col gap-2">
                 {value && (
-                    <div className="px-3 py-1.5 text-xs text-muted-foreground border-b shrink-0">
-                        {language === 'ko' ? '선택됨' : 'Selected'}: <span className="font-medium text-foreground">{value}</span>
+                    <div className="text-xs text-muted-foreground truncate">
+                        {language === 'ko' ? '선택됨' : 'Selected'}:{' '}
+                        <span className="font-medium text-foreground">{value}</span>
                     </div>
                 )}
-                <div className="border-b py-2 shrink-0">{searchBar}</div>
-                <div
-                    className="overflow-y-auto overscroll-contain"
-                    style={{
-                        maxHeight: 'min(40vh, 320px)',
-                        WebkitOverflowScrolling: 'touch',
-                    }}
-                    role="listbox"
-                >
-                    {resultList}
+                {/* 검색 input — 폼의 다른 input 과 동일 룩 (별도 카드 아님) */}
+                <div className="flex w-full min-w-0 items-center gap-1 rounded-md border border-input bg-background px-3">
+                    <Search className="h-4 w-4 opacity-50 shrink-0" />
+                    <input
+                        className="flex h-10 w-full min-w-0 bg-transparent py-2 text-base md:text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                        placeholder={t('searchPlaceholder')}
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.nativeEvent.isComposing) return
+                            if (e.key === 'Enter') {
+                                e.preventDefault()
+                                handleManualSearch()
+                            }
+                        }}
+                        autoFocus
+                    />
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 shrink-0"
+                        onClick={handleManualSearch}
+                    >
+                        <Search className="h-4 w-4" />
+                    </Button>
                 </div>
+                {/* 결과 — 검색이 한 번이라도 일어났거나 진행 중일 때만 노출 */}
+                {(loading || error || hasSearched) && (
+                    <div
+                        className="w-full min-w-0 overflow-y-auto overscroll-contain rounded-md border"
+                        style={{
+                            maxHeight: 'min(40vh, 320px)',
+                            WebkitOverflowScrolling: 'touch',
+                        }}
+                        role="listbox"
+                    >
+                        {resultList}
+                    </div>
+                )}
             </div>
         )
     }
