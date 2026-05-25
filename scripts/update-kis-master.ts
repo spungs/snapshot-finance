@@ -3,7 +3,7 @@ import path from 'path'
 import https from 'https'
 import AdmZip from 'adm-zip'
 import iconv from 'iconv-lite'
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient, Prisma } from '@prisma/client'
 import { Pool } from 'pg'
 import { PrismaPg } from '@prisma/adapter-pg'
 import dotenv from 'dotenv'
@@ -215,21 +215,33 @@ async function validateAll(parsedByMarket: Record<string, ParsedStock[]>): Promi
 // market 단위 트랜잭션으로 upsert. delete 후 insert 방식은 holdings/snapshot_holdings FK 위반.
 // 이름이 바뀐 ticker 는 update, 새 ticker 는 insert, 사라진 ticker 는 보존(보유 가능성).
 async function applyMarket(dbMarket: string, stocks: ParsedStock[]): Promise<void> {
+    // ON CONFLICT 는 한 쿼리 안에 같은 conflict 키가 두 번 오면 에러("command cannot
+    // affect row a second time")난다. KR 파서는 중복 stockCode 를 거르지 않으므로
+    // 여기서 마지막 값 기준으로 dedupe 해 둔다.
+    const deduped = Array.from(new Map(stocks.map((s) => [s.stockCode, s])).values())
+
     await prisma.$transaction(
         async (tx) => {
             await tx.$executeRaw`SELECT pg_advisory_xact_lock(${ADVISORY_LOCK_KEY})`
 
-            // 1) 새 ticker 일괄 삽입 — 기존 row 는 skipDuplicates 로 건너뜀
-            for (const batch of chunk(stocks, 1000)) {
-                await tx.stock.createMany({ data: batch, skipDuplicates: true })
-            }
-
-            // 2) 이름/시장 변경분 반영 — 같은 stockCode 의 row 갱신
-            for (const s of stocks) {
-                await tx.stock.update({
-                    where: { stockCode: s.stockCode },
-                    data: { nameKo: s.nameKo, nameEn: s.nameEn, market: s.market },
-                }).catch(() => {})
+            // 신규 ticker 삽입 + 기존 ticker 의 이름/시장 갱신을 INSERT ... ON CONFLICT
+            // 단일 쿼리(배치당)로 처리. 행마다 개별 update 를 돌리면 Supabase 원격 왕복
+            // 지연으로 트랜잭션 타임아웃(120s)을 넘기므로 bulk upsert 로 전환.
+            // updatedAt 은 @updatedAt 자동 세팅이 raw SQL 에선 안 되므로 NOW() 로 명시.
+            for (const batch of chunk(deduped, 1000)) {
+                const values = batch.map(
+                    (s) =>
+                        Prisma.sql`(${s.stockCode}, ${s.nameKo}, ${s.nameEn}, ${s.market}, NOW())`,
+                )
+                await tx.$executeRaw`
+                    INSERT INTO "stocks" ("stockCode", "nameKo", "nameEn", "market", "updatedAt")
+                    VALUES ${Prisma.join(values)}
+                    ON CONFLICT ("stockCode") DO UPDATE SET
+                        "nameKo" = EXCLUDED."nameKo",
+                        "nameEn" = EXCLUDED."nameEn",
+                        "market" = EXCLUDED."market",
+                        "updatedAt" = NOW()
+                `
             }
         },
         { timeout: 120_000, maxWait: 10_000 },
