@@ -129,7 +129,13 @@ function formatActionResult(
 
 function formatActionCancel(action: ParsedAction): string {
     const name = action.stockOfficialName ?? action.stockName ?? '요청'
-    return `✕ **${name}** 취소했어요.`
+    // 작업 종류를 명시해 "종목 자체를 취소"로 오독되는 것을 방지. ✕ 기호는 취소를
+    // 에러처럼 보이게 해 제거 — 취소는 사용자의 정상적 선택이다.
+    const label =
+        action.type === 'add_holding' ? '추가를' :
+        action.type === 'update_holding' ? '수정을' :
+        '삭제를'
+    return `**${name}** ${label} 취소했어요.`
 }
 
 export function AiChat({ isAuthenticated = false, isPro = false }: AiChatProps) {
