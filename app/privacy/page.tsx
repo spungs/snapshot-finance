@@ -117,7 +117,7 @@ export default function PrivacyPage() {
 
                 <section>
                     <h2 className="text-xl font-semibold mb-3">{t.privacy.section6Title}</h2>
-                    <p>
+                    <p className="whitespace-pre-line">
                         {t.privacy.section6Desc}
                     </p>
                 </section>
