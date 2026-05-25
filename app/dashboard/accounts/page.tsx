@@ -1,18 +1,19 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
+import { accountService } from '@/lib/services/account-service'
 import { AccountsClient } from './accounts-client'
 
 export const dynamic = 'force-dynamic'
 
 /**
- * /dashboard/accounts — 인증 check 만 SSR. 데이터 fetch 는 client (자체 fetch + localStorage L1).
- * 진입 시 SSR DB 쿼리 대기 없이 즉시 mount → localStorage 캐시 표시 → 백그라운드 /api/accounts 갱신.
- * L1 (localStorage SWR) + L2 (accountService Redis) 결합으로 체감 로딩 0ms.
+ * /dashboard/accounts — 계좌 목록을 SSR 로 직접 렌더해 첫 페인트부터 표시(깜빡임 0).
+ * accountService 가 L2(Redis) 캐시를 내장해 SSR 쿼리도 빠름.
  */
 export default async function AccountsPage() {
     const session = await auth()
     if (!session?.user?.id) {
         redirect('/auth/signin')
     }
-    return <AccountsClient />
+    const accounts = await accountService.getList(session.user.id)
+    return <AccountsClient initialAccounts={accounts} />
 }
