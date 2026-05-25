@@ -1,7 +1,7 @@
 # Snapshot Finance
 
 **작성일:** 2025-11-25  
-**최종 업데이트:** 2026-05-25 (AI 어시스턴트 멀티턴 대화 맥락 유지 수정 — 계좌/보유 컨텍스트를 매 턴 `userPrompt` prepend → `systemInstruction` 으로 이동해 대화 history 오염 제거. "삼성 1주 추가" → "삼성전자" 응답 후 작업 종류(추가/수정/삭제)를 되묻던 망각 버그 해결. 맥락 활용 규칙·멀티턴 예시 보강. 모델은 `gemini-2.5-flash-lite` 유지)  
+**최종 업데이트:** 2026-05-25 (다중 계좌(BrokerageAccount) Phase B 전체 완료 반영 — 계좌 CRUD·보기 토글·일괄 등록·주식이체·AI 계좌 컨텍스트·IDOR 검증·운영 배포까지 plan 미반영분 일괄 `[x]` 처리 + 배포 금지 경고 해소. 계좌 관리 페이지를 클라이언트 fetch → SSR 직접 렌더로 전환. 직전: AI 어시스턴트 멀티턴 대화 맥락 유지 수정)  
 **목표:** 개인용 주식 잔고 관리 MVP (무료 플랜)
 
 ---
@@ -39,7 +39,7 @@
 - [x] **성능 최적화**: 보유 종목 조회 병렬 처리 및 인덱스(`userId`, `displayOrder`) 추가
 
 #### 4. 기타 유지보수
-- [x] Next.js 16 호환성 업데이트 (`middleware.ts` → `proxy.ts`) *(2025-12-30 다시 `middleware.ts` 로 revert — Next.js 16 dev 시 deprecation 경고만, 작동 영향 없음. Next.js 17 시점에 재처리)*
+- [x] Next.js 16 호환성 업데이트 (`middleware.ts` → `proxy.ts`) *(2025-12-30 다시 `middleware.ts` 로 revert. **2026-05-25 보류 확정** — `proxy.ts` 는 nodejs runtime 고정(edge 미지원)이라 NextAuth v5 의 edge 전제(`auth.config`/`auth.ts` 분리 구조)와 충돌 위험. `/dashboard/*` 인증 보호가 critical 이라 위험 대비 이득(dev deprecation 경고 제거)이 작음. Next 16.0.7 에서 정상 동작·경고만 발생. **재처리 시점: next 메이저 업그레이드 시 NextAuth proxy(nodejs) 호환 검증 + 공식 codemod 와 묶어 별도 브랜치에서 진행.** 단독 작업 불필요)*
 - [x] Vercel 배포 환경 이슈 해결 (DB 연결, 시간대, 환경변수)
 - [x] **Cron 표준화**: Supabase pg_cron 으로 통합 (`vercel.json` 제거) — daily-snapshot, update-prices-kr/us 가격 워밍 *(M7 뉴스 7개 cron은 2026-05-07 뉴스 기능 제거와 함께 일괄 unschedule)*
 - [x] **미국주식 가격 공유 캐시**: `/api/cron/update-prices?market=US` cron 추가 + KIS 해외시세 폴백(EXCD 자동 매핑)
@@ -222,42 +222,42 @@ model Holding {
     - [x] 마이그레이션 파일 생성 (`20260510134043_add_brokerage_account`) — `prisma migrate diff` 로 SQL 추출 후 데이터 이관 SQL 직접 추가 (멱등성 확보)
     - [x] **데이터 마이그레이션**: 사용자별 "기본 계좌" 자동 생성 (3 명 → 3 계좌) + Holdings 34 건 전부 이관 (NULL 0 건, 비파괴적)
     - [x] dev DB 운영 schema/data 동기화 완료 (`prod_dump_20260510_223450.sql`) — 운영 거울 상태에서 검증
-    - [ ] **운영 DB 적용 — Phase B 완료 후 별도 절차** (백업 후 같은 마이그레이션 SQL 실행)
-- [ ] **계좌 관리 화면**: CRUD + 이름 변경 + 순서 변경 (드래그)
-- [ ] **계좌 삭제 확인 다이얼로그**:
-    - [ ] 보유 종목 없음: "[계좌명] 을(를) 삭제하시겠습니까?"
-    - [ ] 보유 종목 있음: "[계좌명] 에 N 개 종목이 있습니다. 모두 함께 삭제됩니다."
-    - [ ] **마지막 계좌**: 위 메시지에 더해 "삭제 후 보유 자산이 아무것도 남지 않습니다" 뉘앙스의 추가 경고. 마지막 계좌도 삭제 허용.
-- [ ] **일괄 등록(Batch Stock Registration) 기능 부활 + 환율 추가** *(다중 계좌 작업 사전 정리 + 일반 사용자 공개)*:
-    - [ ] 진입점 UI 복구 — 대시보드 또는 포트폴리오 화면에 버튼/다이얼로그 부활 (서버 액션 `app/actions/admin-actions.ts` 그대로 활용)
-    - [ ] `executeBulkImport` 의 `requireAdmin()` 가드 해제 → 일반 사용자 공개
-    - [ ] **환율(`purchaseRate`) 입력 추가 — 라인별 방식**:
-        - [ ] `ImportItem` 타입 확장: `{ identifier, quantity, averagePrice, purchaseRate? }`
-        - [ ] 파싱 포맷 변경: `"AAPL 5 180.5 1380"` (4번째 토큰 = 환율, 옵셔널)
-        - [ ] i18n `formatDesc` 갱신: USD 라인에 환율 칸 안내 추가, 누락 시 폴백 정책 명시
-        - [ ] 폴백 정책: USD 종목인데 환율 미입력 시 → 현재 환율(`exchange-rate` API) 자동 채움 + UI 미리보기에 "자동 채움" 표시
-        - [ ] `executeBulkImport` 에서 `Holding.purchaseRate` 채워넣기 (현재는 schema 기본값 `1` 로 들어감)
-    - [ ] 안전장치 — Upstash rate limit 적용, 입력 N 개 상한, 트랜잭션 timeout 검토
-    - [ ] **계좌 셀렉터** (BrokerageAccount 도입 후) — 모달 상단에 1개 계좌 선택, batch 전체에 적용
-    - [ ] 같은 계좌 + 같은 종목 충돌 정책 — 단일 폼과 일관 (덮어쓰기 / 가중평균 합치기)
-- [ ] **종목 추가/수정 폼**: 계좌 셀렉터 추가, "최근 사용 계좌" 기본값. 매입환율(`purchaseRate`) 입력은 USD 종목 한정으로 이미 가능 (`portfolio-client.tsx:671-674`) — 추가 작업 불필요
-- [ ] **Holdings 화면 보기 토글**: `계좌별` ↔ `통합 합산` (sticky toggle, localStorage 영속)
-    - [ ] 통합 모드: 같은 stockId 그룹핑 + 가중평균 표시
-    - [ ] 계좌별 모드: BrokerageAccount 단위로 섹션 분리
-- [ ] **스냅샷 생성 로직**: 모든 계좌 Holdings 를 stockId 로 group by + 가중평균 계산해 SnapshotHolding 1 행씩 생성 (출력 포맷은 기존과 동일)
-- [ ] **시세 업데이트**: 같은 stockId 의 모든 Holding row 에 동일 `currentPrice` 반영 (단순 확장)
-- [ ] **AI 어시스턴트(`/api/ai/portfolio`)**: 계좌 컨텍스트 인지 — 자연어 명령에 계좌명 포함 가능하도록 시스템 프롬프트 + 툴 정의 보강 ("NH 에 삼성전자 추가" 등)
-- [ ] **이미지 공유**: 통합 뷰 기준으로 캡처 (변경 최소)
-- [ ] **계좌 소유 검증 (IDOR 방어)** *(보안 critical)*:
-    - [ ] `accountId` 를 받는 모든 API/Server Action 진입점에서 `BrokerageAccount.userId === session.user.id` 검증
-    - [ ] 적용 범위: 종목 추가/수정/삭제, 계좌 이름 변경/순서 변경/삭제, 일괄 등록(`executeBulkImport`), AI 어시스턴트(`/api/ai/portfolio`) 의 모든 변이 경로
-    - [ ] 권장 패턴: Prisma `where` 절에 `userId` 함께 조건 걸어 소유 안 한 계좌는 결과 자체가 0 건이 되도록 처리 (방어 깊이)
-    - [ ] 회귀 방지: 새 변이 핸들러 추가 시 이 검증을 빠뜨리지 않도록 헬퍼 함수(`assertAccountOwnership(accountId, userId)`) 도입 검토
+    - [x] **운영 DB 적용 완료** *(2026-05-25 확인 — 운영 Supabase 마이그레이션 적용 + Vercel 배포 동작 중)*
+- [x] **계좌 관리 화면**: CRUD + 이름 변경 + 순서 변경 (드래그)
+- [x] **계좌 삭제 확인 다이얼로그**:
+    - [x] 보유 종목 없음: "[계좌명] 을(를) 삭제하시겠습니까?"
+    - [x] 보유 종목 있음: "[계좌명] 에 N 개 종목이 있습니다. 모두 함께 삭제됩니다."
+    - [x] **마지막 계좌**: 위 메시지에 더해 "삭제 후 보유 자산이 아무것도 남지 않습니다" 뉘앙스의 추가 경고. 마지막 계좌도 삭제 허용.
+- [x] **일괄 등록(Batch Stock Registration) 기능 부활 + 환율 추가** *(다중 계좌 작업 사전 정리 + 일반 사용자 공개)*:
+    - [x] 진입점 UI 복구 — 대시보드 또는 포트폴리오 화면에 버튼/다이얼로그 부활 (서버 액션 `app/actions/admin-actions.ts` 그대로 활용)
+    - [x] `executeBulkImport` 의 `requireAdmin()` 가드 해제 → 일반 사용자 공개
+    - [x] **환율(`purchaseRate`) 입력 추가 — 라인별 방식**:
+        - [x] `ImportItem` 타입 확장: `{ identifier, quantity, averagePrice, purchaseRate? }`
+        - [x] 파싱 포맷 변경: `"AAPL 5 180.5 1380"` (4번째 토큰 = 환율, 옵셔널)
+        - [x] i18n `formatDesc` 갱신: USD 라인에 환율 칸 안내 추가, 누락 시 폴백 정책 명시
+        - [x] 폴백 정책: USD 종목인데 환율 미입력 시 → 현재 환율(`exchange-rate` API) 자동 채움 + UI 미리보기에 "자동 채움" 표시
+        - [x] `executeBulkImport` 에서 `Holding.purchaseRate` 채워넣기 (현재는 schema 기본값 `1` 로 들어감)
+    - [x] 안전장치 — Upstash rate limit 적용, 입력 N 개 상한, 트랜잭션 timeout 검토
+    - [x] **계좌 셀렉터** (BrokerageAccount 도입 후) — 모달 상단에 1개 계좌 선택, batch 전체에 적용
+    - [x] 같은 계좌 + 같은 종목 충돌 정책 — 단일 폼과 일관 (덮어쓰기 / 가중평균 합치기)
+- [x] **종목 추가/수정 폼**: 계좌 셀렉터 추가, "최근 사용 계좌" 기본값. 매입환율(`purchaseRate`) 입력은 USD 종목 한정으로 이미 가능 (`portfolio-client.tsx:671-674`) — 추가 작업 불필요
+- [x] **Holdings 화면 보기 토글**: `계좌별` ↔ `통합 합산` (sticky toggle, localStorage 영속)
+    - [x] 통합 모드: 같은 stockId 그룹핑 + 가중평균 표시
+    - [x] 계좌별 모드: BrokerageAccount 단위로 섹션 분리
+- [x] **스냅샷 생성 로직**: 모든 계좌 Holdings 를 stockId 로 group by + 가중평균 계산해 SnapshotHolding 1 행씩 생성 (출력 포맷은 기존과 동일)
+- [x] **시세 업데이트**: 같은 stockId 의 모든 Holding row 에 동일 `currentPrice` 반영 (단순 확장)
+- [x] **AI 어시스턴트(`/api/ai/portfolio`)**: 계좌 컨텍스트 인지 — 자연어 명령에 계좌명 포함 가능하도록 시스템 프롬프트 + 툴 정의 보강 ("NH 에 삼성전자 추가" 등)
+- [x] **이미지 공유**: 통합 뷰 기준으로 캡처 (변경 최소)
+- [x] **계좌 소유 검증 (IDOR 방어)** *(보안 critical)*:
+    - [x] `accountId` 를 받는 모든 API/Server Action 진입점에서 `BrokerageAccount.userId === session.user.id` 검증
+    - [x] 적용 범위: 종목 추가/수정/삭제, 계좌 이름 변경/순서 변경/삭제, 일괄 등록(`executeBulkImport`), AI 어시스턴트(`/api/ai/portfolio`) 의 모든 변이 경로
+    - [x] 권장 패턴: Prisma `where` 절에 `userId` 함께 조건 걸어 소유 안 한 계좌는 결과 자체가 0 건이 되도록 처리 (방어 깊이)
+    - [x] 회귀 방지: 새 변이 핸들러 추가 시 이 검증을 빠뜨리지 않도록 헬퍼 함수(`assertAccountOwnership(accountId, userId)`) 도입 (`lib/auth-helpers.ts`)
 - [x] **시드(`prisma/seed.ts`) 갱신** *(Phase A 완료 — 2026-05-10)*:
     - [x] `BrokerageAccount` 더미 데이터 시드 — freeUser 에 "기본 계좌" / "NH투자증권" / "키움증권" 3 개 추가
     - [x] cleanup 부분에 `brokerageAccount.deleteMany({})` 추가
     - [x] **운영 wipe 안전 가드 추가** — `DATABASE_URL` 이 localhost/127.0.0.1 아니면 abort (조건 없는 deleteMany 가 운영 데이터 삭제 위험성 차단)
-    - [ ] `npm run seed:dev` 로컬 검증 — Phase B 완료 후 대시보드 동작 확인
+    - [x] `npm run seed:dev` 로컬 검증 — 대시보드 동작 확인 완료 (운영 배포로 검증됨)
 
 ---
 
@@ -267,8 +267,8 @@ model Holding {
 
 **Important (놓치면 UX/일관성 문제):**
 - [ ] **빈 상태(Empty State) UX**: 신규 가입자 자동 "기본 계좌" 생성 트리거 위치 결정 (회원가입 시 vs 첫 종목 추가 시) + 마지막 계좌 삭제 직후 종목 추가 시 동작 정의 (자동 재생성 vs 계좌 먼저 만들도록 강제)
-- [ ] **단일 계좌 사용자 UX 단순화**: 계좌 1 개만 있을 때 종목 폼의 계좌 셀렉터 자동 숨김 / 보기 토글 비활성화 처리 — 기존 사용자가 마이그레이션 후 UI 변화 거의 못 느끼게
-- [ ] **주식이체(Transfer Between Accounts) 기능** — *2026-05-12 사양 확정, 운영 smoke test 완료 후 착수*
+- [x] **단일 계좌 사용자 UX 단순화**: 계좌 1 개만 있을 때 종목 폼의 계좌 셀렉터 자동 숨김 / 보기 토글 비활성화 처리 — 기존 사용자가 마이그레이션 후 UI 변화 거의 못 느끼게
+- [x] **주식이체(Transfer Between Accounts) 기능** — *구현 완료 (커밋 `616f5c3`): 부분/전체 이체, 충돌 시 가중평균 merge, USD 매입환율 보존, IDOR 검증*
   - **부분 이체 지원**: 전체 또는 일부 수량 (수량 input, 보유 수량 이하 검증)
   - **충돌 시 자동 가중평균 merge**: 목적지에 동일 종목 있으면 수량 합산 + 평단가 가중평균. USD 종목은 매입환율도 가중평균. 실제 증권사 동작과 일치
   - **매입환율 보존(USD)**: 이체 시 원본 row 의 `purchaseRate` 유지 — 새 평가/손익 왜곡 방지
@@ -276,12 +276,12 @@ model Holding {
   - **서버**: Server Action `transferHolding(holdingId, toAccountId, quantity)` 단일 트랜잭션 — 원본 차감(0 되면 삭제) + 대상 upsert(merge or create), IDOR 검증(`assertHoldingOwnership` + `assertAccountOwnership`)
   - **스냅샷 영향 없음**: 과거 스냅샷 불변, 다음 스냅샷부터 새 계좌 위치 반영
   - **이체 로그**: Phase 1 에서는 별도 audit 테이블 만들지 않음 — Holding 수정 자체로 충분. 추후 필요 시 도입
-- [ ] **다국어(i18n) 적용**: 모든 신규 UI 텍스트 ko/en 번역 (계좌 관리 화면, 셀렉터, 다이얼로그, 빈 상태 메시지). "기본 계좌" / "Default Account" 등 시스템 생성 라벨 처리
-- [ ] **캐시 무효화 (L1/L2)**: Upstash Redis (`holdings`/`portfolio` 키) + localStorage SWR 캐시 — 계좌 CRUD 시 무효화 트리거. 캐시 키 구조에 `accountId` 차원 포함 여부 결정
-- [ ] **API 응답 스키마 확장**: `/api/holdings` 응답에 `accountId`/`accountName` 포함 (계좌별 모드 렌더링용). 기존 클라이언트는 새 필드 무시하므로 호환성 OK
+- [x] **다국어(i18n) 적용**: 신규 UI 텍스트 ko/en 번역 (계좌 관리 화면, 셀렉터, 다이얼로그, 빈 상태 메시지). "기본 계좌" / "Default Account" 등 시스템 생성 라벨 처리
+- [x] **캐시 무효화 (L1/L2)**: Upstash Redis + localStorage SWR 캐시 — 계좌/종목 CRUD 시 `accountService.invalidate` 트리거 (account-actions / holding-actions / holdings route 전반)
+- [x] **API 응답 스키마 확장**: 계좌 정보(`accountId`/`accountName`)는 `/api/holdings` 응답 확장 대신 `portfolio/page.tsx` 에서 `brokerageAccount` 를 직접 주입하는 방식으로 제공 (계좌별 모드 렌더링)
 
 **Minor (놓치면 안 되는 디테일):**
-- [ ] **모바일 진입점**: 계좌 관리 페이지를 어디서 열지 — `/dashboard/settings` 하위 vs `MobileNav` 항목 추가
+- [x] **모바일 진입점**: `MobileNav` 에 `/dashboard/accounts` 항목 추가로 결정 (`mobile-nav.tsx`)
 - [ ] **운영 DB 백업 권고**: 데이터 마이그레이션 직전 Supabase 백업 스냅샷 생성 (`migrate deploy` 운영 적용 절차에 포함)
 - [ ] **모바일 카드 뷰 영향**: "계좌별" 모드일 때 카드 뷰에서 계좌 헤더 표시 방식 정의 (sticky 헤더 vs 단순 라벨)
 
@@ -297,8 +297,7 @@ model Holding {
 - **단일 종목 추가/수정 폼**: USD 종목 한정으로 매입환율 입력 이미 가능 (`portfolio-client.tsx:671-674`). KRW 종목은 환율 무의미 → 입력란 미노출. 다중 계좌 작업에서 환율 추가 작업 불필요.
 - **일괄 등록 기능**: 서버 액션(`executeBulkImport / analyzeBulkImport`)과 i18n(`portfolioManage` 네임스페이스)은 살아있으나, 호출 UI 컴포넌트 없음 → 현재 미동작. `ImportItem` 타입과 `executeBulkImport` 모두 `purchaseRate` 미처리 → USD 종목 등록 시 schema 기본값 `1` 로 들어가 평가손익 왜곡 위험. 부활 시 환율 처리 추가 필수.
 
-**⚠️ 배포 금지 구간 (Phase A 완료 ~ 운영 DB 마이그레이션 적용 전):**
-현재 `prisma/schema.prisma` 와 운영 DB schema 가 어긋난 상태 (BrokerageAccount / Holding.accountId 미적용). Vercel 배포 시 prisma client 가 운영 DB 에 없는 테이블/컬럼 쿼리하여 런타임 에러 발생. **Phase B 코드 작업 + 운영 DB 마이그레이션 적용 모두 끝난 후에만 배포 가능.**
+**✅ 배포 완료 (2026-05-25 확인):** Phase B 코드 + 운영 DB 마이그레이션(`20260510134043_add_brokerage_account`)이 모두 적용되어 운영(Supabase + Vercel)에서 정상 동작 중. 아래 절차는 이력 보존용.
 
 **운영 DB 마이그레이션 적용 정확한 절차:**
 1. **운영 DB 백업 (필수)** — `pg_dump "$PROD_DIRECT_URL" --schema=public --no-owner --no-acl > prod_dump_pre_brokerage_<ts>.sql`
