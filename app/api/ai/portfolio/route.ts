@@ -405,8 +405,27 @@ export async function POST(request: NextRequest) {
             orderBy: [{ displayOrder: 'asc' }, { createdAt: 'asc' }],
         })
 
+        // 계좌·보유 컨텍스트는 systemInstruction 에 주입한다.
+        // userPrompt 에 매 턴 prepend 하면 멀티턴 대화에서 마지막 발화가 긴 컨텍스트 블록에 묻혀
+        // 모델이 직전 맥락(작업 종류·수량)을 잃는다. system 으로 올려 대화 history 를 깨끗이 유지.
+        const accountsText = userAccounts.length > 0
+            ? `현재 증권 계좌:\n${userAccounts.map(a => `- ${a.name} (보유 종목 ${a._count.holdings}개)`).join('\n')}`
+            : '현재 증권 계좌가 없습니다.'
+
+        const holdingsText = holdingsContext.length > 0
+            ? `현재 보유 종목:\n${holdingsContext.map(h => {
+                const acc = h.accountName ? ` [${h.accountName}]` : ''
+                return `- ${h.stockName}${acc}: ${h.quantity}주, 평단가 ${h.averagePrice.toLocaleString()} ${h.currency}`
+            }).join('\n')}`
+            : '현재 보유 종목 없음'
+
         const systemInstruction = `당신은 Snapshot Finance의 주식 포트폴리오 관리 어시스턴트입니다.
 사용자의 자연어 요청을 분석해 적절한 함수를 호출하거나, 명확화·거절이 필요하면 텍스트로 답변하세요.
+
+## 현재 컨텍스트 (이번 대화 기준)
+${accountsText}
+
+${holdingsText}
 
 ## 절대 규칙 (가장 중요)
 - **행동 의사를 절대 텍스트로 선언하지 마세요.** "추가하겠습니다", "삭제할게요", "수정하겠습니다" 같은 말을 하지 마세요.
@@ -439,7 +458,11 @@ export async function POST(request: NextRequest) {
    - 부분 일치 종목 후보가 여러 개 (예: "삼성" → 삼성전자/삼성SDI/삼성바이오)
    - 보유하지 않은 종목을 수정/삭제하라는 요청
 4. 음수 수량·0 평단가·비정상 큰 값은 호출하지 마세요.
-5. **이전 대화 맥락 활용** — "그거 삭제", "그럼 200주로" 같이 대명사/생략 시 직전 대화에서 언급된 종목 기준으로 함수를 호출하세요.
+5. **이전 대화 맥락 활용 (매우 중요)** — 한 작업의 정보(작업 종류·종목·수량·계좌·평단가)가 여러 턴에 나뉘어 들어올 수 있습니다.
+   - 이전 턴에서 이미 받은 정보는 이번 턴에서 **절대 다시 묻지 마세요.**
+   - 직전에 "OO 1주 추가"라고 했고 이번 턴에 종목명만 확정되면 → 작업 종류를 되묻지 말고 흩어진 정보를 합쳐 **즉시 add_holding 을 호출**하세요.
+   - "그거 삭제", "그럼 200주로" 같은 대명사/생략은 직전 대화에서 언급된 종목·작업 기준으로 해석하세요.
+   - 필요한 정보가 모두 모였는데도 "어떤 작업을 원하세요?"처럼 이미 받은 정보를 되묻는 것은 **금지**입니다.
 
 ## 멀티 액션
 한 메시지에 여러 작업이 섞여 있으면 (예: "A 매수하고 B 매도") **함수를 호출하지 말고** 다음 형식의 텍스트로 분할 안내하세요:
@@ -459,6 +482,8 @@ export async function POST(request: NextRequest) {
 - "키움에서 삼성전자 삭제" → delete_holding(stockName="삼성전자", accountName="키움") ← 즉시 함수 호출
 - "키움 삼성전자 평단가 76000으로 수정" → update_holding(stockName="삼성전자", averagePrice=76000, accountName="키움", intent="update") ← 즉시 함수 호출
 - "삼성 추가해줘" → 텍스트: "삼성전자, 삼성SDI, 삼성바이오로직스 등 비슷한 종목이 많은데 어떤 종목을 말씀하시나요?"
+- (멀티턴 누적) "삼성 1주 추가" → 텍스트로 종목 확인 질문 → 사용자 "삼성전자" → add_holding(stockName="삼성전자", quantity=1) ← '1주 추가'는 이미 받았으므로 작업 종류를 다시 묻지 말 것
+- (멀티턴 누적) "삼성 1주 추가" → "삼성전자/삼성SDI/…?" → "삼성전자" → "어느 계좌?" → "도파민" → add_holding(stockName="삼성전자", quantity=1, accountName="도파민") ← 흩어진 정보를 합쳐 즉시 호출
 - "예수금 500만원으로 변경" → 텍스트: "예수금은 홈 화면의 예수금 카드에서 직접 수정해주세요."
 - "오늘 시장 어떤 거 같아?" → 텍스트: "저는 종목 추가·수정·삭제만 도와드릴 수 있어요."`
 
@@ -518,17 +543,6 @@ export async function POST(request: NextRequest) {
             }],
         })
 
-        const accountsText = userAccounts.length > 0
-            ? `현재 증권 계좌:\n${userAccounts.map(a => `- ${a.name} (보유 종목 ${a._count.holdings}개)`).join('\n')}`
-            : '현재 증권 계좌가 없습니다.'
-
-        const holdingsText = holdingsContext.length > 0
-            ? `현재 보유 종목:\n${holdingsContext.map(h => {
-                const acc = h.accountName ? ` [${h.accountName}]` : ''
-                return `- ${h.stockName}${acc}: ${h.quantity}주, 평단가 ${h.averagePrice.toLocaleString()} ${h.currency}`
-            }).join('\n')}`
-            : '현재 보유 종목 없음'
-
         // Gemini chat은 user/model 교차를 요구하고 첫 메시지가 user여야 한다.
         // 우리 UI는 항상 user→assistant 순으로 쌓이므로 그대로 매핑하되, 빈 텍스트는 제외.
         const geminiHistory = (history ?? [])
@@ -538,7 +552,9 @@ export async function POST(request: NextRequest) {
                 parts: [{ text: m.content }],
             }))
 
-        const userPrompt = `${accountsText}\n\n${holdingsText}\n\n사용자 요청: ${message}`
+        // 계좌·보유 컨텍스트는 systemInstruction 으로 옮겼으므로 여기선 순수 발화만 보낸다.
+        // 이래야 대화 history(user/model 교차)가 깨끗해져 멀티턴 맥락이 유지된다.
+        const userPrompt = message
 
         const chat = model.startChat({ history: geminiHistory })
         const result = await chat.sendMessage(userPrompt)

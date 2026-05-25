@@ -1,7 +1,7 @@
 # Snapshot Finance
 
 **작성일:** 2025-11-25  
-**최종 업데이트:** 2026-05-12 (계좌별 예수금 입력 풀스택 통합 — User/PortfolioSnapshot.cashAccounts JSON 컬럼 + CashAccountEditor + BrokerageAccount 라벨 자동 시드 + 스냅샷 동결 + AI 다중 계좌 안전장치. legacy `예수금` 라벨 → 첫 BrokerageAccount 이름 이관 마이그레이션 로컬/Supabase 양쪽 적용 완료)  
+**최종 업데이트:** 2026-05-25 (AI 어시스턴트 멀티턴 대화 맥락 유지 수정 — 계좌/보유 컨텍스트를 매 턴 `userPrompt` prepend → `systemInstruction` 으로 이동해 대화 history 오염 제거. "삼성 1주 추가" → "삼성전자" 응답 후 작업 종류(추가/수정/삭제)를 되묻던 망각 버그 해결. 맥락 활용 규칙·멀티턴 예시 보강. 모델은 `gemini-2.5-flash-lite` 유지)  
 **목표:** 개인용 주식 잔고 관리 MVP (무료 플랜)
 
 ---
