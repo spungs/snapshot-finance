@@ -47,7 +47,7 @@ async function PortfolioContent({
       .findMany({
         where: { userId },
         select: { id: true, name: true },
-        orderBy: { createdAt: 'asc' },
+        orderBy: [{ displayOrder: 'asc' }, { createdAt: 'asc' }],
       })
       .catch(() => [] as Array<{ id: string; name: string }>),
     isProUser(userId),
