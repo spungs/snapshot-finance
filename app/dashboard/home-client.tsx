@@ -19,6 +19,11 @@ import { Label } from '@/components/ui/label'
 import { Wallet, Loader2 } from 'lucide-react'
 import { findPreviousSnapshot, calcChange, type ChangeResult } from '@/lib/utils/snapshot-comparison'
 
+// sessionStorage stash: 메뉴 전환 후 60초 이내 재진입 시 직전 commit 즉시 복원.
+// 60초 — 그 이상 지나면 시세 차이가 체감될 가능성이 높아 그냥 SSR 값으로 시작.
+const HOME_TICKS_STORAGE_KEY = 'home:committed-ticks:v1'
+const HOME_TICKS_FRESHNESS_MS = 60_000
+
 interface Holding {
     id: string
     stockCode: string
@@ -126,6 +131,33 @@ export function HomeClient({
     const ticksRef = useRef(ticks)
     ticksRef.current = ticks
 
+    // 직전 commit 을 sessionStorage 에 stash 해 메뉴 전환 후 재진입 시 즉시 복원.
+    // 컴포넌트 unmount 되면 committedTicks 메모리는 사라지지만, 재마운트 시 60초 이내
+    // 스냅샷이 있으면 그것으로 hydration 해 "캐시 → 로딩 → 새 값" 깜빡임을 제거한다.
+    // hydration origin 은 useRef 로 mark 해 sessionStorage 재저장을 막는다.
+    const hydratedFromStorage = useRef(false)
+
+    useEffect(() => {
+        if (committedTicks !== null) return
+        try {
+            const raw = sessionStorage.getItem(HOME_TICKS_STORAGE_KEY)
+            if (!raw) return
+            const parsed = JSON.parse(raw) as { ticks: Record<string, StockTick>; savedAt: number }
+            if (!parsed?.ticks || typeof parsed.savedAt !== 'number') return
+            if (Date.now() - parsed.savedAt > HOME_TICKS_FRESHNESS_MS) {
+                sessionStorage.removeItem(HOME_TICKS_STORAGE_KEY)
+                return
+            }
+            const map = new Map<string, StockTick>()
+            for (const [code, tick] of Object.entries(parsed.ticks)) map.set(code, tick)
+            hydratedFromStorage.current = true
+            setCommittedTicks(map)
+        } catch {
+            /* sessionStorage 접근 불가/파싱 실패는 무시 — 정상 SSR 경로로 진행 */
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
+
     // 모든 보유 종목이 첫 tick 을 받으면 즉시 commit. 종목 0개면 빈 commit 으로 스피너 종료.
     useEffect(() => {
         if (committedTicks !== null) return
@@ -146,6 +178,26 @@ export function HomeClient({
         }, 3000)
         return () => clearTimeout(timer)
     }, [committedTicks, tickSubs.length])
+
+    // commit 결과를 sessionStorage 에 stash. hydration 으로 들어온 첫 setState 는
+    // 동일 데이터 재저장 + savedAt 갱신을 막기 위해 skip 한다.
+    useEffect(() => {
+        if (!committedTicks || committedTicks.size === 0) return
+        if (hydratedFromStorage.current) {
+            hydratedFromStorage.current = false
+            return
+        }
+        try {
+            const obj: Record<string, StockTick> = {}
+            for (const [code, tick] of committedTicks) obj[code] = tick
+            sessionStorage.setItem(
+                HOME_TICKS_STORAGE_KEY,
+                JSON.stringify({ ticks: obj, savedAt: Date.now() }),
+            )
+        } catch {
+            /* QuotaExceeded 등은 무시 */
+        }
+    }, [committedTicks])
 
     const isRefreshing = tickSubs.length > 0 && committedTicks === null
 

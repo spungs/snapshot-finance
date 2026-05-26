@@ -48,15 +48,14 @@ async function fetchCurrentPrice(stockCode: string, market: string): Promise<num
 // 환율 조회는 lib/api/exchange-rate.ts 의 L1(in-memory) → L2(Redis) → sources
 // 계층화된 캐시를 그대로 위임한다.
 
-// Redis-backed TTL cache for getList — 탭 전환/재진입 시 KIS 가격 조회와
-// DB 보유 종목 조회를 재실행하지 않고 결과 재사용. Mutation 시 invalidate() 호출.
-// 이전 in-memory Map은 Vercel Serverless에서 인스턴스간 공유 안 되어 효과 미미했음.
-//
-// TTL 5초: 60초가 너무 길어 worker 가 실시간으로 갱신한 stock:price 캐시(L2)가
-// 새로고침에 반영되지 않는 문제가 있었다. 5초면 연타 탭 전환은 캐시 히트(빠른 응답)
-// 유지, 명시적 새로고침은 L2 의 신선한 가격을 거의 항상 받는다.
+// Redis-backed TTL cache for getList — 동시 동일 요청 dedup 용도.
+// TTL 1초: 워커가 매 tick 마다 stock:price 캐시(L2)를 갱신하므로 SSR 이 매번
+// L2 를 직접 읽도록 짧게 둔다. 5초였을 때 메뉴 전환 후 재진입 시 L1 hit 으로
+// 5초 전 가격이 표시되어 클라이언트 첫 broadcast tick 과 차이가 나는
+// "캐시값 → 로딩 → 새 값" 깜빡임 원인이었다. 1초면 동시 요청만 dedup 되고
+// 사용자 체감 새로고침은 항상 워커가 push 한 신선한 L2 를 읽는다.
 // 변이(보유 추가/삭제/예수금 등)는 invalidate() 가 즉시 무효화하므로 stale 위험 없음.
-const HOLDINGS_CACHE_TTL_SECONDS = 5
+const HOLDINGS_CACHE_TTL_SECONDS = 1
 const holdingsCacheKey = (userId: string) => `holdings:list:${userId}`
 
 type HoldingsListResult = Awaited<ReturnType<typeof computeList>>
