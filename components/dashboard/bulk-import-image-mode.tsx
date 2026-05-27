@@ -555,11 +555,16 @@ function ReviewCardItem({
                         min={1}
                         step={1}
                         value={card.draft.quantity}
-                        onChange={e =>
+                        onChange={e => {
+                            const raw = e.target.value
+                            // 빈 입력 / NaN 은 일시적이므로 draft 보존. 사용자가 새 값을 칠 때까지 기존 값 유지.
+                            if (raw === '') return
+                            const num = Number(raw)
+                            if (!Number.isFinite(num) || num < 0) return
                             onChange({
-                                draft: { ...card.draft, quantity: Math.max(0, Math.trunc(Number(e.target.value))) },
+                                draft: { ...card.draft, quantity: Math.trunc(num) },
                             })
-                        }
+                        }}
                         className="w-full border border-input bg-background rounded-sm h-8 px-2 text-sm"
                     />
                 </label>
@@ -570,11 +575,15 @@ function ReviewCardItem({
                         min={0}
                         step={0.0001}
                         value={card.draft.averagePrice}
-                        onChange={e =>
+                        onChange={e => {
+                            const raw = e.target.value
+                            if (raw === '') return
+                            const num = Number(raw)
+                            if (!Number.isFinite(num) || num < 0) return
                             onChange({
-                                draft: { ...card.draft, averagePrice: Math.max(0, Number(e.target.value)) },
+                                draft: { ...card.draft, averagePrice: num },
                             })
-                        }
+                        }}
                         className="w-full border border-input bg-background rounded-sm h-8 px-2 text-sm"
                     />
                 </label>
@@ -585,12 +594,16 @@ function ReviewCardItem({
                             type="number"
                             min={0}
                             step={1}
-                            value={card.draft.purchaseRate ?? card.draft.effectiveRate ?? 0}
-                            onChange={e =>
+                            value={card.draft.purchaseRate ?? card.draft.effectiveRate ?? ''}
+                            onChange={e => {
+                                const raw = e.target.value
+                                if (raw === '') return
+                                const num = Number(raw)
+                                if (!Number.isFinite(num) || num < 0) return
                                 onChange({
-                                    draft: { ...card.draft, purchaseRate: Math.max(0, Number(e.target.value)) },
+                                    draft: { ...card.draft, purchaseRate: num },
                                 })
-                            }
+                            }}
                             className="w-full border border-input bg-background rounded-sm h-8 px-2 text-sm"
                         />
                     </label>
