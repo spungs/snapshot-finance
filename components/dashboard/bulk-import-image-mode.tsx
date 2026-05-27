@@ -66,7 +66,8 @@ function buildInitialCards(resolved: AnalyzedItem[], unresolved: AnalyzedItem[])
                 averagePrice: a.inputPrice,
                 purchaseRate: a.inputRate ?? a.effectiveRate,
             },
-            selected: true,
+            // 평단가가 캡쳐에 없어 0 으로 들어오면 사용자가 직접 입력해야 등록 가능.
+            selected: a.inputPrice > 0,
             replaced: false,
         })
     })
@@ -252,10 +253,13 @@ export function BulkImportImageMode({ accountId, onSubmit, resetSignal }: BulkIm
 
             const resolved = body.resolved ?? []
             const unresolved = body.unresolved ?? []
+            const detected = body.detected ?? 0
 
             if (resolved.length === 0 && unresolved.length === 0) {
-                setState({ kind: 'error', previewUrl, message: tx.ocrEmptyResult })
-                toast.warning(tx.ocrEmptyResult)
+                // detected > 0 면 OCR 은 종목을 봤지만 모두 validator 탈락 — 평단가 누락 가능성 높음.
+                const msg = detected > 0 ? tx.ocrEmptyAfterFilter : tx.ocrEmptyResult
+                setState({ kind: 'error', previewUrl, message: msg })
+                toast.warning(msg)
                 return
             }
 
@@ -294,7 +298,7 @@ export function BulkImportImageMode({ accountId, onSubmit, resetSignal }: BulkIm
             // 카드 중 selected + stockCode 있는 것만 → AnalyzedItem 형태로 부모에게 전달.
             // executeBulkImport 는 stockCode/identifier 기반 lookup 이므로 draft 의 stockCode 를 identifier 로.
             const items: AnalyzedItem[] = state.cards
-                .filter(c => c.selected && c.draft.stockCode)
+                .filter(c => c.selected && c.draft.stockCode && c.draft.averagePrice > 0)
                 .map(c => ({
                     ...c.analyzed,
                     stockCode: c.draft.stockCode,
@@ -452,7 +456,7 @@ function ReviewCardList({
     }
 
     const total = state.cards.length
-    const ready = state.cards.filter(c => c.selected && c.draft.stockCode).length
+    const ready = state.cards.filter(c => c.selected && c.draft.stockCode && c.draft.averagePrice > 0).length
 
     return (
         <div className="space-y-3">
@@ -641,22 +645,40 @@ function ReviewCardItem({
                     />
                 </label>
                 <label className="text-[11px]">
-                    <div className="text-muted-foreground mb-0.5">{tx.averagePrice}</div>
+                    <div className="text-muted-foreground mb-0.5 inline-flex items-center gap-1">
+                        {tx.averagePrice}
+                        {card.draft.averagePrice <= 0 && (
+                            <span className="text-amber-600 text-[10px]">{tx.ocrPriceMissing}</span>
+                        )}
+                    </div>
                     <input
                         type="number"
                         min={0}
                         step={0.0001}
-                        value={card.draft.averagePrice}
+                        value={card.draft.averagePrice || ''}
                         onChange={e => {
                             const raw = e.target.value
-                            if (raw === '') return
+                            if (raw === '') {
+                                onChange({ draft: { ...card.draft, averagePrice: 0 } })
+                                return
+                            }
                             const num = Number(raw)
                             if (!Number.isFinite(num) || num < 0) return
                             onChange({
                                 draft: { ...card.draft, averagePrice: num },
+                                // 사용자가 평단가를 직접 채우면 자동 선택 (resolved 카드에 한함).
+                                ...(num > 0 && card.draft.stockCode && !card.selected
+                                    ? { selected: true }
+                                    : {}),
                             })
                         }}
-                        className="w-full border border-input bg-background rounded-sm h-8 px-2 text-sm"
+                        className={cn(
+                            'w-full border bg-background rounded-sm h-8 px-2 text-sm',
+                            card.draft.averagePrice <= 0
+                                ? 'border-amber-500'
+                                : 'border-input',
+                        )}
+                        placeholder={card.draft.averagePrice <= 0 ? tx.ocrEnterPrice : undefined}
                     />
                 </label>
                 {isUSD && (

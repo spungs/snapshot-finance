@@ -184,17 +184,27 @@ export async function POST(request: NextRequest) {
         // downstream SQL ILIKE 부담 / 잘못된 데이터 등록 위험이 있으므로 portfolio-input validator 재사용.
         const items: ImportItem[] = []
         for (const h of holdings) {
-            const nameRes = validateStockName(h?.stockName)
+            if (typeof h?.stockName !== 'string') continue
+            const nameRes = validateStockName(h.stockName.trim())
             if (!nameRes.ok) continue
-            const qtyRes = validateQuantity(h?.quantity)
+            const qtyRes = validateQuantity(h.quantity)
             if (!qtyRes.ok) continue
-            const priceRes = validateAveragePrice(h?.averagePrice)
-            if (!priceRes.ok) continue
+
+            // averagePrice 는 optional. 캡쳐에 평단 컬럼이 없으면 0 으로 두고
+            // 클라이언트가 사용자에게 직접 입력 요청 (UI 가 0 인 카드를 등록 차단).
+            let averagePrice = 0
+            if (h.averagePrice !== undefined && h.averagePrice !== null) {
+                const priceRes = validateAveragePrice(h.averagePrice)
+                if (priceRes.ok) {
+                    averagePrice = priceRes.value
+                }
+                // priceRes.ok=false 면(0 이하/너무 큼) 그냥 0 으로 두기. 카드는 살리되 사용자 입력 강제.
+            }
 
             items.push({
                 identifier: nameRes.value,
                 quantity: Math.trunc(qtyRes.value),
-                averagePrice: priceRes.value,
+                averagePrice,
                 // purchaseRate 상한 100000 — 합리적 USD/KRW 환율 범위(100~10000) 의 보수적 상한.
                 ...(typeof h.purchaseRate === 'number' &&
                 h.purchaseRate > 0 &&
