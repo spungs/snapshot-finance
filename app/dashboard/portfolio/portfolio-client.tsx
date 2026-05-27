@@ -87,6 +87,7 @@ interface Props {
     summary: Summary
     userName?: string | null
     accounts?: BrokerageAccountOption[]
+    isPro?: boolean
 }
 
 function UpDown({ value, big = false }: { value: number; big?: boolean }) {
@@ -105,7 +106,7 @@ function UpDown({ value, big = false }: { value: number; big?: boolean }) {
     )
 }
 
-export function PortfolioClient({ initialHoldings, summary, userName, accounts = [] }: Props) {
+export function PortfolioClient({ initialHoldings, summary, userName, accounts = [], isPro = false }: Props) {
     const { t, language } = useLanguage()
     const { baseCurrency } = useCurrency()
     const [holdings, setHoldings] = useState<Holding[]>(initialHoldings)
@@ -743,7 +744,7 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                     {language === 'ko' ? '현재 보유 자산' : 'Current Holdings'}
                 </h1>
                 <div className="flex items-center gap-1">
-                    <BulkImportDialog onSuccess={refresh}>
+                    <BulkImportDialog onSuccess={refresh} isPro={isPro}>
                         <button
                             type="button"
                             className="text-[11px] font-bold tracking-wide text-muted-foreground hover:text-foreground px-2.5 py-2 inline-flex items-center gap-1 min-h-[36px]"

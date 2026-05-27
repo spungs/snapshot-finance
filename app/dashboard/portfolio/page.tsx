@@ -98,6 +98,7 @@ async function PortfolioContent({
         summary={summary}
         userName={userName}
         accounts={accounts}
+        isPro={pro}
       />
       <FloatingContainer>
         <AiChat isAuthenticated isPro={pro} />

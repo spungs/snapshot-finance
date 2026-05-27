@@ -17,6 +17,7 @@ import {
     type BrokerageAccountSummary,
     type ImportItem,
 } from '@/app/actions/admin-actions'
+import { BulkImportImageMode } from './bulk-import-image-mode'
 
 const RECENT_ACCOUNT_KEY = 'snapshot.bulkImport.lastAccountId'
 const MAX_ITEMS = 100
@@ -24,6 +25,7 @@ const MAX_ITEMS = 100
 interface BulkImportDialogProps {
     children?: React.ReactNode
     onSuccess?: () => void
+    isPro?: boolean
 }
 
 /**
@@ -88,7 +90,7 @@ function parseLine(rawLine: string): ImportItem | null {
     }
 }
 
-export function BulkImportDialog({ children, onSuccess }: BulkImportDialogProps) {
+export function BulkImportDialog({ children, onSuccess, isPro = false }: BulkImportDialogProps) {
     const { language } = useLanguage()
     const tx = translations[language].portfolioManage
     const router = useRouter()
@@ -105,6 +107,8 @@ export function BulkImportDialog({ children, onSuccess }: BulkImportDialogProps)
     const [resolved, setResolved] = useState<AnalyzedItem[]>([])
     const [unresolved, setUnresolved] = useState<AnalyzedItem[]>([])
     const [hasAnalyzed, setHasAnalyzed] = useState(false)
+    const [mode, setMode] = useState<'text' | 'image'>('text') // 디폴트: 텍스트 (자물쇠 첫 화면 노출 방지)
+    const [imageResetSignal, setImageResetSignal] = useState(0)
 
     // 모달 열릴 때 계좌 목록 로드 + 최근 사용 계좌 복원
     useEffect(() => {
@@ -151,6 +155,8 @@ export function BulkImportDialog({ children, onSuccess }: BulkImportDialogProps)
         setResolved([])
         setUnresolved([])
         setHasAnalyzed(false)
+        setMode('text')
+        setImageResetSignal(s => s + 1)
     }
 
     const handleClear = () => reset()
@@ -252,7 +258,45 @@ export function BulkImportDialog({ children, onSuccess }: BulkImportDialogProps)
                 </DialogHeader>
 
                 <div className="space-y-4">
-                    {/* 계좌 셀렉터 */}
+                    {/* 모드 탭 */}
+                    <div className="flex gap-1 border-b border-border">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                if (!isPro) {
+                                    toast(tx.ocrProOnly, { description: '곧 출시 예정이에요. 조금만 기다려주세요!' })
+                                    return
+                                }
+                                setMode('image')
+                            }}
+                            className={cn(
+                                'px-3 py-2 text-xs font-bold border-b-2 transition-colors inline-flex items-center gap-1',
+                                mode === 'image' && isPro
+                                    ? 'border-primary text-foreground'
+                                    : 'border-transparent text-muted-foreground hover:text-foreground',
+                            )}
+                            aria-label={isPro ? tx.ocrModeTab : `${tx.ocrModeTab} (PRO)`}
+                        >
+                            {tx.ocrModeTab}
+                            {!isPro && (
+                                <span className="text-[9px] bg-foreground text-background px-1 rounded">🔒</span>
+                            )}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setMode('text')}
+                            className={cn(
+                                'px-3 py-2 text-xs font-bold border-b-2 transition-colors',
+                                mode === 'text'
+                                    ? 'border-primary text-foreground'
+                                    : 'border-transparent text-muted-foreground hover:text-foreground',
+                            )}
+                        >
+                            {tx.textModeTab}
+                        </button>
+                    </div>
+
+                    {/* 계좌 셀렉터 — 두 모드 공통 */}
                     {accountsLoading ? (
                         <div className="text-xs text-muted-foreground inline-flex items-center gap-1.5">
                             <Loader2 className="w-3.5 h-3.5 animate-spin" /> ...
@@ -280,6 +324,8 @@ export function BulkImportDialog({ children, onSuccess }: BulkImportDialogProps)
                         </div>
                     ) : null}
 
+                    {mode === 'text' ? (
+                    <>
                     {/* 형식 안내 */}
                     <div className="border border-border bg-accent-soft/50 rounded-md p-3">
                         <div className="text-[11px] font-bold tracking-wide text-muted-foreground mb-1 uppercase">
@@ -466,6 +512,48 @@ export function BulkImportDialog({ children, onSuccess }: BulkImportDialogProps)
                             ? <><Loader2 className="w-4 h-4 mr-1.5 animate-spin" />...</>
                             : tx.executeImport}
                     </Button>
+                    </>
+                    ) : (
+                        <BulkImportImageMode
+                            accountId={accountId}
+                            resetSignal={imageResetSignal}
+                            onSubmit={async (items, strategy) => {
+                                // 이미지 모드 확정 — 기존 executeBulkImport 직접 호출 (텍스트 모드의 handleExecute 와 동일 로직)
+                                if (!accountId) {
+                                    toast.error(tx.accountRequired)
+                                    return
+                                }
+                                const payload = items.map(r => ({
+                                    identifier: r.stockCode ?? r.identifier,
+                                    quantity: r.inputQty,
+                                    averagePrice: r.inputPrice,
+                                    ...(typeof r.inputRate === 'number' && r.inputRate > 0
+                                        ? { purchaseRate: r.inputRate }
+                                        : typeof r.effectiveRate === 'number' && r.effectiveRate > 0
+                                            ? { purchaseRate: r.effectiveRate }
+                                            : {}),
+                                }))
+                                const res = await executeBulkImport(payload, strategy, accountId)
+                                if (res.success) {
+                                    try {
+                                        localStorage.setItem(RECENT_ACCOUNT_KEY, accountId)
+                                    } catch { /* ignore */ }
+                                    toast.success(tx.importSuccessDesc.replace('{count}', String(res.count ?? payload.length)))
+                                    if (res.errors && res.errors.length > 0) {
+                                        toast.warning(`${tx.importPartial}: ${res.errors.length}`)
+                                    }
+                                    setOpen(false)
+                                    reset()
+                                    onSuccess?.()
+                                    startTransition(() => router.refresh())
+                                    try { window.dispatchEvent(new Event('portfolio:refresh')) } catch { /* ignore */ }
+                                } else {
+                                    toast.error(res.error ?? tx.importFailed)
+                                    throw new Error(res.error ?? 'import failed')
+                                }
+                            }}
+                        />
+                    )}
                 </div>
             </DialogContent>
         </Dialog>
