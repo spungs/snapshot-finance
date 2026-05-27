@@ -1,13 +1,14 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { Loader2, Upload, AlertCircle, RefreshCw, X } from 'lucide-react'
+import { Loader2, Upload, AlertCircle, RefreshCw, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { useLanguage } from '@/lib/i18n/context'
 import { translations } from '@/lib/i18n/translations'
 import { cn } from '@/lib/utils'
 import type { AnalyzedItem } from '@/app/actions/admin-actions'
+import { StockSearchCombobox } from '@/components/dashboard/stock-search-combobox'
 
 const ACCEPTED_MIME_TYPES = ['image/png', 'image/jpeg', 'image/webp'] as const
 const MAX_RAW_BYTES = 10 * 1024 * 1024 // 10MB
@@ -22,10 +23,70 @@ type OcrResponseBody = {
     code?: string
 }
 
+/**
+ * 카드 한 장의 사용자 편집 가능 모델.
+ * - analyzed: 서버가 반환한 원본 (불변, 표시 참고용)
+ * - draft: 사용자가 inline edit 한 현재 값
+ * - selected: 등록 대상 체크 여부. resolved 는 자동 true, ambiguous/unresolved 는 false 시작.
+ * - replaced: 사용자가 종목 검색 콤보로 카드의 종목을 교체한 경우 true — 화면 표시용.
+ */
+type ReviewCard = {
+    /** 안정적 key — uuid 같지만 외부 의존성 피하기 위해 인덱스+identifier 조합. */
+    id: string
+    analyzed: AnalyzedItem
+    draft: {
+        stockCode?: string
+        stockName?: string
+        market?: string
+        currency?: string
+        effectiveRate?: number
+        quantity: number
+        averagePrice: number
+        purchaseRate?: number
+    }
+    selected: boolean
+    replaced: boolean
+}
+
+function buildInitialCards(resolved: AnalyzedItem[], unresolved: AnalyzedItem[]): ReviewCard[] {
+    const cards: ReviewCard[] = []
+    resolved.forEach((a, i) => {
+        cards.push({
+            id: `r-${i}-${a.stockCode ?? a.identifier}`,
+            analyzed: a,
+            draft: {
+                stockCode: a.stockCode,
+                stockName: a.stockName,
+                market: a.market,
+                currency: a.currency,
+                effectiveRate: a.effectiveRate,
+                quantity: a.inputQty,
+                averagePrice: a.inputPrice,
+                purchaseRate: a.inputRate ?? a.effectiveRate,
+            },
+            selected: true,
+            replaced: false,
+        })
+    })
+    unresolved.forEach((a, i) => {
+        cards.push({
+            id: `u-${i}-${a.identifier}`,
+            analyzed: a,
+            draft: {
+                quantity: a.inputQty,
+                averagePrice: a.inputPrice,
+            },
+            selected: false,
+            replaced: false,
+        })
+    })
+    return cards
+}
+
 type ImageModeState =
     | { kind: 'idle' }
     | { kind: 'analyzing'; previewUrl: string }
-    | { kind: 'review'; previewUrl: string; resolved: AnalyzedItem[]; unresolved: AnalyzedItem[]; edited: boolean }
+    | { kind: 'review'; previewUrl: string; cards: ReviewCard[]; edited: boolean }
     | { kind: 'submitting'; previewUrl: string; resolved: AnalyzedItem[]; unresolved: AnalyzedItem[] }
     | { kind: 'error'; previewUrl?: string; message: string }
 
@@ -196,7 +257,12 @@ export function BulkImportImageMode({ accountId, onSubmit, resetSignal }: BulkIm
                 return
             }
 
-            setState({ kind: 'review', previewUrl, resolved, unresolved, edited: false })
+            setState({
+                kind: 'review',
+                previewUrl,
+                cards: buildInitialCards(resolved, unresolved),
+                edited: false,
+            })
         } catch (e) {
             if (controller.signal.aborted) return
             console.error('[bulk-import-image-mode] fetch failed:', e)
@@ -267,44 +333,268 @@ export function BulkImportImageMode({ accountId, onSubmit, resetSignal }: BulkIm
                 </div>
             )}
 
-            {/* review / submitting 상태의 UI 는 Task 6, 7 에서 추가 */}
-
-            {/* TODO(Task 7): submitting 처리, onSubmit 호출, 이미지 변경 confirm */}
-            {(state.kind === 'review' || state.kind === 'submitting') && (
-                <ReviewPlaceholder
+            {state.kind === 'review' && (
+                <ReviewCardList
                     state={state}
                     onChangeImage={handleChangeImage}
+                    onUpdate={(next, edited) => setState({ ...state, cards: next, edited })}
+                    onSubmit={() => {
+                        /* Task 7 에서 구현 */
+                    }}
                 />
+            )}
+
+            {state.kind === 'submitting' && (
+                <div className="rounded-md border border-border bg-accent-soft/30 px-4 py-8 text-sm text-center text-muted-foreground inline-flex flex-col items-center gap-2 w-full">
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    등록 중...
+                </div>
             )}
         </div>
     )
 }
 
-// Task 6 에서 정식 구현으로 교체. 지금은 분석 결과를 단순 텍스트로 노출해 흐름이 정상인지 확인.
-function ReviewPlaceholder({
+function ReviewCardList({
     state,
     onChangeImage,
+    onUpdate,
+    onSubmit,
 }: {
-    state: Extract<ImageModeState, { kind: 'review' | 'submitting' }>
+    state: Extract<ImageModeState, { kind: 'review' }>
     onChangeImage: () => void
+    onUpdate: (next: ReviewCard[], edited: boolean) => void
+    onSubmit: (strategy: 'overwrite' | 'add') => void
 }) {
+    const { language } = useLanguage()
+    const tx = translations[language].portfolioManage
+    const [strategy, setStrategy] = useState<'overwrite' | 'add'>('overwrite')
+
+    const updateCard = (id: string, patch: Partial<ReviewCard>) => {
+        const next = state.cards.map(c => (c.id === id ? { ...c, ...patch } : c))
+        onUpdate(next, true)
+    }
+
+    const removeCard = (id: string) => {
+        const next = state.cards.filter(c => c.id !== id)
+        onUpdate(next, true)
+    }
+
+    const total = state.cards.length
+    const ready = state.cards.filter(c => c.selected && c.draft.stockCode).length
+
     return (
-        <div className="rounded-md border border-border bg-background p-3 space-y-2">
-            <div className="flex items-start gap-3">
+        <div className="space-y-3">
+            {/* 이미지 썸네일 + 변경 버튼 */}
+            <div className="flex items-center gap-3 rounded-md border border-border bg-background p-2">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                     src={state.previewUrl}
-                    alt="upload preview"
-                    className="w-20 h-20 object-cover rounded-md border border-border shrink-0"
+                    alt={tx.ocrThumbnailAlt}
+                    width={56}
+                    height={56}
+                    className="w-14 h-14 object-cover rounded border border-border shrink-0"
                 />
-                <div className="flex-1 text-xs space-y-1">
-                    <div className="font-bold">분석 결과 (Task 6 에서 카드로 교체)</div>
-                    <div>resolved: {state.resolved.length}개</div>
-                    <div>unresolved: {state.unresolved.length}개</div>
+                <div className="flex-1 text-[11px] text-muted-foreground">
+                    {tx.ocrCountSummary
+                        .replace('{total}', String(total))
+                        .replace('{ready}', String(ready))}
                 </div>
-                <Button type="button" variant="ghost" size="sm" onClick={onChangeImage}>
-                    <X className="w-3.5 h-3.5" />
+                <Button type="button" variant="outline" size="sm" onClick={onChangeImage}>
+                    <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+                    {tx.ocrChangeImage}
                 </Button>
+            </div>
+
+            {/* 카드 리스트 */}
+            <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-1">
+                {state.cards.map(card => (
+                    <ReviewCardItem
+                        key={card.id}
+                        card={card}
+                        onChange={patch => updateCard(card.id, patch)}
+                        onRemove={() => removeCard(card.id)}
+                    />
+                ))}
+            </div>
+
+            {/* 전략 선택 */}
+            <div>
+                <label className="block text-[11px] font-bold tracking-wide text-muted-foreground mb-1.5 uppercase">
+                    {tx.strategy}
+                </label>
+                <div className="grid grid-cols-2 gap-1.5">
+                    <button
+                        type="button"
+                        onClick={() => setStrategy('overwrite')}
+                        className={cn(
+                            'py-2 text-[12px] font-bold rounded-sm border transition-colors',
+                            strategy === 'overwrite'
+                                ? 'bg-primary text-primary-foreground border-primary'
+                                : 'bg-background text-foreground border-border hover:bg-accent-soft',
+                        )}
+                    >
+                        {tx.strategyOverwrite}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setStrategy('add')}
+                        className={cn(
+                            'py-2 text-[12px] font-bold rounded-sm border transition-colors',
+                            strategy === 'add'
+                                ? 'bg-primary text-primary-foreground border-primary'
+                                : 'bg-background text-foreground border-border hover:bg-accent-soft',
+                        )}
+                    >
+                        {tx.strategyAdd}
+                    </button>
+                </div>
+            </div>
+
+            <Button
+                type="button"
+                onClick={() => onSubmit(strategy)}
+                disabled={ready === 0}
+                className="w-full"
+            >
+                {tx.ocrSubmitButton.replace('{count}', String(ready))}
+            </Button>
+        </div>
+    )
+}
+
+function ReviewCardItem({
+    card,
+    onChange,
+    onRemove,
+}: {
+    card: ReviewCard
+    onChange: (patch: Partial<ReviewCard>) => void
+    onRemove: () => void
+}) {
+    const { language } = useLanguage()
+    const tx = translations[language].portfolioManage
+
+    const isResolved = !!card.draft.stockCode
+    const isAmbiguousOrUnresolved = !isResolved
+    const isUSD = card.draft.currency === 'USD'
+
+    return (
+        <div
+            className={cn(
+                'rounded-md border p-3 space-y-2',
+                isResolved
+                    ? 'border-border bg-background'
+                    : 'border-amber-500/50 bg-amber-500/5',
+            )}
+        >
+            <div className="flex items-center gap-2">
+                <input
+                    type="checkbox"
+                    checked={card.selected}
+                    onChange={e => onChange({ selected: e.target.checked })}
+                    disabled={!isResolved}
+                    className="w-4 h-4"
+                    aria-label="등록 대상 선택"
+                />
+                <div className="flex-1 min-w-0">
+                    {isResolved ? (
+                        <div className="flex items-center gap-2">
+                            <span className="font-bold text-sm truncate">{card.draft.stockName}</span>
+                            <span className="text-[10px] text-muted-foreground">{card.draft.stockCode}</span>
+                            {isUSD && (
+                                <span className="text-[10px] bg-accent-soft px-1.5 py-0.5 rounded">USD</span>
+                            )}
+                            {card.replaced && (
+                                <span className="text-[10px] text-amber-600">교체됨</span>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="text-[11px] text-amber-700">
+                            {tx.ocrUnresolvedHint} (원문: &quot;{card.analyzed.identifier}&quot;)
+                        </div>
+                    )}
+                </div>
+                <button
+                    type="button"
+                    onClick={onRemove}
+                    className="text-muted-foreground hover:text-destructive"
+                    aria-label="카드 제거"
+                >
+                    <Trash2 className="w-3.5 h-3.5" />
+                </button>
+            </div>
+
+            {/* 종목 검색 콤보 — 모호/실패 시 보임 */}
+            {isAmbiguousOrUnresolved && (
+                <StockSearchCombobox
+                    value={card.draft.stockName ?? ''}
+                    inline
+                    onSelect={stock => {
+                        onChange({
+                            draft: {
+                                ...card.draft,
+                                stockCode: stock.stockCode,
+                                stockName: stock.nameKo || stock.stockName,
+                                market: stock.market,
+                                currency:
+                                    stock.market === 'KOSPI' || stock.market === 'KOSDAQ' ? 'KRW' : 'USD',
+                            },
+                            selected: true,
+                            replaced: true,
+                        })
+                    }}
+                />
+            )}
+
+            {/* 수량 / 평단가 inline edit */}
+            <div className={cn('grid gap-2', isUSD ? 'grid-cols-3' : 'grid-cols-2')}>
+                <label className="text-[11px]">
+                    <div className="text-muted-foreground mb-0.5">{tx.quantity}</div>
+                    <input
+                        type="number"
+                        min={1}
+                        step={1}
+                        value={card.draft.quantity}
+                        onChange={e =>
+                            onChange({
+                                draft: { ...card.draft, quantity: Math.max(0, Math.trunc(Number(e.target.value))) },
+                            })
+                        }
+                        className="w-full border border-input bg-background rounded-sm h-8 px-2 text-sm"
+                    />
+                </label>
+                <label className="text-[11px]">
+                    <div className="text-muted-foreground mb-0.5">{tx.averagePrice}</div>
+                    <input
+                        type="number"
+                        min={0}
+                        step={0.0001}
+                        value={card.draft.averagePrice}
+                        onChange={e =>
+                            onChange({
+                                draft: { ...card.draft, averagePrice: Math.max(0, Number(e.target.value)) },
+                            })
+                        }
+                        className="w-full border border-input bg-background rounded-sm h-8 px-2 text-sm"
+                    />
+                </label>
+                {isUSD && (
+                    <label className="text-[11px]">
+                        <div className="text-muted-foreground mb-0.5">환율</div>
+                        <input
+                            type="number"
+                            min={0}
+                            step={1}
+                            value={card.draft.purchaseRate ?? card.draft.effectiveRate ?? 0}
+                            onChange={e =>
+                                onChange({
+                                    draft: { ...card.draft, purchaseRate: Math.max(0, Number(e.target.value)) },
+                                })
+                            }
+                            className="w-full border border-input bg-background rounded-sm h-8 px-2 text-sm"
+                        />
+                    </label>
+                )}
             </div>
         </div>
     )
