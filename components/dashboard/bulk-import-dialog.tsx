@@ -187,46 +187,61 @@ export function BulkImportDialog({ children, onSuccess, isPro = false }: BulkImp
         }
     }
 
+    /**
+     * 텍스트·이미지 모드 공통 import 실행 흐름.
+     * - payload 매핑 → executeBulkImport → 성공 시 토스트/close/reset/refresh
+     * - 실패 시 ok:false 반환 (호출부가 setExecuting 토글 / throw 분기 결정)
+     */
+    const runImport = async (
+        items: AnalyzedItem[],
+        strategy: 'overwrite' | 'add',
+    ): Promise<{ ok: true } | { ok: false; error: string }> => {
+        if (!accountId) {
+            toast.error(tx.accountRequired)
+            return { ok: false, error: tx.accountRequired }
+        }
+        // 서버 액션에는 stockCode(=identifier) 기반으로 보낸다 — analyze 가 채워준 stockCode 로 교체.
+        const payload = items.map(r => ({
+            identifier: r.stockCode ?? r.identifier,
+            quantity: r.inputQty,
+            averagePrice: r.inputPrice,
+            ...(typeof r.inputRate === 'number' && r.inputRate > 0
+                ? { purchaseRate: r.inputRate }
+                : typeof r.effectiveRate === 'number' && r.effectiveRate > 0
+                    ? { purchaseRate: r.effectiveRate }
+                    : {}),
+        }))
+        const res = await executeBulkImport(payload, strategy, accountId)
+        if (!res.success) {
+            const error = res.error ?? tx.importFailed
+            toast.error(error)
+            return { ok: false, error }
+        }
+
+        try {
+            localStorage.setItem(RECENT_ACCOUNT_KEY, accountId)
+        } catch { /* ignore */ }
+        toast.success(tx.importSuccessDesc.replace('{count}', String(res.count ?? payload.length)))
+        if (res.errors && res.errors.length > 0) {
+            toast.warning(`${tx.importPartial}: ${res.errors.length}`)
+        }
+        setOpen(false)
+        reset()
+        onSuccess?.()
+        startTransition(() => router.refresh())
+        // 외부 client (portfolio-client) 의 holdings 자동 갱신
+        try { window.dispatchEvent(new Event('portfolio:refresh')) } catch { /* ignore */ }
+        return { ok: true }
+    }
+
     const handleExecute = async () => {
         if (resolved.length === 0) {
             toast.error(tx.nothingToImportDesc)
             return
         }
-        if (!accountId) {
-            toast.error(tx.accountRequired)
-            return
-        }
         setExecuting(true)
         try {
-            // 서버 액션에는 stockCode(=identifier) 기반으로 보낸다 — analyze 가 채워준 stockCode 로 교체.
-            const payload = resolved.map(r => ({
-                identifier: r.stockCode ?? r.identifier,
-                quantity: r.inputQty,
-                averagePrice: r.inputPrice,
-                ...(typeof r.inputRate === 'number' && r.inputRate > 0
-                    ? { purchaseRate: r.inputRate }
-                    : typeof r.effectiveRate === 'number' && r.effectiveRate > 0
-                        ? { purchaseRate: r.effectiveRate }
-                        : {}),
-            }))
-            const res = await executeBulkImport(payload, strategy, accountId)
-            if (res.success) {
-                try {
-                    localStorage.setItem(RECENT_ACCOUNT_KEY, accountId)
-                } catch { /* ignore */ }
-                toast.success(tx.importSuccessDesc.replace('{count}', String(res.count ?? payload.length)))
-                if (res.errors && res.errors.length > 0) {
-                    toast.warning(`${tx.importPartial}: ${res.errors.length}`)
-                }
-                setOpen(false)
-                reset()
-                onSuccess?.()
-                startTransition(() => router.refresh())
-                // 외부 client (portfolio-client) 의 holdings 자동 갱신
-                try { window.dispatchEvent(new Event('portfolio:refresh')) } catch { /* ignore */ }
-            } else {
-                toast.error(res.error ?? tx.importFailed)
-            }
+            await runImport(resolved, strategy)
         } catch {
             toast.error(tx.importFailed)
         } finally {
@@ -518,38 +533,11 @@ export function BulkImportDialog({ children, onSuccess, isPro = false }: BulkImp
                             accountId={accountId}
                             resetSignal={imageResetSignal}
                             onSubmit={async (items, strategy) => {
-                                // 이미지 모드 확정 — 기존 executeBulkImport 직접 호출 (텍스트 모드의 handleExecute 와 동일 로직)
-                                if (!accountId) {
-                                    toast.error(tx.accountRequired)
-                                    return
-                                }
-                                const payload = items.map(r => ({
-                                    identifier: r.stockCode ?? r.identifier,
-                                    quantity: r.inputQty,
-                                    averagePrice: r.inputPrice,
-                                    ...(typeof r.inputRate === 'number' && r.inputRate > 0
-                                        ? { purchaseRate: r.inputRate }
-                                        : typeof r.effectiveRate === 'number' && r.effectiveRate > 0
-                                            ? { purchaseRate: r.effectiveRate }
-                                            : {}),
-                                }))
-                                const res = await executeBulkImport(payload, strategy, accountId)
-                                if (res.success) {
-                                    try {
-                                        localStorage.setItem(RECENT_ACCOUNT_KEY, accountId)
-                                    } catch { /* ignore */ }
-                                    toast.success(tx.importSuccessDesc.replace('{count}', String(res.count ?? payload.length)))
-                                    if (res.errors && res.errors.length > 0) {
-                                        toast.warning(`${tx.importPartial}: ${res.errors.length}`)
-                                    }
-                                    setOpen(false)
-                                    reset()
-                                    onSuccess?.()
-                                    startTransition(() => router.refresh())
-                                    try { window.dispatchEvent(new Event('portfolio:refresh')) } catch { /* ignore */ }
-                                } else {
-                                    toast.error(res.error ?? tx.importFailed)
-                                    throw new Error(res.error ?? 'import failed')
+                                // 이미지 모드 확정 — 텍스트 모드와 동일한 runImport 헬퍼 사용.
+                                // 실패 시 throw 로 자식 컴포넌트에게 에러 전파.
+                                const result = await runImport(items, strategy)
+                                if (!result.ok) {
+                                    throw new Error(result.error)
                                 }
                             }}
                         />
