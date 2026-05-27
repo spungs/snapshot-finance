@@ -154,17 +154,29 @@ export async function analyzeBulkImport(items: ImportItem[]): Promise<ImportAnal
     try {
         for (const item of items) {
             const cleanIdentifier = item.identifier.trim()
-            // stocks 통합 후: ticker / 한글명 / contains 한 번에 조회. 결과 없으면 unresolved.
+            // 우선순위 1: 정확한 stockCode 또는 영문명 매칭 (대소문자 무시).
+            // 영문 ticker(TSLA, AAPL, TSLL 등)나 6자리 한국 코드는 여기서 잡힘.
             let stock = await prisma.stock.findFirst({
                 where: {
                     OR: [
                         { stockCode: cleanIdentifier },
-                        { nameKo: cleanIdentifier },
-                        { nameKo: { contains: cleanIdentifier } },
                         { nameEn: { equals: cleanIdentifier, mode: 'insensitive' } },
-                    ]
-                }
+                    ],
+                },
             })
+
+            // 우선순위 2: 한글명 매칭 (정확 → 부분 contains).
+            // OCR 이 종목명을 보냈을 때 fallback. stockCode/nameEn 정확 매칭이 실패한 경우만.
+            if (!stock) {
+                stock = await prisma.stock.findFirst({
+                    where: {
+                        OR: [
+                            { nameKo: cleanIdentifier },
+                            { nameKo: { contains: cleanIdentifier } },
+                        ],
+                    },
+                })
+            }
 
             if (stock) {
                 const market = stock.market
