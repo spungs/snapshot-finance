@@ -125,6 +125,9 @@ export function BulkImportImageMode({ accountId, onSubmit, resetSignal }: BulkIm
         setState(s => (s.kind === 'idle' ? s : { kind: 'idle' }))
     }, [resetSignal])
 
+    // 컴포넌트 unmount 시 in-flight 요청 정리 — 메모리 누수·dead state setState 방지.
+    useEffect(() => () => abortRef.current?.abort(), [])
+
     const handleFile = useCallback(async (file: File) => {
         // 진행 중 이전 요청 abort — 새 파일 선택 시 race 방지.
         abortRef.current?.abort()
