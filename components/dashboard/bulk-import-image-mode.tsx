@@ -702,15 +702,26 @@ function ReviewCardItem({
                 </label>
                 {isUSD && (
                     <label className="text-[11px]">
-                        <div className="text-muted-foreground mb-0.5">환율</div>
+                        <div className="text-muted-foreground mb-0.5">{tx.rate}</div>
                         <input
                             type="number"
                             min={0}
                             step={1}
-                            value={card.draft.purchaseRate ?? card.draft.effectiveRate ?? ''}
+                            value={card.draft.purchaseRate || ''}
+                            placeholder={
+                                card.draft.effectiveRate
+                                    ? `${Math.round(card.draft.effectiveRate).toLocaleString()}`
+                                    : tx.rate
+                            }
                             onChange={e => {
                                 const raw = e.target.value
-                                if (raw === '') return
+                                if (raw === '') {
+                                    // 빈 입력으로 만들면 purchaseRate 제거 — effectiveRate placeholder 가 다시 보이게.
+                                    onChange({
+                                        draft: { ...card.draft, purchaseRate: undefined },
+                                    })
+                                    return
+                                }
                                 const num = Number(raw)
                                 if (!Number.isFinite(num) || num < 0) return
                                 onChange({
