@@ -190,6 +190,17 @@ export async function POST(request: NextRequest) {
             const qtyRes = validateQuantity(h.quantity)
             if (!qtyRes.ok) continue
 
+            // ticker 우선 — KIS Master 가 stockCode 로 정확 매칭 시도, fallback 으로 stockName.
+            // ticker 가 비어있거나 noise(통화 약어 등) 면 stockName 으로 그대로 검색 (한국어 부분 매칭).
+            let identifier = nameRes.value
+            if (typeof h.ticker === 'string') {
+                const tickerTrim = h.ticker.trim()
+                // 영문 1~6자 또는 6자리 숫자만 ticker 로 인정 (통화/구분 등 noise 차단).
+                if (/^[A-Z]{1,6}$/i.test(tickerTrim) || /^\d{6}$/.test(tickerTrim)) {
+                    identifier = tickerTrim
+                }
+            }
+
             // averagePrice 는 optional. 캡쳐에 평단 컬럼이 없으면 0 으로 두고
             // 클라이언트가 사용자에게 직접 입력 요청 (UI 가 0 인 카드를 등록 차단).
             let averagePrice = 0
@@ -202,7 +213,7 @@ export async function POST(request: NextRequest) {
             }
 
             items.push({
-                identifier: nameRes.value,
+                identifier,
                 quantity: Math.trunc(qtyRes.value),
                 averagePrice,
                 // purchaseRate 상한 100000 — 합리적 USD/KRW 환율 범위(100~10000) 의 보수적 상한.
