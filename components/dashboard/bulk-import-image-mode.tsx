@@ -462,23 +462,23 @@ function ReviewCardList({
     return (
         <div className="space-y-3">
             {/* 이미지 썸네일 + 변경 버튼 */}
-            <div className="flex items-center gap-3 rounded-md border border-border bg-background p-2">
+            <div className="flex items-center gap-2 rounded-md border border-border bg-background p-2">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                     src={state.previewUrl}
                     alt={tx.ocrThumbnailAlt}
-                    width={56}
-                    height={56}
-                    className="w-14 h-14 object-cover rounded border border-border shrink-0"
+                    width={48}
+                    height={48}
+                    className="w-12 h-12 object-cover rounded border border-border shrink-0"
                 />
-                <div className="flex-1 text-[11px] text-muted-foreground">
+                <div className="flex-1 text-[11px] text-muted-foreground min-w-0">
                     {tx.ocrCountSummary
                         .replace('{total}', String(total))
                         .replace('{ready}', String(ready))}
                 </div>
-                <Button type="button" variant="outline" size="sm" onClick={onChangeImage}>
-                    <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
-                    {tx.ocrChangeImage}
+                <Button type="button" variant="outline" size="sm" onClick={onChangeImage} className="shrink-0">
+                    <RefreshCw className="w-3.5 h-3.5 sm:mr-1.5" />
+                    <span className="hidden sm:inline">{tx.ocrChangeImage}</span>
                 </Button>
             </div>
 
@@ -570,52 +570,60 @@ function ReviewCardItem({
                     : 'border-amber-500/50 bg-amber-500/5',
             )}
         >
-            <div className="flex items-center gap-2">
+            {/* 헤더 row 1: 체크박스 + 종목명/ticker + 삭제 */}
+            <div className="flex items-start gap-2">
                 <input
                     type="checkbox"
                     checked={card.selected}
                     onChange={e => onChange({ selected: e.target.checked })}
                     disabled={!isResolved}
-                    className="w-4 h-4"
+                    className="w-4 h-4 mt-0.5 shrink-0"
                     aria-label="등록 대상 선택"
                 />
                 <div className="flex-1 min-w-0">
                     {isResolved ? (
-                        <div className="flex items-center gap-2 flex-wrap">
+                        <div className="flex items-center gap-2 min-w-0">
                             <span className="font-bold text-sm truncate">{card.draft.stockName}</span>
-                            <span className="text-[10px] text-muted-foreground">{card.draft.stockCode}</span>
-                            {isUSD && (
-                                <span className="text-[10px] bg-accent-soft px-1.5 py-0.5 rounded">USD</span>
-                            )}
-                            {card.replaced && (
-                                <span className="text-[10px] text-amber-600">교체됨</span>
-                            )}
-                            {!showStockSwap && (
-                                <button
-                                    type="button"
-                                    onClick={() => setShowStockSwap(true)}
-                                    className="text-[10px] text-muted-foreground hover:text-foreground inline-flex items-center gap-0.5 underline"
-                                >
-                                    <Pencil className="w-3 h-3" />
-                                    {tx.ocrChangeStock}
-                                </button>
-                            )}
+                            <span className="text-[10px] text-muted-foreground shrink-0">{card.draft.stockCode}</span>
                         </div>
                     ) : (
                         <div className="text-[11px] text-amber-700">
-                            {tx.ocrUnresolvedHint} (원문: &quot;{card.analyzed.identifier}&quot;)
+                            {tx.ocrUnresolvedHint}
+                            <span className="block opacity-70 mt-0.5 truncate">원문: &quot;{card.analyzed.identifier}&quot;</span>
                         </div>
                     )}
                 </div>
                 <button
                     type="button"
                     onClick={onRemove}
-                    className="text-muted-foreground hover:text-destructive"
+                    className="text-muted-foreground hover:text-destructive shrink-0 mt-0.5"
                     aria-label="카드 제거"
                 >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Trash2 className="w-4 h-4" />
                 </button>
             </div>
+
+            {/* 헤더 row 2: 메타 배지 + 변경 액션 (resolved 한정) */}
+            {isResolved && (
+                <div className="flex items-center gap-2 flex-wrap pl-6 text-[10px]">
+                    {isUSD && (
+                        <span className="bg-accent-soft px-1.5 py-0.5 rounded">USD</span>
+                    )}
+                    {card.replaced && (
+                        <span className="text-amber-600">교체됨</span>
+                    )}
+                    {!showStockSwap && (
+                        <button
+                            type="button"
+                            onClick={() => setShowStockSwap(true)}
+                            className="text-muted-foreground hover:text-foreground inline-flex items-center gap-0.5 underline"
+                        >
+                            <Pencil className="w-3 h-3" />
+                            {tx.ocrChangeStock}
+                        </button>
+                    )}
+                </div>
+            )}
 
             {/* 종목 검색 콤보 — 모호/실패 시 항상, resolved 는 사용자 토글 시에만 */}
             {showCombobox && (
@@ -642,8 +650,8 @@ function ReviewCardItem({
                 />
             )}
 
-            {/* 수량 / 평단가 inline edit */}
-            <div className={cn('grid gap-2', isUSD ? 'grid-cols-3' : 'grid-cols-2')}>
+            {/* 수량 / 평단가 — 항상 grid-cols-2 (모바일 호환) */}
+            <div className="grid gap-2 grid-cols-2">
                 <label className="text-[11px]">
                     <div className="text-muted-foreground mb-0.5">{tx.quantity}</div>
                     <input
@@ -661,7 +669,7 @@ function ReviewCardItem({
                                 draft: { ...card.draft, quantity: Math.trunc(num) },
                             })
                         }}
-                        className="w-full border border-input bg-background rounded-sm h-8 px-2 text-sm"
+                        className="w-full border border-input bg-background rounded-sm h-9 px-2 text-sm"
                     />
                 </label>
                 <label className="text-[11px]">
@@ -687,53 +695,53 @@ function ReviewCardItem({
                             onChange({
                                 draft: { ...card.draft, averagePrice: num },
                                 // 사용자가 평단가를 직접 채우면 자동 선택 (resolved 카드에 한함).
-                                ...(num > 0 && card.draft.stockCode && !card.selected
-                                    ? { selected: true }
-                                    : {}),
+                                selected: num > 0 && !!card.draft.stockCode,
                             })
                         }}
+                        placeholder={card.draft.averagePrice <= 0 ? tx.ocrEnterPrice : undefined}
                         className={cn(
-                            'w-full border bg-background rounded-sm h-8 px-2 text-sm',
+                            'w-full border bg-background rounded-sm h-9 px-2 text-sm',
                             card.draft.averagePrice <= 0
                                 ? 'border-amber-500'
                                 : 'border-input',
                         )}
-                        placeholder={card.draft.averagePrice <= 0 ? tx.ocrEnterPrice : undefined}
                     />
                 </label>
-                {isUSD && (
-                    <label className="text-[11px]">
-                        <div className="text-muted-foreground mb-0.5">{tx.rate}</div>
-                        <input
-                            type="number"
-                            min={0}
-                            step={1}
-                            value={card.draft.purchaseRate || ''}
-                            placeholder={
-                                card.draft.effectiveRate
-                                    ? card.draft.effectiveRate.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                                    : tx.rate
-                            }
-                            onChange={e => {
-                                const raw = e.target.value
-                                if (raw === '') {
-                                    // 빈 입력으로 만들면 purchaseRate 제거 — effectiveRate placeholder 가 다시 보이게.
-                                    onChange({
-                                        draft: { ...card.draft, purchaseRate: undefined },
-                                    })
-                                    return
-                                }
-                                const num = Number(raw)
-                                if (!Number.isFinite(num) || num < 0) return
-                                onChange({
-                                    draft: { ...card.draft, purchaseRate: num },
-                                })
-                            }}
-                            className="w-full border border-input bg-background rounded-sm h-8 px-2 text-sm"
-                        />
-                    </label>
-                )}
             </div>
+
+            {/* 환율 — USD 전용 별도 row, 모바일에서 넉넉한 너비 확보 */}
+            {isUSD && (
+                <label className="block text-[11px]">
+                    <div className="text-muted-foreground mb-0.5">{tx.rate}</div>
+                    <input
+                        type="number"
+                        min={0}
+                        step={0.01}
+                        value={card.draft.purchaseRate || ''}
+                        placeholder={
+                            card.draft.effectiveRate
+                                ? card.draft.effectiveRate.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                                : tx.rate
+                        }
+                        onChange={e => {
+                            const raw = e.target.value
+                            if (raw === '') {
+                                // 빈 입력으로 만들면 purchaseRate 제거 — effectiveRate placeholder 가 다시 보이게.
+                                onChange({
+                                    draft: { ...card.draft, purchaseRate: undefined },
+                                })
+                                return
+                            }
+                            const num = Number(raw)
+                            if (!Number.isFinite(num) || num < 0) return
+                            onChange({
+                                draft: { ...card.draft, purchaseRate: num },
+                            })
+                        }}
+                        className="w-full border border-input bg-background rounded-sm h-9 px-2 text-sm"
+                    />
+                </label>
+            )}
         </div>
     )
 }
