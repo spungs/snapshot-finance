@@ -56,6 +56,22 @@ export const ratelimit = {
         analytics: true,
         prefix: '@upstash/ratelimit/ai-daily',
     }),
+
+    // OCR burst (Gemini Vision 단기 남용 방지): 5 요청 / 60초
+    ocr: new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(5, '60 s'),
+        analytics: true,
+        prefix: '@upstash/ratelimit/ocr',
+    }),
+
+    // OCR 일일 한도 (이미지 토큰 비용 통제): 10 요청 / 24시간 — 사용자별 (PRO 일일 한도)
+    ocrDaily: new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(10, '1 d'),
+        analytics: true,
+        prefix: '@upstash/ratelimit/ocr-daily',
+    }),
 }
 
 // IP 주소 추출 헬퍼
