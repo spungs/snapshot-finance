@@ -12,7 +12,9 @@ import { StockSearchCombobox } from '@/components/dashboard/stock-search-combobo
 
 const ACCEPTED_MIME_TYPES = ['image/png', 'image/jpeg', 'image/webp'] as const
 const MAX_RAW_BYTES = 10 * 1024 * 1024 // 10MB
-const TARGET_BASE64_BYTES = 4 * 1024 * 1024 // 4MB (서버 한계와 정합)
+// 압축 결과의 디코드된 raw bytes 상한.
+// 3MB (서버 한계와 정합, Vercel function body 4.5MB 안전 마진 — base64 인코딩 후 ~4MB + JSON wrapping).
+const TARGET_BASE64_BYTES = 3 * 1024 * 1024
 
 type OcrResponseBody = {
     success: boolean
@@ -102,7 +104,7 @@ export interface BulkImportImageModeProps {
  * 이미지를 canvas 로 압축해 OCR 페이로드용 base64(prefix 없음)와
  * 화면 표시용 작은 previewUrl(dataURL, 320px) 을 함께 반환한다.
  *
- * 1차: maxWidth 1920, maxHeight 4096, quality 0.92 → 2차(>4MB): 1280×2560, 0.88.
+ * 1차: maxWidth 1920, maxHeight 4096, quality 0.92 → 2차(>3MB): 1280×2560, 0.82.
  * RGBA 비트맵 메모리 폭주를 막기 위해 MAX_PIXELS(4096×8192) 초과는 사전 거부.
  * 실패 시 throw — 호출부에서 toast.
  */
@@ -149,9 +151,9 @@ async function compressImage(file: File): Promise<{
         // 1차 압축: maxWidth 1920, maxHeight 4096 (긴 스크롤 캡쳐도 흡수)
         let result = tryEncode(1920, 4096, 0.92)
 
-        // 4MB 초과면 2차 압축: maxWidth 1280, maxHeight 2560
+        // 3MB 초과면 2차 압축: maxWidth 1280, maxHeight 2560, quality 0.82 — 해상도 유지 + quality 만 추가로 낮춤.
         if (result.bytes > TARGET_BASE64_BYTES) {
-            result = tryEncode(1280, 2560, 0.88)
+            result = tryEncode(1280, 2560, 0.82)
         }
 
         if (result.bytes > TARGET_BASE64_BYTES) {

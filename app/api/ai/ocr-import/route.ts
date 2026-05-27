@@ -15,9 +15,9 @@ import {
 // 까지 60초 안에 끝나야 함. AI 어시 route 와 동일 정책.
 export const maxDuration = 60
 
-// payload 4MB 한계 (Vercel function body 4.5MB 안전 마진).
-// base64 길이는 raw bytes 의 약 1.37 배이므로 이 한계는 raw ~3MB 에 해당.
-const MAX_BASE64_BYTES = 4 * 1024 * 1024
+// 디코드된 raw bytes 기준 3MB 한계.
+// raw 3MB → base64 ~4MB → JSON wrapping 포함 HTTP body ~4MB → Vercel function 4.5MB body 한도 안전 마진.
+const MAX_DECODED_BYTES = 3 * 1024 * 1024
 
 const SUPPORTED_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp'])
 
@@ -114,9 +114,9 @@ export async function POST(request: NextRequest) {
 
         // base64 길이 → raw bytes 추정. 클라이언트가 압축을 회피했을 때를 위한 서버 2차 차단.
         const estimatedRawBytes = Math.floor((imageBase64.length * 3) / 4)
-        if (estimatedRawBytes > MAX_BASE64_BYTES) {
+        if (estimatedRawBytes > MAX_DECODED_BYTES) {
             return NextResponse.json(
-                { success: false, error: '이미지가 너무 큽니다. 4MB 이하로 압축해주세요.' },
+                { success: false, error: '이미지가 너무 큽니다. 3MB 이하로 압축해주세요.' },
                 { status: 413 },
             )
         }
