@@ -348,19 +348,42 @@ export function BulkImportImageMode({ accountId, onSubmit, resetSignal }: BulkIm
             />
 
             {state.kind === 'idle' && (
-                <button
-                    type="button"
+                <div
+                    role="button"
+                    tabIndex={0}
                     onClick={() => fileInputRef.current?.click()}
-                    disabled={!accountId}
+                    onKeyDown={e => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            fileInputRef.current?.click()
+                        }
+                    }}
+                    onPaste={e => {
+                        const items = e.clipboardData?.items
+                        if (!items) return
+                        for (const item of items) {
+                            if (item.kind === 'file' && item.type.startsWith('image/')) {
+                                const file = item.getAsFile()
+                                if (file) {
+                                    e.preventDefault()
+                                    void handleFile(file)
+                                    return
+                                }
+                            }
+                        }
+                    }}
+                    aria-disabled={!accountId}
                     className={cn(
                         'w-full rounded-md border border-dashed border-primary/60 bg-accent-soft/30',
                         'px-4 py-8 text-sm text-center text-muted-foreground',
-                        'hover:bg-accent-soft/50 transition-colors disabled:opacity-50',
+                        'hover:bg-accent-soft/50 transition-colors',
+                        'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/50',
+                        !accountId && 'opacity-50 pointer-events-none',
                     )}
                 >
                     <Upload className="w-5 h-5 mx-auto mb-2 opacity-70" />
                     {tx.ocrUploadHint}
-                </button>
+                </div>
             )}
 
             {state.kind === 'analyzing' && (
