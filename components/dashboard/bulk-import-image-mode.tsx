@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { Loader2, Upload, AlertCircle, RefreshCw, Trash2 } from 'lucide-react'
+import { Loader2, Upload, AlertCircle, RefreshCw, Trash2, Pencil } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { useLanguage } from '@/lib/i18n/context'
@@ -554,6 +554,12 @@ function ReviewCardItem({
     const isAmbiguousOrUnresolved = !isResolved
     const isUSD = card.draft.currency === 'USD'
 
+    // resolved 카드에서 사용자가 "종목 변경" 클릭 시 콤보박스 인라인 표시.
+    const [showStockSwap, setShowStockSwap] = useState(false)
+
+    // 콤보박스 표시 조건: 모호/실패 카드는 항상, resolved 카드는 사용자가 토글한 경우만.
+    const showCombobox = isAmbiguousOrUnresolved || showStockSwap
+
     return (
         <div
             className={cn(
@@ -574,7 +580,7 @@ function ReviewCardItem({
                 />
                 <div className="flex-1 min-w-0">
                     {isResolved ? (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-bold text-sm truncate">{card.draft.stockName}</span>
                             <span className="text-[10px] text-muted-foreground">{card.draft.stockCode}</span>
                             {isUSD && (
@@ -582,6 +588,16 @@ function ReviewCardItem({
                             )}
                             {card.replaced && (
                                 <span className="text-[10px] text-amber-600">교체됨</span>
+                            )}
+                            {!showStockSwap && (
+                                <button
+                                    type="button"
+                                    onClick={() => setShowStockSwap(true)}
+                                    className="text-[10px] text-muted-foreground hover:text-foreground inline-flex items-center gap-0.5 underline"
+                                >
+                                    <Pencil className="w-3 h-3" />
+                                    {tx.ocrChangeStock}
+                                </button>
                             )}
                         </div>
                     ) : (
@@ -600,8 +616,8 @@ function ReviewCardItem({
                 </button>
             </div>
 
-            {/* 종목 검색 콤보 — 모호/실패 시 보임 */}
-            {isAmbiguousOrUnresolved && (
+            {/* 종목 검색 콤보 — 모호/실패 시 항상, resolved 는 사용자 토글 시에만 */}
+            {showCombobox && (
                 <StockSearchCombobox
                     value={card.draft.stockName ?? ''}
                     inline
@@ -615,9 +631,12 @@ function ReviewCardItem({
                                 currency:
                                     stock.market === 'KOSPI' || stock.market === 'KOSDAQ' ? 'KRW' : 'USD',
                             },
-                            selected: true,
+                            // 평단가 있으면 자동 체크, 없으면 사용자가 입력 후 체크.
+                            selected: card.draft.averagePrice > 0,
                             replaced: true,
                         })
+                        // 선택 후 콤보박스 자동 숨김 (resolved 카드 한정).
+                        if (isResolved) setShowStockSwap(false)
                     }}
                 />
             )}
