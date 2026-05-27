@@ -5,6 +5,11 @@ import { ratelimit, checkRateLimit } from '@/lib/ratelimit'
 import { isProUser } from '@/lib/billing/subscription'
 import { OCR_SYSTEM_PROMPT, OCR_RESPONSE_SCHEMA, type OcrResponse } from '@/lib/ai/ocr-prompt'
 import { analyzeBulkImport, type ImportItem } from '@/app/actions/admin-actions'
+import {
+    validateStockName,
+    validateQuantity,
+    validateAveragePrice,
+} from '@/lib/validation/portfolio-input'
 
 // Vercel function 콜드 스타트 + Gemini Vision 첫 호출 + analyzeBulkImport(KIS/Yahoo)
 // 까지 60초 안에 끝나야 함. AI 어시 route 와 동일 정책.
@@ -121,6 +126,15 @@ export async function POST(request: NextRequest) {
             ? imageBase64.slice(imageBase64.indexOf(',') + 1)
             : imageBase64
 
+        // base64 형식 검증 — 비-base64 문자열은 Gemini 가 모호한 에러를 던지므로 사전 차단.
+        // 정규식만으로 검증 (Buffer.from 디코딩은 메모리 부담 추가).
+        if (!/^[A-Za-z0-9+/]+=*$/.test(stripped)) {
+            return NextResponse.json(
+                { success: false, error: '잘못된 이미지 데이터입니다.' },
+                { status: 400 },
+            )
+        }
+
         // Gemini Vision 호출
         const model = genAI.getGenerativeModel({
             model: 'gemini-2.5-flash',
@@ -165,24 +179,30 @@ export async function POST(request: NextRequest) {
         // OcrHoldingItem → ImportItem 변환.
         // analyzeBulkImport 는 identifier 한 필드만 받으므로 stockName 을 그대로 넘김.
         // purchaseRate 는 USD 종목일 때만 의미 — KRW 종목에 잘못 들어와도 analyzeBulkImport 가 무시.
-        const items: ImportItem[] = holdings
-            .filter(
-                h =>
-                    typeof h?.stockName === 'string' &&
-                    h.stockName.trim().length > 0 &&
-                    typeof h?.quantity === 'number' &&
-                    h.quantity > 0 &&
-                    typeof h?.averagePrice === 'number' &&
-                    h.averagePrice > 0,
-            )
-            .map(h => ({
-                identifier: h.stockName.trim(),
-                quantity: Math.trunc(h.quantity),
-                averagePrice: h.averagePrice,
-                ...(typeof h.purchaseRate === 'number' && h.purchaseRate > 0
+        //
+        // Gemini 가 schema 우회로 비정상 큰 값(10KB stockName, quantity 10^9 등) 을 반환할 경우
+        // downstream SQL ILIKE 부담 / 잘못된 데이터 등록 위험이 있으므로 portfolio-input validator 재사용.
+        const items: ImportItem[] = []
+        for (const h of holdings) {
+            const nameRes = validateStockName(h?.stockName)
+            if (!nameRes.ok) continue
+            const qtyRes = validateQuantity(h?.quantity)
+            if (!qtyRes.ok) continue
+            const priceRes = validateAveragePrice(h?.averagePrice)
+            if (!priceRes.ok) continue
+
+            items.push({
+                identifier: nameRes.value,
+                quantity: Math.trunc(qtyRes.value),
+                averagePrice: priceRes.value,
+                // purchaseRate 상한 100000 — 합리적 USD/KRW 환율 범위(100~10000) 의 보수적 상한.
+                ...(typeof h.purchaseRate === 'number' &&
+                h.purchaseRate > 0 &&
+                h.purchaseRate < 100000
                     ? { purchaseRate: h.purchaseRate }
                     : {}),
-            }))
+            })
+        }
 
         if (items.length === 0) {
             return NextResponse.json({
