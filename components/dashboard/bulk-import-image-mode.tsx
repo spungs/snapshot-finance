@@ -285,6 +285,55 @@ export function BulkImportImageMode({ accountId, onSubmit, resetSignal }: BulkIm
         fileInputRef.current?.click()
     }
 
+    const handleSubmit = useCallback(
+        async (strategy: 'overwrite' | 'add') => {
+            if (state.kind !== 'review') return
+
+            // 카드 중 selected + stockCode 있는 것만 → AnalyzedItem 형태로 부모에게 전달.
+            // executeBulkImport 는 stockCode/identifier 기반 lookup 이므로 draft 의 stockCode 를 identifier 로.
+            const items: AnalyzedItem[] = state.cards
+                .filter(c => c.selected && c.draft.stockCode)
+                .map(c => ({
+                    ...c.analyzed,
+                    stockCode: c.draft.stockCode,
+                    stockName: c.draft.stockName ?? c.analyzed.stockName,
+                    market: c.draft.market ?? c.analyzed.market,
+                    currency: c.draft.currency ?? c.analyzed.currency,
+                    inputQty: c.draft.quantity,
+                    inputPrice: c.draft.averagePrice,
+                    inputRate: c.draft.purchaseRate,
+                    effectiveRate: c.draft.effectiveRate ?? c.analyzed.effectiveRate,
+                    status: 'resolved' as const,
+                }))
+
+            if (items.length === 0) {
+                toast.error(tx.nothingToImportDesc)
+                return
+            }
+
+            setState({
+                kind: 'submitting',
+                previewUrl: state.previewUrl,
+                resolved: items,
+                unresolved: [],
+            })
+
+            try {
+                await onSubmit(items, strategy)
+                // 부모(BulkImportDialog) 가 성공 후 close + reset 처리. 여기서는 idle 로 복귀하지 않음.
+            } catch (e) {
+                console.error('[bulk-import-image-mode] submit failed:', e)
+                setState({
+                    kind: 'error',
+                    previewUrl: state.previewUrl,
+                    message: tx.ocrAnalysisFailed,
+                })
+                toast.error(tx.ocrAnalysisFailed)
+            }
+        },
+        [state, onSubmit, tx],
+    )
+
     // -------- 렌더 --------
     return (
         <div className="space-y-3">
@@ -338,9 +387,7 @@ export function BulkImportImageMode({ accountId, onSubmit, resetSignal }: BulkIm
                     state={state}
                     onChangeImage={handleChangeImage}
                     onUpdate={(next, edited) => setState({ ...state, cards: next, edited })}
-                    onSubmit={() => {
-                        /* Task 7 에서 구현 */
-                    }}
+                    onSubmit={strategy => handleSubmit(strategy)}
                 />
             )}
 
