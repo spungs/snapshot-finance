@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OCR 종목 일괄 등록 — 설계 문서</title>
+<style>
+  :root {
+    --bg: #0d0d0d;
+    --bg-2: #1a1a1a;
+    --bg-3: #222;
+    --fg: #e5e5e5;
+    --fg-muted: #999;
+    --accent: #a78bfa;
+    --accent-2: #4f46e5;
+    --green: #86efac;
+    --green-bg: #052e1a;
+    --yellow: #fcd34d;
+    --yellow-bg: #2a1f0a;
+    --red: #fca5a5;
+    --red-bg: #2a0f0f;
+    --border: #2a2a2a;
+    --code-bg: #0a0a0a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    line-height: 1.7;
+    font-size: 15px;
+  }
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 28px 80px;
+  }
+  h1 {
+    font-size: 28px;
+    border-bottom: 2px solid var(--accent-2);
+    padding-bottom: 12px;
+    margin: 0 0 6px;
+  }
+  h2 {
+    font-size: 22px;
+    margin-top: 40px;
+    margin-bottom: 14px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  h3 {
+    font-size: 17px;
+    margin-top: 24px;
+    margin-bottom: 10px;
+    color: var(--accent);
+  }
+  h4 {
+    font-size: 14px;
+    margin-top: 14px;
+    margin-bottom: 6px;
+    color: var(--green);
+  }
+  p { margin: 8px 0 14px; }
+  ul, ol { margin: 8px 0 14px; padding-left: 22px; }
+  li { margin: 4px 0; }
+  strong { color: #fff; font-weight: 700; }
+  code {
+    background: var(--code-bg);
+    color: #a3e635;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.88em;
+    border: 1px solid #1f2a1f;
+  }
+  pre {
+    background: var(--code-bg);
+    color: #d4d4d4;
+    padding: 14px 16px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    overflow-x: auto;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    line-height: 1.6;
+    margin: 12px 0;
+  }
+  pre code {
+    background: transparent;
+    color: inherit;
+    padding: 0;
+    border: 0;
+    font-size: inherit;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 14px 0 20px;
+    font-size: 13.5px;
+    background: var(--bg-2);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  th {
+    background: var(--bg-3);
+    color: #fff;
+    text-align: left;
+    padding: 10px 14px;
+    border-bottom: 2px solid var(--border);
+    font-weight: 700;
+    font-size: 12.5px;
+    letter-spacing: 0.3px;
+  }
+  td {
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--border);
+    color: #d4d4d4;
+    vertical-align: top;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+  blockquote {
+    border-left: 3px solid var(--accent);
+    background: var(--bg-2);
+    padding: 8px 14px;
+    margin: 12px 0;
+    color: var(--fg-muted);
+  }
+  hr {
+    border: 0;
+    border-top: 1px solid var(--border);
+    margin: 28px 0;
+  }
+  .meta {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    gap: 4px 16px;
+    background: var(--bg-2);
+    padding: 14px 18px;
+    border-radius: 8px;
+    margin-bottom: 24px;
+    font-size: 13.5px;
+  }
+  .meta dt { color: var(--fg-muted); font-weight: 600; }
+  .meta dd { margin: 0; color: var(--fg); }
+  .toc {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 28px;
+    font-size: 13.5px;
+  }
+  .toc-title {
+    font-weight: 700;
+    color: var(--fg-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 11px;
+    margin-bottom: 8px;
+  }
+  .toc ol { columns: 2; column-gap: 24px; margin: 0; padding-left: 18px; }
+  .toc a { color: var(--accent); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  .summary-box {
+    background: linear-gradient(135deg, rgba(79,70,229,0.12), rgba(167,139,250,0.06));
+    border: 1px solid var(--accent-2);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin: 16px 0;
+  }
+  .ok { color: var(--green); }
+  .warn { color: var(--yellow); }
+  .danger { color: var(--red); }
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 700;
+    background: var(--accent-2);
+    color: white;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>OCR 종목 일괄 등록 — 설계 문서</h1>
+
+<dl class="meta">
+  <dt>상태</dt><dd>Draft (사용자 검토 대기)</dd>
+  <dt>작성일</dt><dd>2026-05-27</dd>
+  <dt>작성</dt><dd>브레인스토밍 세션 결과</dd>
+  <dt>연계 작업</dt><dd>구현 계획 작성(<code>writing-plans</code>)에서 이어감</dd>
+</dl>
+
+<div class="toc">
+  <div class="toc-title">목차</div>
+  <ol>
+    <li><a href="#s0">한 줄 요약</a></li>
+    <li><a href="#s1">배경과 의도</a></li>
+    <li><a href="#s2">성공 기준</a></li>
+    <li><a href="#s3">사용자 결정 사항 (확정)</a></li>
+    <li><a href="#s4">아키텍처 & 데이터 흐름</a></li>
+    <li><a href="#s5">컴포넌트 구조</a></li>
+    <li><a href="#s6">UI 상태머신 — 이미지 모드</a></li>
+    <li><a href="#s7">카드 4가지 상태</a></li>
+    <li><a href="#s8">OCR 호출 상세</a></li>
+    <li><a href="#s9">오류 처리 매트릭스</a></li>
+    <li><a href="#s10">안전 보장</a></li>
+    <li><a href="#s11">수동 검증 시나리오</a></li>
+    <li><a href="#s12">비스코프</a></li>
+    <li><a href="#s13">운영 전제 — admin 권한 부여</a></li>
+    <li><a href="#s14">다음 단계</a></li>
+  </ol>
+</div>
+
+<h2 id="s0">0. 한 줄 요약</h2>
+<div class="summary-box">
+증권사 앱 잔고 캡쳐 이미지 한 장을 업로드하면 Gemini Vision이 종목/수량/평단가/환율을 추출하여 카드 리스트로 펼치고, 사용자가 검토·수정 후 한 번에 등록한다. <strong>OCR은 입력 수단이고, 매칭·검증·실행은 기존 일괄등록 백엔드를 그대로 재사용한다.</strong>
+</div>
+
+<h2 id="s1">1. 배경과 의도</h2>
+<ul>
+  <li>사용자 요청: "이미지 업로드하면 OCR로 읽어서 종목 추가 카드들이 생기고, OCR이 확인한 데이터를 자동 바인딩해서 종목 추가/수정을 간편하게 하고 싶다."</li>
+  <li>기존 일괄등록(<code>bulk-import-dialog.tsx</code> → <code>analyzeBulkImport</code> → <code>executeBulkImport</code>)은 텍스트 라인 입력만 지원.</li>
+  <li>OCR을 별도 기능으로 만들면 종목 매칭·계좌 매핑·USD 환율 자동채움·트랜잭션 롤백 같은 안전판을 다시 만들어야 함. <strong>재사용이 압도적으로 합리적.</strong></li>
+  <li>AI 어시스턴트(<code>/api/ai/portfolio</code>)와는 별개 — AI 어시는 자연어 단건 명령, OCR은 이미지 → 다건 일괄.</li>
+</ul>
+
+<h2 id="s2">2. 성공 기준</h2>
+<ol>
+  <li>PRO 사용자가 일괄등록 다이얼로그에서 <strong>📷 이미지로</strong> 탭을 누르고 캡쳐를 업로드하면 카드 리스트로 종목들이 자동 채워진다.</li>
+  <li>매칭 성공 카드는 자동 체크되고, 모호/실패 카드는 사용자가 보정한 뒤에만 등록된다.</li>
+  <li>트랜잭션 단일 커밋이라 일부 실패해도 부분 등록은 없다 (기존 <code>executeBulkImport</code> 보장).</li>
+  <li>무료 사용자는 탭에 자물쇠가 보이고 호출 자체가 막힌다. PRO는 일일 10회, admin은 무제한.</li>
+  <li>iOS/Android 스크린샷(PNG 99%)이 자동 압축 후 OCR 정확도 손실 없이 처리된다.</li>
+</ol>
+
+<h2 id="s3">3. 사용자 결정 사항 (확정) <span class="badge">결정 완료</span></h2>
+<table>
+  <thead><tr><th style="width:25%;">항목</th><th>결정</th></tr></thead>
+  <tbody>
+    <tr><td>진입점</td><td>일괄등록 다이얼로그 안 <strong>모드 탭 분리</strong> (📷 이미지 / 📋 텍스트)</td></tr>
+    <tr><td>입력 범위</td><td><strong>증권사 앱 잔고 캡쳐만</strong> (손글씨/메모지는 비스코프)</td></tr>
+    <tr><td>OCR 엔진</td><td><strong>Gemini 2.5 Flash</strong> (멀티모달, flash-lite/pro 아님)</td></tr>
+    <tr><td>출력 형식</td><td><code>responseSchema</code>로 JSON 강제 (<code>holdings: [{stockName, quantity, averagePrice, currency?, purchaseRate?}]</code>)</td></tr>
+    <tr><td>백엔드 재사용</td><td><code>analyzeBulkImport</code> / <code>executeBulkImport</code> 그대로 호출</td></tr>
+    <tr><td>등록 전략 디폴트</td><td><strong>덮어쓰기</strong>(<code>overwrite</code>) — 캡쳐 = 현재 잔고 동기화이므로. 사용자가 "추가"로 변경 가능</td></tr>
+    <tr><td>게이팅</td><td><strong>PRO 전용 + admin 무제한</strong> (AI 어시 패턴 동일)</td></tr>
+    <tr><td>일일 한도</td><td><strong>별도 카운터 <code>ocrDaily</code> 10회/24h</strong> — <code>aiDaily</code>와 분리</td></tr>
+    <tr><td>분당 burst</td><td><strong>별도 카운터 <code>ocr</code> 5회/60s</strong> — 동시·연속 호출 방지 (이미지 호출이 비용 큼)</td></tr>
+    <tr><td>이미지 포맷</td><td><code>image/png</code>, <code>image/jpeg</code>, <code>image/webp</code> 허용. <code>image/heic</code>·<code>image/heif</code>는 안내 토스트만(자동 변환 미도입)</td></tr>
+    <tr><td>이미지 용량</td><td><strong>raw 입력 ≤ 10MB</strong>, 자동 압축 후 <strong>base64 ≤ 4MB</strong>(Vercel function payload 4.5MB 안전 마진)</td></tr>
+    <tr><td>압축 정책</td><td>max width <strong>1920px</strong> / quality <strong>0.92</strong> → 결과 ≥ 4MB면 max width <strong>1280px</strong>로 재시도</td></tr>
+    <tr><td>카드 분류</td><td><code>resolved</code>(자동 체크) / <code>ambiguous</code>(콤보박스 강제) / <code>unresolved</code>(수동 검색) / 삭제(X)</td></tr>
+    <tr><td>Admin 부여</td><td><code>users</code> 테이블에 본인 계정 SQL <code>UPDATE</code>로 <code>role='admin'</code></td></tr>
+  </tbody>
+</table>
+
+<h2 id="s4">4. 아키텍처 & 데이터 흐름</h2>
+<pre>[CLIENT] bulk-import-dialog (수정)
+  ① 📷 이미지 탭 클릭
+  ② 파일 선택 (PNG/JPEG/WEBP, ≤ 10MB)
+  ③ 클라이언트 압축 (canvas, 1920px / q 0.92)
+  ④ base64 인코딩 → fetch POST /api/ai/ocr-import
+        ↓
+[SERVER] /api/ai/ocr-import (신규)
+  ⑤ auth() → 401
+  ⑥ isProUser() → 403 (code: PRO_REQUIRED)
+  ⑦ isAdmin ? skip : ocr burst (5/60s) → 429
+       isAdmin ? skip : ocrDaily (10/1d) → 429 (code: OCR_DAILY_LIMIT)
+  ⑧ payload 사이즈/mimeType 검증 → 413/400
+  ⑨ gemini-2.5-flash.generateContent([prompt, {inlineData}])
+       responseSchema로 holdings JSON 강제
+  ⑩ holdings → ImportItem[] 변환
+  ⑪ analyzeBulkImport(items)  ← 기존 함수 그대로
+       KIS Master + Yahoo fallback + USD 환율 자동채움
+  ⑫ { resolved: AnalyzedItem[], unresolved: AnalyzedItem[] } 응답
+        ↓
+[CLIENT] 카드 리스트 렌더 (검토 단계)
+  ⑬ resolved 자동 체크, ambiguous/unresolved는 보정 필요
+  ⑭ inline edit (수량·평단가·환율·종목 교체)
+  ⑮ stock-search-combobox 재사용 (모호/실패 분기)
+  ⑯ 전략 선택 (덮어쓰기 디폴트 / 추가)
+  ⑰ "N개 등록" 버튼
+        ↓
+[SERVER] admin-actions.executeBulkImport (기존, 변경 없음)
+  ⑱ 단일 트랜잭션 30s timeout
+       overwrite: upsert / add: 가중평균 (decimal.js)
+       환율 동결, IDOR 방어, MAX 100개 가드
+  ⑲ holdingService.invalidate · revalidatePath
+        ↓
+[CLIENT] 토스트 + close + portfolio:refresh 이벤트</pre>
+
+<h2 id="s5">5. 컴포넌트 구조</h2>
+
+<h3>5.1 신규 파일</h3>
+<ul>
+  <li><strong><code>app/api/ai/ocr-import/route.ts</code></strong> — OCR API endpoint.
+    <ul>
+      <li>PRO 가드, ocrDaily rate limit, 이미지 검증, Gemini Vision 호출, ImportItem 변환, <code>analyzeBulkImport</code> 호출, 응답 매핑.</li>
+      <li><code>maxDuration = 60</code>.</li>
+    </ul>
+  </li>
+  <li><strong><code>components/dashboard/bulk-import-image-mode.tsx</code></strong> — 이미지 업로드 + OCR 결과 카드 리스트.
+    <ul>
+      <li>내부 상태머신: <code>idle</code> → <code>analyzing</code> → <code>review</code> → <code>submitting</code> → <code>done</code> / <code>error</code>.</li>
+      <li>클라이언트 압축(canvas), base64 인코딩, fetch 호출, 카드 렌더, inline edit, 종목 검색 콤보 통합.</li>
+    </ul>
+  </li>
+  <li><strong><code>lib/ai/ocr-prompt.ts</code></strong> — Gemini Vision 시스템 프롬프트 + <code>responseSchema</code> 객체.
+    <ul>
+      <li>추출 대상: stockName / quantity / averagePrice / currency / purchaseRate.</li>
+      <li>함정 가이드: 평가금액·수익률·손익 제외, 콤마/단위 제거, 흐릿/잘림은 <code>holdings: []</code>.</li>
+    </ul>
+  </li>
+</ul>
+
+<h3>5.2 수정 파일</h3>
+<ul>
+  <li><strong><code>components/dashboard/bulk-import-dialog.tsx</code></strong> — 모드 탭 추가(📷 / 📋), 기존 textarea 흐름은 📋 탭으로 캡슐화. 계좌 셀렉터·전략·확정 버튼은 공유. PRO 가드 자물쇠 표시.</li>
+  <li><strong><code>lib/ratelimit.ts</code></strong> — limiter 2개 추가:
+    <ul>
+      <li><code>ocr</code>: <code>slidingWindow(5, '60 s')</code>, prefix <code>@upstash/ratelimit/ocr</code> — 분당 burst</li>
+      <li><code>ocrDaily</code>: <code>slidingWindow(10, '1 d')</code>, prefix <code>@upstash/ratelimit/ocr-daily</code> — 일일 한도</li>
+    </ul>
+  </li>
+  <li><strong><code>app/actions/admin-actions.ts</code></strong> — 변경 없음. <code>analyzeBulkImport</code>는 이미 <code>'use server'</code> + <code>export</code> 상태이고, 동일 server-side 코드(이번 신규 API route)에서 직접 import 호출이 정상 동작.</li>
+</ul>
+
+<h3>5.3 건드리지 않는 것</h3>
+<ul>
+  <li>DB 스키마 (마이그레이션 없음).</li>
+  <li><code>executeBulkImport</code>, <code>holdingService</code>, KIS/Yahoo 검색, <code>stock-search-combobox</code>.</li>
+  <li>기존 일괄등록 텍스트 모드 흐름·키보드 핸들링·계좌 매핑.</li>
+  <li>AI 어시스턴트(<code>/api/ai/portfolio</code>, <code>ai-chat.tsx</code>, <code>ai-action-card.tsx</code>).</li>
+</ul>
+
+<h2 id="s6">6. UI 상태머신 — 이미지 모드</h2>
+<table>
+  <thead><tr><th>상태</th><th>진입</th><th>화면</th><th>다음 전이</th></tr></thead>
+  <tbody>
+    <tr><td><code>idle</code></td><td>다이얼로그 open · 이미지 변경</td><td>업로드 드롭존</td><td>파일 선택 → <code>analyzing</code></td></tr>
+    <tr><td><code>analyzing</code></td><td>파일 선택 후 fetch 호출</td><td>스피너 + "이미지 분석 중..."</td><td>응답 200 → <code>review</code> / 오류 → <code>error</code></td></tr>
+    <tr><td><code>review</code></td><td>OCR 응답 도착</td><td>카드 리스트 + inline edit + 전략·확정 버튼</td><td>확정 → <code>submitting</code> / 이미지 변경 → <code>idle</code></td></tr>
+    <tr><td><code>submitting</code></td><td>확정 클릭</td><td>버튼 disabled + 로딩</td><td>응답 → <code>done</code> / 오류 → <code>error</code></td></tr>
+    <tr><td><code>done</code></td><td>executeBulkImport 성공</td><td>다이얼로그 close · refresh · 토스트</td><td>(종료)</td></tr>
+    <tr><td><code>error</code></td><td>어느 단계든 실패</td><td>토스트 + 재시도 버튼</td><td>재시도 → 이전 상태로</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s7">7. 카드 4가지 상태</h2>
+<table>
+  <thead><tr><th>카드 상태</th><th>트리거</th><th>사용자 액션</th><th>등록 가능</th></tr></thead>
+  <tbody>
+    <tr><td><code class="ok">resolved</code> (clean)</td><td>KIS/Yahoo 매칭 1건</td><td>inline edit</td><td><span class="ok">✓ 자동 체크</span></td></tr>
+    <tr><td><code class="ok">resolved</code> (USD)</td><td>KRW 외 시장</td><td>환율 자동채움 배지 + 수정</td><td><span class="ok">✓ 자동 체크</span></td></tr>
+    <tr><td><code class="warn">ambiguous</code></td><td>부분 일치 2건 이상</td><td><code>stock-search-combobox</code>로 후보 선택</td><td><span class="warn">선택 후 ✓</span></td></tr>
+    <tr><td><code class="danger">unresolved</code></td><td>매칭 0건</td><td><code>stock-search-combobox</code>로 수동 검색</td><td><span class="danger">검색 후 ✓</span></td></tr>
+    <tr><td>삭제</td><td>사용자가 X 클릭</td><td>—</td><td>제외됨</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s8">8. OCR 호출 상세</h2>
+
+<h3>8.1 모델·페이로드</h3>
+<ul>
+  <li>모델: <code>gemini-2.5-flash</code> (멀티모달 기본 권장, 한글 OCR 견고).</li>
+  <li>호출:
+    <pre>model.generateContent([
+  promptText,
+  { inlineData: { mimeType, data: base64WithoutPrefix } },
+])</pre>
+  </li>
+  <li>설정: <code>responseMimeType: 'application/json'</code>, <code>responseSchema</code> 강제, <code>temperature: 0</code> (정확도 우선).</li>
+</ul>
+
+<h3>8.2 responseSchema</h3>
+<pre>{
+  type: SchemaType.OBJECT,
+  properties: {
+    holdings: {
+      type: SchemaType.ARRAY,
+      items: {
+        type: SchemaType.OBJECT,
+        properties: {
+          stockName:    { type: STRING },                  // 한글/영문 그대로
+          quantity:     { type: NUMBER },                  // 주 단위, 정수
+          averagePrice: { type: NUMBER },                  // 단위 없는 숫자
+          currency:     { type: STRING, enum: ['KRW','USD'] },
+          purchaseRate: { type: NUMBER },                  // USD 종목에만
+        },
+        required: ['stockName', 'quantity', 'averagePrice'],
+      },
+    },
+  },
+  required: ['holdings'],
+}</pre>
+
+<h3>8.3 시스템 프롬프트 요지</h3>
+<ul>
+  <li><span class="ok">✓ 추출</span>: 종목명·수량·평단가·(USD 매입환율).</li>
+  <li><span class="warn">⚠️ 함정</span>: 평가금액·수익률·손익 제외 / 콤마·단위 제거 / <code>[ETF]</code> 같은 태그 포함 / 흐릿/잘림은 빈 배열.</li>
+  <li><span class="danger">🚫 금지</span>: 자유 텍스트, 종목명 번역·표기 변경, 0주/음수.</li>
+</ul>
+
+<h3>8.4 이미지 처리</h3>
+<table>
+  <thead><tr><th>단계</th><th>정책</th></tr></thead>
+  <tbody>
+    <tr><td>입력 허용</td><td><code>image/png</code>, <code>image/jpeg</code>, <code>image/webp</code></td></tr>
+    <tr><td>HEIC/HEIF</td><td>토스트로 "PNG/JPG로 저장해주세요" 안내 (자동 변환 미도입)</td></tr>
+    <tr><td>raw 한계</td><td>10MB</td></tr>
+    <tr><td>압축 1차</td><td>canvas, max width <strong>1920px</strong>, quality <strong>0.92</strong></td></tr>
+    <tr><td>압축 2차</td><td>1차 결과 base64가 4MB 초과면 max width <strong>1280px</strong>, quality <strong>0.88</strong></td></tr>
+    <tr><td>전송</td><td>fetch POST JSON body <code>{ imageBase64, mimeType }</code></td></tr>
+    <tr><td>서버 재검증</td><td>base64 길이 → 추정 사이즈 4MB 초과 시 413</td></tr>
+  </tbody>
+</table>
+
+<h3>8.5 비용 추정 (Google AI Studio 유료키)</h3>
+<ul>
+  <li>입력 ≈ 3,000 tokens / 응답 ≈ 500 tokens / 호출당 ≈ $0.0009 ≈ 1.2원</li>
+  <li>PRO 1명 최대 사용량: 10회/일 × 30일 = 300호출 ≈ $0.27/월 ≈ 360원</li>
+  <li>병목: 토큰 비용보다는 Gemini RPD가 먼저 차오를 수 있음 → 429 시 토스트 안내.</li>
+</ul>
+
+<h2 id="s9">9. 오류 처리 매트릭스</h2>
+<table>
+  <thead><tr><th>케이스</th><th>HTTP</th><th>코드</th><th>클라이언트 UX</th></tr></thead>
+  <tbody>
+    <tr><td>비로그인</td><td>401</td><td>—</td><td>기존 미들웨어 차단</td></tr>
+    <tr><td>무료 사용자 호출</td><td>403</td><td><code>PRO_REQUIRED</code></td><td>자물쇠 토스트 + 텍스트 탭 자동 전환</td></tr>
+    <tr><td>PRO 분당 5회 초과 (burst)</td><td>429</td><td>—</td><td>"요청이 너무 많습니다. 잠시 후 다시"</td></tr>
+    <tr><td>PRO 일일 10회 초과</td><td>429</td><td><code>OCR_DAILY_LIMIT</code> + <code>resetAt</code></td><td>"오늘 한도 소진, 자정 초기화"</td></tr>
+    <tr><td>이미지 4MB 초과 (압축 후)</td><td>413</td><td>—</td><td>토스트 + state → idle</td></tr>
+    <tr><td>잘못된 mimeType (PDF/HEIC)</td><td>400</td><td>—</td><td>클라 1차 차단 + 서버 2차</td></tr>
+    <tr><td>Gemini quota</td><td>429</td><td>—</td><td>"이미지 인식 한도 초과" + 재시도</td></tr>
+    <tr><td>Gemini 인증 실패</td><td>503</td><td>—</td><td>"AI 어시스턴트 미설정"</td></tr>
+    <tr><td>OCR 빈 배열</td><td>200</td><td>—</td><td>"이미지에서 종목을 찾지 못했어요"</td></tr>
+    <tr><td>일부 unresolved</td><td>200</td><td>—</td><td>resolved 자동 체크, unresolved 수동 검색</td></tr>
+    <tr><td>executeBulkImport 트랜잭션 실패</td><td>500</td><td>—</td><td>"롤백됨, 변경 0건"</td></tr>
+    <tr><td>Gemini가 깨진 JSON</td><td>502</td><td>—</td><td>"이미지 분석 실패, 재시도"</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s10">10. 안전 보장</h2>
+
+<h3>10.1 기존 코드가 이미 막아주는 것 (재사용)</h3>
+<ul>
+  <li><strong>트랜잭션 롤백</strong> — 일부 실패해도 DB 변경 0건.</li>
+  <li><strong>IDOR 방어</strong> — <code>assertAccountOwnership</code>.</li>
+  <li><strong>금융 계산 정밀도</strong> — <code>decimal.js</code> 강제.</li>
+  <li><strong>USD 환율 동결</strong> — 매입 시점 보존.</li>
+  <li><strong>MAX 100개 가드</strong> — <code>MAX_BULK_IMPORT_ITEMS</code>.</li>
+</ul>
+
+<h3>10.2 OCR로 새로 생기는 위험과 완화</h3>
+<table>
+  <thead><tr><th>위험</th><th>완화책</th></tr></thead>
+  <tbody>
+    <tr><td>잘못된 OCR 결과로 자산 오등록</td><td><strong>검토 단계 강제</strong> — 자동 등록 없음</td></tr>
+    <tr><td>모호 종목 자동 매칭으로 엉뚱한 종목</td><td><code>ambiguous</code>는 콤보박스 선택 강제</td></tr>
+    <tr><td>대용량 이미지로 함수 timeout</td><td>압축 정책 + <code>maxDuration = 60</code></td></tr>
+    <tr><td>토큰 비용 폭주</td><td>PRO 10회/일 + admin만 무제한</td></tr>
+    <tr><td>Gemini가 자유 텍스트로 응답</td><td><code>responseSchema</code> 강제 → 깨지면 502 재시도</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s11">11. 수동 검증 시나리오 (테스트 프레임워크 없음)</h2>
+
+<h3 class="ok">정상 흐름</h3>
+<ol>
+  <li>키움 잔고 캡쳐 (KR 5개) → 5개 매칭 → 덮어쓰기 등록 → portfolio refresh.</li>
+  <li>미래에셋 캡쳐 (US 포함) → USD 환율 자동채움 배지.</li>
+  <li>NH 캡쳐 (모호 "삼성") → 콤보박스 선택 → 등록.</li>
+  <li>무료 사용자 → 다이얼로그는 열림, 📷 탭은 자물쇠 토스트.</li>
+</ol>
+
+<h3 style="color:var(--yellow);">엣지 케이스</h3>
+<ol start="5">
+  <li>이미지 8MB → 자동 압축 후 통과.</li>
+  <li>이미지 12MB → 클라 단 차단.</li>
+  <li>HEIC 파일 → 안내 토스트.</li>
+  <li>흐릿한 캡쳐 → <code>holdings: []</code> → "찾지 못했어요".</li>
+  <li>종목 100개 초과 → <code>MAX_BULK_IMPORT_ITEMS</code> 가드.</li>
+  <li>inline edit 수정값이 등록에 반영.</li>
+  <li>이미지 변경 → 카드 리스트 초기화.</li>
+  <li>다이얼로그 close → state 리셋.</li>
+</ol>
+
+<h3 class="danger">권한·한도</h3>
+<ol start="13">
+  <li>PRO 11번째 호출 → 429 + <code>resetAt</code> 표시.</li>
+  <li>admin 호출 → 한도 통과.</li>
+  <li>동시 OCR 2회 → 첫 번째 끝나야 두 번째 진행.</li>
+</ol>
+
+<h3 style="color:var(--accent);">통합</h3>
+<ol start="16">
+  <li>OCR 등록 직후 텍스트 모드 전환 OK.</li>
+  <li>등록 후 <code>portfolio:refresh</code> 이벤트로 holdings 즉시 반영.</li>
+  <li>스냅샷 저장 시 OCR 등록 종목도 포함.</li>
+</ol>
+
+<h2 id="s12">12. 비스코프 (이번 작업에서 안 함)</h2>
+<ul>
+  <li>손글씨/메모지 OCR.</li>
+  <li>다중 이미지 동시 업로드.</li>
+  <li>HEIC 자동 변환 (피드백 따라 차후 검토).</li>
+  <li>OCR 결과를 자동 등록(검토 생략) 모드.</li>
+  <li>증권사별 캡쳐 템플릿 사전 등록.</li>
+  <li>OCR 분석 이력/감사 로그.</li>
+</ul>
+
+<h2 id="s13">13. 운영 전제 — admin 권한 부여</h2>
+<p>배포 전 본인 계정에 <code>role = 'admin'</code> SQL을 두 환경 모두 적용:</p>
+<pre># 운영(Supabase)
+echo "UPDATE users SET role = 'admin' WHERE email = 's83286263@gmail.com';" | npx prisma db execute --stdin
+
+# 로컬 PG
+DIRECT_URL="$(grep '^DIRECT_URL=' .env.development.local | cut -d= -f2- | tr -d '"' | tr -d \"'\")" \
+  npx prisma db execute --stdin &lt;&lt;&lt; "UPDATE users SET role = 'admin' WHERE email = 's83286263@gmail.com';"</pre>
+<p>실행 후 재로그인 필요 (NextAuth 세션 갱신).</p>
+
+<h2 id="s14">14. 다음 단계</h2>
+<p>이 spec 문서가 승인되면 <code>writing-plans</code> 스킬로 넘어가 구현 계획을 작성한다. 계획은 위 신규/수정 파일 단위로 작업을 쪼개고, 검증 가능한 체크포인트를 둔다.</p>
+
+</div>
+</body>
+</html>
