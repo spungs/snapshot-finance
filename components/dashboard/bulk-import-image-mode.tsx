@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { Loader2, Upload, AlertCircle, RefreshCw, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -38,24 +38,31 @@ export interface BulkImportImageModeProps {
 }
 
 /**
- * 이미지를 canvas 로 압축해 base64 로 반환한다.
- * 1차: maxWidth 1920 / quality 0.92 → 2차(>4MB): maxWidth 1280 / quality 0.88.
+ * 이미지를 canvas 로 압축해 OCR 페이로드용 base64(prefix 없음)와
+ * 화면 표시용 작은 previewUrl(dataURL, 320px) 을 함께 반환한다.
  *
- * 결과: { dataUrl: "data:image/jpeg;base64,...", mimeType, bytes }.
+ * 1차: maxWidth 1920, maxHeight 4096, quality 0.92 → 2차(>4MB): 1280×2560, 0.88.
+ * RGBA 비트맵 메모리 폭주를 막기 위해 MAX_PIXELS(4096×8192) 초과는 사전 거부.
  * 실패 시 throw — 호출부에서 toast.
  */
-async function compressImage(file: File): Promise<{ dataUrl: string; mimeType: string; bytes: number }> {
+async function compressImage(file: File): Promise<{
+    base64: string         // OCR 페이로드용 (prefix 없음)
+    mimeType: string
+    bytes: number
+    previewUrl: string     // 화면 표시용 작은 dataUrl (320px, q 0.7)
+}> {
     const objectUrl = URL.createObjectURL(file)
     try {
         const img = await new Promise<HTMLImageElement>((resolve, reject) => {
             const el = new Image()
             el.onload = () => resolve(el)
-            el.onerror = () => reject(new Error('이미지를 읽을 수 없습니다.'))
+            el.onerror = () => reject(new Error('이미지를 읽을 수 없습니다. PNG·JPG·WEBP 형식이 맞는지 확인해주세요.'))
             el.src = objectUrl
         })
 
-        const tryEncode = (maxWidth: number, quality: number): { dataUrl: string; bytes: number } => {
-            const scale = Math.min(1, maxWidth / img.naturalWidth)
+        const tryEncode = (maxWidth: number, maxHeight: number, quality: number): { dataUrl: string; bytes: number } => {
+            // 가로/세로 한도 중 더 강한 쪽으로 다운스케일.
+            const scale = Math.min(1, maxWidth / img.naturalWidth, maxHeight / img.naturalHeight)
             const w = Math.max(1, Math.round(img.naturalWidth * scale))
             const h = Math.max(1, Math.round(img.naturalHeight * scale))
             const canvas = document.createElement('canvas')
@@ -71,19 +78,32 @@ async function compressImage(file: File): Promise<{ dataUrl: string; mimeType: s
             return { dataUrl, bytes }
         }
 
-        // 1차 압축
-        let { dataUrl, bytes } = tryEncode(1920, 0.92)
-
-        // 4MB 초과면 2차 압축
-        if (bytes > TARGET_BASE64_BYTES) {
-            ({ dataUrl, bytes } = tryEncode(1280, 0.88))
+        // 사전 가드: 비현실적으로 큰 이미지는 거부 (RGBA 비트맵 메모리 폭주 방지).
+        // 4096x8192 = 134MB RGBA — 모바일 임계점 정도로 보수적 상한.
+        const MAX_PIXELS = 4096 * 8192
+        if (img.naturalWidth * img.naturalHeight > MAX_PIXELS) {
+            throw new Error('이미지 해상도가 너무 큽니다.')
         }
 
-        if (bytes > TARGET_BASE64_BYTES) {
+        // 1차 압축: maxWidth 1920, maxHeight 4096 (긴 스크롤 캡쳐도 흡수)
+        let result = tryEncode(1920, 4096, 0.92)
+
+        // 4MB 초과면 2차 압축: maxWidth 1280, maxHeight 2560
+        if (result.bytes > TARGET_BASE64_BYTES) {
+            result = tryEncode(1280, 2560, 0.88)
+        }
+
+        if (result.bytes > TARGET_BASE64_BYTES) {
             throw new Error('이미지 압축 후에도 크기가 너무 큽니다.')
         }
 
-        return { dataUrl, mimeType: 'image/jpeg', bytes }
+        // 화면 미리보기용 (작게) — state 에 4MB string 보관 회피.
+        const previewUrl = tryEncode(320, 320, 0.7).dataUrl
+
+        // OCR 페이로드에서 prefix 제거 — 서버 길이 검증 정합.
+        const base64 = result.dataUrl.slice(result.dataUrl.indexOf(',') + 1)
+
+        return { base64, mimeType: 'image/jpeg', bytes: result.bytes, previewUrl }
     } finally {
         URL.revokeObjectURL(objectUrl)
     }
@@ -94,19 +114,23 @@ export function BulkImportImageMode({ accountId, onSubmit, resetSignal }: BulkIm
     const tx = translations[language].portfolioManage
     const fileInputRef = useRef<HTMLInputElement>(null)
     const [state, setState] = useState<ImageModeState>({ kind: 'idle' })
+    // 진행 중인 OCR 요청을 취소하기 위한 컨트롤러 — race condition 방지.
+    const abortRef = useRef<AbortController | null>(null)
 
-    // 부모가 reset 요청 시(다이얼로그 close 등) idle 로 복귀.
-    // resetSignal 이 바뀔 때만 trigger.
-    const prevResetRef = useRef(resetSignal)
-    if (prevResetRef.current !== resetSignal) {
-        prevResetRef.current = resetSignal
-        if (state.kind !== 'idle') {
-            // preview URL 정리는 다음 unmount 또는 새 파일 선택 시 처리되므로 단순 상태 리셋.
-            setState({ kind: 'idle' })
-        }
-    }
+    // 부모가 reset 요청 시(다이얼로그 close 등) 진행 중 요청을 abort 하고 idle 로 복귀.
+    // resetSignal 은 외부 시스템(부모의 명령적 신호)이므로 effect 안에서 setState 가 의도된 동작.
+    useEffect(() => {
+        abortRef.current?.abort()
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setState(s => (s.kind === 'idle' ? s : { kind: 'idle' }))
+    }, [resetSignal])
 
     const handleFile = useCallback(async (file: File) => {
+        // 진행 중 이전 요청 abort — 새 파일 선택 시 race 방지.
+        abortRef.current?.abort()
+        const controller = new AbortController()
+        abortRef.current = controller
+
         // mimeType 1차 검증
         if (!ACCEPTED_MIME_TYPES.includes(file.type as typeof ACCEPTED_MIME_TYPES[number])) {
             toast.error(tx.ocrUnsupportedFormat)
@@ -117,16 +141,19 @@ export function BulkImportImageMode({ accountId, onSubmit, resetSignal }: BulkIm
             return
         }
 
-        let compressed: { dataUrl: string; mimeType: string }
+        let compressed: { base64: string; mimeType: string; previewUrl: string }
         try {
             compressed = await compressImage(file)
         } catch (e) {
             console.error('[bulk-import-image-mode] compress failed:', e)
+            if (controller.signal.aborted) return
             toast.error(tx.ocrCompressFailed)
             return
         }
 
-        const previewUrl = compressed.dataUrl
+        if (controller.signal.aborted) return
+
+        const previewUrl = compressed.previewUrl
         setState({ kind: 'analyzing', previewUrl })
 
         try {
@@ -134,11 +161,14 @@ export function BulkImportImageMode({ accountId, onSubmit, resetSignal }: BulkIm
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    imageBase64: compressed.dataUrl,
+                    imageBase64: compressed.base64,
                     mimeType: compressed.mimeType,
                 }),
+                signal: controller.signal,
             })
+            if (controller.signal.aborted) return
             const body = (await res.json()) as OcrResponseBody
+            if (controller.signal.aborted) return
 
             if (!res.ok || !body.success) {
                 const message =
@@ -165,6 +195,7 @@ export function BulkImportImageMode({ accountId, onSubmit, resetSignal }: BulkIm
 
             setState({ kind: 'review', previewUrl, resolved, unresolved, edited: false })
         } catch (e) {
+            if (controller.signal.aborted) return
             console.error('[bulk-import-image-mode] fetch failed:', e)
             setState({ kind: 'error', previewUrl, message: tx.ocrAnalysisFailed })
             toast.error(tx.ocrAnalysisFailed)
