@@ -126,3 +126,6 @@ import.log
 *_migration_raw.sql
 # Obsidian vault metadata
 .obsidian/
+
+# Superpowers brainstorm session (visual companion mockups)
+.superpowers/

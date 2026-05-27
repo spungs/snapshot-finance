@@ -362,7 +362,7 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        // 2) daily: 3회/24h — 일일 비용 한도. reset 은 epoch seconds.
+        // 2) daily: 10회/24h — 일일 비용 한도. reset 은 epoch seconds.
         const dailyLimitResult = isAdmin ? null : await checkRateLimit(ratelimit.aiDaily, session.user.id)
         if (dailyLimitResult && !dailyLimitResult.success) {
             return NextResponse.json(
