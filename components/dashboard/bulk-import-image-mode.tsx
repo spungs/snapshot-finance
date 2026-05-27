@@ -11,7 +11,7 @@ import type { AnalyzedItem } from '@/app/actions/admin-actions'
 import { StockSearchCombobox } from '@/components/dashboard/stock-search-combobox'
 
 const ACCEPTED_MIME_TYPES = ['image/png', 'image/jpeg', 'image/webp'] as const
-const MAX_RAW_BYTES = 10 * 1024 * 1024 // 10MB
+const MAX_RAW_BYTES = 5 * 1024 * 1024 // 5MB (일반 캡쳐는 1~2MB 수준 — 보수적 상한)
 // 압축 결과의 디코드된 raw bytes 상한.
 // 3MB (서버 한계와 정합, Vercel function body 4.5MB 안전 마진 — base64 인코딩 후 ~4MB + JSON wrapping).
 const TARGET_BASE64_BYTES = 3 * 1024 * 1024
