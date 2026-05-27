@@ -310,11 +310,22 @@ export async function executeBulkImport(
 
                 const currency = getCurrencyForMarket(market, stock.stockCode)
 
-                // 환율 결정 — USD 면 입력값 또는 자동 채움, KRW 면 1.
+                // 기존 보유 조회 — 환율 결정 + 가중평균 계산에 공통으로 사용.
+                const existing = await tx.holding.findUnique({
+                    where: { accountId_stockCode: { accountId, stockCode: stock.stockCode } }
+                })
+
+                // 환율 결정 — USD 종목만 의미.
+                // 우선순위:
+                //  1) 사용자 명시 입력 (item.purchaseRate)
+                //  2) 기존 보유의 매입환율 (기존 정보 보존, 덮어쓰기 방지)
+                //  3) 현재 환율 (신규 종목 fallback)
                 let purchaseRate = 1
                 if (currency === 'USD') {
                     if (typeof item.purchaseRate === 'number' && item.purchaseRate > 0) {
                         purchaseRate = item.purchaseRate
+                    } else if (existing) {
+                        purchaseRate = Number(existing.purchaseRate)
                     } else {
                         const rate = await ensureUsdRate()
                         purchaseRate = rate > 0 ? rate : 1
@@ -342,10 +353,6 @@ export async function executeBulkImport(
                         }
                     })
                 } else { // 'add'
-                    const existing = await tx.holding.findUnique({
-                        where: { accountId_stockCode: { accountId, stockCode: stock.stockCode } }
-                    })
-
                     if (existing) {
                         // Weighted Average — Decimal 사용. 누적 부동소수점 오차가 평단가에 영구히 누적되는 것을 막는다.
                         // 환율도 가중평균으로 합산(USD 종목만 의미).
