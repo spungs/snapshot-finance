@@ -64,7 +64,8 @@ function buildInitialCards(resolved: AnalyzedItem[], unresolved: AnalyzedItem[])
                 effectiveRate: a.effectiveRate,
                 quantity: a.inputQty,
                 averagePrice: a.inputPrice,
-                purchaseRate: a.inputRate ?? a.effectiveRate,
+                // effectiveRate fallback 제거 — OCR 이 환율 명시 추출 안 한 경우 input 은 빈 칸 + placeholder 표시.
+                purchaseRate: a.inputRate,
             },
             // 평단가가 캡쳐에 없어 0 으로 들어오면 사용자가 직접 입력해야 등록 가능.
             selected: a.inputPrice > 0,
@@ -710,7 +711,7 @@ function ReviewCardItem({
                             value={card.draft.purchaseRate || ''}
                             placeholder={
                                 card.draft.effectiveRate
-                                    ? `${Math.round(card.draft.effectiveRate).toLocaleString()}`
+                                    ? card.draft.effectiveRate.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                                     : tx.rate
                             }
                             onChange={e => {
