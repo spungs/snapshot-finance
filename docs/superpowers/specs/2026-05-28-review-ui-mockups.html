@@ -1,0 +1,1198 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>일괄등록 검토 UI — 4가지 디자인 비교</title>
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --surface: #161616;
+    --surface-2: #1f1f1f;
+    --surface-3: #2a2a2a;
+    --border: #2f2f2f;
+    --border-strong: #3f3f3f;
+    --fg: #e7e7e7;
+    --fg-muted: #888;
+    --accent: #a78bfa;
+    --accent-2: #4f46e5;
+    --green: #4ade80;
+    --green-bg: rgba(74, 222, 128, 0.12);
+    --amber: #fbbf24;
+    --amber-bg: rgba(251, 191, 36, 0.10);
+    --amber-border: rgba(251, 191, 36, 0.45);
+    --red: #f87171;
+    --red-bg: rgba(248, 113, 113, 0.10);
+    --red-border: rgba(248, 113, 113, 0.45);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 32px 24px 80px;
+    font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Apple SD Gothic Neo", sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  h1 {
+    font-size: 24px;
+    margin: 0 0 8px;
+    border-bottom: 2px solid var(--accent-2);
+    padding-bottom: 10px;
+  }
+  .subtitle {
+    color: var(--fg-muted);
+    margin-bottom: 32px;
+  }
+  .option-section {
+    margin-bottom: 56px;
+    padding: 20px;
+    background: var(--surface);
+    border-radius: 10px;
+    border: 1px solid var(--border);
+  }
+  .option-title {
+    font-size: 18px;
+    font-weight: 700;
+    margin: 0 0 4px;
+    color: #fff;
+  }
+  .option-desc {
+    color: var(--fg-muted);
+    margin-bottom: 16px;
+    font-size: 13px;
+  }
+  .viewports {
+    display: grid;
+    grid-template-columns: 1fr 393px;
+    gap: 24px;
+    align-items: start;
+  }
+  @media (max-width: 1200px) {
+    .viewports { grid-template-columns: 1fr; }
+  }
+  .viewport {
+    background: var(--surface);
+    border-radius: 8px;
+    padding: 0;
+    overflow: hidden;
+  }
+  .viewport-label {
+    background: var(--surface-2);
+    padding: 6px 12px;
+    font-size: 11px;
+    color: var(--fg-muted);
+    font-weight: 600;
+    border-bottom: 1px solid var(--border);
+  }
+  .viewport-label .device {
+    color: var(--accent);
+  }
+  .viewport-content {
+    padding: 12px;
+    background: var(--bg);
+  }
+  .mobile { width: 393px; }
+  .desktop { width: 100%; }
+
+  /* ---- shared mockup styles ---- */
+  .dialog-header {
+    text-align: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 12px;
+  }
+  .dialog-title {
+    font-weight: 700;
+    color: #fff;
+    font-size: 14px;
+  }
+  .dialog-sub {
+    font-size: 11px;
+    color: var(--fg-muted);
+    margin-top: 2px;
+  }
+  .tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 12px;
+  }
+  .tab {
+    padding: 6px 12px;
+    font-size: 12px;
+    color: var(--fg-muted);
+    border-bottom: 2px solid transparent;
+  }
+  .tab.active {
+    color: #fff;
+    border-bottom-color: var(--accent-2);
+    font-weight: 700;
+  }
+  .account-selector {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 8px 10px;
+    font-size: 12px;
+    margin-bottom: 12px;
+    color: var(--fg);
+  }
+  .thumb-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px;
+    margin-bottom: 12px;
+  }
+  .thumb {
+    width: 40px;
+    height: 40px;
+    background: #2a2a2a;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+  .thumb-meta {
+    flex: 1;
+    font-size: 10px;
+    color: var(--fg-muted);
+    min-width: 0;
+  }
+  .thumb-action {
+    font-size: 11px;
+    color: var(--fg-muted);
+    background: var(--surface-3);
+    padding: 4px 8px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+  .actions-bar {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .btn-cancel, .btn-submit {
+    flex: 1;
+    padding: 10px;
+    font-size: 12px;
+    font-weight: 700;
+    border-radius: 4px;
+    text-align: center;
+  }
+  .btn-cancel { background: var(--surface-2); color: var(--fg-muted); border: 1px solid var(--border); }
+  .btn-submit { background: var(--accent-2); color: #fff; }
+
+  /* ---- TABLE styles (Options A desktop, B, D) ---- */
+  table.review {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  table.review th {
+    background: var(--surface-3);
+    color: var(--fg-muted);
+    text-align: left;
+    padding: 6px 8px;
+    font-size: 10px;
+    font-weight: 700;
+    border-bottom: 1px solid var(--border);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    white-space: nowrap;
+  }
+  table.review td {
+    padding: 8px;
+    border-bottom: 1px solid var(--border);
+    color: var(--fg);
+    vertical-align: middle;
+  }
+  table.review tr:last-child td { border-bottom: none; }
+  table.review .checkbox { width: 14px; height: 14px; }
+  table.review input[type="number"] {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border-strong);
+    border-radius: 3px;
+    color: var(--fg);
+    padding: 4px 6px;
+    font-size: 11px;
+  }
+  table.review .stock-name {
+    font-weight: 600;
+    color: #fff;
+  }
+  table.review .ticker {
+    color: var(--fg-muted);
+    font-size: 10px;
+    margin-left: 6px;
+  }
+  table.review .usd-badge {
+    background: var(--accent-2);
+    color: #fff;
+    font-size: 9px;
+    padding: 1px 5px;
+    border-radius: 2px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+  table.review .amber-row { background: var(--amber-bg); }
+  table.review .red-row { background: var(--red-bg); }
+  table.review .row-action {
+    color: var(--fg-muted);
+    cursor: pointer;
+    padding: 0 4px;
+  }
+  table.review .row-action:hover { color: #fff; }
+  table.review .price-missing {
+    border-color: var(--amber);
+    background: var(--amber-bg);
+  }
+  table.review .empty-cell { color: var(--fg-muted); font-style: italic; }
+
+  /* sticky 종목명 컬럼 (Option B) */
+  .scroll-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+  }
+  table.review.sticky th:first-child,
+  table.review.sticky td:first-child {
+    position: sticky;
+    left: 0;
+    background: var(--surface-2);
+    z-index: 1;
+    box-shadow: 4px 0 6px -2px rgba(0,0,0,0.3);
+  }
+  table.review.sticky th:first-child { background: var(--surface-3); }
+  .scroll-hint {
+    font-size: 10px;
+    color: var(--fg-muted);
+    text-align: right;
+    padding: 4px 0;
+  }
+
+  /* ---- COMPACT MOBILE CARD (Option A mobile) ---- */
+  .compact-card {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    font-size: 11px;
+  }
+  .compact-card.amber { background: var(--amber-bg); border-color: var(--amber-border); }
+  .compact-card.red { background: var(--red-bg); border-color: var(--red-border); }
+  .compact-card-top {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+  .compact-card-top input { width: 14px; height: 14px; }
+  .compact-card-top .name {
+    flex: 1;
+    font-weight: 700;
+    color: #fff;
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .compact-card-top .ticker {
+    color: var(--fg-muted);
+    font-size: 10px;
+  }
+  .compact-card-bottom {
+    display: flex;
+    gap: 10px;
+    font-size: 11px;
+    color: var(--fg);
+    padding-left: 20px;
+  }
+  .compact-card-bottom .field {
+    color: var(--fg-muted);
+  }
+  .compact-card-bottom .field b {
+    color: #fff;
+    font-weight: 600;
+  }
+  .compact-card-bottom .actions {
+    margin-left: auto;
+    display: flex;
+    gap: 6px;
+    color: var(--fg-muted);
+  }
+  .compact-card .price-warn {
+    color: var(--amber);
+    font-size: 10px;
+  }
+
+  /* ---- CURRENT CARD STYLE (Option C) ---- */
+  .current-card {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 8px;
+  }
+  .current-card.amber { background: var(--amber-bg); border-color: var(--amber-border); }
+  .current-card.red { background: var(--red-bg); border-color: var(--red-border); }
+  .current-card .row1 {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+  .current-card .row1 input { width: 16px; height: 16px; margin-top: 2px; }
+  .current-card .row1 .name { font-weight: 700; color: #fff; font-size: 13px; }
+  .current-card .row1 .code { color: var(--fg-muted); font-size: 10px; margin-left: 6px; }
+  .current-card .row2 {
+    padding-left: 22px;
+    display: flex;
+    gap: 8px;
+    font-size: 10px;
+    margin-bottom: 8px;
+    color: var(--fg-muted);
+  }
+  .current-card .row2 .change-link {
+    color: var(--fg-muted);
+    text-decoration: underline;
+    margin-left: auto;
+  }
+  .current-card .inputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .current-card .inputs label {
+    font-size: 10px;
+    color: var(--fg-muted);
+  }
+  .current-card .inputs input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border-strong);
+    border-radius: 3px;
+    color: var(--fg);
+    padding: 6px 8px;
+    font-size: 12px;
+    margin-top: 2px;
+  }
+  .current-card .rate-row {
+    margin-top: 8px;
+  }
+  .current-card .rate-row label {
+    font-size: 10px;
+    color: var(--fg-muted);
+  }
+  .current-card .rate-row input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border-strong);
+    border-radius: 3px;
+    color: var(--fg);
+    padding: 6px 8px;
+    font-size: 12px;
+    margin-top: 2px;
+  }
+  .pros-cons {
+    margin-top: 12px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    font-size: 11px;
+  }
+  .pros, .cons {
+    background: var(--surface-2);
+    border-radius: 6px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+  }
+  .pros h4, .cons h4 {
+    margin: 0 0 6px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .pros h4 { color: var(--green); }
+  .cons h4 { color: var(--amber); }
+  .pros ul, .cons ul { margin: 0; padding-left: 16px; color: var(--fg-muted); }
+  .pros li, .cons li { margin: 3px 0; }
+</style>
+</head>
+<body>
+
+<h1>일괄등록 검토 UI — 4가지 디자인 비교</h1>
+<p class="subtitle">
+  각 안마다 <b>데스크톱(좌측)</b> + <b>모바일 393px iPhone 17 Pro(우측)</b> 두 viewport 로 표시.
+  사용 시나리오: 종목 4개 (resolved 2 + 모호 1 + 실패 1).
+</p>
+
+<!-- ========== OPTION A ========== -->
+<section class="option-section">
+  <h2 class="option-title">Option A — 데스크톱 테이블 + 모바일 콤팩트 카드 (반응형)</h2>
+  <p class="option-desc">
+    sm 이상은 5컬럼 테이블, sm 미만은 한 카드 = 한 줄 콤팩트. 두 표시 컴포넌트 유지.
+  </p>
+  <div class="viewports">
+    <!-- desktop -->
+    <div class="viewport desktop">
+      <div class="viewport-label">📺 <span class="device">데스크톱 (≥ 640px)</span></div>
+      <div class="viewport-content">
+        <div class="dialog-header">
+          <div class="dialog-title">일괄 등록 & 관리</div>
+          <div class="dialog-sub">보유 종목을 텍스트로 일괄 등록하거나 예수금을 수정합니다.</div>
+        </div>
+        <div class="tabs">
+          <div class="tab active">📷 이미지로</div>
+          <div class="tab">📋 텍스트로</div>
+        </div>
+        <div class="account-selector">이 계좌로 등록: NH증권 ▾</div>
+        <div class="thumb-bar">
+          <div class="thumb">🖼️</div>
+          <div class="thumb-meta">인식 4개 · 확정 2개</div>
+          <div class="thumb-action">🔄 이미지 변경</div>
+        </div>
+        <table class="review">
+          <thead>
+            <tr>
+              <th style="width:24px;"></th>
+              <th>종목</th>
+              <th style="width:80px;">수량</th>
+              <th style="width:110px;">평단가</th>
+              <th style="width:110px;">환율</th>
+              <th style="width:60px;">액션</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><input type="checkbox" class="checkbox" checked></td>
+              <td>
+                <span class="stock-name">DIREXION TSLA DAILY 2X</span>
+                <span class="ticker">TSLL</span>
+                <span class="usd-badge">USD</span>
+              </td>
+              <td><input type="number" value="1018"></td>
+              <td><input type="number" value="14.50"></td>
+              <td><input type="number" placeholder="1,390.00"></td>
+              <td><span class="row-action">✏️</span> <span class="row-action">🗑️</span></td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" class="checkbox" checked></td>
+              <td>
+                <span class="stock-name">테슬라</span>
+                <span class="ticker">TSLA</span>
+                <span class="usd-badge">USD</span>
+              </td>
+              <td><input type="number" value="32"></td>
+              <td><input type="number" value="230.50"></td>
+              <td><input type="number" placeholder="1,450.00"></td>
+              <td><span class="row-action">✏️</span> <span class="row-action">🗑️</span></td>
+            </tr>
+            <tr class="amber-row">
+              <td><input type="checkbox" class="checkbox"></td>
+              <td>
+                <span class="stock-name">GRANITESHARES TSLA DAILY -2X</span>
+                <span class="ticker">TSDD</span>
+                <span class="usd-badge">USD</span>
+              </td>
+              <td><input type="number" value="32"></td>
+              <td><input type="number" placeholder="평단가 입력" class="price-missing"></td>
+              <td><input type="number" placeholder="1,506.20"></td>
+              <td><span class="row-action">✏️</span> <span class="row-action">🗑️</span></td>
+            </tr>
+            <tr class="red-row">
+              <td><input type="checkbox" class="checkbox" disabled></td>
+              <td>
+                <span class="empty-cell">원문: "BGRN" — 종목 검색</span>
+                <div style="margin-top:4px;"><input type="text" placeholder="🔍 종목 검색..." style="width:100%; background:var(--bg); border:1px solid var(--border-strong); padding:4px 6px; border-radius:3px; color:var(--fg); font-size:11px;"></div>
+              </td>
+              <td><input type="number" value="27"></td>
+              <td><input type="number" placeholder="평단가 입력" class="price-missing"></td>
+              <td><span class="empty-cell">—</span></td>
+              <td><span class="row-action">🗑️</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <div style="margin-top:12px; font-size:11px; color:var(--fg-muted);">처리 방식: <b style="color:#fff;">덮어쓰기</b> | 추가하기</div>
+        <div class="actions-bar">
+          <div class="btn-cancel">취소</div>
+          <div class="btn-submit">2개 등록</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- mobile -->
+    <div class="viewport mobile">
+      <div class="viewport-label">📱 <span class="device">모바일 393px</span></div>
+      <div class="viewport-content">
+        <div class="dialog-header">
+          <div class="dialog-title">일괄 등록 & 관리</div>
+        </div>
+        <div class="tabs">
+          <div class="tab active">📷 이미지로</div>
+          <div class="tab">📋 텍스트로</div>
+        </div>
+        <div class="account-selector">NH증권 ▾</div>
+        <div class="thumb-bar">
+          <div class="thumb">🖼️</div>
+          <div class="thumb-meta">인식 4 · 확정 2</div>
+          <div class="thumb-action">🔄</div>
+        </div>
+        <div class="compact-card">
+          <div class="compact-card-top">
+            <input type="checkbox" checked>
+            <div class="name">DIREXION TSLA DAILY 2X</div>
+            <span class="ticker">TSLL</span>
+          </div>
+          <div class="compact-card-bottom">
+            <span class="field">수량 <b>1,018</b></span>
+            <span class="field">$<b>14.50</b></span>
+            <span class="field">FX <b>1,390</b></span>
+            <span class="actions">✏️ 🗑️</span>
+          </div>
+        </div>
+        <div class="compact-card">
+          <div class="compact-card-top">
+            <input type="checkbox" checked>
+            <div class="name">테슬라</div>
+            <span class="ticker">TSLA</span>
+          </div>
+          <div class="compact-card-bottom">
+            <span class="field">수량 <b>32</b></span>
+            <span class="field">$<b>230.50</b></span>
+            <span class="field">FX <b>1,450</b></span>
+            <span class="actions">✏️ 🗑️</span>
+          </div>
+        </div>
+        <div class="compact-card amber">
+          <div class="compact-card-top">
+            <input type="checkbox">
+            <div class="name">GRANITESHARES TSLA…</div>
+            <span class="ticker">TSDD</span>
+          </div>
+          <div class="compact-card-bottom">
+            <span class="field">수량 <b>32</b></span>
+            <span class="field price-warn">평단 미입력</span>
+            <span class="actions">✏️ 🗑️</span>
+          </div>
+        </div>
+        <div class="compact-card red">
+          <div class="compact-card-top">
+            <input type="checkbox" disabled>
+            <div class="name" style="color:var(--red);">원문: "BGRN" — 매칭 실패</div>
+          </div>
+          <div class="compact-card-bottom">
+            <span class="field">수량 <b>27</b></span>
+            <span class="actions">🔍 🗑️</span>
+          </div>
+        </div>
+        <div style="margin-top:8px; font-size:10px; color:var(--fg-muted);">덮어쓰기 | 추가</div>
+        <div class="actions-bar">
+          <div class="btn-cancel">취소</div>
+          <div class="btn-submit">2개 등록</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pros-cons">
+    <div class="pros">
+      <h4>장점</h4>
+      <ul>
+        <li>데스크톱: 한 행에 모든 정보 → 비교 효율</li>
+        <li>모바일: 콤팩트 카드로 가로 너비 부담 없음</li>
+        <li>종목 많아도 모바일 스크롤 부담 적음 (한 카드 = 60px 정도)</li>
+      </ul>
+    </div>
+    <div class="cons">
+      <h4>단점·고려사항</h4>
+      <ul>
+        <li>두 표시 컴포넌트 유지 — 코드 분기 부담</li>
+        <li>모바일 콤팩트 카드는 inline edit 시 별도 펼침 모드 필요 (현재 mockup은 표시만)</li>
+        <li>tablet (sm~md) 어느 쪽으로 갈지 디자인 결정 필요</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ========== OPTION B ========== -->
+<section class="option-section">
+  <h2 class="option-title">Option B — 모든 환경 테이블 + sticky 종목명 컬럼</h2>
+  <p class="option-desc">
+    한 테이블 컴포넌트. 모바일은 가로 스크롤 + 종목명 컬럼이 항상 보이도록 sticky. 일관된 UX.
+  </p>
+  <div class="viewports">
+    <!-- desktop -->
+    <div class="viewport desktop">
+      <div class="viewport-label">📺 <span class="device">데스크톱 (≥ 640px)</span></div>
+      <div class="viewport-content">
+        <div class="dialog-header">
+          <div class="dialog-title">일괄 등록 & 관리</div>
+        </div>
+        <div class="tabs">
+          <div class="tab active">📷 이미지로</div>
+          <div class="tab">📋 텍스트로</div>
+        </div>
+        <div class="account-selector">NH증권 ▾</div>
+        <div class="thumb-bar">
+          <div class="thumb">🖼️</div>
+          <div class="thumb-meta">인식 4 · 확정 2</div>
+          <div class="thumb-action">🔄 이미지 변경</div>
+        </div>
+        <div class="scroll-wrap">
+          <table class="review sticky">
+            <thead>
+              <tr>
+                <th style="width:200px;">종목 (sticky)</th>
+                <th style="width:60px;">선택</th>
+                <th style="width:90px;">코드</th>
+                <th style="width:90px;">수량</th>
+                <th style="width:110px;">평단가</th>
+                <th style="width:110px;">환율</th>
+                <th style="width:60px;">액션</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="stock-name">DIREXION TSLA DAILY 2X</span></td>
+                <td style="text-align:center;"><input type="checkbox" class="checkbox" checked></td>
+                <td>TSLL <span class="usd-badge">USD</span></td>
+                <td><input type="number" value="1018"></td>
+                <td><input type="number" value="14.50"></td>
+                <td><input type="number" placeholder="1,390.00"></td>
+                <td><span class="row-action">✏️🗑️</span></td>
+              </tr>
+              <tr>
+                <td><span class="stock-name">테슬라</span></td>
+                <td style="text-align:center;"><input type="checkbox" class="checkbox" checked></td>
+                <td>TSLA <span class="usd-badge">USD</span></td>
+                <td><input type="number" value="32"></td>
+                <td><input type="number" value="230.50"></td>
+                <td><input type="number" placeholder="1,450.00"></td>
+                <td><span class="row-action">✏️🗑️</span></td>
+              </tr>
+              <tr class="amber-row">
+                <td><span class="stock-name">GRANITESHARES TSLA -2X</span></td>
+                <td style="text-align:center;"><input type="checkbox" class="checkbox"></td>
+                <td>TSDD <span class="usd-badge">USD</span></td>
+                <td><input type="number" value="32"></td>
+                <td><input type="number" placeholder="평단가" class="price-missing"></td>
+                <td><input type="number" placeholder="1,506.20"></td>
+                <td><span class="row-action">✏️🗑️</span></td>
+              </tr>
+              <tr class="red-row">
+                <td><span class="empty-cell">원문: "BGRN"</span></td>
+                <td style="text-align:center;"><input type="checkbox" class="checkbox" disabled></td>
+                <td><input type="text" placeholder="🔍 검색" style="width:100%; background:var(--bg); border:1px solid var(--border-strong); padding:4px; border-radius:3px; color:var(--fg); font-size:11px;"></td>
+                <td><input type="number" value="27"></td>
+                <td><input type="number" class="price-missing"></td>
+                <td><span class="empty-cell">—</span></td>
+                <td><span class="row-action">🗑️</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="actions-bar">
+          <div class="btn-cancel">취소</div>
+          <div class="btn-submit">2개 등록</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- mobile -->
+    <div class="viewport mobile">
+      <div class="viewport-label">📱 <span class="device">모바일 393px (sticky 종목명)</span></div>
+      <div class="viewport-content">
+        <div class="dialog-header">
+          <div class="dialog-title">일괄 등록 & 관리</div>
+        </div>
+        <div class="tabs">
+          <div class="tab active">📷 이미지로</div>
+          <div class="tab">📋 텍스트로</div>
+        </div>
+        <div class="account-selector">NH증권 ▾</div>
+        <div class="thumb-bar">
+          <div class="thumb">🖼️</div>
+          <div class="thumb-meta">인식 4 · 확정 2</div>
+          <div class="thumb-action">🔄</div>
+        </div>
+        <div class="scroll-hint">← → 가로로 스크롤하면 더 보여요</div>
+        <div class="scroll-wrap" style="width:100%;">
+          <table class="review sticky" style="min-width:560px;">
+            <thead>
+              <tr>
+                <th style="width:120px;">종목</th>
+                <th style="width:40px;">✓</th>
+                <th style="width:60px;">코드</th>
+                <th style="width:60px;">수량</th>
+                <th style="width:80px;">평단</th>
+                <th style="width:80px;">환율</th>
+                <th style="width:50px;">…</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="stock-name" style="font-size:11px;">DIREXION TSLA 2X</span></td>
+                <td style="text-align:center;"><input type="checkbox" class="checkbox" checked></td>
+                <td style="font-size:10px;">TSLL</td>
+                <td><input type="number" value="1018"></td>
+                <td><input type="number" value="14.50"></td>
+                <td><input type="number" placeholder="1,390"></td>
+                <td><span class="row-action">⋯</span></td>
+              </tr>
+              <tr>
+                <td><span class="stock-name" style="font-size:11px;">테슬라</span></td>
+                <td style="text-align:center;"><input type="checkbox" class="checkbox" checked></td>
+                <td style="font-size:10px;">TSLA</td>
+                <td><input type="number" value="32"></td>
+                <td><input type="number" value="230.50"></td>
+                <td><input type="number" placeholder="1,450"></td>
+                <td><span class="row-action">⋯</span></td>
+              </tr>
+              <tr class="amber-row">
+                <td><span class="stock-name" style="font-size:11px;">GRANITESHARES…</span></td>
+                <td style="text-align:center;"><input type="checkbox" class="checkbox"></td>
+                <td style="font-size:10px;">TSDD</td>
+                <td><input type="number" value="32"></td>
+                <td><input type="number" placeholder="입력" class="price-missing"></td>
+                <td><input type="number" placeholder="1,506"></td>
+                <td><span class="row-action">⋯</span></td>
+              </tr>
+              <tr class="red-row">
+                <td><span class="empty-cell" style="font-size:10px;">"BGRN"</span></td>
+                <td style="text-align:center;"><input type="checkbox" class="checkbox" disabled></td>
+                <td style="font-size:10px;">🔍</td>
+                <td><input type="number" value="27"></td>
+                <td><input type="number" class="price-missing"></td>
+                <td>—</td>
+                <td><span class="row-action">⋯</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="actions-bar">
+          <div class="btn-cancel">취소</div>
+          <div class="btn-submit">2개 등록</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pros-cons">
+    <div class="pros">
+      <h4>장점</h4>
+      <ul>
+        <li>한 컴포넌트 유지 — 코드 분기 없음</li>
+        <li>모바일에서도 종목명이 sticky로 항상 보임</li>
+        <li>데스크톱·모바일 UX 일관성</li>
+      </ul>
+    </div>
+    <div class="cons">
+      <h4>단점·고려사항</h4>
+      <ul>
+        <li>모바일에서 가로 스크롤 필수 — 익숙치 않은 패턴</li>
+        <li>sticky 컬럼 너비를 잘 잡지 않으면 데이터 보기 답답</li>
+        <li>모바일 inline edit 시 input 너비 너무 좁음 (60-80px)</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ========== OPTION C ========== -->
+<section class="option-section">
+  <h2 class="option-title">Option C — 현재 카드 유지 + 텍스트 모드 통합</h2>
+  <p class="option-desc">
+    현재 디자인 그대로. 텍스트 모드도 같은 카드 컴포넌트 사용해 두 모드 검토 화면 일원화. 가장 적은 코드 변경.
+  </p>
+  <div class="viewports">
+    <!-- desktop -->
+    <div class="viewport desktop">
+      <div class="viewport-label">📺 <span class="device">데스크톱</span> (현재 디자인 동일)</div>
+      <div class="viewport-content">
+        <div class="dialog-header">
+          <div class="dialog-title">일괄 등록 & 관리</div>
+        </div>
+        <div class="tabs">
+          <div class="tab active">📷 이미지로</div>
+          <div class="tab">📋 텍스트로</div>
+        </div>
+        <div class="account-selector">NH증권 ▾</div>
+        <div class="thumb-bar">
+          <div class="thumb">🖼️</div>
+          <div class="thumb-meta">인식 4개 · 확정 2개</div>
+          <div class="thumb-action">🔄 이미지 변경</div>
+        </div>
+
+        <div class="current-card">
+          <div class="row1">
+            <input type="checkbox" checked>
+            <div style="flex:1;">
+              <span class="name">DIREXION TSLA DAILY 2X</span>
+              <span class="code">TSLL</span>
+            </div>
+            <span style="color:var(--fg-muted);">🗑️</span>
+          </div>
+          <div class="row2">
+            <span class="usd-badge">USD</span>
+            <span class="change-link">✏️ 변경</span>
+          </div>
+          <div class="inputs">
+            <label>수량<input type="number" value="1018"></label>
+            <label>평단가<input type="number" value="14.50"></label>
+          </div>
+          <div class="rate-row">
+            <label>환율<input type="number" placeholder="1,390.00"></label>
+          </div>
+        </div>
+
+        <div class="current-card">
+          <div class="row1">
+            <input type="checkbox" checked>
+            <div style="flex:1;">
+              <span class="name">테슬라</span>
+              <span class="code">TSLA</span>
+            </div>
+            <span style="color:var(--fg-muted);">🗑️</span>
+          </div>
+          <div class="row2"><span class="usd-badge">USD</span><span class="change-link">✏️ 변경</span></div>
+          <div class="inputs">
+            <label>수량<input type="number" value="32"></label>
+            <label>평단가<input type="number" value="230.50"></label>
+          </div>
+          <div class="rate-row">
+            <label>환율<input type="number" placeholder="1,450.00"></label>
+          </div>
+        </div>
+
+        <div class="current-card amber">
+          <div class="row1">
+            <input type="checkbox">
+            <div style="flex:1;">
+              <span class="name">GRANITESHARES TSLA -2X</span>
+              <span class="code">TSDD</span>
+            </div>
+            <span style="color:var(--fg-muted);">🗑️</span>
+          </div>
+          <div class="row2"><span class="usd-badge">USD</span><span class="change-link">✏️ 변경</span></div>
+          <div class="inputs">
+            <label>수량<input type="number" value="32"></label>
+            <label>평단가 <span class="price-warn" style="color:var(--amber);">캡쳐에 없음</span><input type="number" placeholder="평단가 입력" class="price-missing"></label>
+          </div>
+          <div class="rate-row">
+            <label>환율<input type="number" placeholder="1,506.20"></label>
+          </div>
+        </div>
+
+        <div class="current-card red">
+          <div class="row1">
+            <input type="checkbox" disabled>
+            <div style="flex:1;">
+              <span style="color:var(--red); font-size:11px;">원문: "BGRN" — 매칭 실패. 검색해주세요</span>
+            </div>
+            <span style="color:var(--fg-muted);">🗑️</span>
+          </div>
+          <div style="padding:6px 22px;"><input type="text" placeholder="🔍 종목 검색..." style="width:100%; background:var(--bg); border:1px solid var(--border-strong); padding:6px 8px; border-radius:3px; color:var(--fg); font-size:11px;"></div>
+          <div class="inputs">
+            <label>수량<input type="number" value="27"></label>
+            <label>평단가<input type="number" class="price-missing"></label>
+          </div>
+        </div>
+
+        <div class="actions-bar">
+          <div class="btn-cancel">취소</div>
+          <div class="btn-submit">2개 등록</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- mobile -->
+    <div class="viewport mobile">
+      <div class="viewport-label">📱 <span class="device">모바일 393px</span> (현재 디자인)</div>
+      <div class="viewport-content">
+        <div class="dialog-header">
+          <div class="dialog-title">일괄 등록</div>
+        </div>
+        <div class="tabs">
+          <div class="tab active">📷 이미지로</div>
+          <div class="tab">📋 텍스트로</div>
+        </div>
+        <div class="account-selector">NH증권 ▾</div>
+        <div class="thumb-bar">
+          <div class="thumb">🖼️</div>
+          <div class="thumb-meta">인식 4 · 확정 2</div>
+          <div class="thumb-action">🔄</div>
+        </div>
+
+        <div class="current-card">
+          <div class="row1">
+            <input type="checkbox" checked>
+            <div style="flex:1; min-width:0;">
+              <span class="name">DIREXION TSLA 2X</span>
+              <span class="code">TSLL</span>
+            </div>
+            <span style="color:var(--fg-muted);">🗑️</span>
+          </div>
+          <div class="row2"><span class="usd-badge">USD</span><span class="change-link">✏️ 변경</span></div>
+          <div class="inputs">
+            <label>수량<input type="number" value="1018"></label>
+            <label>평단가<input type="number" value="14.50"></label>
+          </div>
+          <div class="rate-row">
+            <label>환율<input type="number" placeholder="1,390.00"></label>
+          </div>
+        </div>
+
+        <div class="current-card amber">
+          <div class="row1">
+            <input type="checkbox">
+            <div style="flex:1;">
+              <span class="name">GRANITESHARES…</span>
+              <span class="code">TSDD</span>
+            </div>
+            <span style="color:var(--fg-muted);">🗑️</span>
+          </div>
+          <div class="row2"><span class="usd-badge">USD</span><span class="change-link">✏️ 변경</span></div>
+          <div class="inputs">
+            <label>수량<input type="number" value="32"></label>
+            <label>평단가<input type="number" placeholder="입력" class="price-missing"></label>
+          </div>
+          <div class="rate-row"><label>환율<input type="number" placeholder="1,506.20"></label></div>
+        </div>
+
+        <div style="text-align:center; color:var(--fg-muted); font-size:10px; padding:4px 0;">↓ 2개 더 (스크롤)</div>
+
+        <div class="actions-bar">
+          <div class="btn-cancel">취소</div>
+          <div class="btn-submit">2개 등록</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pros-cons">
+    <div class="pros">
+      <h4>장점</h4>
+      <ul>
+        <li>가장 적은 코드 변경 (텍스트 모드만 카드로 통합)</li>
+        <li>이미 완성된 디자인 — 검증된 UX</li>
+        <li>모바일/데스크톱 모두 가로 너비 부담 없음</li>
+        <li>inline edit이 자연스러움 (라벨+input 명확)</li>
+      </ul>
+    </div>
+    <div class="cons">
+      <h4>단점·고려사항</h4>
+      <ul>
+        <li>종목 10개+면 세로 스크롤이 길어짐 (한 카드 = 약 140-160px)</li>
+        <li>한눈에 비교 어려움 — 사용자가 새 의견 제시한 핵심 문제</li>
+        <li>데스크톱에서 가로 공간 낭비</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ========== OPTION D ========== -->
+<section class="option-section">
+  <h2 class="option-title">Option D — 모든 환경 테이블 (단순 가로 스크롤, sticky 없음)</h2>
+  <p class="option-desc">
+    한 테이블 컴포넌트. 모바일은 단순 가로 스크롤만 — sticky 없이 일반 테이블 흐름. B 보다 더 단순.
+  </p>
+  <div class="viewports">
+    <!-- desktop -->
+    <div class="viewport desktop">
+      <div class="viewport-label">📺 <span class="device">데스크톱</span> (Option B와 동일)</div>
+      <div class="viewport-content">
+        <div class="dialog-header">
+          <div class="dialog-title">일괄 등록 & 관리</div>
+        </div>
+        <div class="tabs">
+          <div class="tab active">📷 이미지로</div>
+          <div class="tab">📋 텍스트로</div>
+        </div>
+        <div class="account-selector">NH증권 ▾</div>
+        <div class="thumb-bar">
+          <div class="thumb">🖼️</div>
+          <div class="thumb-meta">인식 4 · 확정 2</div>
+          <div class="thumb-action">🔄 이미지 변경</div>
+        </div>
+        <table class="review">
+          <thead>
+            <tr>
+              <th style="width:24px;"></th>
+              <th>종목</th>
+              <th style="width:80px;">코드</th>
+              <th style="width:80px;">수량</th>
+              <th style="width:110px;">평단가</th>
+              <th style="width:110px;">환율</th>
+              <th style="width:60px;">액션</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><input type="checkbox" class="checkbox" checked></td>
+              <td><span class="stock-name">DIREXION TSLA DAILY 2X</span></td>
+              <td>TSLL <span class="usd-badge">USD</span></td>
+              <td><input type="number" value="1018"></td>
+              <td><input type="number" value="14.50"></td>
+              <td><input type="number" placeholder="1,390.00"></td>
+              <td><span class="row-action">✏️🗑️</span></td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" class="checkbox" checked></td>
+              <td><span class="stock-name">테슬라</span></td>
+              <td>TSLA <span class="usd-badge">USD</span></td>
+              <td><input type="number" value="32"></td>
+              <td><input type="number" value="230.50"></td>
+              <td><input type="number" placeholder="1,450.00"></td>
+              <td><span class="row-action">✏️🗑️</span></td>
+            </tr>
+            <tr class="amber-row">
+              <td><input type="checkbox" class="checkbox"></td>
+              <td><span class="stock-name">GRANITESHARES TSLA -2X</span></td>
+              <td>TSDD <span class="usd-badge">USD</span></td>
+              <td><input type="number" value="32"></td>
+              <td><input type="number" placeholder="평단가" class="price-missing"></td>
+              <td><input type="number" placeholder="1,506.20"></td>
+              <td><span class="row-action">✏️🗑️</span></td>
+            </tr>
+            <tr class="red-row">
+              <td><input type="checkbox" class="checkbox" disabled></td>
+              <td colspan="2"><input type="text" placeholder="🔍 BGRN — 종목 검색..." style="width:100%; background:var(--bg); border:1px solid var(--border-strong); padding:4px; border-radius:3px; color:var(--fg); font-size:11px;"></td>
+              <td><input type="number" value="27"></td>
+              <td><input type="number" class="price-missing"></td>
+              <td>—</td>
+              <td><span class="row-action">🗑️</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="actions-bar">
+          <div class="btn-cancel">취소</div>
+          <div class="btn-submit">2개 등록</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- mobile -->
+    <div class="viewport mobile">
+      <div class="viewport-label">📱 <span class="device">모바일 393px</span> (단순 가로 스크롤)</div>
+      <div class="viewport-content">
+        <div class="dialog-header"><div class="dialog-title">일괄 등록</div></div>
+        <div class="tabs">
+          <div class="tab active">📷 이미지로</div>
+          <div class="tab">📋 텍스트로</div>
+        </div>
+        <div class="account-selector">NH증권 ▾</div>
+        <div class="thumb-bar">
+          <div class="thumb">🖼️</div>
+          <div class="thumb-meta">인식 4 · 확정 2</div>
+          <div class="thumb-action">🔄</div>
+        </div>
+        <div class="scroll-hint">← → 가로 스크롤</div>
+        <div class="scroll-wrap" style="width:100%;">
+          <table class="review" style="min-width:680px;">
+            <thead>
+              <tr>
+                <th style="width:30px;">✓</th>
+                <th style="width:180px;">종목</th>
+                <th style="width:90px;">코드</th>
+                <th style="width:80px;">수량</th>
+                <th style="width:90px;">평단가</th>
+                <th style="width:90px;">환율</th>
+                <th style="width:60px;">액션</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="text-align:center;"><input type="checkbox" class="checkbox" checked></td>
+                <td><span class="stock-name" style="font-size:11px;">DIREXION TSLA 2X</span></td>
+                <td><span style="font-size:10px;">TSLL</span> <span class="usd-badge">USD</span></td>
+                <td><input type="number" value="1018"></td>
+                <td><input type="number" value="14.50"></td>
+                <td><input type="number" placeholder="1,390"></td>
+                <td><span class="row-action">⋯</span></td>
+              </tr>
+              <tr>
+                <td style="text-align:center;"><input type="checkbox" class="checkbox" checked></td>
+                <td><span class="stock-name" style="font-size:11px;">테슬라</span></td>
+                <td><span style="font-size:10px;">TSLA</span> <span class="usd-badge">USD</span></td>
+                <td><input type="number" value="32"></td>
+                <td><input type="number" value="230.50"></td>
+                <td><input type="number" placeholder="1,450"></td>
+                <td><span class="row-action">⋯</span></td>
+              </tr>
+              <tr class="amber-row">
+                <td style="text-align:center;"><input type="checkbox" class="checkbox"></td>
+                <td><span class="stock-name" style="font-size:11px;">GRANITESHARES…</span></td>
+                <td><span style="font-size:10px;">TSDD</span> <span class="usd-badge">USD</span></td>
+                <td><input type="number" value="32"></td>
+                <td><input type="number" placeholder="입력" class="price-missing"></td>
+                <td><input type="number" placeholder="1,506"></td>
+                <td><span class="row-action">⋯</span></td>
+              </tr>
+              <tr class="red-row">
+                <td style="text-align:center;"><input type="checkbox" class="checkbox" disabled></td>
+                <td colspan="2"><input type="text" placeholder="🔍 BGRN..." style="width:100%; background:var(--bg); border:1px solid var(--border-strong); padding:4px; border-radius:3px; color:var(--fg); font-size:11px;"></td>
+                <td><input type="number" value="27"></td>
+                <td><input type="number" class="price-missing"></td>
+                <td>—</td>
+                <td><span class="row-action">⋯</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="actions-bar">
+          <div class="btn-cancel">취소</div>
+          <div class="btn-submit">2개 등록</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pros-cons">
+    <div class="pros">
+      <h4>장점</h4>
+      <ul>
+        <li>한 컴포넌트만 유지 — 가장 단순한 코드</li>
+        <li>데스크톱/모바일 동일 레이아웃 — 디자인 일관성</li>
+        <li>모바일에서도 한 행에 모든 정보</li>
+      </ul>
+    </div>
+    <div class="cons">
+      <h4>단점·고려사항</h4>
+      <ul>
+        <li>모바일 가로 스크롤은 사용자가 잘 인지 못함</li>
+        <li>sticky 종목명이 없으면 스크롤 시 어떤 종목인지 헷갈림</li>
+        <li>모바일 inline edit 시 input 너비 좁음</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 추천 -->
+<section class="option-section" style="background: linear-gradient(135deg, rgba(167,139,250,0.1), rgba(79,70,229,0.05)); border-color: var(--accent-2);">
+  <h2 class="option-title">📌 추천 — Option A (반응형)</h2>
+  <p>
+    데스크톱은 테이블로 비교 효율 ↑, 모바일은 콤팩트 카드로 가로 너비 부담 회피. 다만 두 컴포넌트 유지 부담이 부담스러우면 <b>Option D (모두 테이블)</b> 도 합리적 — 단일 컴포넌트.
+  </p>
+  <p style="margin-top:12px;">
+    <b>결정 후 진행 방향:</b><br>
+    1. 텍스트 모드의 분석 결과 카드도 같은 표시 컴포넌트로 갈아끼움<br>
+    2. <code>ReviewCard</code> 모델은 그대로 유지 — 표시 컴포넌트만 신규 작성<br>
+    3. 모바일/데스크톱 분기는 Tailwind <code>sm:</code> 으로 처리
+  </p>
+</section>
+
+</body>
+</html>
