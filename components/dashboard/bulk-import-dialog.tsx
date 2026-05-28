@@ -91,6 +91,47 @@ function parseLine(rawLine: string): ImportItem | null {
     }
 }
 
+type LineResult =
+    | { kind: 'parsed'; lineNo: number; raw: string; item: ImportItem }
+    | { kind: 'skipped'; lineNo: number; raw: string; reason: 'header' | 'total' }
+    | { kind: 'error'; lineNo: number; raw: string }
+
+/**
+ * 합계/소계/총계 등 요약 행 키워드. 이런 행은 종목이 아니므로 스킵.
+ */
+const TOTAL_ROW_PATTERN = /합계|총계|소계|총합|합산|평가금액\s*합|\btotal\b|\bsum\b/i
+
+/**
+ * 한 줄을 분류한다.
+ * - 빈 줄: null 반환 (호출부에서 제외, 카운트 안 함)
+ * - 합계/총계 키워드: skipped(total)
+ * - 숫자 토큰이 전혀 없음(헤더 추정): skipped(header)
+ * - parseLine 성공: parsed
+ * - 그 외: error (형식 오류)
+ */
+function classifyLine(raw: string, lineNo: number): LineResult | null {
+    const line = raw.trim()
+    if (!line) return null
+
+    if (TOTAL_ROW_PATTERN.test(line)) {
+        return { kind: 'skipped', lineNo, raw: line, reason: 'total' }
+    }
+
+    // 숫자 토큰 존재 여부 — 수량/평단가는 숫자 필수. 숫자 0개면 헤더 행으로 추정.
+    const tokens = line.split(/[\s,\t]+/).filter(Boolean)
+    const hasNumber = tokens.some(t => {
+        const cleaned = t.replace(/[,주원$₩]/g, '')
+        return cleaned !== '' && /\d/.test(cleaned) && Number.isFinite(parseFloat(cleaned))
+    })
+    if (!hasNumber) {
+        return { kind: 'skipped', lineNo, raw: line, reason: 'header' }
+    }
+
+    const item = parseLine(raw)
+    if (item) return { kind: 'parsed', lineNo, raw: line, item }
+    return { kind: 'error', lineNo, raw: line }
+}
+
 export function BulkImportDialog({ children, onSuccess, isPro = false }: BulkImportDialogProps) {
     const { language } = useLanguage()
     const tx = translations[language].portfolioManage
@@ -142,12 +183,27 @@ export function BulkImportDialog({ children, onSuccess, isPro = false }: BulkImp
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open])
 
-    const parsedItems = useMemo<ImportItem[]>(() => {
+    const lineResults = useMemo<LineResult[]>(() => {
         return rawText
             .split('\n')
-            .map(parseLine)
-            .filter((x): x is ImportItem => x !== null)
+            .map((raw, i) => classifyLine(raw, i + 1))
+            .filter((r): r is LineResult => r !== null)
     }, [rawText])
+
+    const parsedItems = useMemo<ImportItem[]>(
+        () => lineResults.filter(r => r.kind === 'parsed').map(r => r.item),
+        [lineResults],
+    )
+
+    const skippedCount = useMemo(
+        () => lineResults.filter(r => r.kind === 'skipped').length,
+        [lineResults],
+    )
+
+    const errorLines = useMemo(
+        () => lineResults.filter((r): r is Extract<LineResult, { kind: 'error' }> => r.kind === 'error'),
+        [lineResults],
+    )
 
     const reset = () => {
         setRawText('')
@@ -393,12 +449,30 @@ export function BulkImportDialog({ children, onSuccess, isPro = false }: BulkImp
                             rows={6}
                             className="w-full border border-input bg-background rounded-md px-3 py-2 text-sm font-mono focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:opacity-50"
                         />
-                        <div className="mt-1 text-[11px] text-muted-foreground">
-                            {parsedItems.length > 0
-                                ? language === 'ko'
-                                    ? `${parsedItems.length}개 라인 인식됨`
-                                    : `${parsedItems.length} lines detected`
-                                : ' '}
+                        <div className="mt-1 space-y-1">
+                            {(parsedItems.length > 0 || skippedCount > 0 || errorLines.length > 0) && (
+                                <div className="text-[11px] text-muted-foreground flex flex-wrap gap-x-2">
+                                    <span className="text-foreground">{tx.linesRecognized.replace('{count}', String(parsedItems.length))}</span>
+                                    {skippedCount > 0 && (
+                                        <span>· {tx.linesSkipped.replace('{count}', String(skippedCount))}</span>
+                                    )}
+                                    {errorLines.length > 0 && (
+                                        <span className="text-amber-600">· {tx.linesError.replace('{count}', String(errorLines.length))}</span>
+                                    )}
+                                </div>
+                            )}
+                            {errorLines.length > 0 && (
+                                <ul className="text-[10px] text-amber-600/90 space-y-0.5">
+                                    {errorLines.slice(0, 5).map(e => (
+                                        <li key={e.lineNo} className="truncate">
+                                            {tx.lineErrorDetail.replace('{line}', String(e.lineNo)).replace('{text}', e.raw)}
+                                        </li>
+                                    ))}
+                                    {errorLines.length > 5 && (
+                                        <li className="opacity-70">{tx.lineErrorMore.replace('{count}', String(errorLines.length - 5))}</li>
+                                    )}
+                                </ul>
+                            )}
                         </div>
                     </div>
 
