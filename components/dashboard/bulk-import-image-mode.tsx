@@ -361,7 +361,7 @@ export function BulkImportImageMode({ accountId, onSubmit, resetSignal }: BulkIm
             {state.kind === 'submitting' && (
                 <div className="rounded-md border border-border bg-accent-soft/30 px-4 py-8 text-sm text-center text-muted-foreground inline-flex flex-col items-center gap-2 w-full">
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    등록 중...
+                    {tx.ocrSubmitting}
                 </div>
             )}
         </div>

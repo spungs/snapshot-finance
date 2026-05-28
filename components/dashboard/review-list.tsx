@@ -166,8 +166,9 @@ export function ReviewList({ cards, onUpdate, onSubmit, imageHeader }: ReviewLis
                     <button
                         type="button"
                         onClick={() => setStrategy('overwrite')}
+                        aria-pressed={strategy === 'overwrite'}
                         className={cn(
-                            'py-2 text-[12px] font-bold rounded-sm border transition-colors',
+                            'py-2 text-xs font-bold rounded-sm border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/50',
                             strategy === 'overwrite'
                                 ? 'bg-primary text-primary-foreground border-primary'
                                 : 'bg-background text-foreground border-border hover:bg-accent-soft',
@@ -178,8 +179,9 @@ export function ReviewList({ cards, onUpdate, onSubmit, imageHeader }: ReviewLis
                     <button
                         type="button"
                         onClick={() => setStrategy('add')}
+                        aria-pressed={strategy === 'add'}
                         className={cn(
-                            'py-2 text-[12px] font-bold rounded-sm border transition-colors',
+                            'py-2 text-xs font-bold rounded-sm border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/50',
                             strategy === 'add'
                                 ? 'bg-primary text-primary-foreground border-primary'
                                 : 'bg-background text-foreground border-border hover:bg-accent-soft',
@@ -225,8 +227,8 @@ function ReviewRowDesktop({ card, onChange, onRemove }: {
                         checked={card.selected}
                         onChange={e => onChange({ selected: e.target.checked })}
                         disabled={!isResolved}
-                        className="w-4 h-4"
-                        aria-label="등록 대상 선택"
+                        className="w-4 h-4 shrink-0 focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none rounded"
+                        aria-label={tx.ocrSelectTarget}
                     />
                 </td>
                 <td className="px-2 py-2 align-top">
@@ -235,12 +237,12 @@ function ReviewRowDesktop({ card, onChange, onRemove }: {
                             <span className="font-bold text-sm">{card.draft.stockName}</span>
                             <span className="text-[10px] text-muted-foreground">{card.draft.stockCode}</span>
                             {isUSD && <span className="text-[10px] bg-accent-soft px-1.5 py-0.5 rounded">USD</span>}
-                            {card.replaced && <span className="text-[10px] text-amber-600">교체됨</span>}
+                            {card.replaced && <span className="text-[10px] text-amber-600 dark:text-amber-400">{tx.ocrReplaced}</span>}
                         </div>
                     ) : (
-                        <div className="text-[11px] text-amber-700">
+                        <div className="text-[11px] text-amber-700 dark:text-amber-400">
                             {tx.ocrUnresolvedHint}
-                            <div className="opacity-70 mt-0.5 truncate">원문: &quot;{card.analyzed.identifier}&quot;</div>
+                            <div className="opacity-70 mt-0.5 truncate">{tx.ocrOriginalLabel}: &quot;{card.analyzed.identifier}&quot;</div>
                         </div>
                     )}
                 </td>
@@ -257,7 +259,7 @@ function ReviewRowDesktop({ card, onChange, onRemove }: {
                             if (!Number.isFinite(num) || num < 0) return
                             onChange({ draft: { ...card.draft, quantity: Math.trunc(num) } })
                         }}
-                        className="w-full border border-input bg-background rounded-sm h-8 px-2 text-sm"
+                        className="w-full border border-input bg-background rounded-md h-9 px-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                     />
                 </td>
                 <td className="px-2 py-2 align-top">
@@ -278,7 +280,7 @@ function ReviewRowDesktop({ card, onChange, onRemove }: {
                         }}
                         placeholder={priceMissing ? tx.ocrEnterPrice : undefined}
                         className={cn(
-                            'w-full border bg-background rounded-sm h-8 px-2 text-sm',
+                            'w-full border bg-background rounded-md h-9 px-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/50',
                             priceMissing ? 'border-amber-500' : 'border-input',
                         )}
                     />
@@ -305,7 +307,7 @@ function ReviewRowDesktop({ card, onChange, onRemove }: {
                                 if (!Number.isFinite(num) || num < 0) return
                                 onChange({ draft: { ...card.draft, purchaseRate: num } })
                             }}
-                            className="w-full border border-input bg-background rounded-sm h-8 px-2 text-sm"
+                            className="w-full border border-input bg-background rounded-md h-9 px-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                         />
                     ) : (
                         <span className="text-[10px] text-muted-foreground">—</span>
@@ -327,7 +329,7 @@ function ReviewRowDesktop({ card, onChange, onRemove }: {
                         type="button"
                         onClick={onRemove}
                         className="text-muted-foreground hover:text-destructive inline-flex"
-                        aria-label="카드 제거"
+                        aria-label={tx.ocrRemoveCard}
                     >
                         <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -392,7 +394,8 @@ function ReviewCardMobile({ card, onChange, onRemove }: {
                     checked={card.selected}
                     onChange={e => onChange({ selected: e.target.checked })}
                     disabled={!isResolved}
-                    className="w-4 h-4 shrink-0"
+                    className="w-4 h-4 shrink-0 focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none rounded"
+                    aria-label={tx.ocrSelectTarget}
                 />
                 <div className="flex-1 min-w-0">
                     {isResolved ? (
@@ -402,7 +405,7 @@ function ReviewCardMobile({ card, onChange, onRemove }: {
                             {isUSD && <span className="text-[9px] bg-accent-soft px-1 py-0.5 rounded shrink-0">USD</span>}
                         </div>
                     ) : (
-                        <div className="text-[11px] text-amber-700 truncate">{tx.ocrUnresolvedHint} (&quot;{card.analyzed.identifier}&quot;)</div>
+                        <div className="text-[11px] text-amber-700 dark:text-amber-400 truncate">{tx.ocrUnresolvedHint} (&quot;{card.analyzed.identifier}&quot;)</div>
                     )}
                 </div>
                 {isResolved && !showSwap && (
@@ -410,7 +413,7 @@ function ReviewCardMobile({ card, onChange, onRemove }: {
                         <Pencil className="w-3.5 h-3.5" />
                     </button>
                 )}
-                <button type="button" onClick={onRemove} className="text-muted-foreground shrink-0" aria-label="카드 제거">
+                <button type="button" onClick={onRemove} className="text-muted-foreground shrink-0" aria-label={tx.ocrRemoveCard}>
                     <Trash2 className="w-3.5 h-3.5" />
                 </button>
             </div>
@@ -451,13 +454,13 @@ function ReviewCardMobile({ card, onChange, onRemove }: {
                             if (!Number.isFinite(num) || num < 0) return
                             onChange({ draft: { ...card.draft, quantity: Math.trunc(num) } })
                         }}
-                        className="w-full border border-input bg-background rounded-sm h-9 px-2 text-sm"
+                        className="w-full border border-input bg-background rounded-md h-9 px-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                     />
                 </label>
                 <label className="text-[10px]">
                     <div className="text-muted-foreground mb-0.5 inline-flex items-center gap-1">
                         {tx.averagePrice}
-                        {priceMissing && <span className="text-amber-600 text-[9px]">{tx.ocrPriceMissing}</span>}
+                        {priceMissing && <span className="text-amber-600 dark:text-amber-400 text-[9px]">{tx.ocrPriceMissing}</span>}
                     </div>
                     <input
                         type="number"
@@ -476,7 +479,7 @@ function ReviewCardMobile({ card, onChange, onRemove }: {
                         }}
                         placeholder={priceMissing ? tx.ocrEnterPrice : undefined}
                         className={cn(
-                            'w-full border bg-background rounded-sm h-9 px-2 text-sm',
+                            'w-full border bg-background rounded-md h-9 px-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/50',
                             priceMissing ? 'border-amber-500' : 'border-input',
                         )}
                     />
@@ -506,12 +509,12 @@ function ReviewCardMobile({ card, onChange, onRemove }: {
                             if (!Number.isFinite(num) || num < 0) return
                             onChange({ draft: { ...card.draft, purchaseRate: num } })
                         }}
-                        className="w-full border border-input bg-background rounded-sm h-9 px-2 text-sm"
+                        className="w-full border border-input bg-background rounded-md h-9 px-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                     />
                 </label>
             )}
 
-            {card.replaced && <div className="text-[10px] text-amber-600 pl-6">교체됨</div>}
+            {card.replaced && <div className="text-[10px] text-amber-600 dark:text-amber-400 pl-6">{tx.ocrReplaced}</div>}
         </div>
     )
 }
