@@ -277,7 +277,7 @@ export function BulkImportDialog({ children, onSuccess, isPro = false }: BulkImp
                     </Button>
                 )}
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[560px] max-h-[90vh] overflow-y-auto">
+            <DialogContent className="sm:max-w-[680px] lg:max-w-[900px] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle>{tx.title}</DialogTitle>
                     <DialogDescription>{tx.desc}</DialogDescription>

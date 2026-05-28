@@ -93,7 +93,7 @@ export function ReviewList({ cards, onUpdate, onSubmit, imageHeader }: ReviewLis
     const ready = cards.filter(c => c.selected && c.draft.stockCode && c.draft.averagePrice > 0).length
 
     return (
-        <div className="space-y-3">
+        <div className="@container space-y-3">
             {imageHeader && (
                 <div className="flex items-center gap-2 rounded-md border border-border bg-background p-2">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -108,8 +108,8 @@ export function ReviewList({ cards, onUpdate, onSubmit, imageHeader }: ReviewLis
                         {tx.ocrCountSummary.replace('{total}', String(total)).replace('{ready}', String(ready))}
                     </div>
                     <Button type="button" variant="outline" size="sm" onClick={imageHeader.onChangeImage} className="shrink-0">
-                        <RefreshCw className="w-3.5 h-3.5 sm:mr-1.5" />
-                        <span className="hidden sm:inline">{tx.ocrChangeImage}</span>
+                        <RefreshCw className="w-3.5 h-3.5 @2xl:mr-1.5" />
+                        <span className="hidden @2xl:inline">{tx.ocrChangeImage}</span>
                     </Button>
                 </div>
             )}
@@ -120,8 +120,8 @@ export function ReviewList({ cards, onUpdate, onSubmit, imageHeader }: ReviewLis
                 </div>
             )}
 
-            {/* 데스크톱 테이블 (sm+) */}
-            <div className="hidden sm:block max-h-[50vh] overflow-y-auto rounded-md border border-border">
+            {/* 데스크톱 테이블 — 컨테이너 너비 ≥ 672px(@2xl) 일 때 (다이얼로그 넓은 화면) */}
+            <div className="hidden @2xl:block max-h-[50vh] overflow-y-auto rounded-md border border-border">
                 <table className="w-full text-sm">
                     <thead className="bg-accent-soft/50 text-[10px] uppercase tracking-wide text-muted-foreground sticky top-0">
                         <tr>
@@ -146,8 +146,8 @@ export function ReviewList({ cards, onUpdate, onSubmit, imageHeader }: ReviewLis
                 </table>
             </div>
 
-            {/* 모바일 콤팩트 카드 (sm 미만) */}
-            <div className="sm:hidden space-y-2 max-h-[50vh] overflow-y-auto pr-1">
+            {/* 콤팩트 카드 — 컨테이너 너비 < 672px (모바일·좁은 다이얼로그) */}
+            <div className="@2xl:hidden space-y-2 max-h-[50vh] overflow-y-auto pr-1">
                 {cards.map(card => (
                     <ReviewCardMobile
                         key={card.id}
