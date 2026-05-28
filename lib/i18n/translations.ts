@@ -435,6 +435,7 @@ export const translations = {
             ocrCountSummary: '인식 {total}개 · 확정 {ready}개',
             quantity: '수량',
             averagePrice: '평단가',
+            stock: '종목',
         },
         whyInvestPage: {
             title: '왜 재테크를 해야 할까요?',
@@ -955,6 +956,7 @@ export const translations = {
             ocrCountSummary: '{total} detected · {ready} ready',
             quantity: 'Quantity',
             averagePrice: 'Avg Price',
+            stock: 'Stock',
         },
         whyInvestPage: {
             title: 'Why Should You Invest?',

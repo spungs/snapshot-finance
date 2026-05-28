@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useTransition } from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Loader2, Upload, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { Loader2, Upload, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import { useLanguage } from '@/lib/i18n/context'
@@ -18,6 +18,7 @@ import {
     type ImportItem,
 } from '@/app/actions/admin-actions'
 import { BulkImportImageMode } from './bulk-import-image-mode'
+import { ReviewList, buildInitialCards, type ReviewCard } from './review-list'
 
 const RECENT_ACCOUNT_KEY = 'snapshot.bulkImport.lastAccountId'
 const MAX_ITEMS = 100
@@ -98,14 +99,12 @@ export function BulkImportDialog({ children, onSuccess, isPro = false }: BulkImp
 
     const [open, setOpen] = useState(false)
     const [rawText, setRawText] = useState('')
-    const [strategy, setStrategy] = useState<'overwrite' | 'add'>('add')
     const [accounts, setAccounts] = useState<BrokerageAccountSummary[]>([])
     const [accountId, setAccountId] = useState<string>('')
     const [accountsLoading, setAccountsLoading] = useState(false)
     const [analyzing, setAnalyzing] = useState(false)
     const [executing, setExecuting] = useState(false)
-    const [resolved, setResolved] = useState<AnalyzedItem[]>([])
-    const [unresolved, setUnresolved] = useState<AnalyzedItem[]>([])
+    const [cards, setCards] = useState<ReviewCard[]>([])
     const [hasAnalyzed, setHasAnalyzed] = useState(false)
     const [mode, setMode] = useState<'text' | 'image'>('text') // 디폴트: 텍스트 (자물쇠 첫 화면 노출 방지)
     const [imageResetSignal, setImageResetSignal] = useState(0)
@@ -152,8 +151,7 @@ export function BulkImportDialog({ children, onSuccess, isPro = false }: BulkImp
 
     const reset = () => {
         setRawText('')
-        setResolved([])
-        setUnresolved([])
+        setCards([])
         setHasAnalyzed(false)
         setMode('text')
         setImageResetSignal(s => s + 1)
@@ -177,8 +175,7 @@ export function BulkImportDialog({ children, onSuccess, isPro = false }: BulkImp
                 toast.error(res.error ?? tx.parsingFailedDesc)
                 return
             }
-            setResolved(res.resolved)
-            setUnresolved(res.unresolved)
+            setCards(buildInitialCards(res.resolved, res.unresolved))
             setHasAnalyzed(true)
         } catch {
             toast.error(tx.parsingFailedDesc)
@@ -234,14 +231,28 @@ export function BulkImportDialog({ children, onSuccess, isPro = false }: BulkImp
         return { ok: true }
     }
 
-    const handleExecute = async () => {
-        if (resolved.length === 0) {
+    const handleExecute = async (strategy: 'overwrite' | 'add') => {
+        const validCards = cards.filter(c => c.selected && c.draft.stockCode && c.draft.averagePrice > 0)
+        if (validCards.length === 0) {
             toast.error(tx.nothingToImportDesc)
             return
         }
         setExecuting(true)
         try {
-            await runImport(resolved, strategy)
+            // ReviewCard → AnalyzedItem 형태로 변환 후 runImport 사용.
+            const items: AnalyzedItem[] = validCards.map(c => ({
+                ...c.analyzed,
+                stockCode: c.draft.stockCode,
+                stockName: c.draft.stockName ?? c.analyzed.stockName,
+                market: c.draft.market ?? c.analyzed.market,
+                currency: c.draft.currency ?? c.analyzed.currency,
+                inputQty: c.draft.quantity,
+                inputPrice: c.draft.averagePrice,
+                inputRate: c.draft.purchaseRate,
+                effectiveRate: c.draft.effectiveRate ?? c.analyzed.effectiveRate,
+                status: 'resolved' as const,
+            }))
+            await runImport(items, strategy)
         } catch {
             toast.error(tx.importFailed)
         } finally {
@@ -374,8 +385,7 @@ export function BulkImportDialog({ children, onSuccess, isPro = false }: BulkImp
                                 setRawText(e.target.value)
                                 if (hasAnalyzed) {
                                     setHasAnalyzed(false)
-                                    setResolved([])
-                                    setUnresolved([])
+                                    setCards([])
                                 }
                             }}
                             disabled={isBusy}
@@ -392,141 +402,41 @@ export function BulkImportDialog({ children, onSuccess, isPro = false }: BulkImp
                         </div>
                     </div>
 
-                    {/* 전략 */}
-                    <div>
-                        <label className="block text-[11px] font-bold tracking-wide text-muted-foreground mb-1.5 uppercase">
-                            {tx.strategy}
-                        </label>
-                        <div className="grid grid-cols-2 gap-1.5">
-                            <button
-                                type="button"
-                                onClick={() => setStrategy('add')}
-                                disabled={isBusy}
-                                className={cn(
-                                    'py-2 text-[12px] font-bold rounded-sm border transition-colors',
-                                    strategy === 'add'
-                                        ? 'bg-primary text-primary-foreground border-primary'
-                                        : 'bg-background text-foreground border-border hover:bg-accent-soft',
-                                )}
-                            >
-                                {tx.strategyAdd}
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setStrategy('overwrite')}
-                                disabled={isBusy}
-                                className={cn(
-                                    'py-2 text-[12px] font-bold rounded-sm border transition-colors',
-                                    strategy === 'overwrite'
-                                        ? 'bg-primary text-primary-foreground border-primary'
-                                        : 'bg-background text-foreground border-border hover:bg-accent-soft',
-                                )}
-                            >
-                                {tx.strategyOverwrite}
-                            </button>
-                        </div>
-                    </div>
+                    {/* 분석 버튼 — 분석 전 또는 재분석 필요 시 노출. 분석 완료 후 ReviewList 가 등록 버튼을 가짐. */}
+                    {!hasAnalyzed && (
+                        <Button
+                            type="button"
+                            onClick={handleAnalyze}
+                            disabled={isBusy || parsedItems.length === 0 || noAccounts}
+                            className="w-full"
+                            variant="secondary"
+                        >
+                            {analyzing
+                                ? <><Loader2 className="w-4 h-4 mr-1.5 animate-spin" />...</>
+                                : tx.parsePreview}
+                        </Button>
+                    )}
 
-                    {/* 분석 버튼 */}
-                    <Button
-                        type="button"
-                        onClick={handleAnalyze}
-                        disabled={isBusy || parsedItems.length === 0 || noAccounts}
-                        className="w-full"
-                        variant="secondary"
-                    >
-                        {analyzing
-                            ? <><Loader2 className="w-4 h-4 mr-1.5 animate-spin" />...</>
-                            : tx.parsePreview}
-                    </Button>
+                    {/* 분석 결과 — ReviewList 가 통합 표시·편집·등록 흐름을 담당 */}
+                    {hasAnalyzed && cards.length > 0 && (
+                        <ReviewList
+                            cards={cards}
+                            onUpdate={next => setCards(next)}
+                            onSubmit={strategy => handleExecute(strategy)}
+                        />
+                    )}
 
-                    {/* 미리보기 */}
-                    {hasAnalyzed && (
-                        <div className="border border-border rounded-md overflow-hidden">
-                            <div className="px-3 py-2 bg-muted/40 border-b border-border text-[11px] font-bold tracking-wide text-muted-foreground uppercase flex items-center gap-2">
-                                {tx.analysisResult}
-                                <span className="text-foreground numeric">{resolved.length}</span>
-                                {unresolved.length > 0 && (
-                                    <span className="text-destructive numeric">/ {unresolved.length} {tx.failed}</span>
-                                )}
-                            </div>
-
-                            {/* 미해결 목록 */}
-                            {unresolved.length > 0 && (
-                                <div className="border-b border-border bg-destructive/5 px-3 py-2 space-y-1">
-                                    <div className="text-[11px] font-bold text-destructive flex items-center gap-1">
-                                        <AlertCircle className="w-3 h-3" />
-                                        {tx.tabUnresolved.replace('{count}', String(unresolved.length))}
-                                    </div>
-                                    {unresolved.map((u, i) => (
-                                        <div key={`u-${i}`} className="text-[11px] text-foreground/80 numeric font-mono">
-                                            {u.identifier} · {u.inputQty} · {u.inputPrice}
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-
-                            {/* 해결 목록 */}
-                            {resolved.length > 0 && (
-                                <div className="max-h-[240px] overflow-y-auto">
-                                    {resolved.map((r, i) => (
-                                        <div
-                                            key={`r-${i}`}
-                                            className="px-3 py-2 border-b border-border last:border-b-0 flex items-start justify-between gap-3"
-                                        >
-                                            <div className="min-w-0 flex-1">
-                                                <div className="text-[12px] font-semibold text-foreground truncate">
-                                                    <CheckCircle2 className="w-3 h-3 inline-block mr-1 text-profit" />
-                                                    {r.stockName ?? r.identifier}
-                                                </div>
-                                                <div className="text-[11px] text-muted-foreground numeric font-mono mt-0.5">
-                                                    {r.stockCode} · {r.currency}
-                                                    {r.currentQty > 0 && (
-                                                        <span className="ml-1">
-                                                            · {tx.currentQty} {r.currentQty}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            <div className="text-right shrink-0">
-                                                <div className="text-[12px] font-bold text-foreground numeric">
-                                                    {r.inputQty} × {r.inputPrice.toLocaleString()}
-                                                </div>
-                                                {r.currency === 'USD' && r.effectiveRate ? (
-                                                    <div className="text-[10px] text-muted-foreground numeric mt-0.5">
-                                                        {tx.rate} ₩{r.effectiveRate.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-                                                        {r.rateAutoFilled && (
-                                                            <span className="ml-1 inline-flex items-center px-1 py-px text-[9px] font-bold bg-accent-soft text-foreground rounded-sm">
-                                                                {tx.rateAutoFilled}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                ) : null}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-
-                            {resolved.length === 0 && unresolved.length === 0 && (
-                                <div className="px-3 py-6 text-center text-[12px] text-muted-foreground">
-                                    {tx.noReady}
-                                </div>
-                            )}
+                    {hasAnalyzed && cards.length === 0 && (
+                        <div className="border border-border rounded-md px-3 py-6 text-center text-[12px] text-muted-foreground">
+                            {tx.noReady}
                         </div>
                     )}
 
-                    {/* 실행 버튼 */}
-                    <Button
-                        type="button"
-                        onClick={handleExecute}
-                        disabled={isBusy || !hasAnalyzed || resolved.length === 0 || !accountId || noAccounts}
-                        className="w-full"
-                    >
-                        {executing
-                            ? <><Loader2 className="w-4 h-4 mr-1.5 animate-spin" />...</>
-                            : tx.executeImport}
-                    </Button>
+                    {executing && (
+                        <div className="text-[12px] text-muted-foreground inline-flex items-center gap-1.5">
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" /> {tx.executeImport}
+                        </div>
+                    )}
                     </>
                     ) : (
                         <BulkImportImageMode
