@@ -21,11 +21,13 @@ export async function getStooqDailyClose(ticker: string): Promise<StooqQuote | n
     if (!clean) return null
     const url = `${STOOQ_BASE}?s=${encodeURIComponent(clean)}.uk&f=sd2t2ohlcvn&h&e=csv`
 
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 1500)
     try {
-        const res = await fetch(url, { cache: 'no-store' })
+        const res = await fetch(url, { cache: 'no-store', signal: controller.signal })
         if (!res.ok) return null
         const text = await res.text()
-        const lines = text.trim().split('\n')
+        const lines = text.trim().split(/\r?\n/)
         if (lines.length < 2) return null
 
         // 헤더: Symbol,Date,Time,Open,High,Low,Close,Volume,Name
@@ -34,7 +36,7 @@ export async function getStooqDailyClose(ticker: string): Promise<StooqQuote | n
 
         const date = cols[1]
         const close = parseFloat(cols[6])
-        const name = cols[8] ?? ''
+        const name = cols.slice(8).join(',').trim()
 
         // 데이터 없는 종목은 Close 가 'N/D'
         if (date === 'N/D' || !Number.isFinite(close) || close <= 0) return null
@@ -43,5 +45,7 @@ export async function getStooqDailyClose(ticker: string): Promise<StooqQuote | n
     } catch (e) {
         console.warn(`[stooq] failed for ${ticker}:`, e)
         return null
+    } finally {
+        clearTimeout(timer)
     }
 }
