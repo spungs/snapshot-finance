@@ -10,6 +10,7 @@ export type TwelveDataMatch = {
     exchange: string
     micCode: string
     currency: string
+    type: string   // instrument_type (ETF, Common Stock 등)
 }
 
 /**
@@ -44,6 +45,7 @@ export async function searchLseUsdStocks(query: string): Promise<TwelveDataMatch
                 exchange: String(d.exchange ?? 'LSE'),
                 micCode: String(d.mic_code ?? 'XLON'),
                 currency: String(d.currency ?? 'USD'),
+                type: String(d.instrument_type ?? 'EQUITY'),
             }))
             .filter((m) => m.symbol.length > 0)
     } catch (e) {

@@ -50,6 +50,8 @@ async function enrichWithKisMaster(
 // KIS/Yahoo/Finnhub 에서 못 찾은 종목을 LSE(Twelve Data) 에서 검색.
 // 영국 USD-표시 종목(예: HIM3)을 검색 결과 후보로 노출.
 async function searchLseFallback(query: string) {
+    // 1자 입력(타이핑 중)에는 LSE 외부 호출 스킵 — Twelve Data rate limit(8/min) 보호.
+    if (query.trim().length < 2) return []
     const lse = await searchLseUsdStocks(query)
     return lse.map((m) => ({
         symbol: m.symbol,
@@ -57,7 +59,7 @@ async function searchLseFallback(query: string) {
         nameKo: m.name,   // 영문명 (한글명 없음)
         nameEn: m.name,
         exchange: 'LSE',
-        type: 'ETF',
+        type: m.type === 'ETF' ? 'ETF' : 'EQUITY',
         market: 'LSE',
     }))
 }
@@ -242,6 +244,7 @@ export async function GET(request: NextRequest) {
             if (formattedResults.length === 0) {
                 const lseResults = await searchLseFallback(query)
                 if (lseResults.length > 0) {
+                    await cacheSet(cacheKey, lseResults, SEARCH_CACHE_TTL_SECONDS)
                     return NextResponse.json({ success: true, data: lseResults, source: 'lse' })
                 }
             }
@@ -258,6 +261,7 @@ export async function GET(request: NextRequest) {
                     console.warn('FINNHUB_API_KEY not configured, returning empty results')
                     const lseResults = await searchLseFallback(query)
                     if (lseResults.length > 0) {
+                        await cacheSet(searchCacheKey(query), lseResults, SEARCH_CACHE_TTL_SECONDS)
                         return NextResponse.json({ success: true, data: lseResults, source: 'lse' })
                     }
                     return NextResponse.json({ success: true, data: [] })
@@ -305,6 +309,7 @@ export async function GET(request: NextRequest) {
                 if (formattedResults.length === 0) {
                     const lseResults = await searchLseFallback(query)
                     if (lseResults.length > 0) {
+                        await cacheSet(searchCacheKey(query), lseResults, SEARCH_CACHE_TTL_SECONDS)
                         return NextResponse.json({ success: true, data: lseResults, source: 'lse' })
                     }
                 }
@@ -316,6 +321,7 @@ export async function GET(request: NextRequest) {
                 console.warn('Finnhub Search Failed:', finnhubError.message)
                 const lseResults = await searchLseFallback(query)
                 if (lseResults.length > 0) {
+                    await cacheSet(searchCacheKey(query), lseResults, SEARCH_CACHE_TTL_SECONDS)
                     return NextResponse.json({ success: true, data: lseResults, source: 'lse' })
                 }
                 return NextResponse.json({ success: true, data: [] })
