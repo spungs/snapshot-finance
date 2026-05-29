@@ -8,6 +8,7 @@ import { holdingService } from '@/lib/services/holding-service'
 import { getUsdExchangeRate } from '@/lib/api/exchange-rate'
 import { ratelimit, checkRateLimit } from '@/lib/ratelimit'
 import { assertAccountOwnership } from '@/lib/auth-helpers'
+import { resolveOrCreateStock } from '@/lib/services/stock-resolver'
 import Decimal from 'decimal.js'
 
 // 일괄 등록 한 번에 처리 가능한 최대 종목 수.
@@ -156,29 +157,14 @@ export async function analyzeBulkImport(items: ImportItem[]): Promise<ImportAnal
     try {
         for (const item of items) {
             const cleanIdentifier = item.identifier.trim()
-            // 우선순위 1: 정확한 stockCode 또는 영문명 매칭 (대소문자 무시).
-            // 영문 ticker(TSLA, AAPL, TSLL 등)나 6자리 한국 코드는 여기서 잡힘.
-            let stock = await prisma.stock.findFirst({
-                where: {
-                    OR: [
-                        { stockCode: cleanIdentifier },
-                        { nameEn: { equals: cleanIdentifier, mode: 'insensitive' } },
-                    ],
-                },
-            })
-
-            // 우선순위 2: 한글명 매칭 (정확 → 부분 contains).
-            // OCR 이 종목명을 보냈을 때 fallback. stockCode/nameEn 정확 매칭이 실패한 경우만.
-            if (!stock) {
-                stock = await prisma.stock.findFirst({
-                    where: {
-                        OR: [
-                            { nameKo: cleanIdentifier },
-                            { nameKo: { contains: cleanIdentifier } },
-                        ],
-                    },
-                })
-            }
+            // stockCode/nameEn 정확 → nameKo → LSE(Twelve Data) 동적 등록까지 일괄 처리.
+            // resolveOrCreateStock 이 1·2단계(KIS 마스터) + 3단계(LSE upsert)를 모두 수행.
+            const resolved = await resolveOrCreateStock(cleanIdentifier)
+            // resolveOrCreateStock 은 부분 select 만 반환하므로, 아래 로직이 기대하는
+            // 전체 Stock row 가 필요하면 stockCode 로 다시 조회. (LSE 는 방금 upsert 됨)
+            const stock = resolved
+                ? await prisma.stock.findUnique({ where: { stockCode: resolved.stockCode } })
+                : null
 
             if (stock) {
                 const market = stock.market
