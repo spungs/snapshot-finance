@@ -21,14 +21,18 @@ export async function searchLseUsdStocks(query: string): Promise<TwelveDataMatch
     const q = query.trim()
     if (!q) return []
     const key = process.env.TWELVE_DATA_API_KEY
-    const url = `${TD_BASE}?symbol=${encodeURIComponent(q)}${key ? `&apikey=${key}` : ''}`
+    const url = `${TD_BASE}?symbol=${encodeURIComponent(q)}${key ? `&apikey=${encodeURIComponent(key)}` : ''}`
 
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), 1500)
     try {
         const res = await fetch(url, { cache: 'no-store', signal: controller.signal })
         if (!res.ok) return []
-        const body = await res.json() as { data?: unknown }
+        const body = await res.json() as { data?: unknown; status?: string; code?: number; message?: string }
+        if (body.status === 'error' || body.code === 429) {
+            console.warn(`[twelve-data] API error for ${query}: code=${body.code} ${body.message ?? ''}`)
+            return []
+        }
         const data = Array.isArray(body.data) ? body.data : []
 
         return data
@@ -43,7 +47,7 @@ export async function searchLseUsdStocks(query: string): Promise<TwelveDataMatch
             }))
             .filter((m) => m.symbol.length > 0)
     } catch (e) {
-        console.warn(`[twelve-data] search failed for ${query}:`, e)
+        console.warn(`[twelve-data] search failed for ${query}:`, e instanceof Error ? e.message : e)
         return []
     } finally {
         clearTimeout(timer)

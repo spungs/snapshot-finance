@@ -43,7 +43,7 @@ export async function getStooqDailyClose(ticker: string): Promise<StooqQuote | n
 
         return { close, date, name }
     } catch (e) {
-        console.warn(`[stooq] failed for ${ticker}:`, e)
+        console.warn(`[stooq] failed for ${ticker}:`, e instanceof Error ? e.message : e)
         return null
     } finally {
         clearTimeout(timer)
