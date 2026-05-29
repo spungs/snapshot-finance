@@ -53,6 +53,13 @@ export async function resolveOrCreateStock(identifier: string): Promise<Resolved
     const hit = matches.find((m) => m.symbol.toUpperCase() === clean.toUpperCase()) ?? matches[0]
     if (!hit) return null
 
+    // 외부(Twelve Data) symbol 을 PK 로 저장하기 전 형식 검증 —
+    // 비정상 문자가 stockCode 에 들어가면 stooq({ticker}.uk) 조회·검색이 깨짐.
+    if (!/^[A-Za-z0-9.]{1,12}$/.test(hit.symbol)) {
+        console.warn(`[stock-resolver] rejected abnormal symbol from Twelve Data: ${hit.symbol}`)
+        return null
+    }
+
     // stocks 에 동적 등록 (LSE / USD). updatedAt 자동.
     const created = await prisma.stock.upsert({
         where: { stockCode: hit.symbol },
