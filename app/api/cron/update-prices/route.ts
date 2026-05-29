@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { kisClient } from '@/lib/api/kis-client'
 import { getUsdExchangeRate } from '@/lib/api/exchange-rate'
+import { fetchLsePrice } from '@/lib/api/stooq'
 import {
     cacheSet,
     stockPriceKey,
@@ -175,6 +176,44 @@ export async function GET(request: NextRequest) {
             // 마지막 청크 뒤에는 sleep 안 한다 — 응답 latency 절감
             if (i + CHUNK_SIZE < stocks.length) {
                 await sleep(CHUNK_DELAY_MS)
+            }
+        }
+
+        // 5-b. LSE 종목 워밍 — KIS 미지원, stooq 전일종가(USD). US cron 에 편승.
+        //      전일종가라 실시간 아님 → 정확한 영국 장 시간 불필요. 보유 LSE 종목만.
+        if (targetMarket === 'US') {
+            const lseStocks = await prisma.stock.findMany({
+                where: {
+                    liveHoldings: { some: {} },
+                    market: 'LSE',
+                },
+                select: { stockCode: true },
+            })
+            for (const { stockCode } of lseStocks) {
+                try {
+                    const price = await fetchLsePrice(stockCode)
+                    if (price > 0) {
+                        const entry: PriceCacheEntry = {
+                            price,
+                            currency: 'USD',
+                            change: 0,
+                            changeRate: 0,
+                            updatedAt: now.toISOString(),
+                        }
+                        await cacheSet(stockPriceKey(stockCode), entry, PRICE_CACHE_TTL_SECONDS)
+                        results.push({ stockCode, market: 'LSE', status: 'success', price })
+                    } else {
+                        results.push({ stockCode, market: 'LSE', status: 'failed', error: 'No stooq price' })
+                    }
+                } catch (e) {
+                    const msg = e instanceof Error ? e.message : String(e)
+                    results.push({ stockCode, market: 'LSE', status: 'failed', error: msg })
+                }
+                // stooq 과다 호출 방지 — 순차 + 300ms
+                await sleep(300)
+            }
+            if (lseStocks.length > 0) {
+                console.log(`[Cron:update-prices:US] +${lseStocks.length} LSE stocks (stooq)`)
             }
         }
 
