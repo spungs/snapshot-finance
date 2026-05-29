@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma'
 import { ratelimit, checkRateLimit } from '@/lib/ratelimit'
 import { isProUser } from '@/lib/billing/subscription'
 import { getUsdExchangeRate } from '@/lib/api/exchange-rate'
+import { resolveOrCreateStock } from '@/lib/services/stock-resolver'
 import yahooFinance from '@/lib/yahoo-finance'
 import {
     validateQuantity,
@@ -618,6 +619,13 @@ ${holdingsText}
             if (action.type === 'add_holding') {
                 let hit = await searchKisMaster(action.stockName)
                 if (!hit) hit = await searchYahoo(action.stockName)
+                // KIS/Yahoo 미스 시 LSE(Twelve Data) 폴백 — 영국 USD-표시 종목(예: HIM3).
+                if (!hit) {
+                    const lse = await resolveOrCreateStock(action.stockName)
+                    if (lse) {
+                        hit = { officialName: lse.nameEn ?? lse.nameKo, market: 'LSE', currency: 'USD' }
+                    }
+                }
                 if (!hit) {
                     return NextResponse.json({
                         success: true,
