@@ -159,12 +159,10 @@ export async function analyzeBulkImport(items: ImportItem[]): Promise<ImportAnal
             const cleanIdentifier = item.identifier.trim()
             // stockCode/nameEn 정확 → nameKo → LSE(Twelve Data) 동적 등록까지 일괄 처리.
             // resolveOrCreateStock 이 1·2단계(KIS 마스터) + 3단계(LSE upsert)를 모두 수행.
-            const resolved = await resolveOrCreateStock(cleanIdentifier)
-            // resolveOrCreateStock 은 부분 select 만 반환하므로, 아래 로직이 기대하는
-            // 전체 Stock row 가 필요하면 stockCode 로 다시 조회. (LSE 는 방금 upsert 됨)
-            const stock = resolved
-                ? await prisma.stock.findUnique({ where: { stockCode: resolved.stockCode } })
-                : null
+            // 반환된 부분 select(stockCode/nameKo/nameEn/market)에 이후 사용 필드가 모두 있어 재조회 불필요.
+            // 주의: LSE 미등록 종목은 여기서 stocks 에 upsert 됨 — executeBulkImport 의 stock lookup 이
+            // 성공하려면 분석 단계의 이 선등록이 전제 (KIS 마스터 사전 등록과 동일 철학).
+            const stock = await resolveOrCreateStock(cleanIdentifier)
 
             if (stock) {
                 const market = stock.market
