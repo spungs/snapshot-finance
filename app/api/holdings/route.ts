@@ -28,6 +28,16 @@ function safeRevalidate() {
 
 // 현재가 조회 헬퍼 함수 (KIS API 사용)
 async function fetchCurrentPrice(stockCode: string, market: string): Promise<number> {
+    if (market === 'LSE') {
+        try {
+            const { getStooqDailyClose } = await import('@/lib/api/stooq')
+            const quote = await getStooqDailyClose(stockCode)
+            return quote && Number.isFinite(quote.close) && quote.close > 0 ? quote.close : 0
+        } catch (e) {
+            console.warn(`[holdings/route] stooq failed for ${stockCode}:`, e instanceof Error ? e.message : e)
+            return 0
+        }
+    }
     try {
         // 시장 타입 매핑 (US, KOSPI, KOSDAQ)
         // KIS Master DB는 NASD/NYSE/AMEX, KIS API 내부 코드는 NAS/NYS/AMS — 양쪽 모두 인식

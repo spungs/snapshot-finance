@@ -19,6 +19,29 @@ async function fetchCurrentPrice(stockCode: string, market: string): Promise<num
         return cached.price
     }
 
+    // LSE 종목: KIS 미지원 → stooq 전일종가 (USD). 결과를 캐시에 저장.
+    if (market === 'LSE') {
+        try {
+            const { getStooqDailyClose } = await import('@/lib/api/stooq')
+            const quote = await getStooqDailyClose(stockCode)
+            if (quote && Number.isFinite(quote.close) && quote.close > 0) {
+                const entry: PriceCacheEntry = {
+                    price: quote.close,
+                    currency: 'USD',
+                    change: 0,
+                    changeRate: 0,
+                    updatedAt: new Date().toISOString(),
+                }
+                await cacheSet(stockPriceKey(stockCode), entry, PRICE_CACHE_TTL_SECONDS)
+                return quote.close
+            }
+            return 0
+        } catch (e) {
+            console.warn(`[holding-service] stooq failed for ${stockCode}:`, e instanceof Error ? e.message : e)
+            return 0
+        }
+    }
+
     try {
         let marketType: 'KOSPI' | 'KOSDAQ' | 'US' = 'KOSPI'
         if (market === 'US' || market === 'NAS' || market === 'NYS' || market === 'AMS') {

@@ -27,6 +27,16 @@ type ActionResult<T = unknown> =
  */
 
 async function fetchCurrentPrice(stockCode: string, market: string): Promise<number> {
+    if (market === 'LSE') {
+        try {
+            const { getStooqDailyClose } = await import('@/lib/api/stooq')
+            const quote = await getStooqDailyClose(stockCode)
+            return quote && Number.isFinite(quote.close) && quote.close > 0 ? quote.close : 0
+        } catch (e) {
+            console.warn(`[holding-actions] stooq failed for ${stockCode}:`, e instanceof Error ? e.message : e)
+            return 0
+        }
+    }
     try {
         // KIS Master는 NASD/NYSE/AMEX, KIS API 내부 코드는 NAS/NYS/AMS — 양쪽 모두 인식
         let marketType: 'KOSPI' | 'KOSDAQ' | 'US' = 'KOSPI'
