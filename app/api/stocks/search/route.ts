@@ -4,6 +4,7 @@ import yahooFinance from '@/lib/yahoo-finance'
 import { prisma } from '@/lib/prisma'
 import { ratelimit, getIP, checkRateLimit } from '@/lib/ratelimit'
 import { cacheGet, cacheSet } from '@/lib/cache'
+import { searchLseUsdStocks } from '@/lib/api/twelve-data'
 
 // Redis 기반 검색 결과 캐시 — 외부 API rate limit 보호용
 // 이전 in-memory Map은 Vercel Serverless 인스턴스간 공유 안 되어 효과 미미했음
@@ -44,6 +45,21 @@ async function enrichWithKisMaster(
             nameEn: master.nameEn || (r.name as string) || null,
         }
     })
+}
+
+// KIS/Yahoo/Finnhub 에서 못 찾은 종목을 LSE(Twelve Data) 에서 검색.
+// 영국 USD-표시 종목(예: HIM3)을 검색 결과 후보로 노출.
+async function searchLseFallback(query: string) {
+    const lse = await searchLseUsdStocks(query)
+    return lse.map((m) => ({
+        symbol: m.symbol,
+        name: m.name,
+        nameKo: m.name,   // 영문명 (한글명 없음)
+        nameEn: m.name,
+        exchange: 'LSE',
+        type: 'ETF',
+        market: 'LSE',
+    }))
 }
 
 export async function GET(request: NextRequest) {
@@ -222,6 +238,13 @@ export async function GET(request: NextRequest) {
 
             // KIS 마스터에서 한글명 보완 후 캐시 (한글명 포함 상태로 저장)
             const formattedResults = await enrichWithKisMaster(rawResults)
+            // KIS/Yahoo 에 없으면 LSE 후보 추가
+            if (formattedResults.length === 0) {
+                const lseResults = await searchLseFallback(query)
+                if (lseResults.length > 0) {
+                    return NextResponse.json({ success: true, data: lseResults, source: 'lse' })
+                }
+            }
             await cacheSet(cacheKey, formattedResults, SEARCH_CACHE_TTL_SECONDS)
 
             return NextResponse.json({ success: true, data: formattedResults })
@@ -233,6 +256,10 @@ export async function GET(request: NextRequest) {
                 const apiKey = process.env.FINNHUB_API_KEY
                 if (!apiKey) {
                     console.warn('FINNHUB_API_KEY not configured, returning empty results')
+                    const lseResults = await searchLseFallback(query)
+                    if (lseResults.length > 0) {
+                        return NextResponse.json({ success: true, data: lseResults, source: 'lse' })
+                    }
                     return NextResponse.json({ success: true, data: [] })
                 }
 
@@ -274,12 +301,23 @@ export async function GET(request: NextRequest) {
 
                 // KIS 마스터에서 한글명 보완 후 캐시
                 const formattedResults = await enrichWithKisMaster(rawFinnhubResults)
+                // Finnhub 에도 없으면 LSE 후보 추가
+                if (formattedResults.length === 0) {
+                    const lseResults = await searchLseFallback(query)
+                    if (lseResults.length > 0) {
+                        return NextResponse.json({ success: true, data: lseResults, source: 'lse' })
+                    }
+                }
                 await cacheSet(searchCacheKey(query), formattedResults, SEARCH_CACHE_TTL_SECONDS)
 
                 console.log(`Finnhub Search Success: ${formattedResults.length} results`)
                 return NextResponse.json({ success: true, data: formattedResults, source: 'finnhub' })
             } catch (finnhubError: any) {
                 console.warn('Finnhub Search Failed:', finnhubError.message)
+                const lseResults = await searchLseFallback(query)
+                if (lseResults.length > 0) {
+                    return NextResponse.json({ success: true, data: lseResults, source: 'lse' })
+                }
                 return NextResponse.json({ success: true, data: [] })
             }
         }

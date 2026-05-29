@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
+import { resolveOrCreateStock } from '@/lib/services/stock-resolver'
 
 // GET /api/stocks - 종목 목록 조회 (페이지네이션 강제)
 export async function GET(request: NextRequest) {
@@ -70,14 +71,20 @@ export async function POST(request: NextRequest) {
     }
 
     const existing = await prisma.stock.findUnique({ where: { stockCode: trimmedCode } })
-    if (!existing) {
-      return NextResponse.json(
-        { success: false, error: { code: 'STOCK_NOT_FOUND', message: '종목 마스터에 없는 ticker 입니다.' } },
-        { status: 404 }
-      )
+    if (existing) {
+      return NextResponse.json({ success: true, data: existing })
     }
 
-    return NextResponse.json({ success: true, data: existing })
+    // 마스터에 없으면 LSE(Twelve Data) 동적 등록 시도 (KIS 미지원 영국 USD 종목).
+    const resolved = await resolveOrCreateStock(trimmedCode)
+    if (resolved) {
+      return NextResponse.json({ success: true, data: resolved })
+    }
+
+    return NextResponse.json(
+      { success: false, error: { code: 'STOCK_NOT_FOUND', message: '종목을 찾을 수 없습니다.' } },
+      { status: 404 }
+    )
   } catch (error) {
     console.error('Stock lookup error:', error)
     return NextResponse.json(
