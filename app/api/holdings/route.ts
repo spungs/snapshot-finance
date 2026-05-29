@@ -29,14 +29,8 @@ function safeRevalidate() {
 // 현재가 조회 헬퍼 함수 (KIS API 사용)
 async function fetchCurrentPrice(stockCode: string, market: string): Promise<number> {
     if (market === 'LSE') {
-        try {
-            const { getStooqDailyClose } = await import('@/lib/api/stooq')
-            const quote = await getStooqDailyClose(stockCode)
-            return quote && Number.isFinite(quote.close) && quote.close > 0 ? quote.close : 0
-        } catch (e) {
-            console.warn(`[holdings/route] stooq failed for ${stockCode}:`, e instanceof Error ? e.message : e)
-            return 0
-        }
+        const { fetchLsePrice } = await import('@/lib/api/stooq')
+        return fetchLsePrice(stockCode)
     }
     try {
         // 시장 타입 매핑 (US, KOSPI, KOSDAQ)

@@ -21,30 +21,25 @@ async function fetchCurrentPrice(stockCode: string, market: string): Promise<num
 
     // LSE 종목: KIS 미지원 → stooq 전일종가 (USD). 결과를 캐시에 저장.
     if (market === 'LSE') {
-        try {
-            const { getStooqDailyClose } = await import('@/lib/api/stooq')
-            const quote = await getStooqDailyClose(stockCode)
-            if (quote && Number.isFinite(quote.close) && quote.close > 0) {
-                const entry: PriceCacheEntry = {
-                    price: quote.close,
-                    currency: 'USD',
-                    change: 0,
-                    changeRate: 0,
-                    updatedAt: new Date().toISOString(),
-                }
-                await cacheSet(stockPriceKey(stockCode), entry, PRICE_CACHE_TTL_SECONDS)
-                return quote.close
+        const { fetchLsePrice } = await import('@/lib/api/stooq')
+        const price = await fetchLsePrice(stockCode)
+        if (price > 0) {
+            const entry: PriceCacheEntry = {
+                price,
+                currency: 'USD',
+                change: 0,       // stooq 는 종가만 제공 — 등락 미산출(현재 미사용)
+                changeRate: 0,
+                updatedAt: new Date().toISOString(),
             }
-            return 0
-        } catch (e) {
-            console.warn(`[holding-service] stooq failed for ${stockCode}:`, e instanceof Error ? e.message : e)
-            return 0
+            await cacheSet(stockPriceKey(stockCode), entry, PRICE_CACHE_TTL_SECONDS)
         }
+        return price
     }
 
     try {
         let marketType: 'KOSPI' | 'KOSDAQ' | 'US' = 'KOSPI'
-        if (market === 'US' || market === 'NAS' || market === 'NYS' || market === 'AMS') {
+        if (market === 'US' || market === 'NAS' || market === 'NYS' || market === 'AMS'
+            || market === 'NASD' || market === 'NYSE' || market === 'AMEX') {
             marketType = 'US'
         } else if (market === 'KOSDAQ' || market === 'KQ') {
             marketType = 'KOSDAQ'

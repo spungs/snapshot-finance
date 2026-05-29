@@ -49,3 +49,17 @@ export async function getStooqDailyClose(ticker: string): Promise<StooqQuote | n
         clearTimeout(timer)
     }
 }
+
+/**
+ * LSE 종목 현재가(전일종가) — fetchCurrentPrice 류에서 공통 사용.
+ * 유효 종가 없으면 0 반환 (에러도 0 으로 흡수).
+ */
+export async function fetchLsePrice(stockCode: string): Promise<number> {
+    try {
+        const quote = await getStooqDailyClose(stockCode)
+        return quote && Number.isFinite(quote.close) && quote.close > 0 ? quote.close : 0
+    } catch (e) {
+        console.warn(`[stooq] fetchLsePrice failed for ${stockCode}:`, e instanceof Error ? e.message : e)
+        return 0
+    }
+}
