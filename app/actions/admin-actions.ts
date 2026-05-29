@@ -37,8 +37,10 @@ function getCurrencyForMarket(market?: string | null, stockCode?: string): strin
     // 1. Explicit Market Check
     if (market) {
         const cleanMarket = market.toUpperCase().trim()
-        const US_MARKETS = ['NAS', 'NYS', 'AMS']
+        const US_MARKETS = ['NAS', 'NYS', 'AMS', 'NASD', 'NYSE', 'AMEX']
         if (US_MARKETS.includes(cleanMarket)) return 'USD'
+        // LSE 종목은 USD-표시 라인만 지원 (stooq/Twelve Data USD). GBP/GBX 미지원.
+        if (cleanMarket === 'LSE') return 'USD'
     }
 
     // 2. Heuristic based on Stock Code (If market is unknown/missing or not determinative)

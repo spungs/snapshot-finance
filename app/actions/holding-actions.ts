@@ -102,7 +102,7 @@ export async function createHolding(input: CreateHoldingInput): Promise<ActionRe
     }
 
     if (!currency) {
-        const usMarkets = ['US', 'NAS', 'NYS', 'AMS', 'NASD', 'NYSE', 'AMEX']
+        const usMarkets = ['US', 'NAS', 'NYS', 'AMS', 'NASD', 'NYSE', 'AMEX', 'LSE']
         currency = usMarkets.includes(stock.market || '') ? 'USD' : 'KRW'
     }
 

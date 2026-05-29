@@ -178,7 +178,7 @@ export async function POST(request: NextRequest) {
             // 통화 자동 감지 (입력된 통화가 없으면 시장 정보로 판단)
             // KIS Master는 NASD/NYSE/AMEX, KIS API 내부는 NAS/NYS/AMS — 양쪽 다 미국으로 인식
             if (!currency) {
-                const usMarkets = ['US', 'NAS', 'NYS', 'AMS', 'NASD', 'NYSE', 'AMEX']
+                const usMarkets = ['US', 'NAS', 'NYS', 'AMS', 'NASD', 'NYSE', 'AMEX', 'LSE']
                 currency = usMarkets.includes(stock.market || '') ? 'USD' : 'KRW'
             }
 
