@@ -23,6 +23,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
     }
 
+    try {
     // 2. 대상 사용자 — 개인용이므로 BRIEF_USER_EMAIL 1명만.
     const email = process.env.BRIEF_USER_EMAIL
     if (!email) {
@@ -99,4 +100,11 @@ export async function GET(request: NextRequest) {
         },
         holdings: enriched,
     })
+    } catch (e) {
+        console.error('[daily-brief] error:', e)
+        return NextResponse.json(
+            { success: false, error: 'Internal error', detail: e instanceof Error ? e.message : String(e) },
+            { status: 500 },
+        )
+    }
 }
