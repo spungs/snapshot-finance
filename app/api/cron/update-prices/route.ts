@@ -34,6 +34,11 @@ export const maxDuration = 60
 const CHUNK_SIZE = 15
 const CHUNK_DELAY_MS = 1000
 
+// LSE 워밍: stooq 직렬 호출이라 maxDuration(60s) 보호 위해 1회 상한.
+// 초과분은 holding-service 의 fetchCurrentPrice 폴백이 사용자 진입 시 커버.
+const MAX_LSE_WARM = 20
+const LSE_WARM_DELAY_MS = 300
+
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
 type Market = 'KR' | 'US'
@@ -188,6 +193,7 @@ export async function GET(request: NextRequest) {
                     market: 'LSE',
                 },
                 select: { stockCode: true },
+                take: MAX_LSE_WARM,
             })
             for (const { stockCode } of lseStocks) {
                 try {
@@ -209,11 +215,11 @@ export async function GET(request: NextRequest) {
                     const msg = e instanceof Error ? e.message : String(e)
                     results.push({ stockCode, market: 'LSE', status: 'failed', error: msg })
                 }
-                // stooq 과다 호출 방지 — 순차 + 300ms
-                await sleep(300)
+                // stooq 과다 호출 방지 — 순차 + 간격
+                await sleep(LSE_WARM_DELAY_MS)
             }
             if (lseStocks.length > 0) {
-                console.log(`[Cron:update-prices:US] +${lseStocks.length} LSE stocks (stooq)`)
+                console.log(`[Cron:update-prices:US] +${lseStocks.length} LSE stocks (stooq, max ${MAX_LSE_WARM})`)
             }
         }
 
