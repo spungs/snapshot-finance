@@ -1,0 +1,2051 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Snapshot Finance — 로고 컨셉 시안</title>
+<style>
+  :root {
+    --brand: #0a7c4a;
+    --bg: #f6f5f1;
+    --card: #ffffff;
+    --text: #1a1a1a;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+    --code-bg: #f3f4f6;
+  }
+  [data-theme="dark"] {
+    --bg: #0b0f0d;
+    --card: #161a18;
+    --text: #f3f4f6;
+    --muted: #9ca3af;
+    --border: #2a2f2d;
+    --code-bg: #1f2421;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+  }
+  header {
+    padding: 32px 24px 8px;
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  h1 { font-size: 22px; margin: 0; font-weight: 700; letter-spacing: -0.01em; }
+  .sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .toggle {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--card); border: 1px solid var(--border);
+    padding: 6px 12px; border-radius: 999px; cursor: pointer;
+    font-size: 13px; color: var(--text);
+  }
+  main {
+    max-width: 1200px; margin: 0 auto;
+    padding: 24px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(480px, 1fr));
+    gap: 20px;
+  }
+  .divider {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 20px 0 4px;
+    color: var(--muted);
+    font-size: 13px;
+    letter-spacing: 0.05em;
+    border-top: 1px dashed var(--border);
+    margin-top: 12px;
+  }
+  .full-card {
+    grid-column: 1 / -1;
+  }
+  .variant-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+  }
+  .variant {
+    background: var(--bg);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .variant .lbl-name {
+    font-size: 13px; font-weight: 600; color: var(--text);
+    text-align: center;
+  }
+  .variant .lbl-desc {
+    font-size: 11px; color: var(--muted); text-align: center; min-height: 28px;
+  }
+  .variant .sizes {
+    display: flex; align-items: flex-end; gap: 12px; margin-top: 4px;
+  }
+  .variant pre {
+    font-size: 10.5px; padding: 8px 10px;
+    width: 100%;
+  }
+  .variant button {
+    font-size: 11px; padding: 6px 10px;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    display: flex; flex-direction: column; gap: 16px;
+  }
+  .card-head h2 { margin: 0 0 4px; font-size: 17px; font-weight: 700; }
+  .card-head .desc { font-size: 13px; color: var(--muted); margin: 0; }
+  .preview-row {
+    display: flex; align-items: flex-end; gap: 24px;
+    padding: 24px; background: var(--bg); border-radius: 12px;
+    justify-content: center;
+  }
+  .preview-row.dark { background: #0b0f0d; }
+  .preview-cell { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .preview-cell .lbl { font-size: 10px; color: var(--muted); letter-spacing: 0.05em; }
+  .preview-row.dark .lbl { color: #6b7280; }
+  .swatch {
+    background: #fff; border-radius: 22%; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  /* iOS 같은 squircle 느낌 */
+  .ios { background: #fff; border-radius: 22%; }
+  .meta {
+    font-size: 12.5px; color: var(--muted); line-height: 1.55;
+  }
+  .meta b { color: var(--text); font-weight: 600; }
+  pre {
+    margin: 0;
+    background: var(--code-bg);
+    padding: 12px 14px;
+    border-radius: 8px;
+    font-size: 11.5px;
+    line-height: 1.55;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    color: var(--text);
+  }
+  .actions { display: flex; gap: 8px; }
+  button {
+    background: var(--brand); color: #fff; border: 0;
+    padding: 8px 14px; border-radius: 8px; font-size: 12.5px;
+    cursor: pointer; font-weight: 600;
+  }
+  button.ghost {
+    background: transparent; color: var(--text); border: 1px solid var(--border);
+  }
+  button:active { transform: translateY(1px); }
+  .copied { font-size: 11px; color: var(--brand); opacity: 0; transition: opacity 0.2s; align-self: center; }
+  .copied.show { opacity: 1; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Snapshot Finance — 로고 컨셉 시안</h1>
+    <p class="sub">4개 컨셉을 다양한 사이즈에서 비교해보세요. 마음에 드는 컨셉의 "Prompt 복사" 버튼으로 GPT/Midjourney에 바로 붙여넣을 수 있습니다.</p>
+  </div>
+  <button class="toggle" onclick="toggleTheme()">🌓 라이트/다크</button>
+</header>
+
+<main>
+  <!-- ─────────────── 컨셉 1: Pinned Moment ─────────────── -->
+  <article class="card">
+    <div class="card-head">
+      <h2>🥇 컨셉 1 · Pinned Moment</h2>
+      <p class="desc">타임라인 위에 핀이 한 순간을 고정한다 — 스냅샷의 본질</p>
+    </div>
+
+    <div class="preview-row">
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:180px;height:180px;">
+          <svg viewBox="0 0 100 100" width="180" height="180">
+            <line x1="10" y1="65" x2="90" y2="65" stroke="#0a7c4a" stroke-width="3" stroke-linecap="round"/>
+            <line x1="50" y1="65" x2="50" y2="48" stroke="#0a7c4a" stroke-width="3" stroke-linecap="round"/>
+            <circle cx="50" cy="38" r="14" fill="#0a7c4a"/>
+            <circle cx="50" cy="38" r="3.5" fill="#fff"/>
+          </svg>
+        </div>
+        <span class="lbl">180 / iOS</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:64px;height:64px;">
+          <svg viewBox="0 0 100 100" width="64" height="64">
+            <line x1="10" y1="65" x2="90" y2="65" stroke="#0a7c4a" stroke-width="3" stroke-linecap="round"/>
+            <line x1="50" y1="65" x2="50" y2="48" stroke="#0a7c4a" stroke-width="3" stroke-linecap="round"/>
+            <circle cx="50" cy="38" r="14" fill="#0a7c4a"/>
+            <circle cx="50" cy="38" r="3.5" fill="#fff"/>
+          </svg>
+        </div>
+        <span class="lbl">64</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:32px;height:32px;">
+          <svg viewBox="0 0 100 100" width="32" height="32">
+            <line x1="10" y1="65" x2="90" y2="65" stroke="#0a7c4a" stroke-width="4" stroke-linecap="round"/>
+            <line x1="50" y1="65" x2="50" y2="48" stroke="#0a7c4a" stroke-width="4" stroke-linecap="round"/>
+            <circle cx="50" cy="38" r="14" fill="#0a7c4a"/>
+            <circle cx="50" cy="38" r="3.5" fill="#fff"/>
+          </svg>
+        </div>
+        <span class="lbl">32</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:28px;height:28px;">
+          <svg viewBox="0 0 100 100" width="28" height="28">
+            <circle cx="50" cy="38" r="14" fill="#0a7c4a"/>
+            <line x1="10" y1="65" x2="90" y2="65" stroke="#0a7c4a" stroke-width="6" stroke-linecap="round"/>
+            <line x1="50" y1="65" x2="50" y2="48" stroke="#0a7c4a" stroke-width="6" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <span class="lbl">28 헤더</span>
+      </div>
+    </div>
+
+    <div class="preview-row dark">
+      <div class="preview-cell">
+        <svg viewBox="0 0 100 100" width="28" height="28">
+          <line x1="10" y1="65" x2="90" y2="65" stroke="#34d399" stroke-width="6" stroke-linecap="round"/>
+          <line x1="50" y1="65" x2="50" y2="48" stroke="#34d399" stroke-width="6" stroke-linecap="round"/>
+          <circle cx="50" cy="38" r="14" fill="#34d399"/>
+        </svg>
+        <span class="lbl">다크 28</span>
+      </div>
+    </div>
+
+    <p class="meta">
+      <b>메타포</b> 흐르는 시간(수평선) 위에 한 순간을 못박는 핀. 거래·등락이 아닌 <b>고정·보존</b> 행위 자체.<br>
+      <b>강점</b> 핀헤드(원) 단일 실루엣 → 28px도 안전. 화살표·캔들 없는 정적 톤.
+    </p>
+
+    <pre id="p1">Minimalist flat vector app icon: a single bold circular pin head fixed on a thin horizontal timeline, centered composition, monochrome dark green #0a7c4a on white background, geometric, clean strokes, no text, square format, app icon style inspired by Linear and Things 3</pre>
+    <div class="actions">
+      <button onclick="copy('p1', this)">📋 Prompt 복사</button>
+      <span class="copied">복사됨!</span>
+    </div>
+  </article>
+
+  <!-- ─────────────── 컨셉 2: Aperture S ─────────────── -->
+  <article class="card">
+    <div class="card-head">
+      <h2>🥈 컨셉 2 · Aperture S</h2>
+      <p class="desc">조리개 + 모노그램 S — 카메라 비유 + 브랜드 이니셜</p>
+    </div>
+
+    <div class="preview-row">
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:180px;height:180px;">
+          <svg viewBox="0 0 100 100" width="180" height="180">
+            <!-- 외곽 원 -->
+            <circle cx="50" cy="50" r="36" fill="none" stroke="#0a7c4a" stroke-width="4"/>
+            <!-- 조리개 날개 6개 (회전된 호) -->
+            <g fill="none" stroke="#0a7c4a" stroke-width="3.5" stroke-linecap="round">
+              <path d="M 50 22 A 28 28 0 0 1 74 38" />
+              <path d="M 74 38 A 28 28 0 0 1 74 62" />
+              <path d="M 74 62 A 28 28 0 0 1 50 78" />
+              <path d="M 50 78 A 28 28 0 0 1 26 62" />
+              <path d="M 26 62 A 28 28 0 0 1 26 38" />
+              <path d="M 26 38 A 28 28 0 0 1 50 22" />
+            </g>
+            <!-- 중앙 S 곡선 (음각 강조) -->
+            <path d="M 58 38 Q 42 38 42 50 Q 42 62 58 62" fill="none" stroke="#0a7c4a" stroke-width="5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <span class="lbl">180 / iOS</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:64px;height:64px;">
+          <svg viewBox="0 0 100 100" width="64" height="64">
+            <circle cx="50" cy="50" r="36" fill="none" stroke="#0a7c4a" stroke-width="4"/>
+            <g fill="none" stroke="#0a7c4a" stroke-width="3.5" stroke-linecap="round">
+              <path d="M 50 22 A 28 28 0 0 1 74 38" />
+              <path d="M 74 38 A 28 28 0 0 1 74 62" />
+              <path d="M 74 62 A 28 28 0 0 1 50 78" />
+              <path d="M 50 78 A 28 28 0 0 1 26 62" />
+              <path d="M 26 62 A 28 28 0 0 1 26 38" />
+              <path d="M 26 38 A 28 28 0 0 1 50 22" />
+            </g>
+            <path d="M 58 38 Q 42 38 42 50 Q 42 62 58 62" fill="none" stroke="#0a7c4a" stroke-width="5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <span class="lbl">64</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:32px;height:32px;">
+          <svg viewBox="0 0 100 100" width="32" height="32">
+            <circle cx="50" cy="50" r="36" fill="none" stroke="#0a7c4a" stroke-width="6"/>
+            <path d="M 58 38 Q 42 38 42 50 Q 42 62 58 62" fill="none" stroke="#0a7c4a" stroke-width="8" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <span class="lbl">32</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:28px;height:28px;">
+          <svg viewBox="0 0 100 100" width="28" height="28">
+            <circle cx="50" cy="50" r="36" fill="none" stroke="#0a7c4a" stroke-width="7"/>
+            <path d="M 58 38 Q 42 38 42 50 Q 42 62 58 62" fill="none" stroke="#0a7c4a" stroke-width="9" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <span class="lbl">28 헤더</span>
+      </div>
+    </div>
+
+    <div class="preview-row dark">
+      <div class="preview-cell">
+        <svg viewBox="0 0 100 100" width="28" height="28">
+          <circle cx="50" cy="50" r="36" fill="none" stroke="#34d399" stroke-width="7"/>
+          <path d="M 58 38 Q 42 38 42 50 Q 42 62 58 62" fill="none" stroke="#34d399" stroke-width="9" stroke-linecap="round"/>
+        </svg>
+        <span class="lbl">다크 28</span>
+      </div>
+    </div>
+
+    <p class="meta">
+      <b>메타포</b> 카메라 조리개 = 빛을 받아 기록하는 사진의 핵심 기구 → 스냅샷. 동시에 알파벳 S 모노그램으로 브랜드 인지.<br>
+      <b>강점</b> Stripe/Vercel 톤의 미니멀 모노그램. 28px에서는 "원 안의 S"로 압축 인식.
+    </p>
+
+    <pre id="p2">Minimalist flat vector app icon: a camera aperture with overlapping curved blades that subtly form the letter S in negative space, perfectly centered in a circle, monochrome dark green #0a7c4a, geometric precision, uniform stroke weight, no text, square format, monogram style inspired by Stripe and Vercel</pre>
+    <div class="actions">
+      <button onclick="copy('p2', this)">📋 Prompt 복사</button>
+      <span class="copied">복사됨!</span>
+    </div>
+  </article>
+
+  <!-- ─────────────── 컨셉 3: Sealed Archive ─────────────── -->
+  <article class="card">
+    <div class="card-head">
+      <h2>컨셉 3 · Sealed Archive</h2>
+      <p class="desc">봉인된 아카이브 카드 — 스냅샷의 불변성</p>
+    </div>
+
+    <div class="preview-row">
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:180px;height:180px;">
+          <svg viewBox="0 0 100 100" width="180" height="180">
+            <!-- 카드 (우상단 모서리 접힘) -->
+            <path d="M 22 22 H 70 L 80 32 V 80 a 2 2 0 0 1 -2 2 H 22 a 2 2 0 0 1 -2 -2 V 24 a 2 2 0 0 1 2 -2 z"
+                  fill="none" stroke="#0a7c4a" stroke-width="3.5" stroke-linejoin="round"/>
+            <!-- 접힌 모서리 디테일 -->
+            <path d="M 70 22 V 32 H 80" fill="none" stroke="#0a7c4a" stroke-width="3.5" stroke-linejoin="round"/>
+            <!-- 중앙 인장 -->
+            <circle cx="50" cy="56" r="12" fill="#0a7c4a"/>
+            <circle cx="50" cy="56" r="2.5" fill="#fff"/>
+          </svg>
+        </div>
+        <span class="lbl">180 / iOS</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:64px;height:64px;">
+          <svg viewBox="0 0 100 100" width="64" height="64">
+            <path d="M 22 22 H 70 L 80 32 V 80 a 2 2 0 0 1 -2 2 H 22 a 2 2 0 0 1 -2 -2 V 24 a 2 2 0 0 1 2 -2 z"
+                  fill="none" stroke="#0a7c4a" stroke-width="4" stroke-linejoin="round"/>
+            <path d="M 70 22 V 32 H 80" fill="none" stroke="#0a7c4a" stroke-width="4" stroke-linejoin="round"/>
+            <circle cx="50" cy="56" r="12" fill="#0a7c4a"/>
+            <circle cx="50" cy="56" r="2.5" fill="#fff"/>
+          </svg>
+        </div>
+        <span class="lbl">64</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:32px;height:32px;">
+          <svg viewBox="0 0 100 100" width="32" height="32">
+            <path d="M 22 22 H 70 L 80 32 V 80 a 2 2 0 0 1 -2 2 H 22 a 2 2 0 0 1 -2 -2 V 24 a 2 2 0 0 1 2 -2 z"
+                  fill="none" stroke="#0a7c4a" stroke-width="6" stroke-linejoin="round"/>
+            <path d="M 70 22 V 32 H 80" fill="none" stroke="#0a7c4a" stroke-width="6" stroke-linejoin="round"/>
+            <circle cx="50" cy="56" r="12" fill="#0a7c4a"/>
+          </svg>
+        </div>
+        <span class="lbl">32</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:28px;height:28px;">
+          <svg viewBox="0 0 100 100" width="28" height="28">
+            <path d="M 22 22 H 70 L 80 32 V 80 a 2 2 0 0 1 -2 2 H 22 a 2 2 0 0 1 -2 -2 V 24 a 2 2 0 0 1 2 -2 z"
+                  fill="none" stroke="#0a7c4a" stroke-width="7" stroke-linejoin="round"/>
+            <circle cx="50" cy="56" r="12" fill="#0a7c4a"/>
+          </svg>
+        </div>
+        <span class="lbl">28 헤더</span>
+      </div>
+    </div>
+
+    <div class="preview-row dark">
+      <div class="preview-cell">
+        <svg viewBox="0 0 100 100" width="28" height="28">
+          <path d="M 22 22 H 70 L 80 32 V 80 a 2 2 0 0 1 -2 2 H 22 a 2 2 0 0 1 -2 -2 V 24 a 2 2 0 0 1 2 -2 z"
+                fill="none" stroke="#34d399" stroke-width="7" stroke-linejoin="round"/>
+          <circle cx="50" cy="56" r="12" fill="#34d399"/>
+        </svg>
+        <span class="lbl">다크 28</span>
+      </div>
+    </div>
+
+    <p class="meta">
+      <b>메타포</b> 봉인된 기록은 수정 불가 — 스냅샷의 <b>불변성</b>. 거래앱의 다이내믹과 정반대인 정적 무게감.<br>
+      <b>강점</b> 사각형 + 원이라는 가장 기본 도형 조합. 어떤 사이즈에서도 명확.
+    </p>
+
+    <pre id="p3">Minimalist flat vector app icon: a square archive card with a slightly folded top-right corner, stamped with a bold circular seal in the center containing a single dot, monochrome dark green #0a7c4a on white background, clean geometric shapes, uniform line weight, no text, square format, vector style inspired by Notion and Things 3</pre>
+    <div class="actions">
+      <button onclick="copy('p3', this)">📋 Prompt 복사</button>
+      <span class="copied">복사됨!</span>
+    </div>
+  </article>
+
+  <!-- ─────────────── 컨셉 4: Layered Strata ─────────────── -->
+  <article class="card">
+    <div class="card-head">
+      <h2>컨셉 4 · Layered Strata</h2>
+      <p class="desc">시간의 지층 — 스냅샷이 차곡차곡 쌓여 자산이 된다</p>
+    </div>
+
+    <div class="preview-row">
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:180px;height:180px;">
+          <svg viewBox="0 0 100 100" width="180" height="180">
+            <!-- 가로 띠 4개 -->
+            <rect x="22" y="38" width="56" height="6" rx="3" fill="#0a7c4a"/>
+            <rect x="22" y="50" width="56" height="6" rx="3" fill="#0a7c4a"/>
+            <rect x="22" y="62" width="56" height="6" rx="3" fill="#0a7c4a"/>
+            <rect x="22" y="74" width="56" height="6" rx="3" fill="#0a7c4a"/>
+            <!-- 수직 관통선 -->
+            <line x1="50" y1="28" x2="50" y2="84" stroke="#0a7c4a" stroke-width="2.5" stroke-linecap="round"/>
+            <!-- 상단 마커 점 -->
+            <circle cx="50" cy="25" r="4.5" fill="#0a7c4a"/>
+          </svg>
+        </div>
+        <span class="lbl">180 / iOS</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:64px;height:64px;">
+          <svg viewBox="0 0 100 100" width="64" height="64">
+            <rect x="22" y="38" width="56" height="6" rx="3" fill="#0a7c4a"/>
+            <rect x="22" y="50" width="56" height="6" rx="3" fill="#0a7c4a"/>
+            <rect x="22" y="62" width="56" height="6" rx="3" fill="#0a7c4a"/>
+            <rect x="22" y="74" width="56" height="6" rx="3" fill="#0a7c4a"/>
+            <line x1="50" y1="28" x2="50" y2="84" stroke="#0a7c4a" stroke-width="2.5" stroke-linecap="round"/>
+            <circle cx="50" cy="25" r="4.5" fill="#0a7c4a"/>
+          </svg>
+        </div>
+        <span class="lbl">64</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:32px;height:32px;">
+          <svg viewBox="0 0 100 100" width="32" height="32">
+            <rect x="22" y="38" width="56" height="8" rx="4" fill="#0a7c4a"/>
+            <rect x="22" y="52" width="56" height="8" rx="4" fill="#0a7c4a"/>
+            <rect x="22" y="66" width="56" height="8" rx="4" fill="#0a7c4a"/>
+            <line x1="50" y1="30" x2="50" y2="80" stroke="#0a7c4a" stroke-width="4" stroke-linecap="round"/>
+            <circle cx="50" cy="26" r="5" fill="#0a7c4a"/>
+          </svg>
+        </div>
+        <span class="lbl">32</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:28px;height:28px;">
+          <svg viewBox="0 0 100 100" width="28" height="28">
+            <rect x="22" y="38" width="56" height="10" rx="5" fill="#0a7c4a"/>
+            <rect x="22" y="54" width="56" height="10" rx="5" fill="#0a7c4a"/>
+            <rect x="22" y="70" width="56" height="10" rx="5" fill="#0a7c4a"/>
+            <line x1="50" y1="30" x2="50" y2="82" stroke="#0a7c4a" stroke-width="5" stroke-linecap="round"/>
+            <circle cx="50" cy="26" r="6" fill="#0a7c4a"/>
+          </svg>
+        </div>
+        <span class="lbl">28 헤더</span>
+      </div>
+    </div>
+
+    <div class="preview-row dark">
+      <div class="preview-cell">
+        <svg viewBox="0 0 100 100" width="28" height="28">
+          <rect x="22" y="38" width="56" height="10" rx="5" fill="#34d399"/>
+          <rect x="22" y="54" width="56" height="10" rx="5" fill="#34d399"/>
+          <rect x="22" y="70" width="56" height="10" rx="5" fill="#34d399"/>
+          <line x1="50" y1="30" x2="50" y2="82" stroke="#34d399" stroke-width="5" stroke-linecap="round"/>
+          <circle cx="50" cy="26" r="6" fill="#34d399"/>
+        </svg>
+        <span class="lbl">다크 28</span>
+      </div>
+    </div>
+
+    <p class="meta">
+      <b>메타포</b> 띠 하나 = 스냅샷 한 장. 시간 따라 쌓여 자산이 된다. 수직선·상단 점 = "지금 보고 있는 시점".<br>
+      <b>강점</b> 가로 줄무늬 + 수직 관통선의 식별력 높은 패턴. 화살표·등락 톤 0.
+    </p>
+
+    <pre id="p4">Minimalist flat vector app icon: three to four horizontal rounded bars stacked vertically with equal spacing, intersected by a single thin vertical line through the center with a small dot at the top, monochrome dark green #0a7c4a on white background, geometric, uniform stroke weight, no text, square format, vector style inspired by Linear and Arc browser</pre>
+    <div class="actions">
+      <button onclick="copy('p4', this)">📋 Prompt 복사</button>
+      <span class="copied">복사됨!</span>
+    </div>
+  </article>
+
+  <div class="divider">─── 추가 컨셉 5~10 (디자이너 2차 자문) ───</div>
+
+  <!-- ─────────────── 컨셉 5: Sundial Mark ─────────────── -->
+  <article class="card">
+    <div class="card-head">
+      <h2>컨셉 5 · Sundial Mark (해시계)</h2>
+      <p class="desc">반원 다이얼 위에 그노몬(막대)이 한 시각을 가리킴 — 가장 오래된 시간 기록</p>
+    </div>
+
+    <div class="preview-row">
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:180px;height:180px;">
+          <svg viewBox="0 0 100 100" width="180" height="180">
+            <line x1="20" y1="70" x2="80" y2="70" stroke="#0a7c4a" stroke-width="2" stroke-linecap="round"/>
+            <path d="M 20 70 A 30 30 0 0 1 80 70" fill="none" stroke="#0a7c4a" stroke-width="2"/>
+            <!-- 눈금 5개 (30·60·90·120·150°) -->
+            <line x1="24.0" y1="55.0" x2="27.5" y2="57.0" stroke="#0a7c4a" stroke-width="1"/>
+            <line x1="35.0" y1="44.0" x2="37.0" y2="47.5" stroke="#0a7c4a" stroke-width="1"/>
+            <line x1="50" y1="40" x2="50" y2="44" stroke="#0a7c4a" stroke-width="1"/>
+            <line x1="65.0" y1="44.0" x2="63.0" y2="47.5" stroke="#0a7c4a" stroke-width="1"/>
+            <line x1="76.0" y1="55.0" x2="72.5" y2="57.0" stroke="#0a7c4a" stroke-width="1"/>
+            <!-- 그노몬: 60도 방향 -->
+            <line x1="50" y1="70" x2="62" y2="49.2" stroke="#0a7c4a" stroke-width="3" stroke-linecap="round"/>
+            <circle cx="62" cy="49.2" r="3" fill="#0a7c4a"/>
+            <circle cx="50" cy="70" r="2" fill="#0a7c4a"/>
+          </svg>
+        </div>
+        <span class="lbl">180 / iOS</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:64px;height:64px;">
+          <svg viewBox="0 0 100 100" width="64" height="64">
+            <line x1="20" y1="70" x2="80" y2="70" stroke="#0a7c4a" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M 20 70 A 30 30 0 0 1 80 70" fill="none" stroke="#0a7c4a" stroke-width="2.5"/>
+            <line x1="50" y1="70" x2="62" y2="49.2" stroke="#0a7c4a" stroke-width="3.5" stroke-linecap="round"/>
+            <circle cx="62" cy="49.2" r="4" fill="#0a7c4a"/>
+          </svg>
+        </div>
+        <span class="lbl">64</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:32px;height:32px;">
+          <svg viewBox="0 0 100 100" width="32" height="32">
+            <path d="M 20 70 A 30 30 0 0 1 80 70" fill="none" stroke="#0a7c4a" stroke-width="5"/>
+            <line x1="20" y1="70" x2="80" y2="70" stroke="#0a7c4a" stroke-width="5" stroke-linecap="round"/>
+            <line x1="50" y1="70" x2="62" y2="49.2" stroke="#0a7c4a" stroke-width="6" stroke-linecap="round"/>
+            <circle cx="62" cy="49.2" r="6" fill="#0a7c4a"/>
+          </svg>
+        </div>
+        <span class="lbl">32</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:28px;height:28px;">
+          <svg viewBox="0 0 100 100" width="28" height="28">
+            <path d="M 20 70 A 30 30 0 0 1 80 70" fill="none" stroke="#0a7c4a" stroke-width="6"/>
+            <line x1="20" y1="70" x2="80" y2="70" stroke="#0a7c4a" stroke-width="6" stroke-linecap="round"/>
+            <line x1="50" y1="70" x2="62" y2="49.2" stroke="#0a7c4a" stroke-width="7" stroke-linecap="round"/>
+            <circle cx="62" cy="49.2" r="7" fill="#0a7c4a"/>
+          </svg>
+        </div>
+        <span class="lbl">28 헤더</span>
+      </div>
+    </div>
+
+    <p class="meta">
+      <b>메타포</b> "태양이 지나간 한 위치" — 빠른 시·분이 아니라 정적·무게 있는 시간 좌표.<br>
+      <b>강점</b> 반원 + 사선 막대 + 끝점만으로 인식. 차트의 동적 변화 0.
+    </p>
+
+    <pre id="p5">Minimalist flat vector logo of a sundial, semicircular arc with a single gnomon stick casting toward a marked point, monochrome forest green #0a7c4a on white, centered square composition, thin uniform strokes, no shadows, geometric, scalable icon</pre>
+    <div class="actions">
+      <button onclick="copy('p5', this)">📋 Prompt 복사</button>
+      <span class="copied">복사됨!</span>
+    </div>
+  </article>
+
+  <!-- ─────────────── 컨셉 6: Polaroid Dot (디자이너 추천 1순위) ─────────────── -->
+  <article class="card">
+    <div class="card-head">
+      <h2>🥇 컨셉 6 · Polaroid Dot (디자이너 추천 1순위)</h2>
+      <p class="desc">폴라로이드 사진 한 장 + 본문 중앙 점 — Snapshot의 결과물 그 자체</p>
+    </div>
+
+    <div class="preview-row">
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:180px;height:180px;">
+          <svg viewBox="0 0 100 100" width="180" height="180">
+            <rect x="22" y="18" width="56" height="68" rx="3" fill="none" stroke="#0a7c4a" stroke-width="2.5"/>
+            <rect x="28" y="24" width="44" height="44" fill="none" stroke="#0a7c4a" stroke-width="1.5"/>
+            <circle cx="50" cy="46" r="4.5" fill="#0a7c4a"/>
+          </svg>
+        </div>
+        <span class="lbl">180 / iOS</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:64px;height:64px;">
+          <svg viewBox="0 0 100 100" width="64" height="64">
+            <rect x="22" y="18" width="56" height="68" rx="3" fill="none" stroke="#0a7c4a" stroke-width="3"/>
+            <rect x="28" y="24" width="44" height="44" fill="none" stroke="#0a7c4a" stroke-width="2"/>
+            <circle cx="50" cy="46" r="5" fill="#0a7c4a"/>
+          </svg>
+        </div>
+        <span class="lbl">64</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:32px;height:32px;">
+          <svg viewBox="0 0 100 100" width="32" height="32">
+            <rect x="22" y="18" width="56" height="68" rx="3" fill="none" stroke="#0a7c4a" stroke-width="5"/>
+            <rect x="28" y="24" width="44" height="44" fill="none" stroke="#0a7c4a" stroke-width="3"/>
+            <circle cx="50" cy="46" r="6" fill="#0a7c4a"/>
+          </svg>
+        </div>
+        <span class="lbl">32</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:28px;height:28px;">
+          <svg viewBox="0 0 100 100" width="28" height="28">
+            <rect x="22" y="18" width="56" height="68" rx="3" fill="none" stroke="#0a7c4a" stroke-width="6"/>
+            <circle cx="50" cy="46" r="8" fill="#0a7c4a"/>
+          </svg>
+        </div>
+        <span class="lbl">28 헤더</span>
+      </div>
+    </div>
+
+    <div class="preview-row dark">
+      <div class="preview-cell">
+        <svg viewBox="0 0 100 100" width="28" height="28">
+          <rect x="22" y="18" width="56" height="68" rx="3" fill="none" stroke="#34d399" stroke-width="6"/>
+          <circle cx="50" cy="46" r="8" fill="#34d399"/>
+        </svg>
+        <span class="lbl">다크 28</span>
+      </div>
+    </div>
+
+    <p class="meta">
+      <b>메타포</b> 카메라가 아닌 <b>결과물(사진 한 장)</b>. 현상되면 변하지 않는 폴라로이드 = 스냅샷 불변성.<br>
+      <b>강점</b> 외곽 둥근 사각 + 중앙 점 = iOS 그리드에 가장 안정. 시리즈 일러스트 확장 쉬움.
+    </p>
+
+    <pre id="p6">Minimalist flat vector icon of a polaroid photo card, vertical rectangle with thin border, a single solid filled dot centered in the photo area, monochrome forest green #0a7c4a on white, centered square composition, geometric, no shadows, scalable</pre>
+    <div class="actions">
+      <button onclick="copy('p6', this)">📋 Prompt 복사</button>
+      <span class="copied">복사됨!</span>
+    </div>
+  </article>
+
+  <!-- ─────────────── 컨셉 7: Vault Dot ─────────────── -->
+  <article class="card">
+    <div class="card-head">
+      <h2>컨셉 7 · Vault Dot (금고 다이얼)</h2>
+      <p class="desc">금고 문에 다이얼 + 12시 방향 강조 — 잠긴 위치, 고정된 자산</p>
+    </div>
+
+    <div class="preview-row">
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:180px;height:180px;">
+          <svg viewBox="0 0 100 100" width="180" height="180">
+            <rect x="18" y="18" width="64" height="64" rx="6" fill="none" stroke="#0a7c4a" stroke-width="2.5"/>
+            <circle cx="50" cy="50" r="20" fill="none" stroke="#0a7c4a" stroke-width="2"/>
+            <circle cx="50" cy="50" r="2" fill="#0a7c4a"/>
+            <!-- 11개의 일반 눈금 (12시 제외) -->
+            <line x1="60" y1="32.68" x2="61.5" y2="30.08" stroke="#0a7c4a" stroke-width="1"/>
+            <line x1="67.32" y1="40" x2="69.92" y2="38.5" stroke="#0a7c4a" stroke-width="1"/>
+            <line x1="70" y1="50" x2="73" y2="50" stroke="#0a7c4a" stroke-width="1"/>
+            <line x1="67.32" y1="60" x2="69.92" y2="61.5" stroke="#0a7c4a" stroke-width="1"/>
+            <line x1="60" y1="67.32" x2="61.5" y2="69.92" stroke="#0a7c4a" stroke-width="1"/>
+            <line x1="50" y1="70" x2="50" y2="73" stroke="#0a7c4a" stroke-width="1"/>
+            <line x1="40" y1="67.32" x2="38.5" y2="69.92" stroke="#0a7c4a" stroke-width="1"/>
+            <line x1="32.68" y1="60" x2="30.08" y2="61.5" stroke="#0a7c4a" stroke-width="1"/>
+            <line x1="30" y1="50" x2="27" y2="50" stroke="#0a7c4a" stroke-width="1"/>
+            <line x1="32.68" y1="40" x2="30.08" y2="38.5" stroke="#0a7c4a" stroke-width="1"/>
+            <line x1="40" y1="32.68" x2="38.5" y2="30.08" stroke="#0a7c4a" stroke-width="1"/>
+            <!-- 12시 강조 -->
+            <line x1="50" y1="30" x2="50" y2="24" stroke="#0a7c4a" stroke-width="2.5" stroke-linecap="round"/>
+            <circle cx="50" cy="22" r="1.8" fill="#0a7c4a"/>
+          </svg>
+        </div>
+        <span class="lbl">180 / iOS</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:64px;height:64px;">
+          <svg viewBox="0 0 100 100" width="64" height="64">
+            <rect x="18" y="18" width="64" height="64" rx="6" fill="none" stroke="#0a7c4a" stroke-width="3"/>
+            <circle cx="50" cy="50" r="20" fill="none" stroke="#0a7c4a" stroke-width="2.5"/>
+            <line x1="50" y1="30" x2="50" y2="24" stroke="#0a7c4a" stroke-width="3" stroke-linecap="round"/>
+            <circle cx="50" cy="22" r="3" fill="#0a7c4a"/>
+            <circle cx="50" cy="50" r="2.5" fill="#0a7c4a"/>
+          </svg>
+        </div>
+        <span class="lbl">64</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:32px;height:32px;">
+          <svg viewBox="0 0 100 100" width="32" height="32">
+            <rect x="18" y="18" width="64" height="64" rx="6" fill="none" stroke="#0a7c4a" stroke-width="5"/>
+            <circle cx="50" cy="50" r="20" fill="none" stroke="#0a7c4a" stroke-width="4"/>
+            <circle cx="50" cy="22" r="5" fill="#0a7c4a"/>
+            <line x1="50" y1="30" x2="50" y2="26" stroke="#0a7c4a" stroke-width="5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <span class="lbl">32</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:28px;height:28px;">
+          <svg viewBox="0 0 100 100" width="28" height="28">
+            <rect x="18" y="18" width="64" height="64" rx="6" fill="none" stroke="#0a7c4a" stroke-width="6"/>
+            <circle cx="50" cy="50" r="20" fill="none" stroke="#0a7c4a" stroke-width="5"/>
+            <circle cx="50" cy="22" r="6" fill="#0a7c4a"/>
+          </svg>
+        </div>
+        <span class="lbl">28 헤더</span>
+      </div>
+    </div>
+
+    <p class="meta">
+      <b>메타포</b> 보관·자산 + 다이얼(시간). "내 자산을 한 위치에 잠가 보관" = 정적 무게.<br>
+      <b>강점</b> 둥근 사각 + 내부 원 + 12시 강조 — 작은 사이즈에서도 "한 점이 위를 가리킴".
+    </p>
+
+    <pre id="p7">Minimalist flat vector logo of a safe vault door with a circular combination dial, one single tick mark highlighted at the 12 o'clock position with a solid dot, monochrome forest green #0a7c4a on white, centered square composition, thin geometric strokes, no shadows, scalable icon</pre>
+    <div class="actions">
+      <button onclick="copy('p7', this)">📋 Prompt 복사</button>
+      <span class="copied">복사됨!</span>
+    </div>
+  </article>
+
+  <!-- ─────────────── 컨셉 8: Seed in Jar ─────────────── -->
+  <article class="card">
+    <div class="card-head">
+      <h2>컨셉 8 · Seed in Jar (옹기 속 씨앗)</h2>
+      <p class="desc">한국적 옹기 안에 씨앗 하나 — 정적 보관 + 느린 성장</p>
+    </div>
+
+    <div class="preview-row">
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:180px;height:180px;">
+          <svg viewBox="0 0 100 100" width="180" height="180">
+            <path d="M 38 24 L 30 32 C 22 42, 22 54, 22 58 C 22 70, 28 78, 34 82 L 66 82 C 72 78, 78 70, 78 58 C 78 54, 78 42, 70 32 L 62 24 Z"
+                  fill="none" stroke="#0a7c4a" stroke-width="2.5" stroke-linejoin="round"/>
+            <line x1="36" y1="24" x2="64" y2="24" stroke="#0a7c4a" stroke-width="2" stroke-linecap="round"/>
+            <ellipse cx="50" cy="60" rx="5" ry="7" fill="#0a7c4a"/>
+            <line x1="28" y1="44" x2="72" y2="44" stroke="#0a7c4a" stroke-width="0.8" opacity="0.5"/>
+          </svg>
+        </div>
+        <span class="lbl">180 / iOS</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:64px;height:64px;">
+          <svg viewBox="0 0 100 100" width="64" height="64">
+            <path d="M 38 24 L 30 32 C 22 42, 22 54, 22 58 C 22 70, 28 78, 34 82 L 66 82 C 72 78, 78 70, 78 58 C 78 54, 78 42, 70 32 L 62 24 Z"
+                  fill="none" stroke="#0a7c4a" stroke-width="3" stroke-linejoin="round"/>
+            <ellipse cx="50" cy="60" rx="5.5" ry="7.5" fill="#0a7c4a"/>
+          </svg>
+        </div>
+        <span class="lbl">64</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:32px;height:32px;">
+          <svg viewBox="0 0 100 100" width="32" height="32">
+            <path d="M 38 24 L 30 32 C 22 42, 22 54, 22 58 C 22 70, 28 78, 34 82 L 66 82 C 72 78, 78 70, 78 58 C 78 54, 78 42, 70 32 L 62 24 Z"
+                  fill="none" stroke="#0a7c4a" stroke-width="5" stroke-linejoin="round"/>
+            <ellipse cx="50" cy="60" rx="6.5" ry="8.5" fill="#0a7c4a"/>
+          </svg>
+        </div>
+        <span class="lbl">32</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:28px;height:28px;">
+          <svg viewBox="0 0 100 100" width="28" height="28">
+            <path d="M 38 24 L 30 32 C 22 42, 22 54, 22 58 C 22 70, 28 78, 34 82 L 66 82 C 72 78, 78 70, 78 58 C 78 54, 78 42, 70 32 L 62 24 Z"
+                  fill="none" stroke="#0a7c4a" stroke-width="6" stroke-linejoin="round"/>
+            <ellipse cx="50" cy="60" rx="8" ry="10" fill="#0a7c4a"/>
+          </svg>
+        </div>
+        <span class="lbl">28 헤더</span>
+      </div>
+    </div>
+
+    <p class="meta">
+      <b>메타포</b> 한국적 옹기 + 보관 + 느린 성장. 화살표·상승선 없이 "지금 담겨 있는 한 알".<br>
+      <b>강점</b> 단지 실루엣 + 중앙 알맹이 = container + dot 구조.
+    </p>
+
+    <pre id="p8">Minimalist flat vector logo of a Korean traditional pottery jar (onggi) silhouette with a single oval seed centered inside, monochrome forest green #0a7c4a on white, centered square composition, smooth symmetric curves, thin uniform stroke, no shadows, scalable</pre>
+    <div class="actions">
+      <button onclick="copy('p8', this)">📋 Prompt 복사</button>
+      <span class="copied">복사됨!</span>
+    </div>
+  </article>
+
+  <!-- ─────────────── 컨셉 9: ㅅ Monogram Roof ─────────────── -->
+  <article class="card">
+    <div class="card-head">
+      <h2>컨셉 9 · ㅅ Monogram (자음 + 지붕)</h2>
+      <p class="desc">한글 자음 ㅅ + 기와지붕 + 그 아래 받침 점</p>
+    </div>
+
+    <div class="preview-row">
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:180px;height:180px;">
+          <svg viewBox="0 0 100 100" width="180" height="180">
+            <line x1="50" y1="22" x2="22" y2="70" stroke="#0a7c4a" stroke-width="3.5" stroke-linecap="round"/>
+            <line x1="50" y1="22" x2="78" y2="70" stroke="#0a7c4a" stroke-width="3.5" stroke-linecap="round"/>
+            <circle cx="50" cy="80" r="4" fill="#0a7c4a"/>
+          </svg>
+        </div>
+        <span class="lbl">180 / iOS</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:64px;height:64px;">
+          <svg viewBox="0 0 100 100" width="64" height="64">
+            <line x1="50" y1="22" x2="22" y2="70" stroke="#0a7c4a" stroke-width="4" stroke-linecap="round"/>
+            <line x1="50" y1="22" x2="78" y2="70" stroke="#0a7c4a" stroke-width="4" stroke-linecap="round"/>
+            <circle cx="50" cy="80" r="5" fill="#0a7c4a"/>
+          </svg>
+        </div>
+        <span class="lbl">64</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:32px;height:32px;">
+          <svg viewBox="0 0 100 100" width="32" height="32">
+            <line x1="50" y1="22" x2="22" y2="70" stroke="#0a7c4a" stroke-width="6" stroke-linecap="round"/>
+            <line x1="50" y1="22" x2="78" y2="70" stroke="#0a7c4a" stroke-width="6" stroke-linecap="round"/>
+            <circle cx="50" cy="80" r="6" fill="#0a7c4a"/>
+          </svg>
+        </div>
+        <span class="lbl">32</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:28px;height:28px;">
+          <svg viewBox="0 0 100 100" width="28" height="28">
+            <line x1="50" y1="22" x2="22" y2="70" stroke="#0a7c4a" stroke-width="7" stroke-linecap="round"/>
+            <line x1="50" y1="22" x2="78" y2="70" stroke="#0a7c4a" stroke-width="7" stroke-linecap="round"/>
+            <circle cx="50" cy="80" r="7" fill="#0a7c4a"/>
+          </svg>
+        </div>
+        <span class="lbl">28 헤더</span>
+      </div>
+    </div>
+
+    <p class="meta">
+      <b>메타포</b> Snapshot의 S + 한국어 "시점"의 ㅅ + 보호하는 지붕. 받침 점 = 보관된 한 기록.<br>
+      <b>강점</b> 두 사선 + 점 = 가장 단순한 도형 조합. 영문권엔 "A를 뒤집은 형태"로 읽힐 위험.
+    </p>
+
+    <pre id="p9">Minimalist flat vector monogram logo combining the Korean consonant ㅅ shape and a stylized roof, with a single solid dot centered below, monochrome forest green #0a7c4a on white, centered square composition, two clean diagonal strokes meeting at apex, no shadows, scalable icon</pre>
+    <div class="actions">
+      <button onclick="copy('p9', this)">📋 Prompt 복사</button>
+      <span class="copied">복사됨!</span>
+    </div>
+  </article>
+
+  <!-- ─────────────── 컨셉 10: Concentric Mark ─────────────── -->
+  <article class="card">
+    <div class="card-head">
+      <h2>🥈 컨셉 10 · Concentric Mark (동심원 + 점)</h2>
+      <p class="desc">동심원 3겹 + 중심 점 — 시간·자산·시장이 한 점에 수렴</p>
+    </div>
+
+    <div class="preview-row">
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:180px;height:180px;">
+          <svg viewBox="0 0 100 100" width="180" height="180">
+            <circle cx="50" cy="50" r="36" fill="none" stroke="#0a7c4a" stroke-width="2" opacity="0.35"/>
+            <circle cx="50" cy="50" r="24" fill="none" stroke="#0a7c4a" stroke-width="2" opacity="0.6"/>
+            <circle cx="50" cy="50" r="12" fill="none" stroke="#0a7c4a" stroke-width="2"/>
+            <circle cx="50" cy="50" r="4.5" fill="#0a7c4a"/>
+          </svg>
+        </div>
+        <span class="lbl">180 / iOS</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:64px;height:64px;">
+          <svg viewBox="0 0 100 100" width="64" height="64">
+            <circle cx="50" cy="50" r="36" fill="none" stroke="#0a7c4a" stroke-width="2.5" opacity="0.35"/>
+            <circle cx="50" cy="50" r="24" fill="none" stroke="#0a7c4a" stroke-width="2.5" opacity="0.6"/>
+            <circle cx="50" cy="50" r="12" fill="none" stroke="#0a7c4a" stroke-width="2.5"/>
+            <circle cx="50" cy="50" r="5" fill="#0a7c4a"/>
+          </svg>
+        </div>
+        <span class="lbl">64</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:32px;height:32px;">
+          <svg viewBox="0 0 100 100" width="32" height="32">
+            <circle cx="50" cy="50" r="36" fill="none" stroke="#0a7c4a" stroke-width="4" opacity="0.4"/>
+            <circle cx="50" cy="50" r="24" fill="none" stroke="#0a7c4a" stroke-width="4" opacity="0.7"/>
+            <circle cx="50" cy="50" r="12" fill="none" stroke="#0a7c4a" stroke-width="4"/>
+            <circle cx="50" cy="50" r="6" fill="#0a7c4a"/>
+          </svg>
+        </div>
+        <span class="lbl">32</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:28px;height:28px;">
+          <svg viewBox="0 0 100 100" width="28" height="28">
+            <circle cx="50" cy="50" r="36" fill="none" stroke="#0a7c4a" stroke-width="5" opacity="0.4"/>
+            <circle cx="50" cy="50" r="24" fill="none" stroke="#0a7c4a" stroke-width="5" opacity="0.7"/>
+            <circle cx="50" cy="50" r="12" fill="none" stroke="#0a7c4a" stroke-width="5"/>
+            <circle cx="50" cy="50" r="8" fill="#0a7c4a"/>
+          </svg>
+        </div>
+        <span class="lbl">28 헤더</span>
+      </div>
+    </div>
+
+    <div class="preview-row dark">
+      <div class="preview-cell">
+        <svg viewBox="0 0 100 100" width="28" height="28">
+          <circle cx="50" cy="50" r="36" fill="none" stroke="#34d399" stroke-width="5" opacity="0.4"/>
+          <circle cx="50" cy="50" r="24" fill="none" stroke="#34d399" stroke-width="5" opacity="0.7"/>
+          <circle cx="50" cy="50" r="12" fill="none" stroke="#34d399" stroke-width="5"/>
+          <circle cx="50" cy="50" r="8" fill="#34d399"/>
+        </svg>
+        <span class="lbl">다크 28</span>
+      </div>
+    </div>
+
+    <p class="meta">
+      <b>메타포</b> 여러 레이어(시간·자산·시장)가 한 점에 수렴 = 스냅샷. 가장 추상적.<br>
+      <b>강점</b> 원 + 중심 점 = 가장 단순한 인식 단위. iOS 그리드에서 매우 강함.
+    </p>
+
+    <pre id="p10">Minimalist flat vector logo of three concentric circles with decreasing opacity from outer to inner, single solid filled dot at the center, monochrome forest green #0a7c4a on white, centered square composition, thin uniform strokes, geometric precision, no shadows, scalable app icon</pre>
+    <div class="actions">
+      <button onclick="copy('p10', this)">📋 Prompt 복사</button>
+      <span class="copied">복사됨!</span>
+    </div>
+  </article>
+
+  <div class="divider">─── 🥇 Polaroid 채택 · 본문 콘텐츠 변주 (디자이너 3차 자문) ───</div>
+
+  <article class="card full-card">
+    <div class="card-head">
+      <h2>Polaroid + 본문 콘텐츠 6가지</h2>
+      <p class="desc">외곽 폴라로이드 동일, 본문 사각 영역(44×44)에 들어갈 요소만 변주. 1순위는 <b>① 기준선+점</b>, 2순위는 <b>② 원화 ₩</b>.</p>
+    </div>
+
+    <div class="variant-grid">
+      <!-- 변주 1: Baseline & Mark -->
+      <div class="variant">
+        <svg viewBox="0 0 100 100" width="140" height="140">
+          <rect x="22" y="18" width="56" height="68" rx="3" fill="none" stroke="#0a7c4a" stroke-width="2.5"/>
+          <rect x="28" y="24" width="44" height="44" fill="none" stroke="#0a7c4a" stroke-width="1.5"/>
+          <line x1="33" y1="50" x2="67" y2="50" stroke="#0a7c4a" stroke-width="1.5" stroke-linecap="round"/>
+          <circle cx="56" cy="42" r="2.8" fill="#0a7c4a"/>
+        </svg>
+        <div class="lbl-name">🥇 ① 기준선 + 점</div>
+        <div class="lbl-desc">시점을 기준선 위에 박제 — 가장 추상·정적</div>
+        <div class="sizes">
+          <div class="preview-cell">
+            <svg viewBox="0 0 100 100" width="32" height="32">
+              <rect x="22" y="18" width="56" height="68" rx="3" fill="none" stroke="#0a7c4a" stroke-width="5"/>
+              <line x1="33" y1="50" x2="67" y2="50" stroke="#0a7c4a" stroke-width="3" stroke-linecap="round"/>
+              <circle cx="56" cy="42" r="5" fill="#0a7c4a"/>
+            </svg>
+            <span class="lbl">32</span>
+          </div>
+          <div class="preview-cell">
+            <svg viewBox="0 0 100 100" width="28" height="28">
+              <rect x="22" y="18" width="56" height="68" rx="3" fill="none" stroke="#0a7c4a" stroke-width="6"/>
+              <circle cx="56" cy="42" r="6" fill="#0a7c4a"/>
+            </svg>
+            <span class="lbl">28</span>
+          </div>
+        </div>
+        <pre id="v1">Minimalist flat vector icon of a polaroid photo card, vertical rectangle with thin border, inside the photo area a thin horizontal baseline with a single solid dot above and slightly right of center, monochrome forest green #0a7c4a on white, centered square composition, geometric, no shadows, scalable</pre>
+        <button onclick="copy('v1', this)">📋 복사</button>
+        <span class="copied">복사됨!</span>
+      </div>
+
+      <!-- 변주 2: ₩ Won -->
+      <div class="variant">
+        <svg viewBox="0 0 100 100" width="140" height="140">
+          <rect x="22" y="18" width="56" height="68" rx="3" fill="none" stroke="#0a7c4a" stroke-width="2.5"/>
+          <rect x="28" y="24" width="44" height="44" fill="none" stroke="#0a7c4a" stroke-width="1.5"/>
+          <text x="50" y="56" text-anchor="middle" font-family="ui-serif, Georgia, serif" font-weight="600" font-size="30" fill="#0a7c4a">₩</text>
+        </svg>
+        <div class="lbl-name">🥈 ② 원화 ₩</div>
+        <div class="lbl-desc">가장 빠른 "한국 금융" 시그널</div>
+        <div class="sizes">
+          <div class="preview-cell">
+            <svg viewBox="0 0 100 100" width="32" height="32">
+              <rect x="22" y="18" width="56" height="68" rx="3" fill="none" stroke="#0a7c4a" stroke-width="5"/>
+              <text x="50" y="58" text-anchor="middle" font-family="ui-serif, Georgia, serif" font-weight="700" font-size="36" fill="#0a7c4a">₩</text>
+            </svg>
+            <span class="lbl">32</span>
+          </div>
+          <div class="preview-cell">
+            <svg viewBox="0 0 100 100" width="28" height="28">
+              <rect x="22" y="18" width="56" height="68" rx="3" fill="none" stroke="#0a7c4a" stroke-width="6"/>
+              <text x="50" y="58" text-anchor="middle" font-family="ui-serif, Georgia, serif" font-weight="700" font-size="36" fill="#0a7c4a">₩</text>
+            </svg>
+            <span class="lbl">28</span>
+          </div>
+        </div>
+        <pre id="v2">Minimalist flat vector icon of a polaroid photo card, vertical rectangle with thin border, with a bold serif Korean won currency symbol ₩ centered inside the photo area, monochrome forest green #0a7c4a on white, centered square composition, geometric, no shadows, scalable</pre>
+        <button onclick="copy('v2', this)">📋 복사</button>
+        <span class="copied">복사됨!</span>
+      </div>
+
+      <!-- 변주 3: Grid Cell -->
+      <div class="variant">
+        <svg viewBox="0 0 100 100" width="140" height="140">
+          <rect x="22" y="18" width="56" height="68" rx="3" fill="none" stroke="#0a7c4a" stroke-width="2.5"/>
+          <rect x="28" y="24" width="44" height="44" fill="none" stroke="#0a7c4a" stroke-width="1.5"/>
+          <rect x="36" y="32" width="28" height="28" fill="none" stroke="#0a7c4a" stroke-width="1.2"/>
+          <line x1="50" y1="32" x2="50" y2="60" stroke="#0a7c4a" stroke-width="1.2"/>
+          <line x1="36" y1="46" x2="64" y2="46" stroke="#0a7c4a" stroke-width="1.2"/>
+          <rect x="50" y="32" width="14" height="14" fill="#0a7c4a"/>
+        </svg>
+        <div class="lbl-name">③ 그리드 한 칸 채움</div>
+        <div class="lbl-desc">스프레드시트의 한 셀 = 한 스냅샷</div>
+        <div class="sizes">
+          <div class="preview-cell">
+            <svg viewBox="0 0 100 100" width="32" height="32">
+              <rect x="22" y="18" width="56" height="68" rx="3" fill="none" stroke="#0a7c4a" stroke-width="5"/>
+              <rect x="36" y="32" width="28" height="28" fill="none" stroke="#0a7c4a" stroke-width="2.5"/>
+              <rect x="50" y="32" width="14" height="14" fill="#0a7c4a"/>
+            </svg>
+            <span class="lbl">32</span>
+          </div>
+          <div class="preview-cell">
+            <svg viewBox="0 0 100 100" width="28" height="28">
+              <rect x="22" y="18" width="56" height="68" rx="3" fill="none" stroke="#0a7c4a" stroke-width="6"/>
+              <rect x="50" y="32" width="14" height="14" fill="#0a7c4a"/>
+            </svg>
+            <span class="lbl">28</span>
+          </div>
+        </div>
+        <pre id="v3">Minimalist flat vector icon of a polaroid photo card, vertical rectangle with thin border, inside the photo area a 2x2 grid with the top-right cell filled solid, monochrome forest green #0a7c4a on white, centered square composition, geometric, no shadows, scalable</pre>
+        <button onclick="copy('v3', this)">📋 복사</button>
+        <span class="copied">복사됨!</span>
+      </div>
+
+      <!-- 변주 4: Two Dots -->
+      <div class="variant">
+        <svg viewBox="0 0 100 100" width="140" height="140">
+          <rect x="22" y="18" width="56" height="68" rx="3" fill="none" stroke="#0a7c4a" stroke-width="2.5"/>
+          <rect x="28" y="24" width="44" height="44" fill="none" stroke="#0a7c4a" stroke-width="1.5"/>
+          <circle cx="40" cy="54" r="2.5" fill="#0a7c4a"/>
+          <circle cx="60" cy="40" r="3.8" fill="#0a7c4a"/>
+        </svg>
+        <div class="lbl-name">④ 점 2개 (Before/After)</div>
+        <div class="lbl-desc">두 시점 비교 — 시뮬레이션 톤</div>
+        <div class="sizes">
+          <div class="preview-cell">
+            <svg viewBox="0 0 100 100" width="32" height="32">
+              <rect x="22" y="18" width="56" height="68" rx="3" fill="none" stroke="#0a7c4a" stroke-width="5"/>
+              <circle cx="40" cy="54" r="4" fill="#0a7c4a"/>
+              <circle cx="60" cy="40" r="6" fill="#0a7c4a"/>
+            </svg>
+            <span class="lbl">32</span>
+          </div>
+          <div class="preview-cell">
+            <svg viewBox="0 0 100 100" width="28" height="28">
+              <rect x="22" y="18" width="56" height="68" rx="3" fill="none" stroke="#0a7c4a" stroke-width="6"/>
+              <circle cx="40" cy="54" r="4.5" fill="#0a7c4a"/>
+              <circle cx="60" cy="40" r="7" fill="#0a7c4a"/>
+            </svg>
+            <span class="lbl">28</span>
+          </div>
+        </div>
+        <pre id="v4">Minimalist flat vector icon of a polaroid photo card, vertical rectangle with thin border, inside the photo area two solid dots placed diagonally — smaller at bottom-left and larger at top-right, no line between them, monochrome forest green #0a7c4a on white, centered square composition, geometric, no shadows, scalable</pre>
+        <button onclick="copy('v4', this)">📋 복사</button>
+        <span class="copied">복사됨!</span>
+      </div>
+
+      <!-- 변주 5: Two-Step Stair -->
+      <div class="variant">
+        <svg viewBox="0 0 100 100" width="140" height="140">
+          <rect x="22" y="18" width="56" height="68" rx="3" fill="none" stroke="#0a7c4a" stroke-width="2.5"/>
+          <rect x="28" y="24" width="44" height="44" fill="none" stroke="#0a7c4a" stroke-width="1.5"/>
+          <rect x="36" y="50" width="12" height="14" fill="#0a7c4a"/>
+          <rect x="52" y="38" width="12" height="26" fill="#0a7c4a"/>
+        </svg>
+        <div class="lbl-name">⑤ 두 단 계단</div>
+        <div class="lbl-desc">자산이 한 단 쌓인 정적 톤</div>
+        <div class="sizes">
+          <div class="preview-cell">
+            <svg viewBox="0 0 100 100" width="32" height="32">
+              <rect x="22" y="18" width="56" height="68" rx="3" fill="none" stroke="#0a7c4a" stroke-width="5"/>
+              <rect x="36" y="50" width="12" height="14" fill="#0a7c4a"/>
+              <rect x="52" y="38" width="12" height="26" fill="#0a7c4a"/>
+            </svg>
+            <span class="lbl">32</span>
+          </div>
+          <div class="preview-cell">
+            <svg viewBox="0 0 100 100" width="28" height="28">
+              <rect x="22" y="18" width="56" height="68" rx="3" fill="none" stroke="#0a7c4a" stroke-width="6"/>
+              <rect x="36" y="50" width="12" height="14" fill="#0a7c4a"/>
+              <rect x="52" y="38" width="12" height="26" fill="#0a7c4a"/>
+            </svg>
+            <span class="lbl">28</span>
+          </div>
+        </div>
+        <pre id="v5">Minimalist flat vector icon of a polaroid photo card, vertical rectangle with thin border, inside the photo area two ascending rectangular steps — shorter on the left, taller on the right, both bottom-aligned, monochrome forest green #0a7c4a on white, centered square composition, geometric, no shadows, scalable</pre>
+        <button onclick="copy('v5', this)">📋 복사</button>
+        <span class="copied">복사됨!</span>
+      </div>
+
+      <!-- 변주 6: 金 한자 -->
+      <div class="variant">
+        <svg viewBox="0 0 100 100" width="140" height="140">
+          <rect x="22" y="18" width="56" height="68" rx="3" fill="none" stroke="#0a7c4a" stroke-width="2.5"/>
+          <rect x="28" y="24" width="44" height="44" fill="none" stroke="#0a7c4a" stroke-width="1.5"/>
+          <text x="50" y="58" text-anchor="middle" font-family="'Noto Serif KR', ui-serif, serif" font-weight="500" font-size="32" fill="#0a7c4a">金</text>
+        </svg>
+        <div class="lbl-name">⑥ 한자 金</div>
+        <div class="lbl-desc">동양 고전 톤 — 28px 가독성 약함</div>
+        <div class="sizes">
+          <div class="preview-cell">
+            <svg viewBox="0 0 100 100" width="32" height="32">
+              <rect x="22" y="18" width="56" height="68" rx="3" fill="none" stroke="#0a7c4a" stroke-width="5"/>
+              <text x="50" y="60" text-anchor="middle" font-family="'Noto Serif KR', ui-serif, serif" font-weight="600" font-size="38" fill="#0a7c4a">金</text>
+            </svg>
+            <span class="lbl">32</span>
+          </div>
+          <div class="preview-cell">
+            <svg viewBox="0 0 100 100" width="28" height="28">
+              <rect x="22" y="18" width="56" height="68" rx="3" fill="none" stroke="#0a7c4a" stroke-width="6"/>
+              <text x="50" y="60" text-anchor="middle" font-family="'Noto Serif KR', ui-serif, serif" font-weight="600" font-size="38" fill="#0a7c4a">金</text>
+            </svg>
+            <span class="lbl">28</span>
+          </div>
+        </div>
+        <pre id="v6">Minimalist flat vector icon of a polaroid photo card, vertical rectangle with thin border, with the Chinese character 金 (meaning gold/money) centered inside the photo area in serif style, monochrome forest green #0a7c4a on white, centered square composition, geometric, no shadows, scalable</pre>
+        <button onclick="copy('v6', this)">📋 복사</button>
+        <span class="copied">복사됨!</span>
+      </div>
+    </div>
+  </article>
+
+  <div class="divider">─── 정체성 반영 (저장·추이·비교·회고·시뮬레이션) 신규 컨셉 11~15 ───</div>
+
+  <!-- ─────────────── 컨셉 11: Two Timelines (1순위) ─────────────── -->
+  <article class="card">
+    <div class="card-head">
+      <h2>🥇 컨셉 11 · Two Timelines (두 갈래 시간선)</h2>
+      <p class="desc">위 실선=실제 경로, 아래 점선=가지 않은 길. 분기점=스냅샷 시점, 만난점=현재.</p>
+    </div>
+
+    <div class="preview-row">
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:180px;height:180px;">
+          <svg viewBox="0 0 100 100" width="180" height="180">
+            <path d="M 18 50 C 38 28, 62 28, 82 50" fill="none" stroke="#0a7c4a" stroke-width="6" stroke-linecap="round"/>
+            <path d="M 18 50 C 38 72, 62 72, 82 50" fill="none" stroke="#0a7c4a" stroke-width="6" stroke-linecap="round" stroke-dasharray="2 8"/>
+            <circle cx="18" cy="50" r="4" fill="#0a7c4a"/>
+            <circle cx="82" cy="50" r="4" fill="#0a7c4a"/>
+          </svg>
+        </div>
+        <span class="lbl">180 / iOS</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:64px;height:64px;">
+          <svg viewBox="0 0 100 100" width="64" height="64">
+            <path d="M 18 50 C 38 28, 62 28, 82 50" fill="none" stroke="#0a7c4a" stroke-width="7" stroke-linecap="round"/>
+            <path d="M 18 50 C 38 72, 62 72, 82 50" fill="none" stroke="#0a7c4a" stroke-width="7" stroke-linecap="round" stroke-dasharray="2 8"/>
+            <circle cx="18" cy="50" r="5" fill="#0a7c4a"/>
+            <circle cx="82" cy="50" r="5" fill="#0a7c4a"/>
+          </svg>
+        </div>
+        <span class="lbl">64</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:32px;height:32px;">
+          <svg viewBox="0 0 100 100" width="32" height="32">
+            <path d="M 18 50 C 38 28, 62 28, 82 50" fill="none" stroke="#0a7c4a" stroke-width="9" stroke-linecap="round"/>
+            <path d="M 18 50 C 38 72, 62 72, 82 50" fill="none" stroke="#0a7c4a" stroke-width="9" stroke-linecap="round" stroke-dasharray="2 10"/>
+            <circle cx="18" cy="50" r="7" fill="#0a7c4a"/>
+            <circle cx="82" cy="50" r="7" fill="#0a7c4a"/>
+          </svg>
+        </div>
+        <span class="lbl">32</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:28px;height:28px;">
+          <svg viewBox="0 0 100 100" width="28" height="28">
+            <path d="M 18 50 C 38 28, 62 28, 82 50" fill="none" stroke="#0a7c4a" stroke-width="10" stroke-linecap="round"/>
+            <path d="M 18 50 C 38 72, 62 72, 82 50" fill="none" stroke="#0a7c4a" stroke-width="10" stroke-linecap="round" stroke-dasharray="3 12"/>
+            <circle cx="18" cy="50" r="8" fill="#0a7c4a"/>
+            <circle cx="82" cy="50" r="8" fill="#0a7c4a"/>
+          </svg>
+        </div>
+        <span class="lbl">28 헤더</span>
+      </div>
+    </div>
+
+    <div class="preview-row dark">
+      <div class="preview-cell">
+        <svg viewBox="0 0 100 100" width="28" height="28">
+          <path d="M 18 50 C 38 28, 62 28, 82 50" fill="none" stroke="#34d399" stroke-width="10" stroke-linecap="round"/>
+          <path d="M 18 50 C 38 72, 62 72, 82 50" fill="none" stroke="#34d399" stroke-width="10" stroke-linecap="round" stroke-dasharray="3 12"/>
+          <circle cx="18" cy="50" r="8" fill="#34d399"/>
+          <circle cx="82" cy="50" r="8" fill="#34d399"/>
+        </svg>
+        <span class="lbl">다크 28</span>
+      </div>
+    </div>
+
+    <p class="meta">
+      <b>커버</b> 시간 흐름 + 비교 + 분기. <b>메타포</b> 두 시점이 분기됐다가 다시 현재에서 만남 — "그때 유지했다면" 회고를 시각화.<br>
+      <b>강점</b> 점 2개 + 곡선 2개의 극단적 단순함. 가로 비율이 헤더 워드마크와 결합하기 좋음.
+    </p>
+
+    <pre id="p11">Minimalist flat vector logo, two parallel curved lines diverging from one dot on the left and converging into one dot on the right, upper line solid, lower line dashed, forming a lens or eye shape, monochrome forest green #0a7c4a, centered on white square, no text, no shading, vector style</pre>
+    <div class="actions">
+      <button onclick="copy('p11', this)">📋 Prompt 복사</button>
+      <span class="copied">복사됨!</span>
+    </div>
+  </article>
+
+  <!-- ─────────────── 컨셉 12: Stacked Snapshots ─────────────── -->
+  <article class="card">
+    <div class="card-head">
+      <h2>컨셉 12 · Stacked Snapshots (겹친 카드)</h2>
+      <p class="desc">스냅샷 3장이 어긋나 쌓임. 뒤로 갈수록 흐려져 시간 축적감 표현.</p>
+    </div>
+
+    <div class="preview-row">
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:180px;height:180px;">
+          <svg viewBox="0 0 100 100" width="180" height="180">
+            <rect x="30" y="22" width="42" height="42" rx="4" fill="none" stroke="#0a7c4a" stroke-width="3" opacity="0.35"/>
+            <rect x="25" y="29" width="48" height="48" rx="4" fill="none" stroke="#0a7c4a" stroke-width="3.5" opacity="0.6"/>
+            <rect x="20" y="36" width="54" height="54" rx="5" fill="none" stroke="#0a7c4a" stroke-width="5"/>
+            <circle cx="33" cy="68" r="2" fill="none" stroke="#0a7c4a" stroke-width="1.5"/>
+            <circle cx="41" cy="68" r="2" fill="none" stroke="#0a7c4a" stroke-width="1.5"/>
+            <circle cx="49" cy="68" r="2" fill="#0a7c4a"/>
+          </svg>
+        </div>
+        <span class="lbl">180 / iOS</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:64px;height:64px;">
+          <svg viewBox="0 0 100 100" width="64" height="64">
+            <rect x="30" y="22" width="42" height="42" rx="4" fill="none" stroke="#0a7c4a" stroke-width="4" opacity="0.4"/>
+            <rect x="25" y="29" width="48" height="48" rx="4" fill="none" stroke="#0a7c4a" stroke-width="4.5" opacity="0.7"/>
+            <rect x="20" y="36" width="54" height="54" rx="5" fill="none" stroke="#0a7c4a" stroke-width="6"/>
+          </svg>
+        </div>
+        <span class="lbl">64</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:32px;height:32px;">
+          <svg viewBox="0 0 100 100" width="32" height="32">
+            <rect x="30" y="22" width="42" height="42" rx="4" fill="none" stroke="#0a7c4a" stroke-width="6" opacity="0.45"/>
+            <rect x="25" y="29" width="48" height="48" rx="4" fill="none" stroke="#0a7c4a" stroke-width="6" opacity="0.75"/>
+            <rect x="20" y="36" width="54" height="54" rx="5" fill="none" stroke="#0a7c4a" stroke-width="7"/>
+          </svg>
+        </div>
+        <span class="lbl">32</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:28px;height:28px;">
+          <svg viewBox="0 0 100 100" width="28" height="28">
+            <rect x="30" y="22" width="42" height="42" rx="4" fill="none" stroke="#0a7c4a" stroke-width="7" opacity="0.45"/>
+            <rect x="20" y="36" width="54" height="54" rx="5" fill="none" stroke="#0a7c4a" stroke-width="8"/>
+          </svg>
+        </div>
+        <span class="lbl">28 헤더</span>
+      </div>
+    </div>
+
+    <p class="meta">
+      <b>커버</b> 다중 시점 + 시간 축적. <b>메타포</b> 매일 쌓이는 스냅샷 아카이브 (Apple Photos memories 결).<br>
+      <b>강점</b> 28px에서도 "쌓임" 실루엣 강력. <b>약점</b> 비교·분기 메타포 약함.
+    </p>
+
+    <pre id="p12">Minimalist flat vector logo, three stacked square cards with rounded corners, slightly offset diagonally from back to front, back card faded, front card bold and solid outline, monochrome forest green #0a7c4a, centered on white square, no text, no shadow, vector style</pre>
+    <div class="actions">
+      <button onclick="copy('p12', this)">📋 Prompt 복사</button>
+      <span class="copied">복사됨!</span>
+    </div>
+  </article>
+
+  <!-- ─────────────── 컨셉 13: Compare Lens ─────────────── -->
+  <article class="card">
+    <div class="card-head">
+      <h2>컨셉 13 · Compare Lens (비교 렌즈 · 벤다이어그램)</h2>
+      <p class="desc">두 원 겹침. 왼쪽 점선=과거, 오른쪽 실선=현재. 교집합 채움=비교 영역.</p>
+    </div>
+
+    <div class="preview-row">
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:180px;height:180px;">
+          <svg viewBox="0 0 100 100" width="180" height="180">
+            <path d="M 50 28.5 A 24 24 0 0 1 50 71.5 A 24 24 0 0 1 50 28.5 Z" fill="#0a7c4a" opacity="0.85"/>
+            <circle cx="37" cy="50" r="24" fill="none" stroke="#0a7c4a" stroke-width="4" stroke-dasharray="3 5"/>
+            <circle cx="63" cy="50" r="24" fill="none" stroke="#0a7c4a" stroke-width="5"/>
+          </svg>
+        </div>
+        <span class="lbl">180 / iOS</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:64px;height:64px;">
+          <svg viewBox="0 0 100 100" width="64" height="64">
+            <path d="M 50 28.5 A 24 24 0 0 1 50 71.5 A 24 24 0 0 1 50 28.5 Z" fill="#0a7c4a" opacity="0.85"/>
+            <circle cx="37" cy="50" r="24" fill="none" stroke="#0a7c4a" stroke-width="5" stroke-dasharray="3 5"/>
+            <circle cx="63" cy="50" r="24" fill="none" stroke="#0a7c4a" stroke-width="6"/>
+          </svg>
+        </div>
+        <span class="lbl">64</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:32px;height:32px;">
+          <svg viewBox="0 0 100 100" width="32" height="32">
+            <path d="M 50 28.5 A 24 24 0 0 1 50 71.5 A 24 24 0 0 1 50 28.5 Z" fill="#0a7c4a"/>
+            <circle cx="37" cy="50" r="24" fill="none" stroke="#0a7c4a" stroke-width="6" stroke-dasharray="4 6"/>
+            <circle cx="63" cy="50" r="24" fill="none" stroke="#0a7c4a" stroke-width="7"/>
+          </svg>
+        </div>
+        <span class="lbl">32</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:28px;height:28px;">
+          <svg viewBox="0 0 100 100" width="28" height="28">
+            <path d="M 50 28.5 A 24 24 0 0 1 50 71.5 A 24 24 0 0 1 50 28.5 Z" fill="#0a7c4a"/>
+            <circle cx="37" cy="50" r="24" fill="none" stroke="#0a7c4a" stroke-width="7"/>
+            <circle cx="63" cy="50" r="24" fill="none" stroke="#0a7c4a" stroke-width="7"/>
+          </svg>
+        </div>
+        <span class="lbl">28 헤더</span>
+      </div>
+    </div>
+
+    <div class="preview-row dark">
+      <div class="preview-cell">
+        <svg viewBox="0 0 100 100" width="28" height="28">
+          <path d="M 50 28.5 A 24 24 0 0 1 50 71.5 A 24 24 0 0 1 50 28.5 Z" fill="#34d399"/>
+          <circle cx="37" cy="50" r="24" fill="none" stroke="#34d399" stroke-width="7"/>
+          <circle cx="63" cy="50" r="24" fill="none" stroke="#34d399" stroke-width="7"/>
+        </svg>
+        <span class="lbl">다크 28</span>
+      </div>
+    </div>
+
+    <p class="meta">
+      <b>커버</b> 다중 시점 + 비교. <b>메타포</b> 두 시점 포트폴리오를 겹쳐 본다 — 회고 UI 동작 자체.<br>
+      <b>강점</b> 어느 사이즈에서도 식별. <b>약점</b> 시간 축적·분기 톤은 약함.
+    </p>
+
+    <pre id="p13">Minimalist flat vector logo, two overlapping circles forming a venn diagram, left circle dashed outline, right circle solid outline, the intersection lens shape filled solid, monochrome forest green #0a7c4a, centered on white square, no text, vector style, geometric precision</pre>
+    <div class="actions">
+      <button onclick="copy('p13', this)">📋 Prompt 복사</button>
+      <span class="copied">복사됨!</span>
+    </div>
+  </article>
+
+  <!-- ─────────────── 컨셉 14: Time Machine Dial ─────────────── -->
+  <article class="card">
+    <div class="card-head">
+      <h2>컨셉 14 · Time Machine Dial (회고 다이얼)</h2>
+      <p class="desc">동심원 3겹 + 시계바늘이 10시 방향(과거) 가리킴. 바늘 끝 점=선택된 스냅샷.</p>
+    </div>
+
+    <div class="preview-row">
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:180px;height:180px;">
+          <svg viewBox="0 0 100 100" width="180" height="180">
+            <circle cx="50" cy="50" r="38" fill="none" stroke="#0a7c4a" stroke-width="3" opacity="0.4"/>
+            <circle cx="50" cy="50" r="26" fill="none" stroke="#0a7c4a" stroke-width="3" opacity="0.7"/>
+            <circle cx="50" cy="50" r="14" fill="none" stroke="#0a7c4a" stroke-width="3.5"/>
+            <line x1="50" y1="50" x2="24" y2="24" stroke="#0a7c4a" stroke-width="5" stroke-linecap="round"/>
+            <circle cx="50" cy="50" r="3" fill="#0a7c4a"/>
+            <circle cx="24" cy="24" r="4" fill="#0a7c4a"/>
+          </svg>
+        </div>
+        <span class="lbl">180 / iOS</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:64px;height:64px;">
+          <svg viewBox="0 0 100 100" width="64" height="64">
+            <circle cx="50" cy="50" r="38" fill="none" stroke="#0a7c4a" stroke-width="3.5" opacity="0.4"/>
+            <circle cx="50" cy="50" r="26" fill="none" stroke="#0a7c4a" stroke-width="3.5" opacity="0.7"/>
+            <circle cx="50" cy="50" r="14" fill="none" stroke="#0a7c4a" stroke-width="4"/>
+            <line x1="50" y1="50" x2="24" y2="24" stroke="#0a7c4a" stroke-width="6" stroke-linecap="round"/>
+            <circle cx="24" cy="24" r="5" fill="#0a7c4a"/>
+          </svg>
+        </div>
+        <span class="lbl">64</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:32px;height:32px;">
+          <svg viewBox="0 0 100 100" width="32" height="32">
+            <circle cx="50" cy="50" r="38" fill="none" stroke="#0a7c4a" stroke-width="5" opacity="0.5"/>
+            <circle cx="50" cy="50" r="20" fill="none" stroke="#0a7c4a" stroke-width="5"/>
+            <line x1="50" y1="50" x2="24" y2="24" stroke="#0a7c4a" stroke-width="7" stroke-linecap="round"/>
+            <circle cx="24" cy="24" r="7" fill="#0a7c4a"/>
+          </svg>
+        </div>
+        <span class="lbl">32</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:28px;height:28px;">
+          <svg viewBox="0 0 100 100" width="28" height="28">
+            <circle cx="50" cy="50" r="38" fill="none" stroke="#0a7c4a" stroke-width="6" opacity="0.5"/>
+            <line x1="50" y1="50" x2="24" y2="24" stroke="#0a7c4a" stroke-width="8" stroke-linecap="round"/>
+            <circle cx="24" cy="24" r="8" fill="#0a7c4a"/>
+          </svg>
+        </div>
+        <span class="lbl">28 헤더</span>
+      </div>
+    </div>
+
+    <p class="meta">
+      <b>커버</b> 다중 시점 + 시간 흐름 + 되감기. <b>메타포</b> macOS Time Machine 차용 — 회고의 가장 강력한 비주얼.<br>
+      <b>강점</b> 시간 깊이감. <b>약점</b> Time Machine과 시각적 유사도 높아 차별화 약함.
+    </p>
+
+    <pre id="p14">Minimalist flat vector logo, three concentric circles with a clock hand pointing to upper-left at ten o'clock position, small solid dot at the tip of the hand, central dot, monochrome forest green #0a7c4a, centered on white square, no numbers, no text, vector style, geometric</pre>
+    <div class="actions">
+      <button onclick="copy('p14', this)">📋 Prompt 복사</button>
+      <span class="copied">복사됨!</span>
+    </div>
+  </article>
+
+  <!-- ─────────────── 컨셉 15: Branching Path (2순위) ─────────────── -->
+  <article class="card">
+    <div class="card-head">
+      <h2>🥈 컨셉 15 · Branching Path (분기 경로)</h2>
+      <p class="desc">수직 줄기에서 두 갈래 분기. 채운 원=현재, 빈 원=가지 않은 길.</p>
+    </div>
+
+    <div class="preview-row">
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:180px;height:180px;">
+          <svg viewBox="0 0 100 100" width="180" height="180">
+            <line x1="50" y1="85" x2="50" y2="55" stroke="#0a7c4a" stroke-width="5" stroke-linecap="round"/>
+            <path d="M 50 55 Q 32 42, 28 22" fill="none" stroke="#0a7c4a" stroke-width="5" stroke-linecap="round" stroke-dasharray="2 6"/>
+            <path d="M 50 55 Q 68 42, 72 22" fill="none" stroke="#0a7c4a" stroke-width="5" stroke-linecap="round"/>
+            <circle cx="50" cy="85" r="4" fill="#0a7c4a"/>
+            <circle cx="50" cy="55" r="3.5" fill="#0a7c4a"/>
+            <circle cx="28" cy="22" r="5" fill="none" stroke="#0a7c4a" stroke-width="3"/>
+            <circle cx="72" cy="22" r="5" fill="#0a7c4a"/>
+          </svg>
+        </div>
+        <span class="lbl">180 / iOS</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:64px;height:64px;">
+          <svg viewBox="0 0 100 100" width="64" height="64">
+            <line x1="50" y1="85" x2="50" y2="55" stroke="#0a7c4a" stroke-width="6" stroke-linecap="round"/>
+            <path d="M 50 55 Q 32 42, 28 22" fill="none" stroke="#0a7c4a" stroke-width="6" stroke-linecap="round" stroke-dasharray="2 7"/>
+            <path d="M 50 55 Q 68 42, 72 22" fill="none" stroke="#0a7c4a" stroke-width="6" stroke-linecap="round"/>
+            <circle cx="50" cy="85" r="5" fill="#0a7c4a"/>
+            <circle cx="28" cy="22" r="6" fill="none" stroke="#0a7c4a" stroke-width="4"/>
+            <circle cx="72" cy="22" r="6" fill="#0a7c4a"/>
+          </svg>
+        </div>
+        <span class="lbl">64</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:32px;height:32px;">
+          <svg viewBox="0 0 100 100" width="32" height="32">
+            <line x1="50" y1="85" x2="50" y2="55" stroke="#0a7c4a" stroke-width="8" stroke-linecap="round"/>
+            <path d="M 50 55 Q 32 42, 28 22" fill="none" stroke="#0a7c4a" stroke-width="8" stroke-linecap="round"/>
+            <path d="M 50 55 Q 68 42, 72 22" fill="none" stroke="#0a7c4a" stroke-width="8" stroke-linecap="round"/>
+            <circle cx="28" cy="22" r="8" fill="none" stroke="#0a7c4a" stroke-width="5"/>
+            <circle cx="72" cy="22" r="8" fill="#0a7c4a"/>
+          </svg>
+        </div>
+        <span class="lbl">32</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:28px;height:28px;">
+          <svg viewBox="0 0 100 100" width="28" height="28">
+            <line x1="50" y1="85" x2="50" y2="55" stroke="#0a7c4a" stroke-width="9" stroke-linecap="round"/>
+            <path d="M 50 55 Q 32 42, 28 22" fill="none" stroke="#0a7c4a" stroke-width="9" stroke-linecap="round"/>
+            <path d="M 50 55 Q 68 42, 72 22" fill="none" stroke="#0a7c4a" stroke-width="9" stroke-linecap="round"/>
+            <circle cx="28" cy="22" r="9" fill="none" stroke="#0a7c4a" stroke-width="5"/>
+            <circle cx="72" cy="22" r="9" fill="#0a7c4a"/>
+          </svg>
+        </div>
+        <span class="lbl">28 헤더</span>
+      </div>
+    </div>
+
+    <div class="preview-row dark">
+      <div class="preview-cell">
+        <svg viewBox="0 0 100 100" width="28" height="28">
+          <line x1="50" y1="85" x2="50" y2="55" stroke="#34d399" stroke-width="9" stroke-linecap="round"/>
+          <path d="M 50 55 Q 32 42, 28 22" fill="none" stroke="#34d399" stroke-width="9" stroke-linecap="round"/>
+          <path d="M 50 55 Q 68 42, 72 22" fill="none" stroke="#34d399" stroke-width="9" stroke-linecap="round"/>
+          <circle cx="28" cy="22" r="9" fill="none" stroke="#34d399" stroke-width="5"/>
+          <circle cx="72" cy="22" r="9" fill="#34d399"/>
+        </svg>
+        <span class="lbl">다크 28</span>
+      </div>
+    </div>
+
+    <p class="meta">
+      <b>커버</b> 시간 흐름 + 분기 + 다중 결과. <b>메타포</b> GitHub fork 차용 — "이 시점에서 다른 선택을 했더라면" 시뮬레이션 본질.<br>
+      <b>강점</b> 메시지가 가장 직설적. <b>약점</b> 요소 수가 많아 28px에서 점선이 흐려짐.
+    </p>
+
+    <pre id="p15">Minimalist flat vector logo, a vertical line splitting into two diverging branches like a fork or a tree, left branch dashed ending in a hollow circle, right branch solid ending in a filled circle, single dot at the bottom and at the split point, monochrome forest green #0a7c4a, centered on white square, no text, vector style, geometric</pre>
+    <div class="actions">
+      <button onclick="copy('p15', this)">📋 Prompt 복사</button>
+      <span class="copied">복사됨!</span>
+    </div>
+  </article>
+
+  <div class="divider">─── 자산 시그널 강화 컨셉 16~20 (5차 자문) ───</div>
+
+  <!-- ─────────────── 컨셉 16: 동전 측면 + ₩ ─────────────── -->
+  <article class="card">
+    <div class="card-head">
+      <h2>🥈 컨셉 16 · 코인 + ₩ 각인</h2>
+      <p class="desc">정면에서 본 동전 + 중앙 ₩ — 한국 사용자 100% 인지. 자산 5/5.</p>
+    </div>
+
+    <div class="preview-row">
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:180px;height:180px;">
+          <svg viewBox="0 0 100 100" width="180" height="180">
+            <circle cx="50" cy="50" r="34" fill="none" stroke="#0a7c4a" stroke-width="6"/>
+            <circle cx="50" cy="50" r="27" fill="none" stroke="#0a7c4a" stroke-width="2"/>
+            <path d="M 42 36 L 50 56 M 58 36 L 50 56 M 38 44 L 62 44 M 38 50 L 62 50" fill="none" stroke="#0a7c4a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span class="lbl">180 / iOS</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:64px;height:64px;">
+          <svg viewBox="0 0 100 100" width="64" height="64">
+            <circle cx="50" cy="50" r="34" fill="none" stroke="#0a7c4a" stroke-width="7"/>
+            <circle cx="50" cy="50" r="27" fill="none" stroke="#0a7c4a" stroke-width="2"/>
+            <path d="M 42 36 L 50 56 M 58 36 L 50 56 M 38 44 L 62 44 M 38 50 L 62 50" fill="none" stroke="#0a7c4a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span class="lbl">64</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:32px;height:32px;">
+          <svg viewBox="0 0 100 100" width="32" height="32">
+            <circle cx="50" cy="50" r="34" fill="none" stroke="#0a7c4a" stroke-width="8"/>
+            <path d="M 42 36 L 50 56 M 58 36 L 50 56 M 38 44 L 62 44 M 38 50 L 62 50" fill="none" stroke="#0a7c4a" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span class="lbl">32</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:28px;height:28px;">
+          <svg viewBox="0 0 100 100" width="28" height="28">
+            <circle cx="50" cy="50" r="34" fill="none" stroke="#0a7c4a" stroke-width="9"/>
+            <path d="M 42 36 L 50 56 M 58 36 L 50 56 M 38 47 L 62 47" fill="none" stroke="#0a7c4a" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span class="lbl">28 헤더</span>
+      </div>
+    </div>
+
+    <div class="preview-row dark">
+      <div class="preview-cell">
+        <svg viewBox="0 0 100 100" width="28" height="28">
+          <circle cx="50" cy="50" r="34" fill="none" stroke="#34d399" stroke-width="9"/>
+          <path d="M 42 36 L 50 56 M 58 36 L 50 56 M 38 47 L 62 47" fill="none" stroke="#34d399" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="lbl">다크 28</span>
+      </div>
+    </div>
+
+    <p class="meta">
+      <b>자산 시그널</b> ★★★★★ <b>Snapshot 요소</b> 약함 (단일 시점)<br>
+      <b>강점</b> 원 실루엣만으로 즉시 "코인 앱". <b>약점</b> 시간/축적 메타포 없음.
+    </p>
+
+    <pre id="p16">A minimalist flat monochrome app icon: a single coin viewed from the front with the Korean Won symbol (₩) engraved at center, double concentric circle rim. Forest green #0a7c4a strokes only, transparent background, centered in square 1024×1024 canvas, vector style, thick rounded strokes, no shading.</pre>
+    <div class="actions">
+      <button onclick="copy('p16', this)">📋 Prompt 복사</button>
+      <span class="copied">복사됨!</span>
+    </div>
+  </article>
+
+  <!-- ─────────────── 컨셉 17: 동전 적층 3단 (1순위) ─────────────── -->
+  <article class="card">
+    <div class="card-head">
+      <h2>🥇 컨셉 17 · 코인 스택 (3단 적층)</h2>
+      <p class="desc">옆에서 본 동전 3개 적층 — "쌓인 자산" = "시점별 누적 스냅샷". 자산·Snapshot 동시 1:1 매핑.</p>
+    </div>
+
+    <div class="preview-row">
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:180px;height:180px;">
+          <svg viewBox="0 0 100 100" width="180" height="180">
+            <!-- 맨 아래 -->
+            <path d="M 20 76 V 70 A 30 8 0 0 0 80 70 V 76" fill="none" stroke="#0a7c4a" stroke-width="5" stroke-linejoin="round"/>
+            <ellipse cx="50" cy="76" rx="30" ry="8" fill="none" stroke="#0a7c4a" stroke-width="5"/>
+            <!-- 중간 -->
+            <path d="M 20 58 V 52 A 30 8 0 0 0 80 52 V 58" fill="none" stroke="#0a7c4a" stroke-width="5" stroke-linejoin="round"/>
+            <ellipse cx="50" cy="58" rx="30" ry="8" fill="none" stroke="#0a7c4a" stroke-width="5"/>
+            <!-- 맨 위 -->
+            <path d="M 20 40 V 34 A 30 8 0 0 0 80 34 V 40" fill="none" stroke="#0a7c4a" stroke-width="5" stroke-linejoin="round"/>
+            <ellipse cx="50" cy="34" rx="30" ry="8" fill="none" stroke="#0a7c4a" stroke-width="5"/>
+            <!-- 현재 표시 점 -->
+            <circle cx="50" cy="34" r="2.5" fill="#0a7c4a"/>
+          </svg>
+        </div>
+        <span class="lbl">180 / iOS</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:64px;height:64px;">
+          <svg viewBox="0 0 100 100" width="64" height="64">
+            <path d="M 20 76 V 70 A 30 8 0 0 0 80 70 V 76" fill="none" stroke="#0a7c4a" stroke-width="6" stroke-linejoin="round"/>
+            <ellipse cx="50" cy="76" rx="30" ry="8" fill="none" stroke="#0a7c4a" stroke-width="6"/>
+            <path d="M 20 58 V 52 A 30 8 0 0 0 80 52 V 58" fill="none" stroke="#0a7c4a" stroke-width="6" stroke-linejoin="round"/>
+            <ellipse cx="50" cy="58" rx="30" ry="8" fill="none" stroke="#0a7c4a" stroke-width="6"/>
+            <path d="M 20 40 V 34 A 30 8 0 0 0 80 34 V 40" fill="none" stroke="#0a7c4a" stroke-width="6" stroke-linejoin="round"/>
+            <ellipse cx="50" cy="34" rx="30" ry="8" fill="none" stroke="#0a7c4a" stroke-width="6"/>
+          </svg>
+        </div>
+        <span class="lbl">64</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:32px;height:32px;">
+          <svg viewBox="0 0 100 100" width="32" height="32">
+            <path d="M 20 76 V 70 A 30 8 0 0 0 80 70 V 76" fill="none" stroke="#0a7c4a" stroke-width="8" stroke-linejoin="round"/>
+            <ellipse cx="50" cy="76" rx="30" ry="8" fill="none" stroke="#0a7c4a" stroke-width="8"/>
+            <path d="M 20 58 V 52 A 30 8 0 0 0 80 52 V 58" fill="none" stroke="#0a7c4a" stroke-width="8" stroke-linejoin="round"/>
+            <ellipse cx="50" cy="58" rx="30" ry="8" fill="none" stroke="#0a7c4a" stroke-width="8"/>
+            <path d="M 20 40 V 34 A 30 8 0 0 0 80 34 V 40" fill="none" stroke="#0a7c4a" stroke-width="8" stroke-linejoin="round"/>
+            <ellipse cx="50" cy="34" rx="30" ry="8" fill="none" stroke="#0a7c4a" stroke-width="8"/>
+          </svg>
+        </div>
+        <span class="lbl">32</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:28px;height:28px;">
+          <svg viewBox="0 0 100 100" width="28" height="28">
+            <path d="M 20 76 V 70 A 30 8 0 0 0 80 70 V 76" fill="none" stroke="#0a7c4a" stroke-width="9" stroke-linejoin="round"/>
+            <ellipse cx="50" cy="76" rx="30" ry="8" fill="none" stroke="#0a7c4a" stroke-width="9"/>
+            <path d="M 20 58 V 52 A 30 8 0 0 0 80 52 V 58" fill="none" stroke="#0a7c4a" stroke-width="9" stroke-linejoin="round"/>
+            <ellipse cx="50" cy="58" rx="30" ry="8" fill="none" stroke="#0a7c4a" stroke-width="9"/>
+            <path d="M 20 40 V 34 A 30 8 0 0 0 80 34 V 40" fill="none" stroke="#0a7c4a" stroke-width="9" stroke-linejoin="round"/>
+            <ellipse cx="50" cy="34" rx="30" ry="8" fill="none" stroke="#0a7c4a" stroke-width="9"/>
+          </svg>
+        </div>
+        <span class="lbl">28 헤더</span>
+      </div>
+    </div>
+
+    <div class="preview-row dark">
+      <div class="preview-cell">
+        <svg viewBox="0 0 100 100" width="28" height="28">
+          <path d="M 20 76 V 70 A 30 8 0 0 0 80 70 V 76" fill="none" stroke="#34d399" stroke-width="9" stroke-linejoin="round"/>
+          <ellipse cx="50" cy="76" rx="30" ry="8" fill="none" stroke="#34d399" stroke-width="9"/>
+          <path d="M 20 58 V 52 A 30 8 0 0 0 80 52 V 58" fill="none" stroke="#34d399" stroke-width="9" stroke-linejoin="round"/>
+          <ellipse cx="50" cy="58" rx="30" ry="8" fill="none" stroke="#34d399" stroke-width="9"/>
+          <path d="M 20 40 V 34 A 30 8 0 0 0 80 34 V 40" fill="none" stroke="#34d399" stroke-width="9" stroke-linejoin="round"/>
+          <ellipse cx="50" cy="34" rx="30" ry="8" fill="none" stroke="#34d399" stroke-width="9"/>
+        </svg>
+        <span class="lbl">다크 28</span>
+      </div>
+    </div>
+
+    <p class="meta">
+      <b>자산 시그널</b> ★★★★★ <b>Snapshot 요소</b> 축적 + 비교 (각 층 = 시점별 스냅샷)<br>
+      <b>강점</b> "쌓인 동전" 한 그림이 앱 이름 두 단어를 모두 담음. <b>약점</b> 케이크/접시로 오인 위험 (비율 4:1 엄수)
+    </p>
+
+    <pre id="p17">A minimalist flat monochrome app icon: three coins stacked vertically viewed from the side, clean horizontal cylinder layers, top coin showing a single dot marker. Forest green #0a7c4a outline strokes only, transparent background, centered in square 1024×1024, vector flat style, rounded stroke caps, no shading or gradient.</pre>
+    <div class="actions">
+      <button onclick="copy('p17', this)">📋 Prompt 복사</button>
+      <span class="copied">복사됨!</span>
+    </div>
+  </article>
+
+  <!-- ─────────────── 컨셉 18: 금괴 + 각인 ─────────────── -->
+  <article class="card">
+    <div class="card-head">
+      <h2>컨셉 18 · 금괴 (Gold Bar)</h2>
+      <p class="desc">3/4 원근 금괴 + 각인선 3줄 — 고가치 자산 시그널 + 일련번호 메타포.</p>
+    </div>
+
+    <div class="preview-row">
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:180px;height:180px;">
+          <svg viewBox="0 0 100 100" width="180" height="180">
+            <path d="M 28 38 L 38 28 L 80 28 L 70 38 Z" fill="none" stroke="#0a7c4a" stroke-width="5" stroke-linejoin="round"/>
+            <path d="M 28 38 L 70 38 L 70 76 L 28 76 Z" fill="none" stroke="#0a7c4a" stroke-width="5" stroke-linejoin="round"/>
+            <path d="M 70 38 L 80 28 L 80 66 L 70 76 Z" fill="none" stroke="#0a7c4a" stroke-width="5" stroke-linejoin="round"/>
+            <path d="M 36 50 H 50 M 36 58 H 58 M 36 66 H 46" fill="none" stroke="#0a7c4a" stroke-width="3" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <span class="lbl">180 / iOS</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:64px;height:64px;">
+          <svg viewBox="0 0 100 100" width="64" height="64">
+            <path d="M 28 38 L 38 28 L 80 28 L 70 38 Z" fill="none" stroke="#0a7c4a" stroke-width="6" stroke-linejoin="round"/>
+            <path d="M 28 38 L 70 38 L 70 76 L 28 76 Z" fill="none" stroke="#0a7c4a" stroke-width="6" stroke-linejoin="round"/>
+            <path d="M 70 38 L 80 28 L 80 66 L 70 76 Z" fill="none" stroke="#0a7c4a" stroke-width="6" stroke-linejoin="round"/>
+            <path d="M 36 54 H 58 M 36 64 H 50" fill="none" stroke="#0a7c4a" stroke-width="4" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <span class="lbl">64</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:32px;height:32px;">
+          <svg viewBox="0 0 100 100" width="32" height="32">
+            <path d="M 28 38 L 38 28 L 80 28 L 70 38 Z" fill="none" stroke="#0a7c4a" stroke-width="8" stroke-linejoin="round"/>
+            <path d="M 28 38 L 70 38 L 70 76 L 28 76 Z" fill="none" stroke="#0a7c4a" stroke-width="8" stroke-linejoin="round"/>
+            <path d="M 70 38 L 80 28 L 80 66 L 70 76 Z" fill="none" stroke="#0a7c4a" stroke-width="8" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span class="lbl">32</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:28px;height:28px;">
+          <svg viewBox="0 0 100 100" width="28" height="28">
+            <path d="M 28 38 L 38 28 L 80 28 L 70 38 Z" fill="none" stroke="#0a7c4a" stroke-width="9" stroke-linejoin="round"/>
+            <path d="M 28 38 L 70 38 L 70 76 L 28 76 Z" fill="none" stroke="#0a7c4a" stroke-width="9" stroke-linejoin="round"/>
+            <path d="M 70 38 L 80 28 L 80 66 L 70 76 Z" fill="none" stroke="#0a7c4a" stroke-width="9" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span class="lbl">28 헤더</span>
+      </div>
+    </div>
+
+    <div class="preview-row dark">
+      <div class="preview-cell">
+        <svg viewBox="0 0 100 100" width="28" height="28">
+          <path d="M 28 38 L 38 28 L 80 28 L 70 38 Z" fill="none" stroke="#34d399" stroke-width="9" stroke-linejoin="round"/>
+          <path d="M 28 38 L 70 38 L 70 76 L 28 76 Z" fill="none" stroke="#34d399" stroke-width="9" stroke-linejoin="round"/>
+          <path d="M 70 38 L 80 28 L 80 66 L 70 76 Z" fill="none" stroke="#34d399" stroke-width="9" stroke-linejoin="round"/>
+        </svg>
+        <span class="lbl">다크 28</span>
+      </div>
+    </div>
+
+    <p class="meta">
+      <b>자산 시그널</b> ★★★★★ <b>Snapshot 요소</b> 약함 (각인=기록 메타포)<br>
+      <b>강점</b> 은행·자산관리 카테고리 즉시 인지. <b>약점</b> 28px에서 각인선 사라짐.
+    </p>
+
+    <pre id="p18">A minimalist flat monochrome app icon: a single 3D gold ingot bar shown in three-quarter perspective with three short engraving lines on the front face. Outline only, forest green #0a7c4a strokes, transparent background, centered in square 1024×1024, vector flat style, thick rounded stroke joins, no fill, no shading.</pre>
+    <div class="actions">
+      <button onclick="copy('p18', this)">📋 Prompt 복사</button>
+      <span class="copied">복사됨!</span>
+    </div>
+  </article>
+
+  <!-- ─────────────── 컨셉 19: 통장 펼침 ─────────────── -->
+  <article class="card">
+    <div class="card-head">
+      <h2>컨셉 19 · 통장 (Passbook) 펼침</h2>
+      <p class="desc">펼친 통장 + 좌측 기장 라인 + 우측 합계 마커 — 한국 사용자 강한 인지.</p>
+    </div>
+
+    <div class="preview-row">
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:180px;height:180px;">
+          <svg viewBox="0 0 100 100" width="180" height="180">
+            <path d="M 14 28 L 50 34 L 50 76 L 14 70 Z" fill="none" stroke="#0a7c4a" stroke-width="5" stroke-linejoin="round"/>
+            <path d="M 86 28 L 50 34 L 50 76 L 86 70 Z" fill="none" stroke="#0a7c4a" stroke-width="5" stroke-linejoin="round"/>
+            <path d="M 50 34 V 76" stroke="#0a7c4a" stroke-width="3"/>
+            <path d="M 22 44 L 44 47 M 22 52 L 44 55 M 22 60 L 44 63" stroke="#0a7c4a" stroke-width="2" stroke-linecap="round"/>
+            <path d="M 56 50 L 78 53" stroke="#0a7c4a" stroke-width="3" stroke-linecap="round"/>
+            <circle cx="78" cy="53" r="2.5" fill="#0a7c4a"/>
+          </svg>
+        </div>
+        <span class="lbl">180 / iOS</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:64px;height:64px;">
+          <svg viewBox="0 0 100 100" width="64" height="64">
+            <path d="M 14 28 L 50 34 L 50 76 L 14 70 Z" fill="none" stroke="#0a7c4a" stroke-width="6" stroke-linejoin="round"/>
+            <path d="M 86 28 L 50 34 L 50 76 L 86 70 Z" fill="none" stroke="#0a7c4a" stroke-width="6" stroke-linejoin="round"/>
+            <path d="M 50 34 V 76" stroke="#0a7c4a" stroke-width="4"/>
+            <path d="M 22 48 L 44 51 M 22 60 L 44 63" stroke="#0a7c4a" stroke-width="3" stroke-linecap="round"/>
+            <circle cx="78" cy="53" r="4" fill="#0a7c4a"/>
+          </svg>
+        </div>
+        <span class="lbl">64</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:32px;height:32px;">
+          <svg viewBox="0 0 100 100" width="32" height="32">
+            <path d="M 14 28 L 50 34 L 50 76 L 14 70 Z" fill="none" stroke="#0a7c4a" stroke-width="8" stroke-linejoin="round"/>
+            <path d="M 86 28 L 50 34 L 50 76 L 86 70 Z" fill="none" stroke="#0a7c4a" stroke-width="8" stroke-linejoin="round"/>
+            <path d="M 50 34 V 76" stroke="#0a7c4a" stroke-width="5"/>
+            <circle cx="78" cy="53" r="5" fill="#0a7c4a"/>
+          </svg>
+        </div>
+        <span class="lbl">32</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:28px;height:28px;">
+          <svg viewBox="0 0 100 100" width="28" height="28">
+            <path d="M 14 28 L 50 34 L 50 76 L 14 70 Z" fill="none" stroke="#0a7c4a" stroke-width="9" stroke-linejoin="round"/>
+            <path d="M 86 28 L 50 34 L 50 76 L 86 70 Z" fill="none" stroke="#0a7c4a" stroke-width="9" stroke-linejoin="round"/>
+            <path d="M 50 34 V 76" stroke="#0a7c4a" stroke-width="6"/>
+          </svg>
+        </div>
+        <span class="lbl">28 헤더</span>
+      </div>
+    </div>
+
+    <p class="meta">
+      <b>자산 시그널</b> ★★★★ (한국 사용자 5/5) <b>Snapshot 요소</b> 비교/회고 (양면 = 시점)<br>
+      <b>강점</b> 기록 + 자산 동시 표현. <b>약점</b> 28px에서 내부 디테일 소실, 글로벌 인지도 낮음.
+    </p>
+
+    <pre id="p19">A minimalist flat monochrome app icon: an open bank passbook viewed from above, two pages with horizontal entry lines on the left page and a highlighted total line with dot marker on the right page. Forest green #0a7c4a outline strokes only, transparent background, centered in square 1024×1024, vector flat style, rounded stroke caps, no fill, no shading.</pre>
+    <div class="actions">
+      <button onclick="copy('p19', this)">📋 Prompt 복사</button>
+      <span class="copied">복사됨!</span>
+    </div>
+  </article>
+
+  <!-- ─────────────── 컨셉 20: 저울 (Balance Scale) ─────────────── -->
+  <article class="card">
+    <div class="card-head">
+      <h2>컨셉 20 · 저울 (Coin vs Coin)</h2>
+      <p class="desc">양쪽 접시 위 동전 — 두 시점 자산 비교의 절대 시그널.</p>
+    </div>
+
+    <div class="preview-row">
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:180px;height:180px;">
+          <svg viewBox="0 0 100 100" width="180" height="180">
+            <path d="M 50 22 V 78" stroke="#0a7c4a" stroke-width="5" stroke-linecap="round"/>
+            <path d="M 36 82 H 64" stroke="#0a7c4a" stroke-width="6" stroke-linecap="round"/>
+            <path d="M 18 32 L 82 40" stroke="#0a7c4a" stroke-width="5" stroke-linecap="round"/>
+            <path d="M 22 32 L 26 48 M 30 33 L 26 48 M 70 39 L 74 52 M 78 40 L 74 52" stroke="#0a7c4a" stroke-width="2" stroke-linecap="round"/>
+            <path d="M 14 48 A 12 6 0 0 0 38 48" fill="none" stroke="#0a7c4a" stroke-width="4" stroke-linecap="round"/>
+            <path d="M 62 52 A 12 6 0 0 0 86 52" fill="none" stroke="#0a7c4a" stroke-width="4" stroke-linecap="round"/>
+            <circle cx="26" cy="44" r="4" fill="#0a7c4a"/>
+            <circle cx="74" cy="48" r="3" fill="#0a7c4a"/>
+            <circle cx="50" cy="20" r="3" fill="none" stroke="#0a7c4a" stroke-width="2"/>
+          </svg>
+        </div>
+        <span class="lbl">180 / iOS</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:64px;height:64px;">
+          <svg viewBox="0 0 100 100" width="64" height="64">
+            <path d="M 50 22 V 82" stroke="#0a7c4a" stroke-width="6" stroke-linecap="round"/>
+            <path d="M 36 82 H 64" stroke="#0a7c4a" stroke-width="7" stroke-linecap="round"/>
+            <path d="M 18 32 L 82 40" stroke="#0a7c4a" stroke-width="6" stroke-linecap="round"/>
+            <path d="M 14 48 A 12 6 0 0 0 38 48" fill="none" stroke="#0a7c4a" stroke-width="5" stroke-linecap="round"/>
+            <path d="M 62 52 A 12 6 0 0 0 86 52" fill="none" stroke="#0a7c4a" stroke-width="5" stroke-linecap="round"/>
+            <circle cx="26" cy="44" r="5" fill="#0a7c4a"/>
+            <circle cx="74" cy="48" r="4" fill="#0a7c4a"/>
+          </svg>
+        </div>
+        <span class="lbl">64</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:32px;height:32px;">
+          <svg viewBox="0 0 100 100" width="32" height="32">
+            <path d="M 50 22 V 82" stroke="#0a7c4a" stroke-width="8" stroke-linecap="round"/>
+            <path d="M 36 82 H 64" stroke="#0a7c4a" stroke-width="9" stroke-linecap="round"/>
+            <path d="M 18 32 L 82 40" stroke="#0a7c4a" stroke-width="8" stroke-linecap="round"/>
+            <path d="M 14 48 A 12 6 0 0 0 38 48" fill="none" stroke="#0a7c4a" stroke-width="7"/>
+            <path d="M 62 52 A 12 6 0 0 0 86 52" fill="none" stroke="#0a7c4a" stroke-width="7"/>
+            <circle cx="26" cy="44" r="7" fill="#0a7c4a"/>
+            <circle cx="74" cy="48" r="6" fill="#0a7c4a"/>
+          </svg>
+        </div>
+        <span class="lbl">32</span>
+      </div>
+      <div class="preview-cell">
+        <div class="swatch ios" style="width:28px;height:28px;">
+          <svg viewBox="0 0 100 100" width="28" height="28">
+            <path d="M 50 22 V 82" stroke="#0a7c4a" stroke-width="9" stroke-linecap="round"/>
+            <path d="M 36 82 H 64" stroke="#0a7c4a" stroke-width="10" stroke-linecap="round"/>
+            <path d="M 18 32 L 82 40" stroke="#0a7c4a" stroke-width="9" stroke-linecap="round"/>
+            <circle cx="26" cy="44" r="9" fill="#0a7c4a"/>
+            <circle cx="74" cy="48" r="8" fill="#0a7c4a"/>
+          </svg>
+        </div>
+        <span class="lbl">28 헤더</span>
+      </div>
+    </div>
+
+    <p class="meta">
+      <b>자산 시그널</b> ★★★★★ <b>Snapshot 요소</b> 비교 (좌접시 무거움 = 성장 암시)<br>
+      <b>강점</b> 자산 + 비교 두 동사 직설적. <b>약점</b> 줄 가닥 많아 favicon에선 단순화 필요.
+    </p>
+
+    <pre id="p20">A minimalist flat monochrome app icon: a classic two-pan balance scale slightly tilted to the left, with one larger coin dot on the left pan and one smaller coin dot on the right pan. Central vertical post on a base. Forest green #0a7c4a outline strokes only, transparent background, centered in square 1024×1024, vector flat style, thick rounded stroke caps, no fill, no shading.</pre>
+    <div class="actions">
+      <button onclick="copy('p20', this)">📋 Prompt 복사</button>
+      <span class="copied">복사됨!</span>
+    </div>
+  </article>
+
+  <div class="divider">🏆 FINAL · 컨셉 18 금괴 채택 — 용도별 프롬프트 7종</div>
+
+  <article class="card full-card">
+    <div class="card-head">
+      <h2>금괴 (Gold Bar) · 용도별 GPT 프롬프트</h2>
+      <p class="desc">동일 컨셉을 7개 용도(앱 아이콘 / 파비콘 / 헤더 / 워드마크 / OG / 다크 / 스플래시)에 맞춰 프롬프트를 분리. 각 용도별로 비율·여백·강조점이 다릅니다.</p>
+    </div>
+
+    <div class="variant-grid">
+      <!-- ① 앱 아이콘 (iOS / PWA 1024) -->
+      <div class="variant">
+        <svg viewBox="0 0 100 100" width="140" height="140" style="background:#fff;border-radius:22%;">
+          <g transform="translate(8 8) scale(0.84)">
+            <path d="M 28 38 L 38 28 L 80 28 L 70 38 Z" fill="none" stroke="#0a7c4a" stroke-width="5" stroke-linejoin="round"/>
+            <path d="M 28 38 L 70 38 L 70 76 L 28 76 Z" fill="none" stroke="#0a7c4a" stroke-width="5" stroke-linejoin="round"/>
+            <path d="M 70 38 L 80 28 L 80 66 L 70 76 Z" fill="none" stroke="#0a7c4a" stroke-width="5" stroke-linejoin="round"/>
+            <path d="M 36 50 H 50 M 36 58 H 58 M 36 66 H 46" fill="none" stroke="#0a7c4a" stroke-width="3" stroke-linecap="round"/>
+          </g>
+        </svg>
+        <div class="lbl-name">① 앱 아이콘 (iOS/PWA 1024×1024)</div>
+        <div class="lbl-desc">apple-icon.png, icon-512.png, icon-192.png 소스. 10~15% 안전 여백, 흰 배경.</div>
+        <pre id="u1">App icon design 1024x1024: a single 3D gold ingot bar shown in three-quarter perspective with three short engraving lines on the front face, monochrome forest green #0a7c4a strokes on solid white background, centered with generous safe area padding (12% margin from edges), bold thick rounded strokes, vector flat style, outline only, no fill, no shading, no gradient, no text, suitable for iOS home screen and PWA installation.</pre>
+        <button onclick="copy('u1', this)">📋 복사</button>
+        <span class="copied">복사됨!</span>
+      </div>
+
+      <!-- ② Favicon (32px 단순화) -->
+      <div class="variant">
+        <svg viewBox="0 0 100 100" width="140" height="140" style="background:#fff;border-radius:22%;">
+          <path d="M 28 38 L 38 28 L 80 28 L 70 38 Z" fill="none" stroke="#0a7c4a" stroke-width="9" stroke-linejoin="round"/>
+          <path d="M 28 38 L 70 38 L 70 76 L 28 76 Z" fill="none" stroke="#0a7c4a" stroke-width="9" stroke-linejoin="round"/>
+          <path d="M 70 38 L 80 28 L 80 66 L 70 76 Z" fill="none" stroke="#0a7c4a" stroke-width="9" stroke-linejoin="round"/>
+        </svg>
+        <div class="lbl-name">② Favicon (32×32 단순화)</div>
+        <div class="lbl-desc">각인선 제거, 굵은 외곽만. 16~32px 가독성 우선.</div>
+        <pre id="u2">Tiny favicon 32x32: ultra-simplified gold ingot bar silhouette in three-quarter perspective, only essential outline strokes — no engraving details, no interior lines, monochrome forest green #0a7c4a on solid white background, ultra-bold rounded strokes for 16-32px legibility, centered, vector flat style, square format.</pre>
+        <button onclick="copy('u2', this)">📋 복사</button>
+        <span class="copied">복사됨!</span>
+      </div>
+
+      <!-- ③ 헤더 인라인 로고 (28px transparent) -->
+      <div class="variant">
+        <svg viewBox="0 0 100 100" width="140" height="140" style="background:#0b0f0d;border-radius:12px;">
+          <path d="M 28 38 L 38 28 L 80 28 L 70 38 Z" fill="none" stroke="#34d399" stroke-width="6" stroke-linejoin="round"/>
+          <path d="M 28 38 L 70 38 L 70 76 L 28 76 Z" fill="none" stroke="#34d399" stroke-width="6" stroke-linejoin="round"/>
+          <path d="M 70 38 L 80 28 L 80 66 L 70 76 Z" fill="none" stroke="#34d399" stroke-width="6" stroke-linejoin="round"/>
+          <path d="M 36 54 H 58 M 36 64 H 50" fill="none" stroke="#34d399" stroke-width="4" stroke-linecap="round"/>
+        </svg>
+        <div class="lbl-name">③ 헤더 인라인 (28~32px, 투명)</div>
+        <div class="lbl-desc">currentColor 사용 가능한 단순 SVG. 다크/라이트 자동 적응.</div>
+        <pre id="u3">Inline header logo SVG asset: a single gold ingot bar in three-quarter perspective with two short subtle engraving lines on the front face, monochrome single-color strokes (intended to inherit currentColor for theme adaptation), transparent background, optimized for 28-32px rendering, bold rounded strokes, vector flat style, no fill, geometric precision, square viewBox.</pre>
+        <button onclick="copy('u3', this)">📋 복사</button>
+        <span class="copied">복사됨!</span>
+      </div>
+
+      <!-- ④ 가로 워드마크 (로고 + 텍스트) -->
+      <div class="variant">
+        <svg viewBox="0 0 300 100" width="240" height="80" style="background:#fff;border-radius:8px;">
+          <g transform="translate(10 0)">
+            <path d="M 28 38 L 38 28 L 80 28 L 70 38 Z" fill="none" stroke="#0a7c4a" stroke-width="5" stroke-linejoin="round"/>
+            <path d="M 28 38 L 70 38 L 70 76 L 28 76 Z" fill="none" stroke="#0a7c4a" stroke-width="5" stroke-linejoin="round"/>
+            <path d="M 70 38 L 80 28 L 80 66 L 70 76 Z" fill="none" stroke="#0a7c4a" stroke-width="5" stroke-linejoin="round"/>
+            <path d="M 36 50 H 50 M 36 58 H 58 M 36 66 H 46" fill="none" stroke="#0a7c4a" stroke-width="3" stroke-linecap="round"/>
+          </g>
+          <text x="110" y="62" font-family="-apple-system, system-ui, sans-serif" font-weight="700" font-size="28" fill="#0a7c4a" letter-spacing="-0.5">Snapshot</text>
+        </svg>
+        <div class="lbl-name">④ 가로 워드마크 (로고+텍스트)</div>
+        <div class="lbl-desc">3:1 비율. 헤더·푸터·이메일 서명 등.</div>
+        <pre id="u4">Horizontal brand logo lockup 3:1 ratio: a small gold ingot bar icon on the left in three-quarter perspective with three short engraving lines, followed by the wordmark "Snapshot Finance" in modern bold geometric sans-serif typography, both rendered in monochrome forest green #0a7c4a on solid white background, generous spacing between icon and text, balanced left-aligned composition, vector flat style, no shading.</pre>
+        <button onclick="copy('u4', this)">📋 복사</button>
+        <span class="copied">복사됨!</span>
+      </div>
+
+      <!-- ⑤ OG / 소셜 카드 (1200×630) -->
+      <div class="variant">
+        <svg viewBox="0 0 600 315" width="240" height="126" style="background:#f6f5f1;border-radius:6px;">
+          <g transform="translate(60 60) scale(2.2)">
+            <path d="M 28 38 L 38 28 L 80 28 L 70 38 Z" fill="none" stroke="#0a7c4a" stroke-width="3.5" stroke-linejoin="round"/>
+            <path d="M 28 38 L 70 38 L 70 76 L 28 76 Z" fill="none" stroke="#0a7c4a" stroke-width="3.5" stroke-linejoin="round"/>
+            <path d="M 70 38 L 80 28 L 80 66 L 70 76 Z" fill="none" stroke="#0a7c4a" stroke-width="3.5" stroke-linejoin="round"/>
+            <path d="M 36 50 H 50 M 36 58 H 58 M 36 66 H 46" fill="none" stroke="#0a7c4a" stroke-width="2" stroke-linecap="round"/>
+          </g>
+          <text x="290" y="155" font-family="serif" font-weight="700" font-size="32" fill="#1a1a1a">Snapshot Finance</text>
+          <text x="290" y="190" font-family="-apple-system, sans-serif" font-size="16" fill="#6b7280">주식 포트폴리오 스냅샷</text>
+        </svg>
+        <div class="lbl-name">⑤ OG 소셜 카드 (1200×630)</div>
+        <div class="lbl-desc">트위터·페북·카톡 미리보기용. 가로 직사각.</div>
+        <pre id="u5">Social media OG card 1200x630: a medium-sized gold ingot bar icon in three-quarter perspective with three engraving lines positioned at the left third of the canvas in forest green #0a7c4a, beside it the headline "Snapshot Finance" in large bold serif typography and subhead "주식 포트폴리오 스냅샷" in smaller modern sans-serif, both texts in dark charcoal #1a1a1a, on warm off-white background #f6f5f1, generous whitespace, editorial magazine-style layout, balanced composition, vector flat style.</pre>
+        <button onclick="copy('u5', this)">📋 복사</button>
+        <span class="copied">복사됨!</span>
+      </div>
+
+      <!-- ⑥ 다크 모드 버전 -->
+      <div class="variant">
+        <svg viewBox="0 0 100 100" width="140" height="140" style="background:#0b0f0d;border-radius:22%;">
+          <g transform="translate(8 8) scale(0.84)">
+            <path d="M 28 38 L 38 28 L 80 28 L 70 38 Z" fill="none" stroke="#34d399" stroke-width="5" stroke-linejoin="round"/>
+            <path d="M 28 38 L 70 38 L 70 76 L 28 76 Z" fill="none" stroke="#34d399" stroke-width="5" stroke-linejoin="round"/>
+            <path d="M 70 38 L 80 28 L 80 66 L 70 76 Z" fill="none" stroke="#34d399" stroke-width="5" stroke-linejoin="round"/>
+            <path d="M 36 50 H 50 M 36 58 H 58 M 36 66 H 46" fill="none" stroke="#34d399" stroke-width="3" stroke-linecap="round"/>
+          </g>
+        </svg>
+        <div class="lbl-name">⑥ 다크 모드 (반전)</div>
+        <div class="lbl-desc">다크 OG·다크 PWA 옵션. 라이트 그린 + 차콜 배경.</div>
+        <pre id="u6">Dark mode app icon 1024x1024: a single 3D gold ingot bar shown in three-quarter perspective with three short engraving lines on the front face, bright mint green #34d399 strokes on deep charcoal background #0b0f0d, centered with 12% safe area padding, bold thick rounded strokes, vector flat style, outline only, no fill, no shading, no text, square format.</pre>
+        <button onclick="copy('u6', this)">📋 복사</button>
+        <span class="copied">복사됨!</span>
+      </div>
+
+      <!-- ⑦ 스플래시 (큰 여백 + 중앙 로고) -->
+      <div class="variant">
+        <svg viewBox="0 0 100 100" width="140" height="140" style="background:#fff;border-radius:8px;">
+          <g transform="translate(30 30) scale(0.42)">
+            <path d="M 28 38 L 38 28 L 80 28 L 70 38 Z" fill="none" stroke="#0a7c4a" stroke-width="5" stroke-linejoin="round"/>
+            <path d="M 28 38 L 70 38 L 70 76 L 28 76 Z" fill="none" stroke="#0a7c4a" stroke-width="5" stroke-linejoin="round"/>
+            <path d="M 70 38 L 80 28 L 80 66 L 70 76 Z" fill="none" stroke="#0a7c4a" stroke-width="5" stroke-linejoin="round"/>
+            <path d="M 36 50 H 50 M 36 58 H 58 M 36 66 H 46" fill="none" stroke="#0a7c4a" stroke-width="3" stroke-linecap="round"/>
+          </g>
+        </svg>
+        <div class="lbl-name">⑦ 스플래시 화면 (1024×1024)</div>
+        <div class="lbl-desc">PWA 로딩 화면. 로고가 캔버스 25%만 차지, 큰 여백.</div>
+        <pre id="u7">App splash screen 1024x1024: a single small gold ingot bar centered in the canvas occupying only 25% of the total area, with three short engraving lines on the front face, monochrome forest green #0a7c4a strokes on solid white background, vast minimalist whitespace surrounding the icon, calm centered composition, vector flat style, no shading, no text.</pre>
+        <button onclick="copy('u7', this)">📋 복사</button>
+        <span class="copied">복사됨!</span>
+      </div>
+
+      <!-- ⑧ Open Graph 컴팩트 (대안) -->
+      <div class="variant">
+        <svg viewBox="0 0 100 100" width="140" height="140" style="background:#fff;border-radius:22%;">
+          <g transform="translate(8 8) scale(0.84)">
+            <path d="M 28 38 L 38 28 L 80 28 L 70 38 Z" fill="#0a7c4a" stroke="#0a7c4a" stroke-width="5" stroke-linejoin="round"/>
+            <path d="M 28 38 L 70 38 L 70 76 L 28 76 Z" fill="#0a7c4a" stroke="#0a7c4a" stroke-width="5" stroke-linejoin="round"/>
+            <path d="M 70 38 L 80 28 L 80 66 L 70 76 Z" fill="#0a7c4a" stroke="#0a7c4a" stroke-width="5" stroke-linejoin="round"/>
+            <path d="M 36 50 H 50 M 36 58 H 58 M 36 66 H 46" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/>
+          </g>
+        </svg>
+        <div class="lbl-name">⑧ 솔리드 필 버전 (대안)</div>
+        <div class="lbl-desc">outline 대신 채움. 모든 사이즈 가독성 최강, 더 묵직한 톤.</div>
+        <pre id="u8">App icon design 1024x1024 solid fill variant: a single 3D gold ingot bar shown in three-quarter perspective, all three faces (top, front, right) filled solid in forest green #0a7c4a, three short engraving lines on the front face in pure white #ffffff to create cutout effect, on solid white background, centered with 12% safe area padding, vector flat style, no shading, no gradient, bold geometric.</pre>
+        <button onclick="copy('u8', this)">📋 복사</button>
+        <span class="copied">복사됨!</span>
+      </div>
+    </div>
+  </article>
+</main>
+
+<script>
+function toggleTheme() {
+  const cur = document.documentElement.getAttribute('data-theme')
+  document.documentElement.setAttribute('data-theme', cur === 'dark' ? 'light' : 'dark')
+}
+function copy(id, btn) {
+  const text = document.getElementById(id).innerText
+  navigator.clipboard.writeText(text).then(() => {
+    const tip = btn.parentElement.querySelector('.copied')
+    tip.classList.add('show')
+    setTimeout(() => tip.classList.remove('show'), 1500)
+  })
+}
+</script>
+</body>
+</html>

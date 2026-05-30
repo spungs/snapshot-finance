@@ -1,0 +1,692 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Snapshot Finance — UI/UX 전체 리뷰 리포트</title>
+<style>
+  :root {
+    --bg: #0b0d10;
+    --panel: #14171c;
+    --panel-2: #1a1e25;
+    --border: #232831;
+    --fg: #e6e8ee;
+    --muted: #8a93a3;
+    --accent: #34d399;
+    --warn: #fbbf24;
+    --bug: #f87171;
+    --info: #60a5fa;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Segoe UI", "Helvetica Neue", Arial, "Apple SD Gothic Neo", sans-serif;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+  header.hero {
+    margin-bottom: 40px;
+    padding: 28px 0 24px;
+    border-bottom: 1px solid var(--border);
+  }
+  header.hero .eyebrow {
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  header.hero h1 {
+    font-size: 36px;
+    line-height: 1.15;
+    margin: 6px 0 12px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  header.hero .meta {
+    color: var(--muted);
+    font-size: 13px;
+  }
+  header.hero .meta b { color: var(--fg); font-weight: 600; }
+
+  .toc {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 8px;
+    margin: 24px 0 32px;
+    padding: 16px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+  .toc a {
+    color: var(--fg);
+    text-decoration: none;
+    font-size: 13px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+  }
+  .toc a:hover {
+    border-color: var(--border);
+    background: var(--panel-2);
+  }
+
+  section {
+    margin: 56px 0 0;
+    scroll-margin-top: 24px;
+  }
+  section h2 {
+    font-size: 22px;
+    margin: 0 0 6px;
+    font-weight: 700;
+    letter-spacing: -0.005em;
+  }
+  section h2 .num {
+    color: var(--muted);
+    font-weight: 500;
+    margin-right: 8px;
+  }
+  section h3 {
+    font-size: 16px;
+    margin: 24px 0 8px;
+    font-weight: 600;
+  }
+  section .sub {
+    color: var(--muted);
+    font-size: 13px;
+    margin-bottom: 20px;
+  }
+
+  .tldr {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin: 24px 0 0;
+  }
+  .tldr .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 16px 18px;
+    border-radius: 12px;
+  }
+  .tldr .card .label {
+    font-size: 11px;
+    letter-spacing: 1.2px;
+    color: var(--muted);
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+  .tldr .card .value {
+    font-size: 28px;
+    font-weight: 700;
+    margin-top: 4px;
+  }
+  .tldr .card .desc {
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 2px;
+  }
+  .tldr .card.bug .value { color: var(--bug); }
+  .tldr .card.warn .value { color: var(--warn); }
+  .tldr .card.ok .value { color: var(--accent); }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0 20px;
+    font-size: 13.5px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  thead th {
+    text-align: left;
+    background: var(--panel-2);
+    color: var(--muted);
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  tbody td {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  tbody tr:last-child td { border-bottom: 0; }
+
+  .status { font-weight: 600; font-size: 13px; }
+  .status.ok { color: var(--accent); }
+  .status.warn { color: var(--warn); }
+  .status.bug { color: var(--bug); }
+  .status.info { color: var(--info); }
+
+  .badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    text-transform: uppercase;
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+  .badge.bug { background: rgba(248,113,113,.15); color: var(--bug); border: 1px solid rgba(248,113,113,.3); }
+  .badge.warn { background: rgba(251,191,36,.12); color: var(--warn); border: 1px solid rgba(251,191,36,.3); }
+  .badge.ok { background: rgba(52,211,153,.12); color: var(--accent); border: 1px solid rgba(52,211,153,.3); }
+  .badge.info { background: rgba(96,165,250,.12); color: var(--info); border: 1px solid rgba(96,165,250,.3); }
+
+  .finding {
+    margin: 16px 0;
+    padding: 16px 18px;
+    background: var(--panel);
+    border-left: 3px solid var(--border);
+    border-radius: 8px;
+  }
+  .finding.bug { border-left-color: var(--bug); }
+  .finding.warn { border-left-color: var(--warn); }
+  .finding.info { border-left-color: var(--info); }
+  .finding h4 {
+    margin: 0 0 6px;
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .finding p {
+    margin: 6px 0;
+    color: var(--fg);
+    font-size: 14px;
+  }
+  .finding .label-pair {
+    margin: 8px 0;
+    font-size: 13px;
+  }
+  .finding .label-pair b { color: var(--muted); font-weight: 600; }
+  .finding code, .finding pre {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-family: "JetBrains Mono", ui-monospace, Menlo, monospace;
+    font-size: 12px;
+  }
+  .finding pre {
+    padding: 12px 14px;
+    margin: 8px 0;
+    overflow-x: auto;
+    color: #e2e8f0;
+  }
+
+  .shot-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    margin: 24px 0;
+  }
+  .shot {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .shot img {
+    width: 100%;
+    display: block;
+    background: #000;
+  }
+  .shot .cap {
+    padding: 10px 14px;
+    font-size: 12px;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+  }
+  .shot .cap b { color: var(--fg); font-weight: 600; }
+
+  .priority {
+    display: grid;
+    grid-template-columns: 80px 1fr 120px;
+    gap: 12px 16px;
+    align-items: center;
+    padding: 12px 16px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin: 6px 0;
+    font-size: 14px;
+  }
+  .priority .p {
+    font-weight: 800;
+    font-size: 12px;
+    letter-spacing: 1px;
+    text-align: center;
+    padding: 4px 0;
+    border-radius: 6px;
+  }
+  .priority .p.p0 { background: rgba(248,113,113,.15); color: var(--bug); }
+  .priority .p.p1 { background: rgba(251,191,36,.15); color: var(--warn); }
+  .priority .p.p2 { background: rgba(96,165,250,.15); color: var(--info); }
+  .priority .est { color: var(--muted); font-size: 12px; text-align: right; }
+
+  ul.clean { padding-left: 18px; margin: 8px 0; }
+  ul.clean li { margin: 4px 0; }
+
+  .footer {
+    margin-top: 80px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 12px;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <div class="eyebrow">UI / UX REVIEW · cmux 직접 검증</div>
+    <h1>Snapshot Finance — 전체 리뷰 리포트</h1>
+    <div class="meta">
+      작성일 <b>2026-05-19</b> · 환경 <b>cmux WKWebView 665×789</b> · Dark 테마 ·
+      서버 <b>localhost:3001</b> (Next 16.0.7 Turbopack)
+    </div>
+  </header>
+
+  <div class="tldr">
+    <div class="card bug">
+      <div class="label">시각적 버그</div>
+      <div class="value">2</div>
+      <div class="desc">홈 토글 줄바꿈 · 시뮬레이션 셀렉트 라벨</div>
+    </div>
+    <div class="card warn">
+      <div class="label">UX 개선</div>
+      <div class="value">8</div>
+      <div class="desc">a11y · 트렁케이션 · FAB 겹침 · 메모 포맷 등</div>
+    </div>
+    <div class="card ok">
+      <div class="label">정상 동작</div>
+      <div class="value">다수</div>
+      <div class="desc">최근 픽스 확인 (종목 추가 기본값 · 검색 스크롤)</div>
+    </div>
+  </div>
+
+  <nav class="toc">
+    <a href="#s1">1. 홈</a>
+    <a href="#s2">2. 보유</a>
+    <a href="#s3">3. 스냅샷</a>
+    <a href="#s4">4. 시뮬레이션</a>
+    <a href="#s5">5. 계좌</a>
+    <a href="#s6">6. 설정</a>
+    <a href="#s7">7. 더보기</a>
+    <a href="#s8">8. AI 어시스턴트</a>
+    <a href="#s9">9. 전역</a>
+    <a href="#sp">우선순위</a>
+    <a href="#sx">스크린샷</a>
+  </nav>
+
+  <!-- ===== 1. 홈 ===== -->
+  <section id="s1">
+    <h2><span class="num">01</span>홈 <code>/dashboard</code></h2>
+    <p class="sub">최상단 KPI, 성과 흐름 차트, 일간/주간 변동, 예금 환산, 수익률 TOP — 모든 영역이 모바일 폭 안에 압축돼 있어 토글 가독성이 가장 큰 이슈.</p>
+
+    <table>
+      <thead><tr><th style="width:40px">#</th><th>시나리오</th><th>실제값</th><th style="width:60px">결과</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>KPI 카드 표시</td><td>₩106,167,103 · ▲19.49% · +₩15,421,599</td><td class="status ok">✅</td></tr>
+        <tr><td>2</td><td>기간 토글 (1·3·6·1년·전체)</td><td>3개월 활성 (<code>bg-primary text-primary-foreground</code>)</td><td class="status ok">✅</td></tr>
+        <tr><td>3</td><td>수익률 ↔ 자산 토글 클릭 전환</td><td>활성 클래스 정상 전환</td><td class="status ok">✅</td></tr>
+        <tr><td>4</td><td>"연 3%" 예금 환산 칩</td><td><code>aria-label="연 3% 예금 환산액"</code></td><td class="status ok">✅</td></tr>
+        <tr><td>5</td><td>수익률 TOP 4 종목 표시</td><td>종목명 일부 잘림</td><td class="status warn">⚠️</td></tr>
+      </tbody>
+    </table>
+
+    <div class="finding bug">
+      <h4><span class="badge bug">P0 · BUG</span>H-1. 차트 토글 텍스트가 글자 단위로 세로 줄바꿈</h4>
+      <div class="label-pair"><b>AS-IS</b> · 665px 폭에서 「수」「익」「률」 / 「1」「개」「월」처럼 한 음절씩 분리 → 가독성 심각 저하</div>
+      <div class="label-pair"><b>TO-BE</b> · 라벨 <code>whitespace-nowrap</code> + (필요 시) 가로 스크롤 / <code>text-[10px]</code> 자동 축소</div>
+      <div class="label-pair"><b>원인 추정</b> · <code>수익률/자산</code> + <code>1개월~전체</code> 두 토글 그룹이 같은 flex row · 각 버튼이 <code>text-[11px] px-2.5</code> 고정, viewport가 좁아지면 단어 자동 줄바꿈</div>
+    </div>
+
+    <div class="finding warn">
+      <h4><span class="badge warn">P1 · WARN</span>H-2. 수익률 TOP 종목명 트렁케이션</h4>
+      <pre>DIREX DAIL SEMI BU 3X ET-USD   ← SOXL (실제: DIREXION DAILY SEMICONDUCTOR BULL 3X)
+PROSHARES ULTRA SEMICONDUCT    ← USD ticker (실제: PROSHARES ULTRA SEMICONDUCTORS)</pre>
+      <p>KIS 종목 마스터의 영문명 길이 제한으로 잘린 채 저장됨. → Yahoo Finance 영문명 fallback 또는 <code>stocks.engName</code> 풀네임 컬럼 추가 권장.</p>
+    </div>
+
+    <div class="finding warn">
+      <h4><span class="badge warn">P1 · WARN</span>H-3. 토글 버튼 a11y 누락</h4>
+      <p>"수익률/자산", "1개월/…" 토글 버튼에 <code>aria-pressed</code> 또는 <code>role="tab" aria-selected</code> 없음. 보유 페이지의 계좌 탭은 <code>aria-selected</code>가 적용돼 있어 일관성 위해 동일 패턴 권장.</p>
+    </div>
+
+    <div class="finding info">
+      <h4><span class="badge info">INFO</span>H-4. "기간 변화: +11.15%p" 표기</h4>
+      <p>최근 커밋(4b8ef7a)에서 일간/주간 변동의 <code>%p</code>를 제거했으나, 기간 변화는 그대로 유지 — 수익률 간 포인트 차이라 정확한 표기이지만 다른 영역과 어긋난다는 점은 인지 필요.</p>
+    </div>
+
+    <div class="shot-grid">
+      <div class="shot"><img src=".review-screenshots/01-home-mobile.png" alt="홈 - 토글 세로 줄바꿈 가시"><div class="cap"><b>H-1 증거</b> · 토글이 글자 단위로 세로 분리</div></div>
+      <div class="shot"><img src=".review-screenshots/02-home-자산.png" alt="홈 - 자산 토글 활성"><div class="cap">"자산" 토글 활성화 후 (정상 전환)</div></div>
+      <div class="shot"><img src=".review-screenshots/03-home-scrolled.png" alt="홈 - 수익률 TOP"><div class="cap"><b>H-2 증거</b> · 수익률 TOP 종목명 잘림</div></div>
+    </div>
+  </section>
+
+  <!-- ===== 2. 보유 ===== -->
+  <section id="s2">
+    <h2><span class="num">02</span>보유 <code>/dashboard/portfolio</code></h2>
+    <p class="sub">도넛 차트 + 비중 테이블 + 예수금 카드 + 계좌별/통합 토글 + 종목 카드 리스트 + 두 개의 FAB. 최근 종목 추가 기본값 픽스가 정상 동작 확인.</p>
+
+    <table>
+      <thead><tr><th style="width:40px">#</th><th>시나리오</th><th>실제값</th><th style="width:60px">결과</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>도넛 차트 + 비중 테이블 (22 종목)</td><td>색상 매핑 정상</td><td class="status ok">✅</td></tr>
+        <tr><td>2</td><td>예수금 카드 + 수정 버튼</td><td>₩11,600,000</td><td class="status ok">✅</td></tr>
+        <tr><td>3</td><td>계좌 탭 a11y</td><td><code>role="tab" aria-selected</code> 정상</td><td class="status ok">✅</td></tr>
+        <tr><td>4</td><td>"전체" 탭 → 종목 추가 → 기본 계좌</td><td>기본 계좌</td><td class="status ok">✅</td></tr>
+        <tr><td>5</td><td>"NH증권" 탭 → 종목 추가 → NH증권</td><td>NH증권 — <b>c8e248b 동작 확인</b></td><td class="status ok">✅</td></tr>
+        <tr><td>6</td><td>종목 추가 Dialog 폭 (모바일)</td><td>다이얼로그 420 / viewport 665</td><td class="status ok">✅</td></tr>
+        <tr><td>7</td><td>인라인 검색 결과 스크롤</td><td>scrollHeight 638 / clientHeight 316</td><td class="status ok">✅</td></tr>
+      </tbody>
+    </table>
+
+    <div class="finding warn">
+      <h4><span class="badge warn">P1 · WARN</span>P-1. 종목 검색 즉시 트리거 부재</h4>
+      <p>"삼성"을 타이핑해도 결과가 즉시 표시되지 않고 <b>Enter 또는 우측 돋보기 버튼을 눌러야 검색 실행</b>. 자동완성 UX와 다르므로 사용자가 "검색이 안 되네?"라 오인할 수 있음.</p>
+      <div class="label-pair"><b>권장</b> · <code>onChange</code> debounce(300ms) → 즉시 결과 노출</div>
+    </div>
+
+    <div class="finding warn">
+      <h4><span class="badge warn">P1 · WARN</span>P-2. 정렬 토글 a11y (평가금/매입금/수익금)</h4>
+      <p>현재 정렬 기준이 시각만으로 노출. <code>aria-sort</code> 또는 <code>aria-pressed</code> 추가 필요.</p>
+    </div>
+
+    <div class="finding warn">
+      <h4><span class="badge warn">P2 · WARN</span>P-3. FAB 두 개가 종목 카드 일부 가림</h4>
+      <p>우하단에 <code>AI 어시스턴트</code> + <code>종목 추가</code> 두 FAB(<code>fixed right-4 z-40 w-12 h-12</code>)가 떠 있어 좁은 폭에서 스크롤 시 종목 카드 수익률/금액과 겹침. 카드 우측 내부 패딩 64px 확보 또는 스크롤 시 자동 숨김 권장.</p>
+    </div>
+
+    <div class="shot-grid">
+      <div class="shot"><img src=".review-screenshots/04-portfolio-top.png" alt="보유 상단"><div class="cap">도넛 + 예수금 + 계좌 탭</div></div>
+      <div class="shot"><img src=".review-screenshots/05-add-stock-dialog.png" alt="종목 추가 다이얼로그"><div class="cap"><b>기본 계좌 자동 선택</b> 동작 확인</div></div>
+      <div class="shot"><img src=".review-screenshots/06-stock-search-results.png" alt="종목 검색 결과"><div class="cap">인라인 검색 결과 스크롤 정상</div></div>
+    </div>
+  </section>
+
+  <!-- ===== 3. 스냅샷 ===== -->
+  <section id="s3">
+    <h2><span class="num">03</span>스냅샷 <code>/dashboard/snapshots</code> · <code>/[id]</code></h2>
+    <p class="sub">LATEST 강조 카드 + 타임라인 + 상세 페이지(MEMO/KPI/HOLDINGS). 자동 스냅샷 메모 텍스트만 톤 정리 필요.</p>
+
+    <table>
+      <thead><tr><th style="width:40px">#</th><th>시나리오</th><th>실제값</th><th style="width:60px">결과</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>LATEST 카드</td><td>2026.05.09 / ₩104,763,454 / ▲17.71%</td><td class="status ok">✅</td></tr>
+        <tr><td>2</td><td>타임라인 카드 리스트</td><td>날짜·수익률·자산·비교/상세 노출</td><td class="status ok">✅</td></tr>
+        <tr><td>3</td><td>상세 페이지 이동</td><td><code>/snapshots/[id]</code> 정상</td><td class="status ok">✅</td></tr>
+        <tr><td>4</td><td>상세 MEMO 텍스트</td><td><code>"Auto Snapshot (2026. 5. 8.)"</code></td><td class="status warn">⚠️</td></tr>
+        <tr><td>5</td><td>HOLDINGS 표 (22 종목)</td><td>정상 노출 (영문명 트렁케이션은 H-2)</td><td class="status ok">✅</td></tr>
+      </tbody>
+    </table>
+
+    <div class="finding warn">
+      <h4><span class="badge warn">P0 · WARN</span>S-1. 자동 스냅샷 MEMO 텍스트 어색함</h4>
+      <p>영문 키워드 + 띄어쓰기 섞인 날짜 — 한국어 UI 톤과 불일치. 같은 텍스트가 시뮬레이션 셀렉트(SI-1)에도 노출돼 단일 포맷터 통일 필요.</p>
+      <pre>AS-IS: "Auto Snapshot (2026. 5. 8.)"
+TO-BE: "자동 스냅샷 · 2026-05-08"  또는  "자동 (2026.05.08)"</pre>
+    </div>
+
+    <div class="shot-grid">
+      <div class="shot"><img src=".review-screenshots/07-snapshots-list.png" alt="스냅샷 목록"><div class="cap">LATEST 강조 + 타임라인 카드</div></div>
+      <div class="shot"><img src=".review-screenshots/08-snapshot-detail.png" alt="스냅샷 상세"><div class="cap"><b>S-1 증거</b> · MEMO "Auto Snapshot (2026. 5. 8.)"</div></div>
+      <div class="shot"><img src=".review-screenshots/08b-snapshot-detail-scrolled.png" alt="스냅샷 상세 스크롤"><div class="cap">HOLDINGS 표 — 영문명 트렁케이션 동일 발생</div></div>
+    </div>
+  </section>
+
+  <!-- ===== 4. 시뮬레이션 ===== -->
+  <section id="s4">
+    <h2><span class="num">04</span>시뮬레이션 <code>/dashboard/simulation</code></h2>
+    <p class="sub">셀렉트 옵션 라벨이 영문/한글 혼용 + 모호한 날짜로 가장 시급한 톤 정리 대상.</p>
+
+    <table>
+      <thead><tr><th style="width:40px">#</th><th>시나리오</th><th>실제값</th><th style="width:60px">결과</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>헤더 + 안내 문구</td><td>"과거의 포트폴리오를 지금까지 보유했다면 얼마일까요?"</td><td class="status ok">✅</td></tr>
+        <tr><td>2</td><td>STEP 01 카드</td><td>셀렉트 + 실행 버튼</td><td class="status ok">✅</td></tr>
+        <tr><td>3</td><td>셀렉트 옵션 라벨</td><td>108개 모두 영문/한글 혼용 + 어색한 날짜</td><td class="status bug">🐛</td></tr>
+      </tbody>
+    </table>
+
+    <div class="finding bug">
+      <h4><span class="badge bug">P0 · BUG</span>SI-1. 셀렉트 옵션 라벨 톤 불일치</h4>
+      <pre>AS-IS:
+  2026-05-09 16:30 | Auto Snapshot (2026. 5. 8.) (총 ₩104,763,454)
+  2026-05-08 16:30 | Auto Snapshot (2026. 5. 7.) (총 ₩99,587,388)
+
+TO-BE:
+  2026-05-09 16:30 · 자동 · 총 ₩104,763,454
+  2026-05-08 16:30 · 자동 · 총 ₩99,587,388</pre>
+      <ul class="clean">
+        <li>영문 "Auto Snapshot" 노출 → 한국어 UI 톤과 불일치</li>
+        <li>메모의 날짜 <code>2026. 5. 8.</code>와 스냅샷 일시 <code>2026-05-09</code> 동시 표시 → 어느 시점인지 모호</li>
+        <li>S-1과 동일 포맷터 사용 → 한 곳만 고치면 양쪽 해결</li>
+      </ul>
+    </div>
+
+    <div class="shot-grid">
+      <div class="shot"><img src=".review-screenshots/09-simulation.png" alt="시뮬레이션 진입 화면"><div class="cap">STEP 01 안내 카드</div></div>
+      <div class="shot"><img src=".review-screenshots/10-simulation-select.png" alt="시뮬레이션 셀렉트"><div class="cap"><b>SI-1 증거</b> · 옵션 라벨 톤 불일치</div></div>
+    </div>
+  </section>
+
+  <!-- ===== 5. 계좌 ===== -->
+  <section id="s5">
+    <h2><span class="num">05</span>계좌 관리 <code>/dashboard/accounts</code></h2>
+    <p class="sub">드래그 정렬·편집·삭제 — UI 자체는 깔끔하고 일관됨.</p>
+
+    <table>
+      <thead><tr><th style="width:40px">#</th><th>시나리오</th><th>실제값</th><th style="width:60px">결과</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>계좌 목록</td><td>기본 계좌 22개 / NH증권 0개</td><td class="status ok">✅</td></tr>
+        <tr><td>2</td><td>드래그 핸들 + 편집(연필) + 삭제(휴지통)</td><td>모두 노출</td><td class="status ok">✅</td></tr>
+        <tr><td>3</td><td>"드래그하여 순서를 바꿀 수 있습니다." 안내</td><td>표시 정상</td><td class="status ok">✅</td></tr>
+        <tr><td>4</td><td>"+ 새 계좌 추가" 풀폭 버튼</td><td>디자인 톤 정렬</td><td class="status ok">✅</td></tr>
+      </tbody>
+    </table>
+
+    <div class="finding info">
+      <h4><span class="badge info">INFO</span>종목 수 표기 일관성</h4>
+      <p>계좌 페이지: <code>종목 수: 22개</code> · 보유 페이지: <code>· 22</code> — 표기 통일하면 일관성 향상.</p>
+    </div>
+
+    <div class="shot-grid">
+      <div class="shot"><img src=".review-screenshots/11-accounts-final.png" alt="계좌 관리"><div class="cap">드래그 핸들 · 편집 · 삭제 아이콘</div></div>
+    </div>
+  </section>
+
+  <!-- ===== 6. 설정 ===== -->
+  <section id="s6">
+    <h2><span class="num">06</span>설정 <code>/dashboard/settings</code></h2>
+    <p class="sub">테마/언어/자동 스냅샷 토글, 위험 동작(회원 탈퇴) 색상 구분도 적절.</p>
+
+    <table>
+      <thead><tr><th style="width:40px">#</th><th>시나리오</th><th>실제값</th><th style="width:60px">결과</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>프로필 카드</td><td>spungs · s83286263@gmail.com</td><td class="status ok">✅</td></tr>
+        <tr><td>2</td><td>테마 (Light/Dark)</td><td>Dark 활성</td><td class="status ok">✅</td></tr>
+        <tr><td>3</td><td>언어 (한국어/EN)</td><td>한국어 활성</td><td class="status ok">✅</td></tr>
+        <tr><td>4</td><td>자동 스냅샷 토글</td><td>ON</td><td class="status ok">✅</td></tr>
+        <tr><td>5</td><td>로그아웃 / 회원 탈퇴(빨강)</td><td>위험 색상 구분 적절</td><td class="status ok">✅</td></tr>
+        <tr><td>6</td><td>이용약관 / 개인정보처리방침</td><td>링크 정상</td><td class="status ok">✅</td></tr>
+      </tbody>
+    </table>
+
+    <div class="shot-grid">
+      <div class="shot"><img src=".review-screenshots/12-settings-v2.png" alt="설정 화면"><div class="cap">프로필 + 테마/언어/자동 스냅샷 + 계정 + 약관</div></div>
+    </div>
+  </section>
+
+  <!-- ===== 7. 더보기 ===== -->
+  <section id="s7">
+    <h2><span class="num">07</span>더보기 <code>/dashboard/more</code></h2>
+    <p class="sub">도구·계정 그룹화는 깔끔하나, 두 시뮬레이션 도구 차별화는 약함.</p>
+
+    <table>
+      <thead><tr><th>영역</th><th>항목</th><th style="width:60px">결과</th></tr></thead>
+      <tbody>
+        <tr><td>도구</td><td>시뮬레이션 — 과거 스냅샷을 지금까지 보유했다면</td><td class="status ok">✅</td></tr>
+        <tr><td>도구</td><td>만약에 — 과거 이 시점에 샀더라면</td><td class="status ok">✅</td></tr>
+        <tr><td>계정</td><td>계좌 관리 · 설정</td><td class="status ok">✅</td></tr>
+      </tbody>
+    </table>
+
+    <div class="finding warn">
+      <h4><span class="badge warn">P2 · WARN</span>M-1. "시뮬레이션" vs "만약에" 차이 모호</h4>
+      <p>기능 차이는 분명하나 라벨/설명만으론 사용자가 처음에 헷갈릴 수 있음.</p>
+      <ul class="clean">
+        <li>대안 1: "스냅샷 유지 시뮬레이션" / "대체 매수 시뮬레이션"</li>
+        <li>대안 2: 아이콘 차별화 + 한 줄 예시 ("예: TQQQ 100주 더 샀더라면" / "예: 작년 1월 그대로 보유했다면")</li>
+      </ul>
+    </div>
+
+    <div class="shot-grid">
+      <div class="shot"><img src=".review-screenshots/13-more.png" alt="더보기"><div class="cap">도구 · 계정 그룹 카드</div></div>
+    </div>
+  </section>
+
+  <!-- ===== 8. AI 어시스턴트 ===== -->
+  <section id="s8">
+    <h2><span class="num">08</span>AI 어시스턴트 (FAB)</h2>
+    <p class="sub">자연어 종목 관리 다이얼로그. 진입 시 가능/불가 범위 명시가 명확.</p>
+
+    <table>
+      <thead><tr><th style="width:40px">#</th><th>시나리오</th><th>실제값</th><th style="width:60px">결과</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>보유 페이지 FAB</td><td><code>aria-label="AI 어시스턴트 열기"</code></td><td class="status ok">✅</td></tr>
+        <tr><td>2</td><td>다이얼로그 헤더 + 설명</td><td>"자연어로 종목을 추가·수정·삭제할 수 있는 AI 어시스턴트"</td><td class="status ok">✅</td></tr>
+        <tr><td>3</td><td>예시 4개</td><td>"NH에 삼성전자 100주 75000원 추가" 등</td><td class="status ok">✅</td></tr>
+        <tr><td>4</td><td>가능/불가 범위 명시</td><td>예수금→홈 / 계좌 관리→설정 / 스냅샷→스냅샷 메뉴</td><td class="status ok">✅</td></tr>
+        <tr><td>5</td><td>USD 환율 입력 (cfa6720)</td><td>진입 직후엔 미노출 — 종목 추가/수정 시점에 노출 추정</td><td class="status info">📝</td></tr>
+      </tbody>
+    </table>
+
+    <div class="shot-grid">
+      <div class="shot"><img src=".review-screenshots/16-ai-chat-v2.png" alt="AI 어시스턴트"><div class="cap">진입 직후 안내 (가능 작업 + 예시 + 외부 진입점)</div></div>
+    </div>
+  </section>
+
+  <!-- ===== 9. 전역 ===== -->
+  <section id="s9">
+    <h2><span class="num">09</span>전역 — 콘솔/네트워크/접근성</h2>
+
+    <div class="finding warn">
+      <h4><span class="badge warn">P2 · WARN</span>G-1. Google Sign-In 경고</h4>
+      <pre>[GSI_LOGGER]: Relative login_uri was provided. Use absolute url instead.
+Relative login_uri may be considered invalid in the future.</pre>
+      <p>Next dev 오버레이에 "1 Issue" 인디케이터로 노출됨. <code>google-signin</code> 설정의 <code>login_uri</code> → 절대 URL 교체 권장.</p>
+    </div>
+
+    <div class="finding warn">
+      <h4><span class="badge warn">P2 · WARN</span>G-2. Next 16 deprecation</h4>
+      <pre>The "middleware" file convention is deprecated. Please use "proxy" instead.</pre>
+      <p>다음 Next 메이저에서 동작 불가 가능. <code>middleware.ts</code> → <code>proxy.ts</code> 마이그레이션 일정 필요.</p>
+    </div>
+
+    <div class="finding info">
+      <h4><span class="badge info">INFO</span>G-3. 검증 환경 한계</h4>
+      <ul class="clean">
+        <li>cmux 브라우저(WKWebView)는 <code>viewport</code> 명령 미지원 → 데스크탑 폭(<code>md:max-w-2xl</code>) 검증은 별도 Chrome/Safari 환경에서 확인 필요</li>
+        <li>최근 픽스(데스크탑 Popover 검색 결과 스크롤 db3f367, 2e64361)는 모바일 폭 검증만 완료</li>
+        <li>리뷰 중 다른 세션이 3000 포트 점유 → 3001로 dev 서버 재기동하여 진행</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ===== 우선순위 ===== -->
+  <section id="sp">
+    <h2><span class="num">10</span>권장 우선순위</h2>
+    <div>
+      <div class="priority">
+        <div class="p p0">P0</div>
+        <div><b>H-1</b> · 차트 토글 세로 줄바꿈 (CSS only)</div>
+        <div class="est">1–2시간</div>
+      </div>
+      <div class="priority">
+        <div class="p p0">P0</div>
+        <div><b>SI-1 + S-1</b> · 시뮬레이션 셀렉트 라벨 + 자동 메모 포맷 통일 (포맷터 한 곳)</div>
+        <div class="est">30분</div>
+      </div>
+      <div class="priority">
+        <div class="p p1">P1</div>
+        <div><b>H-2 / P-4</b> · KIS 영문명 트렁케이션 — Yahoo Finance fallback</div>
+        <div class="est">1일</div>
+      </div>
+      <div class="priority">
+        <div class="p p1">P1</div>
+        <div><b>H-3 / P-2</b> · 토글 a11y (<code>aria-pressed</code> / <code>aria-selected</code>)</div>
+        <div class="est">1시간</div>
+      </div>
+      <div class="priority">
+        <div class="p p1">P1</div>
+        <div><b>P-1</b> · 종목 검색 즉시 트리거 (debounce 300ms)</div>
+        <div class="est">2시간</div>
+      </div>
+      <div class="priority">
+        <div class="p p2">P2</div>
+        <div><b>P-3</b> · FAB 겹침 회피 (카드 우측 패딩 or 스크롤 시 자동 숨김)</div>
+        <div class="est">1시간</div>
+      </div>
+      <div class="priority">
+        <div class="p p2">P2</div>
+        <div><b>M-1</b> · "시뮬레이션 vs 만약에" 라벨/아이콘 차별화</div>
+        <div class="est">30분</div>
+      </div>
+      <div class="priority">
+        <div class="p p2">P2</div>
+        <div><b>G-1</b> · GSI <code>login_uri</code> 절대 URL</div>
+        <div class="est">5분</div>
+      </div>
+      <div class="priority">
+        <div class="p p2">P2</div>
+        <div><b>G-2</b> · <code>middleware</code> → <code>proxy</code> 마이그레이션 (Next 17 대비)</div>
+        <div class="est">1일</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 스크린샷 부록 ===== -->
+  <section id="sx">
+    <h2><span class="num">11</span>스크린샷 인덱스</h2>
+    <div class="shot-grid">
+      <div class="shot"><img src=".review-screenshots/01-home-mobile.png" alt=""><div class="cap"><b>01</b> · 홈 (H-1 버그 가시)</div></div>
+      <div class="shot"><img src=".review-screenshots/02-home-자산.png" alt=""><div class="cap"><b>02</b> · 홈 "자산" 토글</div></div>
+      <div class="shot"><img src=".review-screenshots/03-home-scrolled.png" alt=""><div class="cap"><b>03</b> · 홈 수익률 TOP (H-2)</div></div>
+      <div class="shot"><img src=".review-screenshots/04-portfolio-top.png" alt=""><div class="cap"><b>04</b> · 보유 도넛 + 예수금</div></div>
+      <div class="shot"><img src=".review-screenshots/05-add-stock-dialog.png" alt=""><div class="cap"><b>05</b> · 종목 추가 다이얼로그</div></div>
+      <div class="shot"><img src=".review-screenshots/06-stock-search-results.png" alt=""><div class="cap"><b>06</b> · 종목 검색 결과 스크롤</div></div>
+      <div class="shot"><img src=".review-screenshots/07-snapshots-list.png" alt=""><div class="cap"><b>07</b> · 스냅샷 목록</div></div>
+      <div class="shot"><img src=".review-screenshots/08-snapshot-detail.png" alt=""><div class="cap"><b>08</b> · 스냅샷 상세 (S-1)</div></div>
+      <div class="shot"><img src=".review-screenshots/08b-snapshot-detail-scrolled.png" alt=""><div class="cap"><b>08b</b> · 스냅샷 상세 HOLDINGS</div></div>
+      <div class="shot"><img src=".review-screenshots/09-simulation.png" alt=""><div class="cap"><b>09</b> · 시뮬레이션 진입</div></div>
+      <div class="shot"><img src=".review-screenshots/10-simulation-select.png" alt=""><div class="cap"><b>10</b> · 시뮬레이션 셀렉트 (SI-1)</div></div>
+      <div class="shot"><img src=".review-screenshots/11-accounts-final.png" alt=""><div class="cap"><b>11</b> · 계좌 관리</div></div>
+      <div class="shot"><img src=".review-screenshots/12-settings-v2.png" alt=""><div class="cap"><b>12</b> · 설정</div></div>
+      <div class="shot"><img src=".review-screenshots/13-more.png" alt=""><div class="cap"><b>13</b> · 더보기</div></div>
+      <div class="shot"><img src=".review-screenshots/16-ai-chat-v2.png" alt=""><div class="cap"><b>14</b> · AI 어시스턴트</div></div>
+    </div>
+  </section>
+
+  <div class="footer">
+    Snapshot Finance UI/UX Review · cmux 직접 검증 · 2026-05-19
+  </div>
+</div>
+</body>
+</html>
