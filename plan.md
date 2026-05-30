@@ -1,7 +1,7 @@
 # Snapshot Finance
 
 **작성일:** 2025-11-25  
-**최종 업데이트:** 2026-05-30 (스냅샷 탐색·진입 개선 — 연/월 기간 필터·큰 카드 컴팩트 액션·상세 시뮬레이션 진입. + Upstash Sensitive env 빌드 복호화 이슈로 인한 배포 실패를 cache/ratelimit 가드로 해소. 직전: 다중 계좌 Phase B 전체 완료 반영)  
+**최종 업데이트:** 2026-05-30 (일일 포트폴리오 브리핑 read 엔드포인트 `/api/portfolio/daily-brief` 추가 — Claude 원격 루틴이 매일 아침 호출해 뉴스·리밸런싱 분석 후 텔레그램 전송. 직전: 스냅샷 탐색·진입 개선 — 연/월 기간 필터·큰 카드 컴팩트 액션·상세 시뮬레이션 진입. + Upstash Sensitive env 빌드 복호화 이슈로 인한 배포 실패를 cache/ratelimit 가드로 해소)  
 **목표:** 개인용 주식 잔고 관리 MVP (무료 플랜)
 
 ---
@@ -54,6 +54,7 @@
 - [x] [Fix] KIS API Token 자동 갱신: 토큰 만료 시 자동으로 재발급 및 재시도 로직 구현
 - [x] [Docs] 가이드 콘텐츠 수정: 수익률 표 순수익 기준 변경 및 양도소득세 공제 내용 추가
 - [x] [Docs] README.md 업데이트: 프로젝트 개요, 기술 스택, 주요 기능 및 아키텍처 정리
+- [x] **일일 포트폴리오 브리핑 엔드포인트**: `GET /api/portfolio/daily-brief` (Bearer `DAILY_BRIEF_TOKEN` 게이트, `BRIEF_USER_EMAIL` 오너 1인의 보유+등락률+비중+요약 JSON). `holdingService.getList` 재사용 + 캐시에서 `changeRate` 부착 + `weight` 계산. Claude 원격 루틴이 08:00 KST 호출 → 종목별 웹검색 뉴스·리밸런싱 분석 → 텔레그램 전송. 설계: `docs/superpowers/specs/2026-05-30-daily-portfolio-brief-design.md` *(루틴 등록·전용 봇·Vercel env 셋업은 외부 작업으로 진행 예정)*
 
 ---
 
