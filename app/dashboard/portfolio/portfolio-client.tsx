@@ -26,7 +26,7 @@ import { PortfolioShareButton } from '@/components/dashboard/portfolio-share'
 import { BulkImportDialog } from '@/components/dashboard/bulk-import-dialog'
 import { ExchangeRateFootnote } from '@/components/dashboard/exchange-rate-footnote'
 import { AccountSelector, type BrokerageAccountOption } from '@/components/dashboard/account-selector'
-import { Plus, Edit2, Trash2, Check, X, Loader2, ArrowUp, ArrowDown, MoreVertical, Wallet, Upload, ArrowLeftRight } from 'lucide-react'
+import { Plus, Edit2, Trash2, Loader2, ArrowUp, ArrowDown, MoreVertical, Wallet, Upload, ArrowLeftRight } from 'lucide-react'
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -291,11 +291,13 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
         return holdings.find(h => h.stockCode === newStock.stockCode) ?? null
     }, [newStock, holdings, isMultiAccount, newAccountId])
 
-    // Edit/delete
-    const [editingId, setEditingId] = useState<string | null>(null)
-    const [editValues, setEditValues] = useState({ quantity: '', averagePrice: '', purchaseRate: '' })
-    const [savingRow, setSavingRow] = useState<string | null>(null)
+    // Edit (다이얼로그) / delete
+    const [editTargetId, setEditTargetId] = useState<string | null>(null)
     const [deletingId, setDeletingId] = useState<string | null>(null)
+    const editTargetHolding = useMemo(
+        () => (editTargetId ? holdings.find(h => h.id === editTargetId) ?? null : null),
+        [editTargetId, holdings]
+    )
 
     const exRate = currentSummary.exchangeRate || FALLBACK_USD_RATE
     // USD 종목 한 개라도 보유 시에만 환율 footnote 의미 있음
@@ -485,43 +487,11 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
         }
     }
 
+    // 종목 수정 — ⋮ 메뉴에서 다이얼로그(EditHoldingDialog)를 연다.
+    // 통합 모드의 가상 합산 row 는 실제 DB row 가 아니므로 편집 불가.
     const startEdit = (h: Holding) => {
-        // 통합 모드의 가상 합산 row 는 편집 불가 (실제 DB row 가 아님)
         if (h.id.startsWith('unified-')) return
-        setEditingId(h.id)
-        setEditValues({
-            quantity: h.quantity.toString(),
-            averagePrice: h.averagePrice.toString(),
-            purchaseRate: h.purchaseRate ? h.purchaseRate.toString() : '',
-        })
-    }
-
-    const cancelEdit = () => {
-        setEditingId(null)
-        setEditValues({ quantity: '', averagePrice: '', purchaseRate: '' })
-    }
-
-    const saveEdit = async (id: string, currency: string) => {
-        if (savingRow) return
-        setSavingRow(id)
-        const purchaseRateVal = editValues.purchaseRate ? parseFloat(editValues.purchaseRate.replace(/,/g, '')) : undefined
-        try {
-            const res = await holdingsApi.update(id, {
-                quantity: parseInt(editValues.quantity),
-                averagePrice: parseFloat(editValues.averagePrice),
-                ...(currency === 'USD' && purchaseRateVal && purchaseRateVal > 0 && { purchaseRate: purchaseRateVal }),
-            })
-            if (res.success) {
-                setEditingId(null)
-                await refresh()
-            } else {
-                toast.error(res.error?.message || t('genericUpdateFailed'))
-            }
-        } catch {
-            toast.error(t('networkError'))
-        } finally {
-            setSavingRow(null)
-        }
+        setEditTargetId(h.id)
     }
 
     // 종목 삭제 — native confirm() 대신 ConfirmDialog 사용.
@@ -566,7 +536,6 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
     // 헤더에 단순 값/평단 등 표시 정보는 holdingsWithWeight 가 미리 계산해 둠 (weight/color 포함).
     type HoldingCardItem = (typeof holdingsWithWeight)[number]
     const renderHoldingCard = (h: HoldingCardItem) => {
-        const isEditing = editingId === h.id
         const isVirtual = h.id.startsWith('unified-')
         // 평가금: 현재 환율로 변환
         const toBase = (v: number) => baseCurrency === 'KRW'
@@ -590,10 +559,7 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
         return (
             <div
                 key={h.id}
-                className={cn(
-                    'bg-card border border-border p-4',
-                    isEditing && 'border-primary',
-                )}
+                className={cn('bg-card border border-border p-4')}
                 style={{ borderLeftWidth: '3px', borderLeftColor: h.color }}
             >
                 {/* Row 1: 종목명 (full) + overflow menu */}
@@ -608,12 +574,12 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                             </div>
                         )}
                     </div>
-                    {!isEditing && !isVirtual && (
+                    {!isVirtual && (
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <button
                                     type="button"
-                                    disabled={!!editingId || deletingId === h.id}
+                                    disabled={deletingId === h.id}
                                     className="-mt-1 -mr-2 p-2 text-muted-foreground hover:text-foreground disabled:opacity-50 shrink-0"
                                     aria-label={language === 'ko' ? '더보기' : 'More'}
                                 >
@@ -680,58 +646,6 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                         </div>
                     </div>
                 </div>
-
-                {/* Edit row */}
-                {isEditing ? (
-                    <div className="mt-3 pt-3 border-t border-border space-y-2">
-                        <div className="grid grid-cols-2 gap-2">
-                            <FormattedNumberInput
-                                label={t('quantity')}
-                                suffix={language === 'ko' ? '주' : 'shr'}
-                                value={editValues.quantity}
-                                onChange={v => setEditValues(p => ({ ...p, quantity: v }))}
-                                disabled={savingRow !== null}
-                            />
-                            <FormattedNumberInput
-                                label={t('averagePrice')}
-                                prefix="$"
-                                value={editValues.averagePrice}
-                                onChange={v => setEditValues(p => ({ ...p, averagePrice: v }))}
-                                disabled={savingRow !== null}
-                            />
-                        </div>
-                        {h.currency === 'USD' && (
-                            <div>
-                                <FormattedNumberInput
-                                    label={language === 'ko' ? '매입환율' : 'Buy rate'}
-                                    prefix="₩"
-                                    value={editValues.purchaseRate}
-                                    onChange={v => setEditValues(p => ({ ...p, purchaseRate: v }))}
-                                    disabled={savingRow !== null}
-                                />
-                            </div>
-                        )}
-                        <div className="flex justify-end gap-2">
-                            <button
-                                type="button"
-                                onClick={cancelEdit}
-                                disabled={savingRow !== null}
-                                className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1 px-2 py-1"
-                            >
-                                <X className="w-3 h-3" /> {t('cancel')}
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => saveEdit(h.id, h.currency)}
-                                disabled={savingRow !== null}
-                                className="bg-primary text-primary-foreground px-3 py-1 text-xs font-bold inline-flex items-center gap-1 hover:opacity-90"
-                            >
-                                {savingRow === h.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
-                                {t('save')}
-                            </button>
-                        </div>
-                    </div>
-                ) : null}
             </div>
         )
     }
@@ -1326,6 +1240,16 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                 onTransferred={refresh}
                 language={language}
             />
+            <EditHoldingDialog
+                open={!!editTargetId}
+                onOpenChange={(next) => { if (!next) setEditTargetId(null) }}
+                holding={editTargetHolding}
+                holdings={holdings}
+                exRate={exRate}
+                onSaved={refresh}
+                t={t}
+                language={language}
+            />
         </div>
     )
 }
@@ -1510,6 +1434,210 @@ function AddHoldingFloating({
                 </DialogContent>
             </Dialog>
         </>
+    )
+}
+
+
+interface EditHoldingDialogProps {
+    open: boolean
+    onOpenChange: (next: boolean) => void
+    holding: Holding | null
+    holdings: Holding[]
+    exRate: number
+    onSaved: () => void | Promise<void>
+    t: (key: any) => string
+    language: 'ko' | 'en'
+}
+
+// 종목 수정 다이얼로그 — 추가 다이얼로그(AddHoldingFloating)와 같은 검색·물타기 UI를 쓰되
+// FAB/계좌 셀렉터는 없다. 종목 검색으로 ticker 자체를 바꿀 수 있고, 바꾼 종목이 같은 계좌에
+// 이미 있으면 물타기/덮어쓰기로 합친다 (실제 합치기는 PATCH /api/holdings/[id] 가 처리).
+function EditHoldingDialog({
+    open, onOpenChange, holding, holdings, exRate, onSaved, t, language,
+}: EditHoldingDialogProps) {
+    const [selectedStock, setSelectedStock] = useState<any>(null)
+    const [qty, setQty] = useState('')
+    const [price, setPrice] = useState('')
+    const [purchaseRate, setPurchaseRate] = useState('')
+    const [mode, setMode] = useState<'merge' | 'overwrite'>('merge')
+    const [saving, setSaving] = useState(false)
+
+    // 다이얼로그 오픈 시 현재 보유 종목 값으로 폼 seed
+    useEffect(() => {
+        if (open && holding) {
+            setSelectedStock({
+                stockCode: holding.stockCode,
+                stockName: holding.stockName,
+                market: holding.market,
+            })
+            setQty(holding.quantity.toString())
+            setPrice(holding.averagePrice.toString())
+            setPurchaseRate(holding.purchaseRate && holding.purchaseRate > 0 ? holding.purchaseRate.toString() : '')
+            setMode('merge')
+        }
+    }, [open, holding])
+
+    const isKR = selectedStock?.market === 'KOSPI' || selectedStock?.market === 'KOSDAQ'
+    const isUSD = !!selectedStock && !isKR
+    const pricePrefix = selectedStock ? (isKR ? '₩' : '$') : undefined
+    const qtySuffix = language === 'ko' ? '주' : 'shr'
+
+    const stockChanged = !!selectedStock && !!holding && selectedStock.stockCode !== holding.stockCode
+
+    // 새로 고른 종목이 같은 계좌의 다른 보유분과 충돌하는지 (자기 자신 제외)
+    const conflictHolding = useMemo(() => {
+        if (!stockChanged || !selectedStock || !holding) return null
+        return holdings.find(h =>
+            h.id !== holding.id &&
+            h.stockCode === selectedStock.stockCode &&
+            (h.accountId ?? null) === (holding.accountId ?? null)
+        ) ?? null
+    }, [stockChanged, selectedStock, holding, holdings])
+
+    const handleSelect = (s: any) => {
+        setSelectedStock(s)
+        setMode('merge')
+        // USD 종목으로 바뀌면 매입환율이 비어있을 때 현재 환율로 채움
+        const isUsd = s?.market && s.market !== 'KOSPI' && s.market !== 'KOSDAQ'
+        if (isUsd) {
+            setPurchaseRate(prev => (prev && parseFloat(prev.replace(/,/g, '')) > 0) ? prev : (exRate ? exRate.toFixed(2) : ''))
+        }
+    }
+
+    const handleSave = async () => {
+        if (!holding || !selectedStock || saving) return
+        const q = parseInt(qty.replace(/,/g, ''))
+        const p = parseFloat(price.replace(/,/g, ''))
+        if (!q || !p) return
+        setSaving(true)
+        try {
+            const pr = purchaseRate ? parseFloat(purchaseRate.replace(/,/g, '')) : undefined
+            const res = await holdingsApi.update(holding.id, {
+                quantity: q,
+                averagePrice: p,
+                ...(stockChanged && { stockCode: selectedStock.stockCode }),
+                ...(stockChanged && conflictHolding && { mode }),
+                ...(isUSD && pr && pr > 0 && { purchaseRate: pr }),
+            })
+            if (res.success) {
+                onOpenChange(false)
+                await onSaved()
+            } else {
+                toast.error(res.error?.message || t('genericUpdateFailed'))
+            }
+        } catch {
+            toast.error(t('networkError'))
+        } finally {
+            setSaving(false)
+        }
+    }
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="sm:max-w-[420px] grid-cols-[minmax(0,1fr)] overflow-x-hidden">
+                <DialogHeader>
+                    <DialogTitle>{language === 'ko' ? '종목 수정' : 'Edit holding'}</DialogTitle>
+                    <DialogDescription className="sr-only">
+                        {language === 'ko' ? '종목을 다시 검색해 바꾸거나 수량·매입가를 수정합니다.' : 'Re-search the stock or edit quantity and average price.'}
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-2.5">
+                    <StockSearchCombobox
+                        value={selectedStock?.stockName || ''}
+                        onSelect={handleSelect}
+                        disabled={saving}
+                        inline
+                    />
+                    {conflictHolding && (
+                        <div className="border border-border bg-accent-soft rounded-md p-3 space-y-2.5">
+                            <div className="text-[11px] text-muted-foreground leading-snug">
+                                {language === 'ko' ? (
+                                    <>
+                                        이미 이 계좌에 보유 중인 종목입니다 — <span className="numeric font-semibold text-foreground">{formatNumber(conflictHolding.quantity)}{qtySuffix}</span>
+                                        {' · '}평단 <span className="numeric font-semibold text-foreground">{(conflictHolding.currency === 'KRW' ? '₩' : '$') + formatNumber(conflictHolding.averagePrice)}</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        You already hold this stock in this account — <span className="numeric font-semibold text-foreground">{formatNumber(conflictHolding.quantity)} shr</span>
+                                        {' · '}Avg <span className="numeric font-semibold text-foreground">{(conflictHolding.currency === 'KRW' ? '₩' : '$') + formatNumber(conflictHolding.averagePrice)}</span>
+                                    </>
+                                )}
+                            </div>
+                            <div className="grid grid-cols-2 gap-1.5">
+                                <button
+                                    type="button"
+                                    onClick={() => setMode('merge')}
+                                    disabled={saving}
+                                    className={cn(
+                                        'py-2 text-[12px] font-bold rounded-sm border transition-colors',
+                                        mode === 'merge'
+                                            ? 'bg-primary text-primary-foreground border-primary'
+                                            : 'bg-background text-foreground border-border hover:bg-accent-soft',
+                                    )}
+                                >
+                                    {language === 'ko' ? '물타기 (평단 합산)' : 'Average down (merge)'}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setMode('overwrite')}
+                                    disabled={saving}
+                                    className={cn(
+                                        'py-2 text-[12px] font-bold rounded-sm border transition-colors',
+                                        mode === 'overwrite'
+                                            ? 'bg-primary text-primary-foreground border-primary'
+                                            : 'bg-background text-foreground border-border hover:bg-accent-soft',
+                                    )}
+                                >
+                                    {language === 'ko' ? '덮어쓰기' : 'Overwrite'}
+                                </button>
+                            </div>
+                            <div className="text-[10.5px] text-muted-foreground leading-snug">
+                                {mode === 'merge'
+                                    ? (language === 'ko' ? '입력한 수량을 기존 보유분에 더하고 평단가는 가중평균으로 계산됩니다. 수정 중인 항목은 합쳐지며 사라집니다.' : 'Quantity is added to the existing holding; average price is recalculated. The edited entry is merged and removed.')
+                                    : (language === 'ko' ? '기존 보유분을 입력값으로 교체합니다. 수정 중인 항목은 사라집니다.' : 'The existing holding is replaced with these values. The edited entry is removed.')}
+                            </div>
+                        </div>
+                    )}
+                    <div className="grid grid-cols-2 gap-2">
+                        <FormattedNumberInput
+                            label={t('quantity')}
+                            suffix={qtySuffix}
+                            value={qty}
+                            onChange={setQty}
+                            disabled={saving}
+                        />
+                        <FormattedNumberInput
+                            label={t('averagePrice')}
+                            prefix={pricePrefix}
+                            value={price}
+                            onChange={setPrice}
+                            disabled={saving}
+                        />
+                    </div>
+                    {isUSD && (
+                        <FormattedNumberInput
+                            label={language === 'ko' ? '매입환율 (₩/$)' : 'Buy rate (KRW/USD)'}
+                            value={purchaseRate}
+                            onChange={setPurchaseRate}
+                            disabled={saving}
+                        />
+                    )}
+                    <button
+                        type="button"
+                        onClick={handleSave}
+                        disabled={!selectedStock || !qty || !price || saving}
+                        className="w-full bg-primary text-primary-foreground py-3 text-sm font-bold disabled:opacity-50 hover:opacity-90 rounded-md inline-flex items-center justify-center gap-2"
+                    >
+                        {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                        {stockChanged && conflictHolding
+                            ? (mode === 'merge'
+                                ? (language === 'ko' ? '물타기로 저장' : 'Merge & save')
+                                : (language === 'ko' ? '덮어쓰기로 저장' : 'Overwrite & save'))
+                            : t('save')}
+                    </button>
+                </div>
+            </DialogContent>
+        </Dialog>
     )
 }
 

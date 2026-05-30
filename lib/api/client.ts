@@ -138,6 +138,8 @@ export const holdingsApi = {
     currency?: string
     purchaseRate?: number
     accountId?: string
+    stockCode?: string
+    mode?: 'merge' | 'overwrite'
   }) =>
     fetchApi<any>(`/holdings/${id}`, {
       method: 'PATCH',

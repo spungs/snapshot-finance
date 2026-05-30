@@ -6,7 +6,7 @@ import { assertAccountOwnership } from '@/lib/auth-helpers'
 import { getUsdExchangeRate } from '@/lib/api/exchange-rate'
 import { holdingService } from '@/lib/services/holding-service'
 import { accountService } from '@/lib/services/account-service'
-import { kisClient } from '@/lib/api/kis-client'
+import { fetchCurrentPrice, detectCurrency } from '@/lib/api/stock-price'
 import { ratelimit, checkRateLimit } from '@/lib/ratelimit'
 import { validateQuantity, validateAveragePrice } from '@/lib/validation/portfolio-input'
 import Decimal from 'decimal.js'
@@ -22,32 +22,6 @@ function safeRevalidate() {
         revalidatePath('/dashboard')
     } catch (e) {
         console.warn('[holdings] revalidatePath failed (non-critical):', e)
-    }
-}
-
-
-// 현재가 조회 헬퍼 함수 (KIS API 사용)
-async function fetchCurrentPrice(stockCode: string, market: string): Promise<number> {
-    if (market === 'LSE') {
-        const { fetchLsePrice } = await import('@/lib/api/stooq')
-        return fetchLsePrice(stockCode)
-    }
-    try {
-        // 시장 타입 매핑 (US, KOSPI, KOSDAQ)
-        // KIS Master DB는 NASD/NYSE/AMEX, KIS API 내부 코드는 NAS/NYS/AMS — 양쪽 모두 인식
-        let marketType: 'KOSPI' | 'KOSDAQ' | 'US' = 'KOSPI'
-        if (market === 'US' || market === 'NAS' || market === 'NYS' || market === 'AMS'
-            || market === 'NASD' || market === 'NYSE' || market === 'AMEX') {
-            marketType = 'US'
-        } else if (market === 'KOSDAQ' || market === 'KQ') {
-            marketType = 'KOSDAQ'
-        }
-
-        const priceData = await kisClient.getCurrentPrice(stockCode, marketType)
-        return priceData.price
-    } catch (e) {
-        console.error(`Failed to fetch price for ${stockCode}:`, e)
-        return 0
     }
 }
 
@@ -180,10 +154,8 @@ export async function POST(request: NextRequest) {
             if (isNaN(currentPrice)) currentPrice = 0
 
             // 통화 자동 감지 (입력된 통화가 없으면 시장 정보로 판단)
-            // KIS Master는 NASD/NYSE/AMEX, KIS API 내부는 NAS/NYS/AMS — 양쪽 다 미국으로 인식
             if (!currency) {
-                const usMarkets = ['US', 'NAS', 'NYS', 'AMS', 'NASD', 'NYSE', 'AMEX', 'LSE']
-                currency = usMarkets.includes(stock.market || '') ? 'USD' : 'KRW'
+                currency = detectCurrency(stock.market)
             }
 
             // USD인데 purchaseRate가 1(기본값)인 경우 현재 환율 적용
