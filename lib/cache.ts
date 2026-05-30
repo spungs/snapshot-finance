@@ -9,16 +9,17 @@ import { Redis } from '@upstash/redis'
 // 추가가 UI 에 안 나타나 silent fail 로 오인 — 사실은 dev DB 25 row vs 운영 Redis
 // cached 22 row 의 불일치였음.)
 const isProduction = process.env.NODE_ENV === 'production'
+const redisUrl = process.env.UPSTASH_REDIS_REST_URL
+const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN
+
+// Vercel "Sensitive" 환경변수는 빌드(collect page data) 시점에 복호화되지 않아 암호문
+// ('eyJ2...')이 그대로 들어온다. 유효한 https URL 일 때만 인스턴스화해 빌드 단계 크래시
+// (UrlError)를 방지한다. 런타임에서는 Vercel 이 복호화한 실제 URL 이 주입되므로 정상 동작.
 const cacheEnabled =
-    isProduction &&
-    !!process.env.UPSTASH_REDIS_REST_URL &&
-    !!process.env.UPSTASH_REDIS_REST_TOKEN
+    isProduction && !!redisUrl && redisUrl.startsWith('https') && !!redisToken
 
 const redis = cacheEnabled
-    ? new Redis({
-          url: process.env.UPSTASH_REDIS_REST_URL!,
-          token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-      })
+    ? new Redis({ url: redisUrl!, token: redisToken! })
     : null
 
 if (!cacheEnabled && !isProduction) {
