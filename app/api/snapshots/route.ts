@@ -248,7 +248,15 @@ export async function GET(request: NextRequest) {
     const limit = Number.isFinite(rawLimit) ? Math.max(1, Math.min(rawLimit, 100)) : 20
     const cursor = searchParams.get('cursor')
 
-    const { data: snapshots, pagination } = await snapshotService.getList(userId, limit, cursor || undefined)
+    // 연/월 필터 (둘 다 유효할 때만 적용)
+    const yearRaw = parseInt(searchParams.get('year') || '', 10)
+    const monthRaw = parseInt(searchParams.get('month') || '', 10)
+    const filter =
+      Number.isInteger(yearRaw) && monthRaw >= 1 && monthRaw <= 12
+        ? { year: yearRaw, month: monthRaw }
+        : undefined
+
+    const { data: snapshots, pagination } = await snapshotService.getList(userId, limit, cursor || undefined, filter)
 
     return NextResponse.json({
       success: true,

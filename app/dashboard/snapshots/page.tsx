@@ -23,12 +23,13 @@ export default async function SnapshotsPage() {
 }
 
 async function SnapshotsContent({ userId }: { userId: string }) {
-  const [{ data: snapshots }, currentHoldingsRaw] = await Promise.all([
+  const [{ data: snapshots }, currentHoldingsRaw, availableMonths] = await Promise.all([
     snapshotService.getList(userId),
     prisma.holding.findMany({
       where: { userId },
       include: { stock: true },
     }),
+    snapshotService.getAvailableMonths(userId),
   ])
 
   const currentHoldings = currentHoldingsRaw.map(h => ({
@@ -65,6 +66,7 @@ async function SnapshotsContent({ userId }: { userId: string }) {
     <SnapshotsClient
       initialSnapshots={serializedSnapshots}
       currentHoldings={currentHoldings}
+      availableMonths={availableMonths}
     />
   )
 }

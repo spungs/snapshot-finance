@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import { snapshotsApi } from '@/lib/api/client'
 import { formatCurrency, formatDate } from '@/lib/utils/formatters'
@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils'
 import { useLanguage } from '@/lib/i18n/context'
 import { SnapshotBottomPanel } from '@/components/dashboard/snapshots/snapshot-bottom-panel'
 import { EmptySnapshotState } from '@/components/dashboard/empty-snapshot-state'
-import { Loader2, Plus, MoreVertical, Eye, TrendingUp, Trash2 } from 'lucide-react'
+import { Loader2, Plus, MoreVertical, Eye, TrendingUp, Trash2, ChevronDown } from 'lucide-react'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import {
     DropdownMenu,
@@ -35,9 +35,22 @@ interface Snapshot {
     exchangeRate?: number
 }
 
+interface AvailableMonth {
+    year: number
+    month: number
+    count: number
+}
+
 interface SnapshotsClientProps {
     initialSnapshots: Snapshot[]
     currentHoldings: any[]
+    availableMonths: AvailableMonth[]
+}
+
+const EN_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+function monthLabel(month: number, language: string) {
+    return language === 'ko' ? `${month}월` : EN_MONTHS[month - 1]
 }
 
 function getDisplay(snapshot: Snapshot, language: string) {
@@ -71,20 +84,15 @@ function UpDown({ value, big = false }: { value: number; big?: boolean }) {
     )
 }
 
-export function SnapshotsClient({ initialSnapshots, currentHoldings }: SnapshotsClientProps) {
+export function SnapshotsClient({ initialSnapshots, currentHoldings, availableMonths }: SnapshotsClientProps) {
     const { t, language } = useLanguage()
     const router = useRouter()
     const [snapshots, setSnapshots] = useState<Snapshot[]>(initialSnapshots)
     const [deleting, setDeleting] = useState<string | null>(null)
     const [selectedIds, setSelectedIds] = useState<string[]>([])
     const [activeId, setActiveId] = useState<string | null>(initialSnapshots[0]?.id ?? null)
-
-    // 부모 server component 가 router.refresh() 후 새 props 로 재렌더되면
-    // useState 초기값은 마운트 시 1회만 적용되므로 자동 동기화 안 됨.
-    // 명시적으로 props 변경을 감지해 state 갱신.
-    useEffect(() => {
-        setSnapshots(initialSnapshots)
-    }, [initialSnapshots])
+    const [filter, setFilter] = useState<{ year: number; month: number } | null>(null)
+    const [isFiltering, setIsFiltering] = useState(false)
 
     const [nextCursor, setNextCursor] = useState<string | undefined>(undefined)
     const [hasMore, setHasMore] = useState(initialSnapshots.length >= 20)
@@ -92,14 +100,18 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings }: Snapshots
     const observerTarget = useRef<HTMLDivElement>(null)
     const loadMoreAbortRef = useRef<AbortController | null>(null)
 
+    // 필터가 없을 때만 서버 props(initialSnapshots)와 동기화한다.
+    // (부모가 router.refresh() 로 재렌더하거나 삭제로 목록이 줄어든 경우 반영, '전체' 복귀 시 복원)
+    // 필터가 걸리면 목록은 클라이언트가 소유하므로 props 로 덮어쓰지 않는다.
     useEffect(() => {
-        if (initialSnapshots.length > 0) {
-            setNextCursor(initialSnapshots[initialSnapshots.length - 1].id)
-            if (!activeId) setActiveId(initialSnapshots[0].id)
-        }
-        // initialSnapshots 가 줄어들거나(삭제) 늘어나면 hasMore 도 재평가
+        if (filter) return
+        setSnapshots(initialSnapshots)
+        setNextCursor(initialSnapshots.length > 0 ? initialSnapshots[initialSnapshots.length - 1].id : undefined)
         setHasMore(initialSnapshots.length >= 20)
-    }, [initialSnapshots, activeId])
+        setActiveId(prev =>
+            prev && initialSnapshots.some(s => s.id === prev) ? prev : (initialSnapshots[0]?.id ?? null),
+        )
+    }, [initialSnapshots, filter])
 
     // Cancel any in-flight pagination fetch when the component unmounts (e.g., tab switch)
     useEffect(() => () => loadMoreAbortRef.current?.abort(), [])
@@ -113,7 +125,7 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings }: Snapshots
 
         setIsLoadingMore(true)
         try {
-            const response = await snapshotsApi.getList(nextCursor, controller.signal)
+            const response = await snapshotsApi.getList(nextCursor, controller.signal, filter ?? undefined)
             if (controller.signal.aborted) return
             if (response.success && response.data) {
                 const newSnapshots = response.data
@@ -131,7 +143,7 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings }: Snapshots
         } finally {
             if (!controller.signal.aborted) setIsLoadingMore(false)
         }
-    }, [nextCursor, hasMore, isLoadingMore])
+    }, [nextCursor, hasMore, isLoadingMore, filter])
 
     useEffect(() => {
         const observer = new IntersectionObserver(
@@ -148,6 +160,42 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings }: Snapshots
         setActiveId(id)
         window.scrollTo({ top: 0, behavior: 'smooth' })
     }, [])
+
+    // 연/월 필터 적용 — 첫 페이지부터 새로 조회해 목록을 교체. 무한스크롤은 이 필터 안에서 이어진다.
+    const applyFilter = useCallback(async (year: number, month: number) => {
+        loadMoreAbortRef.current?.abort()
+        const controller = new AbortController()
+        loadMoreAbortRef.current = controller
+        setFilter({ year, month })
+        setSelectedIds([])
+        setIsFiltering(true)
+        try {
+            const response = await snapshotsApi.getList(undefined, controller.signal, { year, month })
+            if (controller.signal.aborted) return
+            if (response.success && response.data) {
+                setSnapshots(response.data)
+                setActiveId(response.data[0]?.id ?? null)
+                setNextCursor(response.pagination?.cursor)
+                setHasMore(response.pagination?.hasMore ?? false)
+                window.scrollTo({ top: 0, behavior: 'smooth' })
+            }
+        } catch (err) {
+            if ((err as Error).name === 'AbortError') return
+            console.error('Failed to filter snapshots:', err)
+            toast.error(t('networkError'))
+        } finally {
+            if (!controller.signal.aborted) setIsFiltering(false)
+        }
+    }, [t])
+
+    // '전체' — filter=null 로 두면 동기화 effect 가 initialSnapshots(최신 목록)로 복원한다.
+    const clearFilter = useCallback(() => {
+        if (!filter) return
+        loadMoreAbortRef.current?.abort()
+        setSelectedIds([])
+        setIsFiltering(false)
+        setFilter(null)
+    }, [filter])
 
     const handleSelect = (id: string, e: React.MouseEvent) => {
         e.stopPropagation()
@@ -201,7 +249,8 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings }: Snapshots
         }
     }
 
-    if (snapshots.length === 0) {
+    // 필터 없는 진짜 빈 상태(스냅샷 0개) — 첫 스냅샷 작성 유도
+    if (snapshots.length === 0 && !filter) {
         return (
             <div className="max-w-[420px] md:max-w-2xl mx-auto w-full pb-20">
                 <Hero t={t} />
@@ -212,45 +261,69 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings }: Snapshots
         )
     }
 
-    const activeSnapshot = snapshots.find(s => s.id === activeId) ?? snapshots[0]
-    const activeIndex = snapshots.findIndex(s => s.id === activeSnapshot.id)
+    const activeSnapshot = snapshots.find(s => s.id === activeId) ?? snapshots[0] ?? null
+    const activeIndex = activeSnapshot ? snapshots.findIndex(s => s.id === activeSnapshot.id) : -1
+    // 필터 적용 시엔 "LATEST/N일 전" 대신 선택한 연·월을 라벨로 표기
+    const activeEyebrow = filter
+        ? `${filter.year}.${String(filter.month).padStart(2, '0')}${language === 'ko' ? ' · 선택' : ''}`
+        : undefined
 
     return (
         <div className={cn('max-w-[420px] md:max-w-2xl mx-auto w-full relative', selectedIds.length > 0 ? 'pb-28' : 'pb-4')}>
             <Hero t={t} />
-            <ActiveSnapshotCard
-                snapshot={activeSnapshot}
-                index={activeIndex}
+            <FilterBar
+                availableMonths={availableMonths}
+                filter={filter}
+                onApply={applyFilter}
+                onClear={clearFilter}
+                isFiltering={isFiltering}
                 language={language}
                 t={t}
-            />
-            <TimelineSection
-                snapshots={snapshots}
-                activeId={activeSnapshot.id}
-                onSelect={handleActiveSelect}
-                language={language}
-                t={t}
-                selectedIds={selectedIds}
-                onToggleSelect={handleSelect}
-                onDelete={handleDelete}
-                onSimulate={(id) => router.push(`/dashboard/simulation?snapshotId=${id}`)}
-                deletingId={deleting}
             />
 
-            {hasMore && (
-                <div ref={observerTarget} className="py-8 flex justify-center">
-                    {isLoadingMore && (
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            <span className="text-sm">{t('loadingMore')}</span>
+            {snapshots.length === 0 ? (
+                <PeriodEmpty t={t} />
+            ) : (
+                <>
+                    {activeSnapshot && (
+                        <ActiveSnapshotCard
+                            snapshot={activeSnapshot}
+                            index={activeIndex}
+                            eyebrowOverride={activeEyebrow}
+                            language={language}
+                            t={t}
+                            onSimulate={(id) => router.push(`/dashboard/simulation?snapshotId=${id}`)}
+                        />
+                    )}
+                    <TimelineSection
+                        snapshots={snapshots}
+                        activeId={activeSnapshot?.id ?? ''}
+                        onSelect={handleActiveSelect}
+                        language={language}
+                        t={t}
+                        selectedIds={selectedIds}
+                        onToggleSelect={handleSelect}
+                        onDelete={handleDelete}
+                        onSimulate={(id) => router.push(`/dashboard/simulation?snapshotId=${id}`)}
+                        deletingId={deleting}
+                    />
+
+                    {hasMore && (
+                        <div ref={observerTarget} className="py-8 flex justify-center">
+                            {isLoadingMore && (
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    <span className="text-sm">{t('loadingMore')}</span>
+                                </div>
+                            )}
                         </div>
                     )}
-                </div>
-            )}
-            {!hasMore && snapshots.length > 0 && (
-                <div className="py-4 text-center text-muted-foreground text-xs tracking-wider">
-                    — {t('noMoreSnapshots')} —
-                </div>
+                    {!hasMore && snapshots.length > 0 && (
+                        <div className="py-4 text-center text-muted-foreground text-xs tracking-wider">
+                            — {t('noMoreSnapshots')} —
+                        </div>
+                    )}
+                </>
             )}
 
             {/* FAB — 보유 탭의 종목 추가 FAB과 동일한 사이즈/위치 (48px round, 우하단)
@@ -307,20 +380,22 @@ function Hero({ t }: { t: (k: any) => string }) {
 
 /* ─── Active/Latest snapshot detail card ─── */
 function ActiveSnapshotCard({
-    snapshot, index, language, t,
+    snapshot, index, eyebrowOverride, language, t, onSimulate,
 }: {
     snapshot: Snapshot
     index: number
+    eyebrowOverride?: string
     language: string
     t: (k: any) => string
+    onSimulate: (id: string) => void
 }) {
     const { displayValue, displayProfit, currency } = getDisplay(snapshot, language)
     const profitRate = Number(snapshot.profitRate)
     const isProfit = displayProfit >= 0
     const holdingsCount = snapshot.holdings.length
-    const labelKey = index === 0
+    const labelKey = eyebrowOverride ?? (index === 0
         ? (language === 'ko' ? 'LATEST · 최신' : 'LATEST')
-        : (language === 'ko' ? `${index}일 전` : `${index}d ago`)
+        : (language === 'ko' ? `${index}일 전` : `${index}d ago`))
     const sourceLabel = t('autoSnapshotLabel')
 
     return (
@@ -366,6 +441,141 @@ function ActiveSnapshotCard({
                     </div>
                 </div>
             </div>
+
+            {/* 컴팩트 액션 라인 — 상세보기(텍스트 링크) + ⋮(시뮬레이션). 타임라인/상세 패턴과 일치 */}
+            <div className="flex items-center justify-between mt-4 pt-3 border-t border-border/60">
+                <Link
+                    href={`/dashboard/snapshots/${snapshot.id}`}
+                    className="text-[12px] font-semibold text-primary hover:underline inline-flex items-center gap-1"
+                >
+                    <Eye className="w-3.5 h-3.5" /> {t('details')}
+                </Link>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <button
+                            type="button"
+                            className="p-1.5 -mr-1.5 text-muted-foreground hover:text-foreground"
+                            aria-label={language === 'ko' ? '더보기' : 'More'}
+                        >
+                            <MoreVertical className="w-4 h-4" />
+                        </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="min-w-[140px]">
+                        <DropdownMenuItem
+                            onClick={() => onSimulate(snapshot.id)}
+                            className="cursor-pointer"
+                        >
+                            <TrendingUp className="w-4 h-4 mr-2" /> {t('simulation')}
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            </div>
+        </div>
+    )
+}
+
+/* ─── Filter bar (연/월 선택) ─── */
+function FilterBar({
+    availableMonths, filter, onApply, onClear, isFiltering, language, t,
+}: {
+    availableMonths: AvailableMonth[]
+    filter: { year: number; month: number } | null
+    onApply: (year: number, month: number) => void
+    onClear: () => void
+    isFiltering: boolean
+    language: string
+    t: (k: any) => string
+}) {
+    const years = useMemo(() => {
+        const seen = new Set<number>()
+        const out: number[] = []
+        for (const m of availableMonths) {
+            if (!seen.has(m.year)) { seen.add(m.year); out.push(m.year) }
+        }
+        return out
+    }, [availableMonths])
+
+    // availableMonths 는 snapshotDate desc 순서 → 같은 해의 첫 항목이 그 해의 최신 월
+    const monthsOfYear = useMemo(
+        () => (filter ? availableMonths.filter(m => m.year === filter.year) : []),
+        [availableMonths, filter],
+    )
+
+    if (availableMonths.length === 0) return null
+
+    const handleYear = (year: number) => {
+        const latest = availableMonths.find(m => m.year === year)
+        if (latest) onApply(year, latest.month)
+    }
+
+    const triggerCls =
+        'inline-flex items-center gap-1.5 border bg-card px-3 py-1.5 text-[12.5px] font-semibold text-foreground disabled:opacity-40 disabled:cursor-not-allowed'
+
+    return (
+        <div className="px-6 pb-3 flex items-center gap-2 flex-wrap">
+            {/* 연도 */}
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <button type="button" className={triggerCls} aria-label={t('selectYear')}>
+                        {filter ? filter.year : (language === 'ko' ? '연도' : 'Year')}
+                        <ChevronDown className="w-3.5 h-3.5 opacity-60" />
+                    </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="min-w-[100px] max-h-[260px] overflow-y-auto">
+                    {years.map(y => (
+                        <DropdownMenuItem key={y} onClick={() => handleYear(y)} className="cursor-pointer">
+                            {y}
+                        </DropdownMenuItem>
+                    ))}
+                </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* 월 */}
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <button type="button" className={triggerCls} disabled={!filter} aria-label={t('selectMonth')}>
+                        {filter ? monthLabel(filter.month, language) : (language === 'ko' ? '월' : 'Month')}
+                        <ChevronDown className="w-3.5 h-3.5 opacity-60" />
+                    </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="min-w-[120px] max-h-[260px] overflow-y-auto">
+                    {monthsOfYear.map(m => (
+                        <DropdownMenuItem
+                            key={m.month}
+                            onClick={() => filter && onApply(filter.year, m.month)}
+                            className="cursor-pointer"
+                        >
+                            <span>{monthLabel(m.month, language)}</span>
+                            <span className="ml-auto pl-3 text-[11px] text-muted-foreground numeric">{m.count}</span>
+                        </DropdownMenuItem>
+                    ))}
+                </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* 전체 */}
+            <button
+                type="button"
+                onClick={onClear}
+                className={cn(
+                    'px-3 py-1.5 text-[12px] font-medium border transition-colors',
+                    !filter
+                        ? 'border-primary bg-primary text-primary-foreground'
+                        : 'border-border text-muted-foreground hover:text-foreground hover:border-foreground',
+                )}
+            >
+                {t('allPeriods')}
+            </button>
+
+            {isFiltering && <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground ml-1" />}
+        </div>
+    )
+}
+
+/* ─── 선택한 기간에 스냅샷이 없을 때 ─── */
+function PeriodEmpty({ t }: { t: (k: any) => string }) {
+    return (
+        <div className="mx-4 my-6 p-8 bg-card border border-border text-center">
+            <p className="text-[13px] text-muted-foreground">{t('noSnapshotsInPeriod')}</p>
         </div>
     )
 }

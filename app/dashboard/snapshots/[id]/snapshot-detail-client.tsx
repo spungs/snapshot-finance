@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, MoreVertical, Pencil, Trash2, Loader2, AlertCircle } from 'lucide-react'
+import { ChevronLeft, MoreVertical, Pencil, Trash2, Loader2, AlertCircle, TrendingUp } from 'lucide-react'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
 import { useLanguage } from '@/lib/i18n/context'
@@ -156,6 +156,12 @@ export default function SnapshotDetailClient({ snapshot }: Props) {
                             </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="min-w-[160px]">
+                            <DropdownMenuItem
+                                onClick={() => router.push(`/dashboard/simulation?snapshotId=${snapshot.id}`)}
+                                className="cursor-pointer"
+                            >
+                                <TrendingUp className="w-4 h-4 mr-2" /> {t('simulation')}
+                            </DropdownMenuItem>
                             <DropdownMenuItem
                                 onClick={() => router.push(`/dashboard/snapshots/${snapshot.id}/edit`)}
                                 className="cursor-pointer"

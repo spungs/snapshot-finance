@@ -101,9 +101,24 @@ export interface ChartDataPoint {
 }
 
 export const snapshotService = {
-    async getList(userId: string, limit: number = 20, cursor?: string) {
+    async getList(
+        userId: string,
+        limit: number = 20,
+        cursor?: string,
+        filter?: { year: number; month: number },
+    ) {
+        // 연/월 필터: UTC 월 경계로 범위 지정. formatDate(date-fns, 런타임 로컬=Vercel UTC)
+        // 및 getAvailableMonths 의 UTC 버킷팅과 동일 기준이라 표시값과 일관된다.
+        const where: { userId: string; snapshotDate?: { gte: Date; lt: Date } } = { userId }
+        if (filter) {
+            where.snapshotDate = {
+                gte: new Date(Date.UTC(filter.year, filter.month - 1, 1)),
+                lt: new Date(Date.UTC(filter.year, filter.month, 1)),
+            }
+        }
+
         const snapshots = await prisma.portfolioSnapshot.findMany({
-            where: { userId },
+            where,
             orderBy: { snapshotDate: 'desc' },
             take: limit + 1,
             ...(cursor && {
@@ -131,6 +146,31 @@ export const snapshotService = {
                 hasMore,
             },
         }
+    },
+
+    /**
+     * 기간 필터 드롭다운용 — 스냅샷이 실제 존재하는 연·월 목록(내림차순).
+     * snapshotDate 만 select 해 가볍게 읽고, getList 필터와 동일한 UTC 기준으로 버킷팅한다.
+     */
+    async getAvailableMonths(userId: string): Promise<{ year: number; month: number; count: number }[]> {
+        const rows = await prisma.portfolioSnapshot.findMany({
+            where: { userId },
+            orderBy: { snapshotDate: 'desc' },
+            select: { snapshotDate: true },
+        })
+
+        const map = new Map<string, { year: number; month: number; count: number }>()
+        for (const { snapshotDate } of rows) {
+            const year = snapshotDate.getUTCFullYear()
+            const month = snapshotDate.getUTCMonth() + 1
+            const key = `${year}-${month}`
+            const existing = map.get(key)
+            if (existing) existing.count += 1
+            else map.set(key, { year, month, count: 1 })
+        }
+
+        // Map 삽입 순서 = snapshotDate desc 순서이므로 그대로 내림차순 유지
+        return Array.from(map.values())
     },
 
     async getDetail(id: string) {

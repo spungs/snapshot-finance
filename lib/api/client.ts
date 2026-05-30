@@ -33,8 +33,20 @@ async function fetchApi<T>(
 
 // 스냅샷 API
 export const snapshotsApi = {
-  getList: (cursor?: string, signal?: AbortSignal) =>
-    fetchApi<any[]>(`/snapshots${cursor ? `?cursor=${cursor}` : ''}`, { cache: 'no-store', signal }),
+  getList: (
+    cursor?: string,
+    signal?: AbortSignal,
+    filter?: { year: number; month: number },
+  ) => {
+    const params = new URLSearchParams()
+    if (cursor) params.set('cursor', cursor)
+    if (filter) {
+      params.set('year', String(filter.year))
+      params.set('month', String(filter.month))
+    }
+    const qs = params.toString()
+    return fetchApi<any[]>(`/snapshots${qs ? `?${qs}` : ''}`, { cache: 'no-store', signal })
+  },
 
   getDetail: (id: string, signal?: AbortSignal) =>
     fetchApi<any>(`/snapshots/${id}`, { signal }),
