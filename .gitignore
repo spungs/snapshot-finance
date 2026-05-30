@@ -130,3 +130,7 @@ import.log
 # Superpowers brainstorm session (visual companion mockups)
 .superpowers/
 report.txt
+
+# Daily briefing output (generated at runtime, sent via Telegram)
+brief.html
+daily_brief*.html
