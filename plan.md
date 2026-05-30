@@ -1,7 +1,7 @@
 # Snapshot Finance
 
 **작성일:** 2025-11-25  
-**최종 업데이트:** 2026-05-30 (일일 포트폴리오 브리핑 read 엔드포인트 `/api/portfolio/daily-brief` 추가 — Claude 원격 루틴이 매일 아침 호출해 뉴스·리밸런싱 분석 후 텔레그램 전송. 직전: 스냅샷 탐색·진입 개선 — 연/월 기간 필터·큰 카드 컴팩트 액션·상세 시뮬레이션 진입. + Upstash Sensitive env 빌드 복호화 이슈로 인한 배포 실패를 cache/ratelimit 가드로 해소)  
+**최종 업데이트:** 2026-05-31 (종목 수정을 인라인 폼 → `EditHoldingDialog` 로 전환하고 **티커(종목) 변경** 지원 — 같은 계좌 기보유 종목으로 바꾸면 물타기/덮어쓰기로 합침(`PATCH /api/holdings/[id]` 가 `stockCode`/`mode` 트랜잭션 처리). 직전: 일일 포트폴리오 브리핑 read 엔드포인트 `/api/portfolio/daily-brief` 추가 — Claude 원격 루틴이 매일 아침 호출해 뉴스·리밸런싱 분석 후 텔레그램 전송. + Upstash Sensitive env 빌드 복호화 이슈로 인한 배포 실패를 cache/ratelimit 가드로 해소)  
 **목표:** 개인용 주식 잔고 관리 MVP (무료 플랜)
 
 ---
@@ -123,6 +123,7 @@
     - [x] 오버스크롤 방지: Native Pull-to-Refresh와 커스텀 로직 충돌 방지 (`overscroll-behavior-y: none`)
     - [x] 다국어 누락 수정: 'Qty', 'Price' 라벨 번역 적용
     - [x] **모바일 종목 수정 UI 구현**: 모바일 카드 뷰에서 인라인 수정 기능 추가 및 버튼 가시성 버그 해결
+    - [x] **종목 수정 = 다이얼로그 + 티커 변경** (2026-05-31): 인라인 폼을 `EditHoldingDialog`(추가 다이얼로그와 동일한 검색·물타기 UI)로 전환. 종목 검색으로 ticker 자체를 교체 가능(현재가·통화 자동 재조회). 바꾼 종목이 같은 계좌에 이미 있으면 물타기(가중평균)/덮어쓰기로 합치고 수정하던 행은 삭제 — `PATCH /api/holdings/[id]` 가 `stockCode`/`mode` 수용, 단일 트랜잭션 처리. `fetchCurrentPrice`/`detectCurrency` 를 `lib/api/stock-price.ts` 로 공용화(POST/PATCH 공유)
 - [x] **스냅샷 기능 보완**: 
     - [x] 스냅샷 목록 '시뮬레이션 실행' 버튼 복구 (데스크톱/모바일 최적화)
     - [x] 스냅샷 비교 화면 레이아웃 수정: 종목명 전체 표시 및 수량 정보 정렬 개선
