@@ -9,6 +9,7 @@ import { getUsdExchangeRate } from '@/lib/api/exchange-rate'
 import { ratelimit, checkRateLimit } from '@/lib/ratelimit'
 import { assertAccountOwnership } from '@/lib/auth-helpers'
 import { resolveOrCreateStock } from '@/lib/services/stock-resolver'
+import { fetchCurrentPrice } from '@/lib/api/stock-price'
 import Decimal from 'decimal.js'
 
 // 일괄 등록 한 번에 처리 가능한 최대 종목 수.
@@ -288,6 +289,26 @@ export async function executeBulkImport(
         return cachedUsdRate
     }
 
+    // 현재가 사전 조회 — 트랜잭션 밖에서 미리 받아 둔다.
+    // 외부 API(KIS) 호출을 트랜잭션 안에서 돌리면 30s timeout 위험 + 전체 롤백 리스크가 있어 분리.
+    // 개별 등록(createHolding)과 달리 일괄 등록은 그동안 currentPrice 를 채우지 않아 default 0 으로 남았고,
+    // getList 의 라이브 시세 조회가 실패(US 종목 KIS 실패/레이트리밋 등)하면 폴백할 저장가가 없어
+    // ₩0 / 수익률 -100% 로 표시되는 버그가 있었다. 여기서 저장가 폴백을 채워 개별 등록과 동작을 일치시킨다.
+    const uniqueCodes = [...new Set(items.map(i => i.identifier))]
+    const stockMetas = await prisma.stock.findMany({
+        where: { stockCode: { in: uniqueCodes } },
+        select: { stockCode: true, market: true },
+    })
+    const priceMap = new Map<string, number>()
+    await Promise.all(stockMetas.map(async (s) => {
+        try {
+            const price = await fetchCurrentPrice(s.stockCode, s.market || 'Unknown')
+            if (Number.isFinite(price) && price > 0) priceMap.set(s.stockCode, price)
+        } catch {
+            // 개별 시세 실패는 무시 — 해당 종목만 저장가 없이 진행(default 0), import 자체는 계속.
+        }
+    }))
+
     try {
         // 전체 import를 단일 트랜잭션으로 실행 - 중간에 실패하면 전체 롤백
         const result = await prisma.$transaction(async (tx) => {
@@ -330,6 +351,9 @@ export async function executeBulkImport(
                     }
                 }
 
+                // 사전 조회한 현재가 — 0(조회 실패)이면 저장가를 덮어쓰지 않는다(기존 양호한 값 보존).
+                const freshPrice = priceMap.get(stock.stockCode) ?? 0
+
                 // 2. Logic based on Strategy
                 if (strategy === 'overwrite') {
                     await tx.holding.upsert({
@@ -339,6 +363,7 @@ export async function executeBulkImport(
                             averagePrice: item.averagePrice,
                             currency,
                             purchaseRate,
+                            ...(freshPrice > 0 ? { currentPrice: freshPrice, priceUpdatedAt: new Date() } : {}),
                         },
                         create: {
                             userId,
@@ -348,6 +373,8 @@ export async function executeBulkImport(
                             averagePrice: item.averagePrice,
                             currency,
                             purchaseRate,
+                            currentPrice: freshPrice,
+                            priceUpdatedAt: freshPrice > 0 ? new Date() : null,
                         }
                     })
                 } else { // 'add'
@@ -375,6 +402,7 @@ export async function executeBulkImport(
                                 averagePrice: newAvgPrice,
                                 currency,
                                 purchaseRate: newPurchaseRate,
+                                ...(freshPrice > 0 ? { currentPrice: freshPrice, priceUpdatedAt: new Date() } : {}),
                             }
                         })
                     } else {
@@ -387,6 +415,8 @@ export async function executeBulkImport(
                                 averagePrice: item.averagePrice,
                                 currency,
                                 purchaseRate,
+                                currentPrice: freshPrice,
+                                priceUpdatedAt: freshPrice > 0 ? new Date() : null,
                             }
                         })
                     }
