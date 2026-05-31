@@ -530,13 +530,18 @@ function FilterBar({
                 </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* 월 */}
+            {/* 월 — '전체'(filter=null)일 땐 표시할 월 목록이 없으므로 트리거 자체를 비활성화.
+                disabled 를 자식 button 에만 주면 Radix Trigger 가 pointerdown 으로 빈 메뉴를 여는
+                모순(회색인데 열림)이 생긴다 → Trigger primitive 에 직접 disabled 를 전달한다. */}
             <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <button type="button" className={triggerCls} disabled={!filter} aria-label={t('selectMonth')}>
-                        {filter ? monthLabel(filter.month, language) : (language === 'ko' ? '월' : 'Month')}
-                        <ChevronDown className="w-3.5 h-3.5 opacity-60" />
-                    </button>
+                <DropdownMenuTrigger
+                    type="button"
+                    disabled={!filter}
+                    aria-label={t('selectMonth')}
+                    className={triggerCls}
+                >
+                    {filter ? monthLabel(filter.month, language) : (language === 'ko' ? '월' : 'Month')}
+                    <ChevronDown className="w-3.5 h-3.5 opacity-60" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="min-w-[120px] max-h-[260px] overflow-y-auto">
                     {monthsOfYear.map(m => (
