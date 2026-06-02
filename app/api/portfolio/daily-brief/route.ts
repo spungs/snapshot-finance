@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { holdingService } from '@/lib/services/holding-service'
-import { cacheGet, stockPriceKey, type PriceCacheEntry } from '@/lib/cache'
 import Decimal from 'decimal.js'
 
 // 매일 아침 포트폴리오 브리핑용 read 엔드포인트.
@@ -53,42 +52,38 @@ export async function GET(request: NextRequest) {
         const totalStockValue = new Decimal(summary.totalStockValue || 0)
         const exRate = new Decimal(summary.exchangeRate || 0)
 
-        // 4. getList 가 버리는 changeRate 를 가격 캐시에서 끌어와 부착 + weight 계산.
-        //    - 캐시 미스/비프로덕션(Redis 없음)/시세 실패 → changeRate: null (리포트에서 N/A)
-        //    - LSE 는 등락 미산출(캐시값 0 고정)이므로 0 대신 null 로 노출.
+        // 4. changeRate 부착 + weight 계산.
+        //    - changeRate 는 getList 가 라이브/캐시 가격 fetch 에서 직접 전달하는 값을 사용.
+        //      (Redis 를 다시 읽지 않으므로 캐시 다운/미스 상황에서도 등락률이 살아있음)
+        //    - 시세 실패로 DB 폴백한 종목·LSE 는 changeRate 가 null → 리포트에서 N/A.
         //    - weight: USD 보유분을 환율로 KRW 환산해 totalStockValue(KRW)와 단위를 맞춘다.
-        const enriched = await Promise.all(
-            holdings.map(async (h) => {
-                const entry = await cacheGet<PriceCacheEntry>(stockPriceKey(h.stockCode))
-                const changeRate =
-                    h.market === 'LSE' || !entry || !Number.isFinite(entry.changeRate)
-                        ? null
-                        : entry.changeRate
-                const valueKRW =
-                    h.currency === 'USD'
-                        ? new Decimal(h.currentValue).times(exRate)
-                        : new Decimal(h.currentValue)
-                const weight = totalStockValue.isZero()
-                    ? 0
-                    : valueKRW.div(totalStockValue).times(100).toNumber()
-                return {
-                    stockCode: h.stockCode,
-                    stockName: h.stockName,
-                    engName: h.engName,
-                    market: h.market,
-                    currency: h.currency,
-                    quantity: h.quantity,
-                    averagePrice: h.averagePrice,
-                    currentPrice: h.currentPrice,
-                    changeRate, // 전일/간밤 대비 등락률(%) — 없으면 null
-                    totalCost: h.totalCost,
-                    currentValue: h.currentValue,
-                    profit: h.profit,
-                    profitRate: h.profitRate,
-                    weight,
-                }
-            }),
-        )
+        const enriched = holdings.map((h) => {
+            const changeRate =
+                h.market === 'LSE' || !Number.isFinite(h.changeRate) ? null : h.changeRate
+            const valueKRW =
+                h.currency === 'USD'
+                    ? new Decimal(h.currentValue).times(exRate)
+                    : new Decimal(h.currentValue)
+            const weight = totalStockValue.isZero()
+                ? 0
+                : valueKRW.div(totalStockValue).times(100).toNumber()
+            return {
+                stockCode: h.stockCode,
+                stockName: h.stockName,
+                engName: h.engName,
+                market: h.market,
+                currency: h.currency,
+                quantity: h.quantity,
+                averagePrice: h.averagePrice,
+                currentPrice: h.currentPrice,
+                changeRate, // 전일/간밤 대비 등락률(%) — 없으면 null
+                totalCost: h.totalCost,
+                currentValue: h.currentValue,
+                profit: h.profit,
+                profitRate: h.profitRate,
+                weight,
+            }
+        })
 
         return NextResponse.json({
             success: true,

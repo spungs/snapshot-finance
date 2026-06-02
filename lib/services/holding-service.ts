@@ -13,13 +13,20 @@ import Decimal from 'decimal.js'
 
 // 가격 조회: 우선 Redis(stock:price:{code}) → 미스 시 KIS 직접 호출.
 // cron 미실행 / 캐시 만료 / 신규 보유 종목 등 어떤 상태에서도 동작 보장.
-async function fetchCurrentPrice(stockCode: string, market: string): Promise<number> {
+// price 와 함께 changeRate(전일/간밤 대비 등락률 %)도 반환한다 — 호출부가 Redis 를
+// 다시 읽지 않고 같은 fetch 결과에서 등락률을 얻도록(캐시 다운 시에도 동작).
+// 가격을 못 구하면(라이브 실패 → DB 폴백) 등락률은 알 수 없으므로 null.
+async function fetchCurrentPrice(stockCode: string, market: string): Promise<{ price: number; changeRate: number | null }> {
     const cached = await cacheGet<PriceCacheEntry>(stockPriceKey(stockCode))
     if (cached && Number.isFinite(cached.price) && cached.price > 0) {
-        return cached.price
+        return {
+            price: cached.price,
+            changeRate: Number.isFinite(cached.changeRate) ? cached.changeRate : null,
+        }
     }
 
     // LSE 종목: KIS 미지원 → stooq 전일종가 (USD). 결과를 캐시에 저장.
+    // stooq 는 종가만 제공 → 등락률 미산출이므로 changeRate 는 null 로 노출.
     if (market === 'LSE') {
         const { fetchLsePrice } = await import('@/lib/api/stooq')
         const price = await fetchLsePrice(stockCode)
@@ -27,13 +34,13 @@ async function fetchCurrentPrice(stockCode: string, market: string): Promise<num
             const entry: PriceCacheEntry = {
                 price,
                 currency: 'USD',
-                change: 0,       // stooq 는 종가만 제공 — 등락 미산출(현재 미사용)
+                change: 0,
                 changeRate: 0,
                 updatedAt: new Date().toISOString(),
             }
             await cacheSet(stockPriceKey(stockCode), entry, PRICE_CACHE_TTL_SECONDS)
         }
-        return price
+        return { price, changeRate: null }
     }
 
     try {
@@ -55,11 +62,15 @@ async function fetchCurrentPrice(stockCode: string, market: string): Promise<num
                 updatedAt: new Date().toISOString(),
             }
             await cacheSet(stockPriceKey(stockCode), entry, PRICE_CACHE_TTL_SECONDS)
+            return {
+                price: priceData.price,
+                changeRate: Number.isFinite(priceData.changeRate) ? priceData.changeRate : null,
+            }
         }
-        return priceData.price
+        return { price: priceData.price, changeRate: null }
     } catch (e) {
         console.warn(`Failed to fetch price for ${stockCode}:`, e)
-        return 0
+        return { price: 0, changeRate: null }
     }
 }
 
@@ -138,9 +149,11 @@ const holdingServiceInternal = {
             // 본 GET 핸들러에서 분리해 한 번에 묶어서 처리한다 (race + GET-side-effect 회피).
             const pricesPromise = Promise.all(holdings.map(async (holding) => {
                 let fetchedPrice = 0
+                let changeRate: number | null = null
                 try {
-                    fetchedPrice = await fetchCurrentPrice(holding.stock.stockCode, holding.stock.market || 'Unknown')
-                    if (!Number.isFinite(fetchedPrice)) fetchedPrice = 0
+                    const fetched = await fetchCurrentPrice(holding.stock.stockCode, holding.stock.market || 'Unknown')
+                    fetchedPrice = Number.isFinite(fetched.price) ? fetched.price : 0
+                    changeRate = fetched.changeRate
                 } catch (e) {
                     console.warn(`Price fetch failed for ${holding.stock.nameKo}`, e)
                 }
@@ -182,6 +195,7 @@ const holdingServiceInternal = {
                     averagePrice: averagePrice.toNumber(),
                     currentPrice: displayPrice.toNumber(),
                     currency: holding.currency || 'KRW',
+                    changeRate, // 전일/간밤 대비 등락률(%) — 라이브/캐시 fetch 에서 직접 전달, 없으면 null
                     purchaseRate: purchaseRate.toNumber(),
                     priceUpdatedAt: priceTimestamp,
                     totalCost: totalCost.toNumber(),
