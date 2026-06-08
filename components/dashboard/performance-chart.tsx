@@ -123,13 +123,16 @@ export function PerformanceChart({ initialChartData }: PerformanceChartProps) {
   const [mode, setMode] = useState<ChartMode>('profitRate')
   const exchangeRate = 1435
 
-  // SWR — 서버에서 prefetch 된 initialChartData 를 fallback 으로 사용해 첫 페인트
-  // 부터 차트가 보인다. 이후엔 stale-while-revalidate 패턴으로 백그라운드 재검증.
+  // SWR — 서버에서 prefetch 된 initialChartData 를 fallback 으로 첫 페인트부터 차트 표시.
+  // 단, SWR 캐시는 localStorage 에 영속(localStorageProvider)되므로 과거의 stale 한
+  // 차트 배열이 fallbackData 보다 우선해 표시될 수 있다. 이때 마운트 재검증을 생략하면
+  // (구: revalidateOnMount: !initialChartData) 새로고침해도 stale 값(예: 시세 수리 전
+  // -91%)이 영구히 남는다 → 항상 마운트 시 서버 기준으로 재검증해 영속 캐시를 정정한다.
   const { data: allData, error, isLoading, isValidating, mutate } = useSWR<ChartDataPoint[]>(
     '/api/snapshots/chart-data',
     {
       fallbackData: initialChartData,
-      revalidateOnMount: !initialChartData, // SSR 데이터가 있으면 마운트 즉시 재검증 생략
+      revalidateOnMount: true,
     }
   )
 
