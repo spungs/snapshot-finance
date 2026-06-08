@@ -10,23 +10,24 @@ import { format } from 'date-fns'
 // Unified Cron Job: Daily Snapshot + User Maintenance
 // Schedule: 22:30 UTC Mon-Fri (07:30 KST Tue-Sat / 화~토)
 
-// Helper function to fetch price with retry
+// Helper function to fetch price.
+// 실패/0 가격을 그대로 반환하면 snapshot_holdings.currentPrice = 0 으로 저장되어
+// totalValue 과소·profitRate ≈ -100% 가 되므로, 0 반환 대신 throw 하여
+// 상위 호출부가 skip(개별) / abort(>50%) 를 결정하게 한다.
 async function getStockPrice(symbol: string, market: string): Promise<number> {
-    try {
-        // Map market for KIS Client
-        let marketType: 'KOSPI' | 'KOSDAQ' | 'US' = 'KOSPI'
-        if (market === 'US' || market === 'NAS' || market === 'NYS' || market === 'AMS') {
-            marketType = 'US'
-        } else if (market === 'KOSDAQ' || market === 'KQ') {
-            marketType = 'KOSDAQ'
-        }
-
-        const priceData = await kisClient.getCurrentPrice(symbol, marketType)
-        return priceData.price
-    } catch (error) {
-        console.warn(`[Cron] Failed to fetch price for ${symbol} (${market}), using 0. Error:`, error)
-        return 0
+    // Map market for KIS Client
+    let marketType: 'KOSPI' | 'KOSDAQ' | 'US' = 'KOSPI'
+    if (market === 'US' || market === 'NAS' || market === 'NYS' || market === 'AMS') {
+        marketType = 'US'
+    } else if (market === 'KOSDAQ' || market === 'KQ') {
+        marketType = 'KOSDAQ'
     }
+
+    const priceData = await kisClient.getCurrentPrice(symbol, marketType)
+    if (!priceData || !Number.isFinite(priceData.price) || priceData.price <= 0) {
+        throw new Error(`Invalid price (${priceData?.price}) for ${symbol} (${market})`)
+    }
+    return priceData.price
 }
 
 export async function GET(request: NextRequest) {
@@ -80,51 +81,72 @@ export async function GET(request: NextRequest) {
 
                     // 여러 계좌에 분산된 같은 종목을 stockCode 단위로 통합 (가중평균 평단 + 합계 수량)
                     const merged = mergeHoldingsByStock(user.holdings)
-
-                    // Fetch prices and calculate values (Real-time) — 모든 합계는 Decimal로
                     const usdRateDec = new Decimal(usdRate || 0)
-                    let totalValue = new Decimal(0)
-                    let totalCost = new Decimal(0)
 
-                    const snapshotHoldingsData = await Promise.all(
+                    // 1) 종목별 현재가 조회 — 실패 종목은 0원 저장 대신 skip 으로 표시
+                    const priced = await Promise.all(
                         merged.map(async (holding) => {
-                            const currentPrice = await getStockPrice(holding.stock.stockCode, holding.stock.market || 'Unknown')
-                            const quantity = holding.quantity
-                            const avgPrice = holding.averagePrice
-                            const cur = new Decimal(currentPrice || 0)
-
-                            const val = cur.times(quantity)
-                            const cost = avgPrice.times(quantity)
-
-                            // 매입금액은 매입 시점 환율(purchaseRate)로 동결 — 환율 변동만으로 매입금액이 출렁이지 않게 함
-                            // purchaseRate 누락/legacy(1)면 현재 환율로 폴백
-                            const purchaseRate = holding.purchaseRate
-                            const effectivePurchaseRate = purchaseRate.gt(0) && !purchaseRate.equals(1)
-                                ? purchaseRate
-                                : usdRateDec
-                            const krwValue = holding.currency === 'USD' ? val.times(usdRateDec) : val
-                            const krwCost = holding.currency === 'USD' ? cost.times(effectivePurchaseRate) : cost
-
-                            totalValue = totalValue.plus(krwValue)
-                            totalCost = totalCost.plus(krwCost)
-
-                            const hProfit = val.minus(cost)
-                            const hProfitRate = cost.isZero() ? new Decimal(0) : hProfit.div(cost).times(100)
-
-                            return {
-                                stockCode: holding.stockCode,
-                                quantity: quantity,
-                                averagePrice: avgPrice,
-                                currentPrice: cur,
-                                currency: holding.currency,
-                                totalCost: cost,
-                                currentValue: val,
-                                profit: hProfit,
-                                profitRate: hProfitRate,
-                                purchaseRate: purchaseRate.gt(0) ? purchaseRate : usdRateDec,
+                            try {
+                                const currentPrice = await getStockPrice(holding.stock.stockCode, holding.stock.market || 'Unknown')
+                                return { holding, currentPrice, ok: true as const }
+                            } catch (priceError) {
+                                console.warn(`[Cron] Skip ${holding.stock.stockCode} (${holding.stock.market}) for user ${user.id}: price fetch failed.`, priceError)
+                                return { holding, currentPrice: 0, ok: false as const }
                             }
                         })
                     )
+
+                    const succeeded = priced.filter((p) => p.ok)
+                    const skippedCodes = priced.filter((p) => !p.ok).map((p) => p.holding.stock.stockCode)
+
+                    // 2) 현재가 조회 실패 비율이 50% 초과면 스냅샷 신뢰 불가 → 전체 abort
+                    //    (0원 종목이 절반 넘는 스냅샷을 저장하면 totalValue·profitRate 가 심하게 왜곡됨)
+                    if (skippedCodes.length / merged.length > 0.5) {
+                        throw new Error(
+                            `Price fetch failed for ${skippedCodes.length}/${merged.length} holdings (>50%). Aborting snapshot. Skipped: ${skippedCodes.join(', ')}`
+                        )
+                    }
+
+                    // 3) 현재가 조회 성공 종목만으로 스냅샷 구성 + 합계 계산 (모든 합계는 Decimal로)
+                    let totalValue = new Decimal(0)
+                    let totalCost = new Decimal(0)
+
+                    const snapshotHoldingsData = succeeded.map(({ holding, currentPrice }) => {
+                        const quantity = holding.quantity
+                        const avgPrice = holding.averagePrice
+                        const cur = new Decimal(currentPrice || 0)
+
+                        const val = cur.times(quantity)
+                        const cost = avgPrice.times(quantity)
+
+                        // 매입금액은 매입 시점 환율(purchaseRate)로 동결 — 환율 변동만으로 매입금액이 출렁이지 않게 함
+                        // purchaseRate 누락/legacy(1)면 현재 환율로 폴백
+                        const purchaseRate = holding.purchaseRate
+                        const effectivePurchaseRate = purchaseRate.gt(0) && !purchaseRate.equals(1)
+                            ? purchaseRate
+                            : usdRateDec
+                        const krwValue = holding.currency === 'USD' ? val.times(usdRateDec) : val
+                        const krwCost = holding.currency === 'USD' ? cost.times(effectivePurchaseRate) : cost
+
+                        totalValue = totalValue.plus(krwValue)
+                        totalCost = totalCost.plus(krwCost)
+
+                        const hProfit = val.minus(cost)
+                        const hProfitRate = cost.isZero() ? new Decimal(0) : hProfit.div(cost).times(100)
+
+                        return {
+                            stockCode: holding.stockCode,
+                            quantity: quantity,
+                            averagePrice: avgPrice,
+                            currentPrice: cur,
+                            currency: holding.currency,
+                            totalCost: cost,
+                            currentValue: val,
+                            profit: hProfit,
+                            profitRate: hProfitRate,
+                            purchaseRate: purchaseRate.gt(0) ? purchaseRate : usdRateDec,
+                        }
+                    })
 
                     const totalProfit = totalValue.minus(totalCost)
                     const profitRate = totalCost.isZero() ? new Decimal(0) : totalProfit.div(totalCost).times(100)
@@ -150,7 +172,12 @@ export async function GET(request: NextRequest) {
                         },
                     })
 
-                    return { userId: user.id, status: 'success' as const, snapshotId: newSnapshot.id }
+                    return {
+                        userId: user.id,
+                        status: 'success' as const,
+                        snapshotId: newSnapshot.id,
+                        ...(skippedCodes.length > 0 ? { skippedHoldings: skippedCodes } : {}),
+                    }
                 } catch (error) {
                     console.error(`[Cron] Error processing user ${user.id}:`, error)
                     return { userId: user.id, status: 'failed' as const, error: error instanceof Error ? error.message : 'Unknown error' }
@@ -217,13 +244,17 @@ export async function GET(request: NextRequest) {
         if (!errorLogged && results.length > 0) {
             try {
                 const failedCount = results.filter((r: any) => r.status === 'failed').length
+                const skippedHoldingsCount = results.reduce(
+                    (acc: number, r: any) => acc + (Array.isArray(r.skippedHoldings) ? r.skippedHoldings.length : 0),
+                    0
+                )
                 const status = failedCount > 0 ? (failedCount === results.length ? 'FAILED' : 'PARTIAL') : 'SUCCESS'
 
                 await prisma.cronLog.create({
                     data: {
                         jobName: 'DailySnapshot',
                         status: status,
-                        message: `Processed ${results.length} items. Failed: ${failedCount}`,
+                        message: `Processed ${results.length} items. Failed: ${failedCount}. Skipped holdings: ${skippedHoldingsCount}`,
                         details: { results }
                     }
                 })
