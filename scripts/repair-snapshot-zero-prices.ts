@@ -41,7 +41,7 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env'), override: true })
 
 const EXECUTE = process.argv.includes('--execute')
 const DELAY_MS = 200
-const MAX_DATE_FALLBACK = 5 // 비거래일 소급 최대 일수
+const LOOKBACK_DAYS = 10 // 과거 시세 조회 윈도우 — 연휴/비거래일 대비 소급일수
 
 /** CLI 옵션 파싱 */
 function getArgValue(flag: string): string | null {
@@ -90,36 +90,54 @@ interface PriceResult {
     fallbackDays: number  // 소급한 일수 (0 = 요청 날짜 당일)
 }
 
+// DB stock.market(원본) → KIS 해외 거래소 코드. getDailyPriceRange US 분기 매칭용.
+const US_EXCHANGE: Record<string, 'NASD' | 'NYSE' | 'AMEX'> = {
+    NASD: 'NASD', NAS: 'NASD',
+    NYSE: 'NYSE', NYS: 'NYSE',
+    AMEX: 'AMEX', AMS: 'AMEX',
+    US: 'NASD',
+}
+
 /**
- * 국내 / 해외 종목의 과거 종가 조회.
- * 비거래일이면 MAX_DATE_FALLBACK 일 이전까지 순차 소급.
- * LSE 는 과거 시세 불가 → null 반환.
+ * 국내 / 해외 종목의 과거 종가 조회 — KIS getDailyPriceRange 단일 경로.
+ *   - KR(KOSPI/KOSDAQ): FHKST03010100 (기간 무제한, 페이지네이션) → 30거래일 초과 과거도 조회 가능
+ *   - US(NASD/NYSE/AMEX): HHDFS76240000 (해외 일별시세) → Yahoo 429 우회. 거래소 구분 위해 원본 market 사용
+ *   - LSE: 과거 시세 미지원 → null
+ * targetDate 이하의 가장 최근 거래일 종가를 선택(비거래일/연휴 자동 소급).
  */
 async function fetchHistoricalPrice(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     kisClient: any,
+    rawMarket: string | null,
     stockCode: string,
-    market: MarketType,
     targetDate: string,
 ): Promise<PriceResult | null> {
-    if (market === 'LSE') return null
+    const m = resolveMarket(rawMarket)
+    if (m === 'LSE') return null
 
-    // narrowed to 'KOSPI' | 'KOSDAQ' | 'US' after the LSE guard above
-    const domainMarket = market as 'KOSPI' | 'KOSDAQ' | 'US'
+    // US 는 거래소 코드(NASD/NYSE/AMEX)가 필요 → DB 원본 market 을 매핑해 전달.
+    const rangeMarket: 'KOSPI' | 'KOSDAQ' | 'NASD' | 'NYSE' | 'AMEX' =
+        m === 'US' ? (US_EXCHANGE[rawMarket ?? ''] ?? 'NASD') : m
+    const startDate = subtractDays(targetDate, LOOKBACK_DAYS)
 
-    for (let i = 0; i <= MAX_DATE_FALLBACK; i++) {
-        const dateStr = subtractDays(targetDate, i)
-        try {
-            const data = await kisClient.getDailyPrice(stockCode, domainMarket, dateStr)
-            if (data && Number(data.close) > 0) {
-                return { price: Number(data.close), usedDate: dateStr, fallbackDays: i }
-            }
-        } catch {
-            // 해당 날짜 조회 실패 → 소급 계속
-        }
-        await sleep(DELAY_MS)
+    let rows: Array<{ date: string; close: number }> = []
+    try {
+        rows = await kisClient.getDailyPriceRange(stockCode, rangeMarket, startDate, targetDate)
+    } catch {
+        return null
     }
-    return null
+    if (!rows || rows.length === 0) return null
+
+    // targetDate 이하 & 양수 close 중 가장 최근 거래일
+    const best = rows
+        .filter((r) => r.date <= targetDate && Number(r.close) > 0)
+        .sort((a, b) => (a.date < b.date ? 1 : -1))[0]
+    if (!best) return null
+
+    const fallbackDays = Math.round(
+        (new Date(targetDate + 'T00:00:00Z').getTime() - new Date(best.date + 'T00:00:00Z').getTime()) / 86400000
+    )
+    return { price: Number(best.close), usedDate: best.date, fallbackDays }
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -255,7 +273,8 @@ async function main() {
 
             process.stdout.write(`  조회 ${h.stockCode} (${h.stock.nameKo}) [${h.stock.market}]… `)
 
-            const result = await fetchHistoricalPrice(kisClient, h.stockCode, market, dateStr)
+            const result = await fetchHistoricalPrice(kisClient, h.stock.market, h.stockCode, dateStr)
+            await sleep(DELAY_MS) // KIS rate limit 보호
 
             if (!result || result.price <= 0) {
                 console.log('✗ 가격 조회 실패')
