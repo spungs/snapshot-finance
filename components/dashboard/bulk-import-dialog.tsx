@@ -394,7 +394,7 @@ export function BulkImportDialog({ children, onSuccess, isPro = false }: BulkImp
                         </div>
                     ) : showAccountSelector ? (
                         <div>
-                            <label className="block text-[11px] font-bold tracking-wide text-muted-foreground mb-1.5 uppercase">
+                            <label className="block text-[13px] font-medium text-muted-foreground mb-1.5">
                                 {tx.accountSelector}
                             </label>
                             <select
@@ -414,7 +414,7 @@ export function BulkImportDialog({ children, onSuccess, isPro = false }: BulkImp
                     <>
                     {/* 형식 안내 */}
                     <div className="border border-border bg-accent-soft/50 rounded-md p-3">
-                        <div className="text-[11px] font-bold tracking-wide text-muted-foreground mb-1 uppercase">
+                        <div className="text-[13px] font-medium text-muted-foreground mb-1">
                             {tx.formatInstructions}
                         </div>
                         <pre className="text-[11px] text-foreground/80 leading-relaxed whitespace-pre-wrap font-mono">
@@ -425,7 +425,7 @@ export function BulkImportDialog({ children, onSuccess, isPro = false }: BulkImp
                     {/* Raw 입력 */}
                     <div>
                         <div className="flex items-center justify-between mb-1.5">
-                            <label className="text-[11px] font-bold tracking-wide text-muted-foreground uppercase">
+                            <label className="text-[13px] font-medium text-muted-foreground">
                                 {tx.rawData}
                             </label>
                             {rawText.length > 0 && (

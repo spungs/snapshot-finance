@@ -125,7 +125,7 @@ export default function SnapshotDetailClient({ snapshot }: Props) {
             <section className="px-6 pt-3 pb-4">
                 <Link
                     href="/dashboard/snapshots"
-                    className="inline-flex items-center gap-1 text-[11px] text-muted-foreground tracking-[0.5px] hover:text-foreground transition-colors mb-2"
+                    className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors mb-2"
                 >
                     <ChevronLeft className="w-3 h-3" />
                     {t('snapshotList')}
@@ -180,10 +180,10 @@ export default function SnapshotDetailClient({ snapshot }: Props) {
             </section>
 
             {error && (
-                <section className="mx-4 mb-4 bg-card border border-loss/40 p-4 flex gap-3">
+                <section className="mx-4 mb-4 bg-card rounded-2xl p-4 flex gap-3">
                     <AlertCircle className="h-4 w-4 text-loss shrink-0 mt-0.5" />
                     <div>
-                        <div className="text-[11px] font-bold text-loss tracking-[0.5px] uppercase">
+                        <div className="text-[12px] font-semibold text-loss">
                             {t('error')}
                         </div>
                         <div className="text-[13px] text-foreground mt-1">{error}</div>
@@ -193,9 +193,9 @@ export default function SnapshotDetailClient({ snapshot }: Props) {
 
             {/* Memo */}
             {snapshot.note && (
-                <section className="mx-4 mb-4 bg-card border border-border p-4">
+                <section className="mx-4 mb-4 bg-card rounded-2xl p-4">
                     <div className="eyebrow mb-1.5">
-                        {language === 'ko' ? 'MEMO' : 'MEMO'}
+                        {language === 'ko' ? '메모' : 'Memo'}
                     </div>
                     <p className="serif-italic text-[13px] text-foreground leading-relaxed break-words">
                         “{formatSnapshotNote(snapshot.note, language === 'en' ? 'en' : 'ko')}”
@@ -204,12 +204,11 @@ export default function SnapshotDetailClient({ snapshot }: Props) {
             )}
 
             {/* Summary card */}
-            <div className="mx-4 mb-2 relative overflow-hidden border bg-card" style={{ padding: 22 }}>
-                <div className="absolute top-0 left-0 right-0 h-[3px] bg-primary" />
+            <div className="mx-4 mb-2 relative overflow-hidden rounded-2xl bg-card" style={{ padding: 22 }}>
 
                 <div className="flex items-center justify-between mb-1">
                     <span className="eyebrow">
-                        {language === 'ko' ? `SNAPSHOT · 기록` : 'SNAPSHOT'}
+                        {language === 'ko' ? '기록' : 'Snapshot'}
                     </span>
                     <span className="text-[11px] text-muted-foreground" suppressHydrationWarning>
                         {formatDate(snapshot.snapshotDate, 'HH:mm')}
@@ -222,7 +221,7 @@ export default function SnapshotDetailClient({ snapshot }: Props) {
                     {formatDate(snapshot.snapshotDate, 'yyyy.MM.dd')}
                 </div>
 
-                <div className="text-[11px] font-semibold text-muted-foreground tracking-[0.5px] mt-3.5 mb-1">
+                <div className="text-[11px] font-semibold text-muted-foreground mt-3.5 mb-1">
                     {t('totalValue')}
                 </div>
                 <div className="amount-display text-[30px] text-foreground leading-none">
@@ -231,14 +230,14 @@ export default function SnapshotDetailClient({ snapshot }: Props) {
 
                 <div className="flex gap-4 mt-3.5 items-stretch">
                     <div>
-                        <div className="text-[10px] font-semibold text-muted-foreground tracking-[0.5px] uppercase">
+                        <div className="text-[12px] font-medium text-muted-foreground">
                             {t('returnRate')}
                         </div>
                         <div className="mt-1"><UpDown value={profitRate} big /></div>
                     </div>
                     <div className="w-px bg-border self-stretch" />
                     <div>
-                        <div className="text-[10px] font-semibold text-muted-foreground tracking-[0.5px] uppercase">
+                        <div className="text-[12px] font-medium text-muted-foreground">
                             {t('pl')}
                         </div>
                         <div className={cn('text-[15px] font-bold mt-1 numeric', isProfit ? 'text-profit' : 'text-loss')}>
@@ -250,23 +249,23 @@ export default function SnapshotDetailClient({ snapshot }: Props) {
 
             {/* Two-up: stock value / cash */}
             <section className="mx-4 mb-4 grid grid-cols-2 gap-2">
-                <div className="p-4 bg-card border border-border">
-                    <div className="text-[10px] font-bold text-muted-foreground tracking-[1px] uppercase">
+                <div className="p-4 bg-card rounded-2xl">
+                    <div className="text-[13px] font-medium text-muted-foreground">
                         {t('stockValue')}
                     </div>
-                    <div className="font-serif text-lg font-semibold text-foreground mt-1.5 numeric">
+                    <div className="text-lg font-bold text-foreground mt-1 numeric tracking-tight">
                         {formatCurrency(stockValue, currency)}
                     </div>
-                    <div className="text-[10px] text-muted-foreground tracking-[0.5px] mt-2 pt-2 border-t border-border/60 flex justify-between">
+                    <div className="text-[10px] text-muted-foreground mt-2 pt-2 border-t border-border/60 flex justify-between">
                         <span>{t('totalCost')}</span>
                         <span className="numeric text-foreground">{formatCurrency(totalCost, currency)}</span>
                     </div>
                 </div>
-                <div className="p-4 bg-card border border-border">
-                    <div className="text-[10px] font-bold text-muted-foreground tracking-[1px] uppercase">
+                <div className="p-4 bg-card rounded-2xl">
+                    <div className="text-[13px] font-medium text-muted-foreground">
                         {t('cash')}
                     </div>
-                    <div className="font-serif text-lg font-semibold text-foreground mt-1.5 numeric">
+                    <div className="text-lg font-bold text-foreground mt-1 numeric tracking-tight">
                         {formatCurrency(cashBalance, currency)}
                     </div>
                     {/* 계좌별 분해 — 있으면 표시 (스냅샷 시점에 동결된 정보). 없으면 합계만 (legacy). */}
@@ -285,7 +284,7 @@ export default function SnapshotDetailClient({ snapshot }: Props) {
                         </ul>
                     )}
                     {isEn && (
-                        <div className="text-[10px] text-muted-foreground tracking-[0.5px] mt-2 pt-2 border-t border-border/60 flex justify-between">
+                        <div className="text-[10px] text-muted-foreground mt-2 pt-2 border-t border-border/60 flex justify-between">
                             <span>Rate</span>
                             <span className="numeric text-foreground">{formatNumber(rate, 0)}</span>
                         </div>
@@ -297,16 +296,16 @@ export default function SnapshotDetailClient({ snapshot }: Props) {
             <div className="px-6 pb-3 flex justify-between items-center">
                 <span className="eyebrow">
                     {language === 'ko'
-                        ? `HOLDINGS · ${snapshot.holdings.length}`
-                        : `HOLDINGS · ${snapshot.holdings.length}`}
+                        ? `보유 종목 · ${snapshot.holdings.length}`
+                        : `Holdings · ${snapshot.holdings.length}`}
                 </span>
-                <span className="text-[10px] text-muted-foreground tracking-[0.5px]">
+                <span className="text-[10px] text-muted-foreground">
                     {t('holdings')}
                 </span>
             </div>
 
             {snapshot.holdings.length === 0 ? (
-                <div className="mx-4 p-8 bg-card border border-border text-center">
+                <div className="mx-4 p-8 bg-card rounded-2xl text-center">
                     <p className="text-[12px] text-muted-foreground">{t('holdingsEmpty')}</p>
                 </div>
             ) : (
@@ -346,21 +345,17 @@ export default function SnapshotDetailClient({ snapshot }: Props) {
                         return (
                             <div
                                 key={h.id}
-                                className="bg-card border border-border p-4"
-                                style={{
-                                    borderLeftWidth: '3px',
-                                    borderLeftColor: isItemUp ? 'var(--profit)' : 'var(--loss)',
-                                }}
+                                className="bg-card rounded-2xl p-4"
                             >
                                 <div className="flex items-start justify-between gap-2">
-                                    <div className="font-serif text-[15px] font-semibold text-foreground leading-snug break-keep flex-1 min-w-0">
+                                    <div className="text-[15px] font-semibold text-foreground leading-snug break-keep flex-1 min-w-0">
                                         {h.stock.stockName}
                                     </div>
                                     <UpDown value={profitRateDisplay} />
                                 </div>
 
                                 <div className="mt-1.5 flex items-end justify-between gap-3">
-                                    <div className="text-[10px] text-muted-foreground tracking-[0.5px] flex-1 min-w-0">
+                                    <div className="text-[10px] text-muted-foreground flex-1 min-w-0">
                                         {h.stock.stockCode}
                                         {' · '}
                                         {formatNumber(h.quantity)}{language === 'ko' ? '주' : 'shr'}
@@ -379,18 +374,18 @@ export default function SnapshotDetailClient({ snapshot }: Props) {
 
                                 <div className="mt-2.5 pt-2.5 border-t border-border/60 grid grid-cols-2 gap-3 text-[11px]">
                                     <div>
-                                        <div className="text-[10px] text-muted-foreground tracking-[0.5px] uppercase">
+                                        <div className="text-[11px] text-muted-foreground">
                                             {t('averagePrice')}
                                         </div>
-                                        <div className="font-serif text-[13px] font-semibold text-foreground mt-0.5 numeric">
+                                        <div className="text-[13px] font-bold text-foreground mt-0.5 numeric">
                                             {formatCurrency(avgPrice, currency)}
                                         </div>
                                     </div>
                                     <div className="text-right">
-                                        <div className="text-[10px] text-muted-foreground tracking-[0.5px] uppercase">
+                                        <div className="text-[11px] text-muted-foreground">
                                             {t('currentPrice')}
                                         </div>
-                                        <div className="font-serif text-[13px] font-semibold text-foreground mt-0.5 numeric">
+                                        <div className="text-[13px] font-bold text-foreground mt-0.5 numeric">
                                             {formatCurrency(curPrice, currency)}
                                         </div>
                                     </div>

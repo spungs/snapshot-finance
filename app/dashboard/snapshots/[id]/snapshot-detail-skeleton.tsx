@@ -32,7 +32,7 @@ export function SnapshotDetailSkeleton() {
             </section>
 
             {/* Summary card — 상단 3px 액센트 */}
-            <div className="mx-4 mb-2 relative overflow-hidden border bg-card" style={{ padding: 22 }}>
+            <div className="mx-4 mb-2 relative overflow-hidden rounded-2xl bg-card" style={{ padding: 22 }}>
                 <div className="absolute top-0 left-0 right-0 h-[3px] bg-primary/40" />
                 <div className="flex items-center justify-between mb-1">
                     <Bar className="h-3 w-20" />
@@ -56,7 +56,7 @@ export function SnapshotDetailSkeleton() {
 
             {/* Two-up: stock value / cash */}
             <section className="mx-4 mb-4 grid grid-cols-2 gap-2">
-                <div className="p-4 bg-card border border-border space-y-1.5">
+                <div className="p-4 bg-card rounded-2xl space-y-1.5">
                     <Bar className="h-2.5 w-16" />
                     <Bar className="h-5 w-24" />
                     <div className="pt-2 mt-2 border-t border-border/60 flex justify-between">
@@ -64,7 +64,7 @@ export function SnapshotDetailSkeleton() {
                         <Bar className="h-2.5 w-16" />
                     </div>
                 </div>
-                <div className="p-4 bg-card border border-border space-y-1.5">
+                <div className="p-4 bg-card rounded-2xl space-y-1.5">
                     <Bar className="h-2.5 w-12" />
                     <Bar className="h-5 w-24" />
                 </div>
@@ -81,7 +81,7 @@ export function SnapshotDetailSkeleton() {
                 {[0, 1, 2, 3].map(i => (
                     <div
                         key={i}
-                        className="bg-card border border-border p-4"
+                        className="bg-card rounded-2xl p-4"
                         style={{ borderLeftWidth: '3px', borderLeftColor: 'var(--border)' }}
                     >
                         <div className="flex items-start justify-between gap-2">

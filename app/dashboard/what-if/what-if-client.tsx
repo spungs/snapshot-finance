@@ -269,14 +269,14 @@ export function WhatIfClient() {
             </section>
 
             {/* Controls */}
-            <section className="mx-4 mb-4 bg-card border border-border p-5">
+            <section className="mx-4 mb-4 bg-card rounded-2xl p-5">
                 <div className="eyebrow mb-3">
-                    {language === 'ko' ? 'INPUT · 시뮬레이션 조건' : 'INPUT · Conditions'}
+                    {language === 'ko' ? '시뮬레이션 조건' : 'Conditions'}
                 </div>
 
                 <div className="space-y-3">
                     <div>
-                        <label className="text-[10px] font-bold text-muted-foreground tracking-[1px] uppercase block mb-1.5">
+                        <label className="text-[13px] font-medium text-muted-foreground block mb-1.5">
                             {t('stock')}
                         </label>
                         <StockSearchCombobox
@@ -286,12 +286,12 @@ export function WhatIfClient() {
                     </div>
 
                     <div>
-                        <label className="text-[10px] font-bold text-muted-foreground tracking-[1px] uppercase block mb-1.5">
+                        <label className="text-[13px] font-medium text-muted-foreground block mb-1.5">
                             {t('whatIfBuyDate')}
                         </label>
                         <input
                             type="date"
-                            className="flex h-10 w-full border border-border bg-background px-3 py-2 text-base md:text-sm font-serif numeric focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            className="flex h-10 w-full rounded-lg bg-background px-3 py-2 text-base md:text-sm numeric focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                             value={dateInput}
                             onChange={(e) => setDateInput(e.target.value)}
                             max={new Date().toISOString().split('T')[0]}
@@ -300,7 +300,7 @@ export function WhatIfClient() {
 
                     <div>
                         <div className="flex items-center justify-between mb-1.5">
-                            <label className="text-[10px] font-bold text-muted-foreground tracking-[1px] uppercase">
+                            <label className="text-[13px] font-medium text-muted-foreground">
                                 {t('whatIfInvestAmount')}
                             </label>
                             <CurrencyToggle
@@ -316,7 +316,7 @@ export function WhatIfClient() {
                                     ? (language === 'ko' ? '예: 1,000,000' : 'e.g. 1,000,000')
                                     : (language === 'ko' ? '예: 1,000' : 'e.g. 1,000')
                             }
-                            className="flex h-10 w-full border border-border bg-background px-3 py-2 text-base md:text-sm font-serif numeric placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            className="flex h-10 w-full rounded-lg bg-background px-3 py-2 text-base md:text-sm numeric placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                             value={amountInput}
                             onChange={(e) => setAmountInput(formatAmountInput(e.target.value))}
                         />
@@ -327,7 +327,7 @@ export function WhatIfClient() {
                         onClick={handleRunQuery}
                         disabled={!canRunQuery}
                         className={cn(
-                            'mt-1 w-full py-3 text-sm font-bold inline-flex items-center justify-center gap-2 transition-opacity',
+                            'mt-1 w-full py-3 text-sm font-bold inline-flex items-center justify-center gap-2 rounded-xl active:scale-[0.98] transition-all',
                             'bg-primary text-primary-foreground',
                             'disabled:opacity-50 hover:opacity-90',
                             isStale && 'ring-2 ring-primary/40',
@@ -349,10 +349,10 @@ export function WhatIfClient() {
 
             {/* Error / Empty / Result */}
             {!loading && error && (
-                <section className="mx-4 mb-4 bg-card border border-loss/40 p-4 flex gap-3">
+                <section className="mx-4 mb-4 bg-card rounded-2xl p-4 flex gap-3">
                     <Info className="h-4 w-4 text-loss shrink-0 mt-0.5" />
                     <div>
-                        <div className="text-[11px] font-bold text-loss tracking-[0.5px] uppercase">
+                        <div className="text-[12px] font-semibold text-loss">
                             {t('error')}
                         </div>
                         <div className="text-[13px] text-foreground mt-1">{error}</div>
@@ -361,7 +361,7 @@ export function WhatIfClient() {
             )}
 
             {!loading && !error && chartData.length === 0 && (
-                <section className="mx-4 mb-4 bg-card border border-border p-10 text-center">
+                <section className="mx-4 mb-4 bg-card rounded-2xl p-10 text-center">
                     <div className="hero-serif text-[20px] text-foreground mb-1.5">
                         {t('whatIfSelectTitle')}
                     </div>
@@ -406,7 +406,7 @@ function CurrencyToggle({
     onChange: (v: 'KRW' | 'USD') => void
 }) {
     return (
-        <div className="inline-flex border border-border" role="group">
+        <div className="inline-flex rounded-lg bg-secondary p-0.5" role="group">
             {(['KRW', 'USD'] as const).map((c) => {
                 const active = value === c
                 return (
@@ -415,10 +415,10 @@ function CurrencyToggle({
                         type="button"
                         onClick={() => onChange(c)}
                         className={cn(
-                            'px-2 h-6 text-[10px] font-bold tracking-[0.5px] transition-colors',
+                            'px-2 h-6 text-[11px] font-bold rounded-md transition-colors',
                             active
-                                ? 'bg-foreground text-background'
-                                : 'bg-background text-muted-foreground hover:text-foreground',
+                                ? 'bg-card text-foreground shadow-sm'
+                                : 'text-muted-foreground hover:text-foreground',
                         )}
                         aria-pressed={active}
                     >
@@ -475,17 +475,10 @@ function ResultBlock({
     return (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Result hero */}
-            <div className="mx-4 mb-4 relative overflow-hidden border bg-card" style={{ padding: 22 }}>
-                <div
-                    className={cn(
-                        'absolute top-0 left-0 right-0 h-[3px]',
-                        isProfit ? 'bg-profit' : 'bg-loss',
-                    )}
-                />
-
+            <div className="mx-4 mb-4 relative overflow-hidden rounded-2xl bg-card" style={{ padding: 22 }}>
                 <div className="flex items-center justify-between mb-1">
                     <span className="eyebrow">
-                        {language === 'ko' ? `RESULT · ${t('whatIfIfBought')}` : 'RESULT · IF YOU BOUGHT THEN'}
+                        {language === 'ko' ? t('whatIfIfBought') : 'If you bought then'}
                     </span>
                     <span className="text-[11px] text-muted-foreground" suppressHydrationWarning>
                         {periodLabel}
@@ -496,7 +489,7 @@ function ResultBlock({
                     {stockDisplayName}
                 </div>
 
-                <div className="text-[11px] font-semibold text-muted-foreground tracking-[0.5px] mt-3.5 mb-1">
+                <div className="text-[11px] font-semibold text-muted-foreground mt-3.5 mb-1">
                     {t('returnRate')}
                 </div>
                 <div
@@ -510,19 +503,19 @@ function ResultBlock({
 
                 <div className="flex gap-4 mt-3.5 items-stretch">
                     <div>
-                        <div className="text-[10px] font-semibold text-muted-foreground tracking-[0.5px] uppercase">
+                        <div className="text-[12px] font-medium text-muted-foreground">
                             {t('pastPrice')}
                         </div>
-                        <div className="text-[14px] font-bold mt-1 numeric font-serif text-foreground">
+                        <div className="text-[14px] font-bold mt-1 numeric text-foreground">
                             {fmtMoney(firstPrice, stockCurrency)}
                         </div>
                     </div>
                     <div className="w-px bg-border self-stretch" />
                     <div>
-                        <div className="text-[10px] font-semibold text-muted-foreground tracking-[0.5px] uppercase">
+                        <div className="text-[12px] font-medium text-muted-foreground">
                             {t('currentPrice')}
                         </div>
-                        <div className="text-[14px] font-bold mt-1 numeric font-serif text-foreground">
+                        <div className="text-[14px] font-bold mt-1 numeric text-foreground">
                             {fmtMoney(lastPrice, stockCurrency)}
                         </div>
                     </div>
@@ -532,8 +525,8 @@ function ResultBlock({
             {/* Amount-based valuation */}
             {hasAmount && (
                 <section className="mx-4 mb-4 grid grid-cols-2 gap-2">
-                    <div className="p-4 bg-card border border-border">
-                        <div className="text-[10px] font-bold text-muted-foreground tracking-[1px] uppercase">
+                    <div className="p-4 bg-card rounded-2xl">
+                        <div className="text-[13px] font-medium text-muted-foreground">
                             {t('whatIfTodayValue')}
                         </div>
                         <div className={cn(
@@ -542,15 +535,15 @@ function ResultBlock({
                         )}>
                             {fmtMoney(todayValueDisplay, amountCurrency, { compact: showCompact(todayValueDisplay), integer: true })}
                         </div>
-                        <div className="text-[10px] text-muted-foreground tracking-[0.5px] mt-2 pt-2 border-t border-border/60 flex justify-between">
+                        <div className="text-[10px] text-muted-foreground mt-2 pt-2 border-t border-border/60 flex justify-between">
                             <span>{t('whatIfShares')}</span>
                             <span className="numeric text-foreground">
                                 {formatShares(sharesAcquired)}{t('whatIfSharesUnit')}
                             </span>
                         </div>
                     </div>
-                    <div className="p-4 bg-card border border-border">
-                        <div className="text-[10px] font-bold text-muted-foreground tracking-[1px] uppercase">
+                    <div className="p-4 bg-card rounded-2xl">
+                        <div className="text-[13px] font-medium text-muted-foreground">
                             {t('pl')}
                         </div>
                         <div className={cn(
@@ -559,7 +552,7 @@ function ResultBlock({
                         )}>
                             {isProfit ? '+' : ''}{fmtMoney(absoluteProfit, amountCurrency, { compact: showCompact(absoluteProfit), integer: true })}
                         </div>
-                        <div className="text-[10px] text-muted-foreground tracking-[0.5px] mt-2 pt-2 border-t border-border/60 flex justify-between">
+                        <div className="text-[10px] text-muted-foreground mt-2 pt-2 border-t border-border/60 flex justify-between">
                             <span>{t('totalInvested')}</span>
                             <span className="numeric text-foreground">
                                 {fmtMoney(parsedAmount, amountCurrency, { compact: showCompact(parsedAmount), integer: true })}
@@ -574,12 +567,12 @@ function ResultBlock({
                 <span className="eyebrow">
                     {language === 'ko' ? `CHART · ${t('whatIfChartTitle')}` : 'CHART · PRICE HISTORY'}
                 </span>
-                <span className="text-[10px] text-muted-foreground tracking-[0.5px]">
+                <span className="text-[10px] text-muted-foreground">
                     {chartData.length}{language === 'ko' ? '일' : 'd'}
                 </span>
             </div>
 
-            <section className="mx-4 mb-4 bg-card border border-border p-3 pt-4">
+            <section className="mx-4 mb-4 bg-card rounded-2xl p-3 pt-4">
                 <div className="h-[280px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
                         <AreaChart
@@ -711,7 +704,7 @@ function InsightRow({
 }) {
     return (
         <div
-            className="bg-card border border-border p-4"
+            className="bg-card rounded-2xl p-4"
             style={{
                 borderLeftWidth: '3px',
                 borderLeftColor: tone === 'profit' ? 'var(--profit)' : 'var(--loss)',
@@ -733,7 +726,7 @@ function InsightRow({
                     )}>
                         {valueLabel}
                     </div>
-                    <div className="text-[10px] text-muted-foreground tracking-[0.5px] mt-0.5 numeric" suppressHydrationWarning>
+                    <div className="text-[10px] text-muted-foreground mt-0.5 numeric" suppressHydrationWarning>
                         {format(new Date(date), language === 'ko' ? 'yyyy.MM.dd' : 'MMM dd, yyyy')}
                     </div>
                 </div>

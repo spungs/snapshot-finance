@@ -372,7 +372,7 @@ export default function EditSnapshotPage() {
                 <p className="text-loss text-[13px] mb-4">{error}</p>
                 <Link
                     href="/dashboard/snapshots"
-                    className="inline-flex items-center gap-1 text-[11px] font-bold tracking-[1.5px] uppercase text-primary hover:underline"
+                    className="inline-flex items-center gap-1 text-[12px] font-semibold text-primary hover:underline"
                 >
                     <ChevronLeft className="w-3 h-3" />
                     {t('backToList')}
@@ -392,7 +392,7 @@ export default function EditSnapshotPage() {
                     <div className="absolute inset-0 bg-background/60 backdrop-blur-sm z-50 flex items-center justify-center">
                         <div className="flex flex-col items-center gap-3">
                             <Loader2 className="w-9 h-9 animate-spin text-primary" />
-                            <p className="text-xs font-bold tracking-[1px] uppercase text-muted-foreground">
+                            <p className="text-[13px] font-medium text-muted-foreground">
                                 {t('saving')}
                             </p>
                         </div>
@@ -403,7 +403,7 @@ export default function EditSnapshotPage() {
                 <section className="px-6 pt-3 pb-4">
                     <Link
                         href={`/dashboard/snapshots/${params.id}`}
-                        className="inline-flex items-center gap-1 text-[11px] text-muted-foreground tracking-[0.5px] hover:text-foreground transition-colors mb-2"
+                        className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors mb-2"
                     >
                         <ChevronLeft className="w-3 h-3" />
                         {t('cancel')}
@@ -422,7 +422,7 @@ export default function EditSnapshotPage() {
                         <button
                             type="submit"
                             disabled={saving || updatingPrices}
-                            className="bg-primary text-primary-foreground px-3 py-1.5 text-[11px] font-bold tracking-[0.5px] disabled:opacity-50 hover:opacity-90 transition-opacity inline-flex items-center justify-center gap-1.5 min-w-[72px] shrink-0"
+                            className="bg-primary text-primary-foreground px-3 py-1.5 text-[11px] font-bold disabled:opacity-50 hover:opacity-90 transition-opacity inline-flex items-center justify-center gap-1.5 min-w-[72px] shrink-0"
                         >
                             {saving || updatingPrices
                                 ? <Loader2 className="w-3 h-3 animate-spin" />
@@ -471,8 +471,8 @@ export default function EditSnapshotPage() {
                     </div>
                 </div>
 
-                <section className="mx-4 mb-4 p-5 bg-card border border-border">
-                    <div className="text-[10px] font-bold text-muted-foreground tracking-[1px] uppercase">
+                <section className="mx-4 mb-4 p-5 bg-card rounded-2xl">
+                    <div className="text-[13px] font-medium text-muted-foreground">
                         {t('totalValue')}
                     </div>
                     <div className="amount-display text-[28px] text-foreground leading-none mt-1.5">
@@ -481,7 +481,7 @@ export default function EditSnapshotPage() {
 
                     <div className="flex gap-4 mt-4 items-stretch">
                         <div className="flex-1">
-                            <div className="text-[10px] font-bold text-muted-foreground tracking-[0.5px] uppercase">
+                            <div className="text-[13px] font-medium text-muted-foreground">
                                 {t('returnRate')}
                             </div>
                             <div
@@ -496,7 +496,7 @@ export default function EditSnapshotPage() {
                         </div>
                         <div className="w-px bg-border self-stretch" />
                         <div className="flex-1">
-                            <div className="text-[10px] font-bold text-muted-foreground tracking-[0.5px] uppercase">
+                            <div className="text-[13px] font-medium text-muted-foreground">
                                 {t('pl')}
                             </div>
                             <div
@@ -522,7 +522,7 @@ export default function EditSnapshotPage() {
                 <div className="px-6 pb-3">
                     <span className="eyebrow">{t('memo')}</span>
                 </div>
-                <section className="mx-4 mb-4 px-4 py-3 bg-card border border-border">
+                <section className="mx-4 mb-4 px-4 py-3 bg-card rounded-2xl">
                     <input
                         id="note"
                         type="text"
@@ -538,7 +538,7 @@ export default function EditSnapshotPage() {
                 <div className="px-6 pb-3">
                     <span className="eyebrow">{t('cash')}</span>
                 </div>
-                <section className="mx-4 mb-4 p-4 bg-card border border-border">
+                <section className="mx-4 mb-4 p-4 bg-card rounded-2xl">
                     <CashAccountEditor
                         accounts={cashRows}
                         onChange={setCashRows}
@@ -548,8 +548,7 @@ export default function EditSnapshotPage() {
                 </section>
 
                 {/* Date card */}
-                <section className="mx-4 mb-4 p-5 bg-card border border-border relative overflow-hidden">
-                    <div className="absolute top-0 left-0 right-0 h-[3px] bg-primary" />
+                <section className="mx-4 mb-4 p-5 bg-card rounded-2xl">
                     <div className="eyebrow mb-2">
                         {t('snapshotDate')}
                     </div>
@@ -605,14 +604,14 @@ export default function EditSnapshotPage() {
                         return (
                             <div
                                 key={index}
-                                className="bg-card border border-border p-4"
+                                className="bg-card rounded-2xl p-4"
                                 style={{
                                     borderLeftWidth: '3px',
                                     borderLeftColor: holding.stockCode ? 'var(--primary)' : 'var(--border)',
                                 }}
                             >
                                 <div className="flex items-center justify-between mb-2.5">
-                                    <span className="text-[10px] font-bold text-muted-foreground tracking-[1px] uppercase">
+                                    <span className="text-[13px] font-medium text-muted-foreground">
                                         {language === 'ko' ? `종목 ${index + 1}` : `Stock ${index + 1}`}
                                     </span>
                                     {holdings.length > 1 && (

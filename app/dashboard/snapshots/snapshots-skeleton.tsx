@@ -26,7 +26,7 @@ export function SnapshotsSkeleton() {
             </section>
 
             {/* Active(latest) snapshot — 큰 카드, 상단 3px 액센트 */}
-            <div className="mx-4 mb-4 relative overflow-hidden border bg-card" style={{ padding: 22 }}>
+            <div className="mx-4 mb-4 relative overflow-hidden rounded-2xl bg-card" style={{ padding: 22 }}>
                 <div className="absolute top-0 left-0 right-0 h-[3px] bg-primary/40" />
                 <div className="flex items-center justify-between mb-1">
                     <Bar className="h-3 w-16" />
@@ -67,7 +67,7 @@ export function SnapshotsSkeleton() {
                         {/* dot */}
                         <div className="w-[22px] h-[22px] rounded-full flex-shrink-0 mt-1 relative z-10 bg-card border-2 border-border" />
                         {/* card */}
-                        <div className="flex-1 min-w-0 border bg-card p-3.5 space-y-2">
+                        <div className="flex-1 min-w-0 rounded-2xl bg-card p-3.5 space-y-2">
                             <div className="flex justify-between items-baseline">
                                 <Bar className="h-4 w-24" />
                                 <Bar className="h-3 w-12" />

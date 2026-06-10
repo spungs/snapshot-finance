@@ -146,7 +146,7 @@ export function CashAccountEditor({
 
             {accounts.length > 0 && (
                 <div className="flex items-center justify-between pt-3 border-t border-border">
-                    <span className="text-[10px] font-bold tracking-[1px] uppercase text-muted-foreground">
+                    <span className="text-[12px] font-medium text-muted-foreground">
                         {language === 'ko' ? '합계' : 'Total'}
                     </span>
                     <span className="font-serif text-base font-semibold text-foreground numeric">

@@ -147,7 +147,7 @@ export function SnapshotBottomPanel({ currentHoldings, snapshots, selectedIds, o
                             {/* 모바일 핸들 바 */}
                             <div className="w-10 h-1 bg-muted-foreground/30 rounded-full mb-1 md:hidden mx-auto" />
 
-                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                            <span className="text-[13px] font-medium text-muted-foreground">
                                 {t('portfolioComparison')}
                             </span>
 
@@ -160,7 +160,7 @@ export function SnapshotBottomPanel({ currentHoldings, snapshots, selectedIds, o
                                             {headerSummary.newDate}
                                         </span>
                                         {headerSummary.diffDays > 0 && (
-                                            <span className="text-[10px] text-muted-foreground border border-border rounded px-1.5 py-0.5">
+                                            <span className="text-[11px] text-muted-foreground bg-secondary rounded px-1.5 py-0.5">
                                                 {headerSummary.diffDays}일
                                             </span>
                                         )}

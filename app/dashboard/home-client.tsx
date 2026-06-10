@@ -351,8 +351,8 @@ export function HomeClient({
                             ? convert(Math.abs(change.totalValueDiff))
                             : 0
                         return (
-                            <div key={label} className="p-4 bg-card border border-border">
-                                <div className="text-[10px] font-bold text-muted-foreground tracking-[1px] uppercase mb-1.5">
+                            <div key={label} className="p-4 bg-card rounded-2xl">
+                                <div className="text-[13px] font-medium text-muted-foreground mb-1.5">
                                     {label}
                                 </div>
                                 {change ? (
@@ -383,20 +383,20 @@ export function HomeClient({
 
             {/* Two-up — 매입금 / 평가손익금 (1억 이상은 자동 축약) */}
             <section className="mx-4 mb-2 grid grid-cols-2 gap-2">
-                <div className="p-4 bg-card border border-border">
-                    <div className="text-[10px] font-bold text-muted-foreground tracking-[1px] uppercase">
+                <div className="p-4 bg-card rounded-2xl">
+                    <div className="text-[13px] font-medium text-muted-foreground">
                         {language === 'ko' ? '매입금' : 'Cost'}
                     </div>
-                    <div className="font-serif text-lg font-semibold text-foreground mt-1.5 numeric">
+                    <div className="text-lg font-bold text-foreground mt-1 numeric tracking-tight">
                         {formatCurrency(displayCost, baseCurrency, { compact: true })}
                     </div>
                 </div>
-                <div className="p-4 bg-card border border-border">
-                    <div className="text-[10px] font-bold text-muted-foreground tracking-[1px] uppercase">
+                <div className="p-4 bg-card rounded-2xl">
+                    <div className="text-[13px] font-medium text-muted-foreground">
                         {language === 'ko' ? '평가손익금' : 'Unrealized P/L'}
                     </div>
                     <div className={cn(
-                        'font-serif text-lg font-semibold mt-1.5 numeric',
+                        'text-lg font-bold mt-1 numeric tracking-tight',
                         isProfit ? 'text-profit' : 'text-loss',
                     )}>
                         {isProfit ? '+' : ''}{formatCurrency(displayProfit, baseCurrency, { compact: true })}
@@ -457,29 +457,29 @@ export function HomeClient({
             </section>
 
             {/* 예수금 단일 행 — 보유 탭 카드와 동일 톤, display only */}
-            <section className="mx-4 mb-4 p-4 bg-card border border-border flex items-center gap-3">
-                <div className="w-9 h-9 rounded-sm bg-accent-soft flex items-center justify-center shrink-0">
-                    <Wallet className="w-4 h-4 text-primary" strokeWidth={2} />
+            <section className="mx-4 mb-4 p-4 bg-card rounded-2xl flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-accent-soft flex items-center justify-center shrink-0">
+                    <Wallet className="w-[18px] h-[18px] text-primary" strokeWidth={2} />
                 </div>
                 <div className="min-w-0 flex-1">
-                    <div className="text-[10px] font-bold text-muted-foreground tracking-[1px] uppercase">
+                    <div className="text-[14px] font-medium text-muted-foreground">
                         {language === 'ko' ? '예수금' : 'Cash balance'}
                     </div>
                 </div>
-                <div className="font-serif text-lg font-semibold text-foreground numeric truncate">
+                <div className="text-lg font-bold text-foreground numeric truncate tracking-tight">
                     {formatCurrency(displayCash, baseCurrency, { compact: true })}
                 </div>
             </section>
 
             {/* Recent snapshot ribbon */}
             {latestSnap && (
-                <section className="mx-4 mb-4 p-[18px] bg-accent-soft border" style={{ borderColor: 'color-mix(in srgb, var(--primary) 30%, transparent)' }}>
-                    <div className="text-[11px] font-bold text-primary tracking-[1.5px] uppercase mb-1.5">
+                <section className="mx-4 mb-4 p-[18px] bg-accent-soft rounded-2xl">
+                    <div className="text-[13px] font-semibold text-primary mb-1.5">
                         {language === 'ko' ? '최근 스냅샷' : 'Recent snapshot'}
                     </div>
                     <div className="flex items-center justify-between gap-3">
                         <div className="min-w-0">
-                            <div className="font-serif text-base text-foreground" suppressHydrationWarning>
+                            <div className="text-base font-bold text-foreground numeric" suppressHydrationWarning>
                                 {formatDate(latestSnap.snapshotDate, 'yyyy.MM.dd')}
                             </div>
                             <div className="text-[11px] text-muted-foreground">
@@ -492,7 +492,7 @@ export function HomeClient({
                         </div>
                         <Link
                             href="/dashboard/snapshots"
-                            className="bg-primary text-primary-foreground px-3.5 py-2 text-xs font-bold whitespace-nowrap hover:opacity-90 transition-opacity"
+                            className="bg-primary text-primary-foreground px-3.5 py-2 text-xs font-bold whitespace-nowrap rounded-lg hover:opacity-90 active:scale-[0.97] transition-all"
                         >
                             {language === 'ko' ? '전체보기' : 'View all'}
                         </Link>
@@ -506,7 +506,7 @@ export function HomeClient({
                     <div className="eyebrow mb-3.5">
                         {language === 'ko' ? '수익률 TOP' : 'TOP RETURNS'}
                     </div>
-                    <ul className="divide-y divide-border">
+                    <ul>
                         {topReturns.map((h, i) => {
                             const value = h.currency === 'USD' ? h.currentValue * exRate : h.currentValue
                             const displayHValue = baseCurrency === 'KRW' ? value : value / exRate
@@ -515,14 +515,14 @@ export function HomeClient({
                                     key={h.id}
                                     className="flex items-center gap-3.5 py-3"
                                 >
-                                    <span className="font-serif italic text-lg text-muted-foreground w-6 shrink-0">
+                                    <span className="text-[15px] font-bold text-primary numeric w-6 shrink-0">
                                         {i + 1}
                                     </span>
                                     <div className="flex-1 min-w-0">
-                                        <div className="text-[13px] font-bold text-foreground truncate">
+                                        <div className="text-[14px] font-semibold text-foreground truncate">
                                             {h.stockName}
                                         </div>
-                                        <div className="text-[10px] text-muted-foreground tracking-[0.5px] mt-0.5">
+                                        <div className="text-[12px] text-muted-foreground mt-0.5">
                                             {h.stockCode}
                                         </div>
                                     </div>

@@ -49,48 +49,48 @@
   --color-accent-soft: var(--accent-soft);
   --shadow-card: var(--shadow-card-token);
   --shadow-fab: var(--shadow-fab-token);
-  --font-serif: var(--font-serif-ko), var(--font-serif-latin), Charter, "Source Serif Pro", "Iowan Old Style", Georgia, serif;
+  --font-serif: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
 }
 
 :root {
-  /* Editorial sharp corners — Variation B */
-  --radius: 0.25rem;
+  /* Toss(TDS) soft rounded corners */
+  --radius: 0.875rem;
 
-  /* Surfaces (THEME_B.light) */
-  --background: #FAFAF7;
-  --foreground: #1A1A1A;
+  /* Surfaces — Toss layered look: grey page + borderless white cards */
+  --background: #F2F4F6;
+  --foreground: #191F28;
   --card: #FFFFFF;
-  --card-hover: #F1F1ED;
-  --card-foreground: #1A1A1A;
+  --card-hover: #F9FAFB;
+  --card-foreground: #191F28;
   --popover: #FFFFFF;
-  --popover-foreground: #1A1A1A;
-  --surface2: #F1F1ED;
+  --popover-foreground: #191F28;
+  --surface2: #F2F4F6;
 
-  /* Brand: emerald accent */
-  --primary: #0F8B5C;
+  /* Brand: Toss Blue */
+  --primary: #3182F6;
   --primary-foreground: #FFFFFF;
-  --accent: #F1F1ED;
-  --accent-foreground: #1A1A1A;
-  --accent-soft: #E1F5EC;
+  --accent: #F2F4F6;
+  --accent-foreground: #191F28;
+  --accent-soft: #E8F3FF;
 
-  --secondary: #F1F1ED;
-  --secondary-foreground: #1A1A1A;
-  --muted: #F1F1ED;
-  --muted-foreground: #737373;
+  --secondary: #F2F4F6;
+  --secondary-foreground: #4E5968;
+  --muted: #F2F4F6;
+  --muted-foreground: #6B7684;
 
-  --destructive: #D4322F;
-  --border: rgba(0, 0, 0, 0.08);
-  --input: rgba(0, 0, 0, 0.08);
-  --ring: #0F8B5C;
+  --destructive: #F04452;
+  --border: rgba(0, 19, 43, 0.06);
+  --input: rgba(0, 19, 43, 0.07);
+  --ring: #3182F6;
 
-  /* Profit (up) = red ▲ ; Loss (down) = emerald ▼ — Korean editorial convention */
-  --profit: #D4322F;
-  --loss: #0F8B5C;
-  --flat: #737373;
+  /* Profit (up) = red ▲ ; Loss (down) = blue ▼ — Toss Securities convention */
+  --profit: #F04452;
+  --loss: #3182F6;
+  --flat: #8B95A1;
 
-  /* Card / FAB shadow tokens — single source of truth for elevation */
-  --shadow-card-token: 0 1px 2px rgb(0 0 0 / .04), 0 1px 3px rgb(0 0 0 / .06);
-  --shadow-fab-token: 0 8px 24px rgb(0 0 0 / .12);
+  /* Toss elevation — boundaries come from surface contrast, shadows stay near-invisible */
+  --shadow-card-token: 0 1px 3px rgb(25 31 40 / .03);
+  --shadow-fab-token: 0 6px 20px rgb(25 31 40 / .16);
 
   /* Safe-area insets — fall back to 0 on platforms without notch/home-indicator */
   --safe-top: env(safe-area-inset-top, 0px);
@@ -98,74 +98,73 @@
   --safe-left: env(safe-area-inset-left, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
 
-  --chart-1: #0F8B5C;
-  --chart-2: #D4322F;
-  --chart-3: #A855F7;
-  --chart-4: #F59E0B;
-  --chart-5: #06B6D4;
+  --chart-1: #3182F6;
+  --chart-2: #F04452;
+  --chart-3: #7C5CFC;
+  --chart-4: #F5A623;
+  --chart-5: #00C7BE;
 
-  --sidebar: #FAFAF7;
-  --sidebar-foreground: #1A1A1A;
-  --sidebar-primary: #0F8B5C;
+  --sidebar: #F2F4F6;
+  --sidebar-foreground: #191F28;
+  --sidebar-primary: #3182F6;
   --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #F1F1ED;
-  --sidebar-accent-foreground: #1A1A1A;
-  --sidebar-border: rgba(0, 0, 0, 0.08);
-  --sidebar-ring: #0F8B5C;
+  --sidebar-accent: #E8EBED;
+  --sidebar-accent-foreground: #191F28;
+  --sidebar-border: rgba(0, 19, 43, 0.06);
+  --sidebar-ring: #3182F6;
 }
 
 .dark {
   color-scheme: dark;
-  /* Surfaces (THEME_B.dark) — warm green-black
-     카드 배경을 페이지 배경 대비 한 단계 더 밝게 + border 강도를 12%로 올려 카드
-     경계감을 보강 (다크모드 검토 P2-2). */
-  --background: #0A0B08;
-  --foreground: #F2F1EC;
-  --card: #1A1B17;
-  --card-hover: #232520;
-  --card-foreground: #F2F1EC;
-  --popover: #1A1B17;
-  --popover-foreground: #F2F1EC;
-  --surface2: #232520;
+  /* Surfaces — Toss Securities dark: #17171C page + #202027 cards, 보더 대신
+     표면 명도 차이로 경계를 만든다. */
+  --background: #17171C;
+  --foreground: #ECEFF2;
+  --card: #202027;
+  --card-hover: #26262E;
+  --card-foreground: #ECEFF2;
+  --popover: #26262E;
+  --popover-foreground: #ECEFF2;
+  --surface2: #2A2A31;
 
-  --primary: #3DD68C;
-  --primary-foreground: #0E0F0C;
-  --accent: #232520;
-  --accent-foreground: #F2F1EC;
-  --accent-soft: rgba(61, 214, 140, 0.14);
+  --primary: #4593FC;
+  --primary-foreground: #FFFFFF;
+  --accent: #2A2A31;
+  --accent-foreground: #ECEFF2;
+  --accent-soft: rgba(69, 147, 252, 0.16);
 
-  --secondary: #232520;
-  --secondary-foreground: #F2F1EC;
-  --muted: #232520;
-  --muted-foreground: #9A9A95;
+  --secondary: #2A2A31;
+  --secondary-foreground: #C3C8CF;
+  --muted: #2A2A31;
+  --muted-foreground: #8B95A1;
 
-  --destructive: #FF6B68;
-  --border: rgba(255, 255, 255, 0.12);
-  --input: rgba(255, 255, 255, 0.12);
-  --ring: #3DD68C;
+  --destructive: #F66570;
+  --border: rgba(255, 255, 255, 0.07);
+  --input: rgba(255, 255, 255, 0.09);
+  --ring: #4593FC;
 
-  --profit: #FF6B68;
-  --loss: #3DD68C;
-  --flat: #8A8A85;
+  --profit: #F66570;
+  --loss: #4593FC;
+  --flat: #7E8794;
 
-  /* Dark elevation — slightly stronger to compensate for low ambient contrast */
-  --shadow-card-token: 0 1px 2px rgb(0 0 0 / .35), 0 1px 3px rgb(0 0 0 / .25);
-  --shadow-fab-token: 0 8px 24px rgb(0 0 0 / .45);
+  /* Dark elevation — surface contrast does the work, shadows stay soft */
+  --shadow-card-token: 0 1px 3px rgb(0 0 0 / .2);
+  --shadow-fab-token: 0 8px 24px rgb(0 0 0 / .4);
 
-  --chart-1: #3DD68C;
-  --chart-2: #FF6B68;
-  --chart-3: #C084FC;
-  --chart-4: #FBBF24;
-  --chart-5: #22D3EE;
+  --chart-1: #4593FC;
+  --chart-2: #F66570;
+  --chart-3: #9D7BFF;
+  --chart-4: #FFC04D;
+  --chart-5: #2BD9CE;
 
-  --sidebar: #0E0F0C;
-  --sidebar-foreground: #F2F1EC;
-  --sidebar-primary: #3DD68C;
-  --sidebar-primary-foreground: #0E0F0C;
-  --sidebar-accent: #1F211C;
-  --sidebar-accent-foreground: #F2F1EC;
-  --sidebar-border: rgba(255, 255, 255, 0.08);
-  --sidebar-ring: #3DD68C;
+  --sidebar: #17171C;
+  --sidebar-foreground: #ECEFF2;
+  --sidebar-primary: #4593FC;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #26262E;
+  --sidebar-accent-foreground: #ECEFF2;
+  --sidebar-border: rgba(255, 255, 255, 0.07);
+  --sidebar-ring: #4593FC;
 }
 
 @layer base {
@@ -181,42 +180,42 @@
 }
 
 @layer utilities {
-  /* Editorial serif (Charter alternative — Source Serif 4 + Noto Serif KR) */
+  /* Toss 타이포 — 세리프 계열 클래스를 모두 Pretendard 산세리프로 통합 */
   .font-serif {
-    font-family: var(--font-serif);
+    font-family: var(--font-sans);
     font-feature-settings: "kern", "liga";
   }
 
-  /* Hero serif headline — "스냅샷", "포트폴리오" */
+  /* Hero headline — 큰 볼드 산세리프 (토스 금액/타이틀) */
   .hero-serif {
-    font-family: var(--font-serif);
-    font-weight: 500;
-    letter-spacing: -0.04em;
-    line-height: 1.0;
+    font-family: var(--font-sans);
+    font-weight: 800;
+    letter-spacing: -0.035em;
+    line-height: 1.1;
   }
 
   /* Big tabular amount display — ₩87,620,123 */
   .amount-display {
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum";
-    letter-spacing: -0.025em;
+    letter-spacing: -0.03em;
     font-weight: 700;
   }
 
-  /* Editorial all-caps tracker (LATEST · 최신 / TIMELINE / TOP MOVERS) */
+  /* Toss 섹션 라벨 — 작고 단단한 캡션 (대문자 트래킹 제거) */
   .eyebrow {
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    text-transform: none;
     color: var(--muted-foreground);
   }
 
-  /* Italic serif quote/subtitle ("시점별 포트폴리오 기록") */
+  /* 서브타이틀 — 이탤릭 제거, 차분한 미디엄 산세리프 */
   .serif-italic {
-    font-family: var(--font-serif);
-    font-style: italic;
-    font-weight: 400;
+    font-family: var(--font-sans);
+    font-style: normal;
+    font-weight: 500;
   }
 
   /* 금액, 수익률 등 숫자 요소에 적용 */

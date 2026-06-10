@@ -156,16 +156,16 @@ export default function SimulationClient({ initialSnapshots }: SimulationClientP
             </section>
 
             {/* Snapshot picker */}
-            <section className="mx-4 mb-4 bg-card border border-border p-5">
+            <section className="mx-4 mb-4 bg-card rounded-2xl p-5">
                 <div className="eyebrow mb-2">
-                    {language === 'ko' ? `STEP 01 · ${t('selectSnapshot')}` : `STEP 01 · ${t('selectSnapshot')}`}
+                    {t('selectSnapshot')}
                 </div>
                 <p className="text-[11px] text-muted-foreground mb-3">
                     {t('selectSnapshotDesc')}
                 </p>
 
                 <Select value={selectedSnapshotId} onValueChange={handleSnapshotChange}>
-                    <SelectTrigger className="w-full h-11 bg-background border-border rounded-none font-serif text-[14px]">
+                    <SelectTrigger className="w-full h-11 bg-background border-border rounded-none text-[14px]">
                         <SelectValue placeholder={t('selectSnapshotPlaceholder')} />
                     </SelectTrigger>
                     <SelectContent>
@@ -196,7 +196,7 @@ export default function SimulationClient({ initialSnapshots }: SimulationClientP
                     type="button"
                     onClick={runSimulation}
                     disabled={!selectedSnapshotId || loading}
-                    className="mt-3 w-full bg-primary text-primary-foreground py-3 text-sm font-bold disabled:opacity-50 hover:opacity-90 transition-opacity inline-flex items-center justify-center gap-2"
+                    className="mt-3 w-full bg-primary text-primary-foreground py-3 text-sm font-bold disabled:opacity-50 hover:opacity-90 rounded-xl active:scale-[0.98] transition-all inline-flex items-center justify-center gap-2"
                 >
                     {loading ? (
                         <>
@@ -210,10 +210,10 @@ export default function SimulationClient({ initialSnapshots }: SimulationClientP
             </section>
 
             {error && (
-                <section className="mx-4 mb-4 bg-card border border-loss/40 p-4 flex gap-3">
+                <section className="mx-4 mb-4 bg-card rounded-2xl p-4 flex gap-3">
                     <AlertCircle className="h-4 w-4 text-loss shrink-0 mt-0.5" />
                     <div>
-                        <div className="text-[11px] font-bold text-loss tracking-[0.5px] uppercase">{t('error')}</div>
+                        <div className="text-[12px] font-semibold text-loss">{t('error')}</div>
                         <div className="text-[13px] text-foreground mt-1">{error}</div>
                     </div>
                 </section>
@@ -278,24 +278,17 @@ function ResultBlock({
     return (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Result hero — accent stripe + big simulated diff */}
-            <div className="mx-4 mb-4 relative overflow-hidden border bg-card" style={{ padding: 22 }}>
-                <div
-                    className={cn(
-                        'absolute top-0 left-0 right-0 h-[3px]',
-                        isUp ? 'bg-profit' : 'bg-loss',
-                    )}
-                />
-
+            <div className="mx-4 mb-4 relative overflow-hidden rounded-2xl bg-card" style={{ padding: 22 }}>
                 <div className="flex items-center justify-between mb-1">
                     <span className="eyebrow">
-                        {language === 'ko' ? `RESULT · ${t('simulationResult')}` : `RESULT · ${t('simulationResult')}`}
+                        {t('simulationResult')}
                     </span>
                     <span className="text-[11px] text-muted-foreground" suppressHydrationWarning>
                         {formatDate(result.snapshotDate, 'yyyy.MM.dd')} {t('basedOn')}
                     </span>
                 </div>
 
-                <div className="text-[11px] font-semibold text-muted-foreground tracking-[0.5px] mt-3 mb-1">
+                <div className="text-[11px] font-semibold text-muted-foreground mt-3 mb-1">
                     {language === 'ko' ? '시뮬레이션 차이' : 'Simulation difference'}
                 </div>
                 <div
@@ -309,14 +302,14 @@ function ResultBlock({
 
                 <div className="flex gap-4 mt-3.5 items-stretch">
                     <div>
-                        <div className="text-[10px] font-semibold text-muted-foreground tracking-[0.5px] uppercase">
+                        <div className="text-[12px] font-medium text-muted-foreground">
                             {language === 'ko' ? '시뮬레이션 수익률' : 'Sim. yield'}
                         </div>
                         <div className="mt-1"><UpDown value={simulationYield} big /></div>
                     </div>
                     <div className="w-px bg-border self-stretch" />
                     <div>
-                        <div className="text-[10px] font-semibold text-muted-foreground tracking-[0.5px] uppercase">
+                        <div className="text-[12px] font-medium text-muted-foreground">
                             {language === 'ko' ? '평가손익 변화' : 'P/L change'}
                         </div>
                         <div
@@ -334,14 +327,14 @@ function ResultBlock({
 
             {/* Two-up: 과거 가치 / 현재 가치 */}
             <section className="mx-4 mb-2 grid grid-cols-2 gap-2">
-                <div className="p-4 bg-card border border-border">
-                    <div className="text-[10px] font-bold text-muted-foreground tracking-[1px] uppercase">
+                <div className="p-4 bg-card rounded-2xl">
+                    <div className="text-[13px] font-medium text-muted-foreground">
                         {t('pastValue')}
                     </div>
-                    <div className="font-serif text-lg font-semibold text-foreground mt-1.5 numeric">
+                    <div className="text-lg font-bold text-foreground mt-1 numeric tracking-tight">
                         {formatCurrency(displaySnapshotValue, currency)}
                     </div>
-                    <div className="text-[10px] text-muted-foreground tracking-[0.5px] mt-2 pt-2 border-t border-border/60">
+                    <div className="text-[10px] text-muted-foreground mt-2 pt-2 border-t border-border/60">
                         <div className="flex justify-between">
                             <span>{t('totalInvested')}</span>
                             <span className="numeric text-foreground">{formatCurrency(totalInvested, currency)}</span>
@@ -352,14 +345,14 @@ function ResultBlock({
                         </div>
                     </div>
                 </div>
-                <div className="p-4 bg-card border border-border">
-                    <div className="text-[10px] font-bold text-muted-foreground tracking-[1px] uppercase">
+                <div className="p-4 bg-card rounded-2xl">
+                    <div className="text-[13px] font-medium text-muted-foreground">
                         {t('currentValue')}
                     </div>
-                    <div className="font-serif text-lg font-semibold text-foreground mt-1.5 numeric">
+                    <div className="text-lg font-bold text-foreground mt-1 numeric tracking-tight">
                         {formatCurrency(currentTotalValue, currency)}
                     </div>
-                    <div className="text-[10px] text-muted-foreground tracking-[0.5px] mt-2 pt-2 border-t border-border/60">
+                    <div className="text-[10px] text-muted-foreground mt-2 pt-2 border-t border-border/60">
                         <div className="flex justify-between">
                             <span>{t('basedOnRealtime')}</span>
                             <span className="text-[9px]">({t('exclCash')})</span>
@@ -375,9 +368,9 @@ function ResultBlock({
             </section>
 
             {/* P/L detail card */}
-            <section className="mx-4 mb-4 p-4 bg-card border border-border">
+            <section className="mx-4 mb-4 p-4 bg-card rounded-2xl">
                 <div className="flex justify-between items-center py-1">
-                    <span className="text-[11px] text-muted-foreground tracking-[0.5px]">
+                    <span className="text-[11px] text-muted-foreground">
                         {t('currentPL')}
                     </span>
                     <span className={cn(
@@ -388,7 +381,7 @@ function ResultBlock({
                     </span>
                 </div>
                 <div className="flex justify-between items-center py-1 mt-1 pt-2 border-t border-border/60">
-                    <span className="text-[11px] text-muted-foreground tracking-[0.5px]">
+                    <span className="text-[11px] text-muted-foreground">
                         {t('snapshotPL')}
                     </span>
                     <span className={cn(
@@ -407,7 +400,7 @@ function ResultBlock({
                         ? `HOLDINGS · ${result.holdings.length}`
                         : `HOLDINGS · ${result.holdings.length}`}
                 </span>
-                <span className="text-[10px] text-muted-foreground tracking-[0.5px]">
+                <span className="text-[10px] text-muted-foreground">
                     {t('holdingsComparison')}
                 </span>
             </div>
@@ -440,7 +433,7 @@ function ResultBlock({
                     return (
                         <div
                             key={`${item.stockCode}-${index}`}
-                            className="bg-card border border-border p-4"
+                            className="bg-card rounded-2xl p-4"
                             style={{
                                 borderLeftWidth: '3px',
                                 borderLeftColor: isItemUp ? 'var(--profit)' : 'var(--loss)',
@@ -456,7 +449,7 @@ function ResultBlock({
 
                             {/* Row 2: 메타 + gain */}
                             <div className="mt-1.5 flex items-end justify-between gap-3">
-                                <div className="text-[10px] text-muted-foreground tracking-[0.5px] flex-1 min-w-0">
+                                <div className="text-[10px] text-muted-foreground flex-1 min-w-0">
                                     {item.stockCode}
                                     {' · '}
                                     {formatNumber(item.quantity)}{language === 'ko' ? '주' : 'shr'}
@@ -484,18 +477,18 @@ function ResultBlock({
                             {/* Row 3: avg → current price */}
                             <div className="mt-2.5 pt-2.5 border-t border-border/60 grid grid-cols-2 gap-3 text-[11px]">
                                 <div>
-                                    <div className="text-[10px] text-muted-foreground tracking-[0.5px] uppercase">
+                                    <div className="text-[11px] text-muted-foreground">
                                         {t('pastPrice')}
                                     </div>
-                                    <div className="font-serif text-[13px] font-semibold text-foreground mt-0.5 numeric">
+                                    <div className="text-[13px] font-bold text-foreground mt-0.5 numeric">
                                         {formatCurrency(displayAvgPrice, displayCurrency)}
                                     </div>
                                 </div>
                                 <div className="text-right">
-                                    <div className="text-[10px] text-muted-foreground tracking-[0.5px] uppercase">
+                                    <div className="text-[11px] text-muted-foreground">
                                         {t('currentPrice')}
                                     </div>
-                                    <div className="font-serif text-[13px] font-semibold text-foreground mt-0.5 numeric">
+                                    <div className="text-[13px] font-bold text-foreground mt-0.5 numeric">
                                         {item.error ? (
                                             <span className="text-loss text-[11px]">{t('fetchFailed')}</span>
                                         ) : (

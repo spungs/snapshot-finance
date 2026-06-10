@@ -26,7 +26,7 @@ export function PortfolioSkeleton() {
             </section>
 
             {/* Donut + legend */}
-            <section className="mx-4 mb-4 p-5 bg-card border border-border">
+            <section className="mx-4 mb-4 p-5 bg-card rounded-2xl">
                 <div className="flex items-center gap-4">
                     <div className="shrink-0">
                         <Bar className="h-[130px] w-[130px] rounded-full" />
@@ -49,7 +49,7 @@ export function PortfolioSkeleton() {
             </section>
 
             {/* 예수금 단일 행 */}
-            <section className="mx-4 mb-4 p-4 bg-card border border-border flex items-center justify-between gap-3">
+            <section className="mx-4 mb-4 p-4 bg-card rounded-2xl flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
                     <Bar className="w-9 h-9 rounded-sm shrink-0" />
                     <div className="min-w-0 space-y-1.5">
@@ -75,7 +75,7 @@ export function PortfolioSkeleton() {
                 {[0, 1, 2, 3].map(i => (
                     <div
                         key={i}
-                        className="bg-card border border-border p-4"
+                        className="bg-card rounded-2xl p-4"
                         style={{ borderLeftWidth: '3px', borderLeftColor: 'var(--border)' }}
                     >
                         <div className="flex items-start justify-between gap-2">

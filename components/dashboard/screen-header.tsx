@@ -10,7 +10,6 @@ interface ScreenHeaderProps {
 export function ScreenHeader({ right }: ScreenHeaderProps) {
     return (
         <header
-            className="border-b border-border/50"
             style={{ paddingTop: 'calc(0.875rem + var(--safe-top, 0px))' }}
         >
             <div className="px-6 pb-2 flex items-center justify-between max-w-[480px] md:max-w-2xl mx-auto">

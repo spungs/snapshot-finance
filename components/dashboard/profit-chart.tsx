@@ -23,8 +23,8 @@ interface ProfitChartProps {
   data: ChartDataPoint[]
 }
 
-const PROFIT_COLOR = '#f43f5e'
-const LOSS_COLOR = '#3b82f6'
+const PROFIT_COLOR = 'var(--profit)'
+const LOSS_COLOR = 'var(--loss)'
 
 export function ProfitChart({ data }: ProfitChartProps) {
   const formattedData = data.map((d) => ({

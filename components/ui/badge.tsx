@@ -18,9 +18,9 @@ const badgeVariants = cva(
         outline:
           "text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
         profit:
-          "bg-profit/10 text-profit border-profit/30 badge-profit-glow",
+          "border-transparent bg-profit/10 text-profit",
         loss:
-          "bg-loss/10 text-loss border-loss/30 badge-loss-glow",
+          "border-transparent bg-loss/10 text-loss",
       },
     },
     defaultVariants: {

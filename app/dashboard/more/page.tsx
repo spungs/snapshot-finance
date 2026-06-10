@@ -48,7 +48,7 @@ export default function MorePage() {
             {GROUPS.map((group) => (
                 <div key={group.labelKey} className="mb-6">
                     <div className="eyebrow px-6 mb-2">{t(group.labelKey)}</div>
-                    <div className="mx-4 bg-card border border-border">
+                    <div className="mx-4 bg-card rounded-2xl">
                         {group.items.map((item, i) => {
                             const Icon = item.icon
                             return (
@@ -57,7 +57,7 @@ export default function MorePage() {
                                     href={item.href}
                                     className={`flex items-center gap-4 px-5 py-4 hover:bg-card-hover transition-colors min-h-[56px] ${i !== 0 ? 'border-t border-border' : ''}`}
                                 >
-                                    <div className="w-9 h-9 rounded-sm bg-accent-soft flex items-center justify-center shrink-0">
+                                    <div className="w-9 h-9 rounded-full bg-accent-soft flex items-center justify-center shrink-0">
                                         <Icon className="w-4 h-4 text-primary" strokeWidth={2} />
                                     </div>
                                     <div className="flex-1 min-w-0">

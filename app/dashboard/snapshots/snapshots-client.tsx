@@ -254,7 +254,7 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings, availableMo
         return (
             <div className="max-w-[420px] md:max-w-2xl mx-auto w-full pb-20">
                 <Hero t={t} />
-                <div className="mx-4 border bg-card overflow-hidden">
+                <div className="mx-4 rounded-2xl bg-card overflow-hidden">
                     <EmptySnapshotState />
                 </div>
             </div>
@@ -394,21 +394,19 @@ function ActiveSnapshotCard({
     const isProfit = displayProfit >= 0
     const holdingsCount = snapshot.holdings.length
     const labelKey = eyebrowOverride ?? (index === 0
-        ? (language === 'ko' ? 'LATEST · 최신' : 'LATEST')
+        ? (language === 'ko' ? '최신' : 'Latest')
         : (language === 'ko' ? `${index}일 전` : `${index}d ago`))
     const sourceLabel = t('autoSnapshotLabel')
 
     return (
-        <div className="mx-4 mb-4 relative overflow-hidden border bg-card" style={{ padding: 22 }}>
-            {/* 3px accent stripe at top */}
-            <div className="absolute top-0 left-0 right-0 h-[3px] bg-primary" />
+        <div className="mx-4 mb-4 relative overflow-hidden rounded-2xl bg-card" style={{ padding: 22 }}>
 
             <div className="flex items-center justify-between mb-1">
                 <span className="eyebrow">{labelKey}</span>
                 <span className="text-[11px] text-muted-foreground">{sourceLabel}</span>
             </div>
 
-            <div className="font-serif text-[22px] text-foreground mt-1.5" suppressHydrationWarning>
+            <div className="text-[22px] font-bold tracking-tight text-foreground mt-1.5 numeric" suppressHydrationWarning>
                 {formatDate(snapshot.snapshotDate, 'yyyy.MM.dd')}
             </div>
             <div className="text-[11px] text-muted-foreground mb-[18px]">
@@ -417,7 +415,7 @@ function ActiveSnapshotCard({
                 {holdingsCount}{t('countUnit')} {t('stock')}
             </div>
 
-            <div className="text-[11px] font-semibold text-muted-foreground tracking-[0.5px] mb-1">
+            <div className="text-[11px] font-semibold text-muted-foreground mb-1">
                 {t('totalValue')}
             </div>
             <div className="amount-display text-[30px] text-foreground leading-none">
@@ -426,14 +424,14 @@ function ActiveSnapshotCard({
 
             <div className="flex gap-4 mt-3.5 items-stretch">
                 <div>
-                    <div className="text-[10px] font-semibold text-muted-foreground tracking-[0.5px] uppercase">
+                    <div className="text-[12px] font-medium text-muted-foreground">
                         {t('returnRate')}
                     </div>
                     <div className="mt-1"><UpDown value={profitRate} big /></div>
                 </div>
                 <div className="w-px bg-border self-stretch" />
                 <div>
-                    <div className="text-[10px] font-semibold text-muted-foreground tracking-[0.5px] uppercase">
+                    <div className="text-[12px] font-medium text-muted-foreground">
                         {t('pl')}
                     </div>
                     <div className={cn('text-[15px] font-bold mt-1 numeric', isProfit ? 'text-profit' : 'text-loss')}>
@@ -509,7 +507,7 @@ function FilterBar({
     }
 
     const triggerCls =
-        'inline-flex items-center gap-1.5 border bg-card px-3 py-1.5 text-[12.5px] font-semibold text-foreground disabled:opacity-40 disabled:cursor-not-allowed'
+        'inline-flex items-center gap-1.5 rounded-lg bg-card shadow-sm px-3 py-1.5 text-[12.5px] font-semibold text-foreground disabled:opacity-40 disabled:cursor-not-allowed'
 
     return (
         <div className="px-6 pb-3 flex items-center gap-2 flex-wrap">
@@ -562,10 +560,10 @@ function FilterBar({
                 type="button"
                 onClick={onClear}
                 className={cn(
-                    'px-3 py-1.5 text-[12px] font-medium border transition-colors',
+                    'px-3 py-1.5 text-[12px] font-medium rounded-lg transition-colors',
                     !filter
-                        ? 'border-primary bg-primary text-primary-foreground'
-                        : 'border-border text-muted-foreground hover:text-foreground hover:border-foreground',
+                        ? 'bg-accent-soft text-primary font-bold'
+                        : 'bg-secondary text-muted-foreground hover:text-foreground',
                 )}
             >
                 {t('allPeriods')}
@@ -579,7 +577,7 @@ function FilterBar({
 /* ─── 선택한 기간에 스냅샷이 없을 때 ─── */
 function PeriodEmpty({ t }: { t: (k: any) => string }) {
     return (
-        <div className="mx-4 my-6 p-8 bg-card border border-border text-center">
+        <div className="mx-4 my-6 p-8 bg-card rounded-2xl text-center">
             <p className="text-[13px] text-muted-foreground">{t('noSnapshotsInPeriod')}</p>
         </div>
     )
@@ -604,7 +602,7 @@ function TimelineSection({
         <>
             <div className="px-6 mb-3">
                 <div className="eyebrow">
-                    {language === 'ko' ? `TIMELINE · ${t('timeline')}` : 'TIMELINE'}
+                    {language === 'ko' ? t('timeline') : 'Timeline'}
                 </div>
             </div>
             <div className="relative px-6">
@@ -647,7 +645,7 @@ function TimelineSection({
                             {/* card */}
                             <div
                                 className={cn(
-                                    'flex-1 min-w-0 border bg-card p-3.5',
+                                    'flex-1 min-w-0 rounded-2xl bg-card p-3.5',
                                     isSelected && 'ring-1 ring-primary border-primary',
                                 )}
                             >
@@ -682,10 +680,10 @@ function TimelineSection({
                                             type="button"
                                             onClick={e => onToggleSelect(s.id, e)}
                                             className={cn(
-                                                'inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium border transition-colors',
+                                                'inline-flex items-center gap-1 px-1.5 py-0.5 text-[11px] font-medium rounded-md transition-colors',
                                                 isSelected
-                                                    ? 'border-primary bg-primary text-primary-foreground'
-                                                    : 'border-border text-muted-foreground hover:text-foreground hover:border-foreground',
+                                                    ? 'bg-accent-soft text-primary font-bold'
+                                                    : 'bg-secondary text-muted-foreground hover:text-foreground',
                                             )}
                                             aria-pressed={isSelected}
                                             aria-label={language === 'ko' ? '비교 선택' : 'Compare select'}

@@ -95,7 +95,7 @@ export function ReviewList({ cards, onUpdate, onSubmit, imageHeader }: ReviewLis
     return (
         <div className="@container space-y-3">
             {imageHeader && (
-                <div className="flex items-center gap-2 rounded-md border border-border bg-background p-2">
+                <div className="flex items-center gap-2 rounded-md bg-background p-2">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                         src={imageHeader.previewUrl}
@@ -121,9 +121,9 @@ export function ReviewList({ cards, onUpdate, onSubmit, imageHeader }: ReviewLis
             )}
 
             {/* 데스크톱 테이블 — 컨테이너 너비 ≥ 672px(@2xl) 일 때 (다이얼로그 넓은 화면) */}
-            <div className="hidden @2xl:block max-h-[50vh] overflow-y-auto rounded-md border border-border">
+            <div className="hidden @2xl:block max-h-[50vh] overflow-y-auto rounded-md">
                 <table className="w-full text-sm">
-                    <thead className="bg-accent-soft/50 text-[10px] uppercase tracking-wide text-muted-foreground sticky top-0">
+                    <thead className="bg-accent-soft/50 text-[11px] text-muted-foreground sticky top-0">
                         <tr>
                             <th className="w-8 px-2 py-2"></th>
                             <th className="text-left px-2 py-2">{tx.stock}</th>
@@ -159,7 +159,7 @@ export function ReviewList({ cards, onUpdate, onSubmit, imageHeader }: ReviewLis
             </div>
 
             <div>
-                <label className="block text-[11px] font-bold tracking-wide text-muted-foreground mb-1.5 uppercase">
+                <label className="block text-[13px] font-medium text-muted-foreground mb-1.5">
                     {tx.strategy}
                 </label>
                 <div className="grid grid-cols-2 gap-1.5">

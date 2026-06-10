@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Source_Serif_4, Noto_Serif_KR, JetBrains_Mono } from "next/font/google";
+import { JetBrains_Mono } from "next/font/google";
 import { APPLE_STARTUP_IMAGES } from '@/lib/ios-splash-images'
 import "./globals.css";
 
@@ -7,22 +7,6 @@ import "./globals.css";
 const jetbrainsMono = JetBrains_Mono({
   variable: "--font-mono-jb",
   weight: ["400", "500", "700"],
-  subsets: ["latin"],
-  display: "swap",
-});
-
-// Editorial serif for Latin glyphs (Charter alternative)
-const sourceSerif = Source_Serif_4({
-  variable: "--font-serif-latin",
-  weight: ["400", "500", "600", "700"],
-  subsets: ["latin"],
-  display: "swap",
-});
-
-// Korean editorial serif (design uses system fallback; we add Noto Serif KR for richer Korean serif)
-const notoSerifKr = Noto_Serif_KR({
-  variable: "--font-serif-ko",
-  weight: ["400", "500", "600", "700"],
   subsets: ["latin"],
   display: "swap",
 });
@@ -92,7 +76,7 @@ export default async function RootLayout({
         <script src="https://accounts.google.com/gsi/client" async defer></script>
       </head>
       <body
-        className={`${jetbrainsMono.variable} ${sourceSerif.variable} ${notoSerifKr.variable} font-sans antialiased`}
+        className={`${jetbrainsMono.variable} font-sans antialiased`}
       >
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
           {/* GSI One Tap 비활성 (auto_prompt=false). login_uri 는 GSI 가 절대 URL 만 허용 → metadataBase 와 동일한 fallback 도메인 사용. */}

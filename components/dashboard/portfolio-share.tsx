@@ -149,7 +149,7 @@ export function PortfolioShareButton({ holdings, summary, userName }: Props) {
                 onClick={captureAndShare}
                 disabled={capturing}
                 aria-label={t('share')}
-                className="h-9 px-3 inline-flex items-center gap-1.5 border border-border bg-card text-foreground text-[12px] font-semibold tracking-wide hover:bg-muted disabled:opacity-50 transition-colors shrink-0"
+                className="h-9 px-3 inline-flex items-center gap-1.5 bg-card rounded-lg shadow-sm text-foreground text-[12px] font-semibold hover:bg-muted disabled:opacity-50 transition-colors shrink-0"
             >
                 {capturing
                     ? <Loader2 className="w-4 h-4 animate-spin" />
@@ -263,7 +263,7 @@ function ShareCard({ holdings, summary, userName, baseCurrency, language }: Shar
 
                 {/* 요약 박스 */}
                 <div
-                    className="bg-card border border-border"
+                    className="bg-card rounded-2xl"
                     style={{ padding: '18px 18px 16px', marginBottom: '20px' }}
                 >
                     <div
@@ -335,7 +335,7 @@ function ShareCard({ holdings, summary, userName, baseCurrency, language }: Shar
                         return (
                             <div
                                 key={h.id}
-                                className="bg-card border border-border"
+                                className="bg-card rounded-2xl"
                                 style={{
                                     padding: '12px 14px',
                                     borderLeftWidth: '3px',

@@ -559,8 +559,7 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
         return (
             <div
                 key={h.id}
-                className={cn('bg-card border border-border p-4')}
-                style={{ borderLeftWidth: '3px', borderLeftColor: h.color }}
+                className={cn('bg-card rounded-2xl p-4')}
             >
                 {/* Row 1: 종목명 (full) + overflow menu */}
                 <div className="flex items-start justify-between gap-2">
@@ -617,7 +616,7 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
 
                 {/* Row 2: 메타 (좌) + 평가금액·등락률 (우) */}
                 <div className="mt-1.5 flex items-end justify-between gap-3">
-                    <div className="text-[10px] text-muted-foreground tracking-[0.5px] flex-1 min-w-0 space-y-0.5">
+                    <div className="text-[10px] text-muted-foreground flex-1 min-w-0 space-y-0.5">
                         <div>
                             {h.stockCode} · {formatNumber(h.quantity)}{language === 'ko' ? '주' : 'shr'}
                             {' · '}
@@ -629,7 +628,7 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                         </div>
                     </div>
                     <div className="text-right shrink-0">
-                        <div className="text-[10px] text-muted-foreground tracking-[0.5px] numeric">
+                        <div className="text-[10px] text-muted-foreground numeric">
                             {language === 'ko' ? '매입' : 'Cost'} {formatCurrency(costDisplay, baseCurrency)}
                         </div>
                         <div className="text-[14px] font-bold text-foreground numeric mt-0.5">
@@ -698,7 +697,7 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
 
                 return (
                     <section
-                        className="mx-4 mb-4 p-5 bg-card border border-border"
+                        className="mx-4 mb-4 p-5 bg-card rounded-2xl"
                         onClick={(e) => {
                             // 카드 빈 영역 탭 시 선택 해제 (레전드/도넛 path 클릭은 stopPropagation 처리)
                             if (e.target === e.currentTarget) setSelectedSegIdx(null)
@@ -722,7 +721,7 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                                                 className="w-2 h-2 rounded-sm shrink-0"
                                                 style={{ background: selectedSeg!.color }}
                                             />
-                                            <span className="text-[10px] font-bold text-muted-foreground tracking-[1px] uppercase truncate">
+                                            <span className="text-[13px] font-medium text-muted-foreground truncate">
                                                 {selectedHolding.stockCode}
                                             </span>
                                         </div>
@@ -742,7 +741,7 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                                     </>
                                 ) : (
                                     <>
-                                        <div className="text-[10px] font-bold text-muted-foreground tracking-[1px] uppercase">
+                                        <div className="text-[13px] font-medium text-muted-foreground">
                                             {t('totalValue')}
                                         </div>
                                         <div className="font-serif text-[20px] font-semibold text-foreground numeric leading-tight mt-0.5">
@@ -847,13 +846,13 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
             })()}
 
             {/* Cash balance — 예수금 (수정 트리거 포함) */}
-            <section className="mx-4 mb-4 p-4 bg-card border border-border flex items-center justify-between gap-3">
+            <section className="mx-4 mb-4 p-4 bg-card rounded-2xl flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-9 h-9 rounded-sm bg-accent-soft flex items-center justify-center shrink-0">
+                    <div className="w-9 h-9 rounded-full bg-accent-soft flex items-center justify-center shrink-0">
                         <Wallet className="w-4 h-4 text-primary" strokeWidth={2} />
                     </div>
                     <div className="min-w-0">
-                        <div className="text-[10px] font-bold text-muted-foreground tracking-[1px] uppercase">
+                        <div className="text-[13px] font-medium text-muted-foreground">
                             {language === 'ko' ? '예수금' : 'Cash balance'}
                         </div>
                         <div className="font-serif text-lg font-semibold text-foreground mt-0.5 numeric truncate">
@@ -889,7 +888,7 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                         <div
                             role="tablist"
                             aria-label={language === 'ko' ? '보기 방식' : 'View mode'}
-                            className="inline-flex border border-border rounded-sm overflow-hidden"
+                            className="inline-flex rounded-lg bg-secondary p-0.5"
                         >
                             <button
                                 type="button"
@@ -897,9 +896,9 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                                 aria-selected={viewMode === 'byAccount'}
                                 onClick={() => handleViewModeChange('byAccount')}
                                 className={cn(
-                                    'text-[11px] font-bold tracking-wide px-2.5 py-1 transition-colors',
+                                    'text-[11px] font-bold px-2.5 py-1 rounded-md transition-colors',
                                     viewMode === 'byAccount'
-                                        ? 'bg-foreground text-background'
+                                        ? 'bg-card text-foreground shadow-sm'
                                         : 'text-muted-foreground hover:text-foreground',
                                 )}
                             >
@@ -911,9 +910,9 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                                 aria-selected={viewMode === 'unified'}
                                 onClick={() => handleViewModeChange('unified')}
                                 className={cn(
-                                    'text-[11px] font-bold tracking-wide px-2.5 py-1 border-l border-border transition-colors',
+                                    'text-[11px] font-bold px-2.5 py-1 rounded-md transition-colors',
                                     viewMode === 'unified'
-                                        ? 'bg-foreground text-background'
+                                        ? 'bg-card text-foreground shadow-sm'
                                         : 'text-muted-foreground hover:text-foreground',
                                 )}
                             >
@@ -980,10 +979,10 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                             aria-selected={accountFilter === 'all'}
                             onClick={() => handleAccountFilterChange('all')}
                             className={cn(
-                                'shrink-0 text-[11px] font-bold tracking-wide px-3 py-1 rounded-sm border transition-colors',
+                                'shrink-0 text-[12px] font-semibold px-3 py-1.5 rounded-full transition-colors',
                                 accountFilter === 'all'
-                                    ? 'bg-foreground text-background border-foreground'
-                                    : 'bg-background text-muted-foreground border-border hover:text-foreground',
+                                    ? 'bg-foreground text-background'
+                                    : 'bg-secondary text-muted-foreground hover:text-foreground',
                             )}
                         >
                             {language === 'ko' ? '전체' : 'All'}
@@ -996,10 +995,10 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                                 aria-selected={accountFilter === a.id}
                                 onClick={() => handleAccountFilterChange(a.id)}
                                 className={cn(
-                                    'shrink-0 text-[11px] font-bold tracking-wide px-3 py-1 rounded-sm border transition-colors',
+                                    'shrink-0 text-[12px] font-semibold px-3 py-1.5 rounded-full transition-colors',
                                     accountFilter === a.id
-                                        ? 'bg-foreground text-background border-foreground'
-                                        : 'bg-background text-muted-foreground border-border hover:text-foreground',
+                                        ? 'bg-foreground text-background'
+                                        : 'bg-secondary text-muted-foreground hover:text-foreground',
                                 )}
                             >
                                 {a.name}
@@ -1341,7 +1340,7 @@ function AddHoldingFloating({
                             label={language === 'ko' ? '계좌' : 'Account'}
                         />
                         {existingHolding && (
-                            <div className="border border-border bg-accent-soft rounded-md p-3 space-y-2.5">
+                            <div className="bg-accent-soft rounded-xl p-3 space-y-2.5">
                                 <div className="text-[11px] text-muted-foreground leading-snug">
                                     {language === 'ko' ? (
                                         <>
@@ -1363,10 +1362,10 @@ function AddHoldingFloating({
                                         onClick={() => setAddMode('merge')}
                                         disabled={adding}
                                         className={cn(
-                                            'py-2 text-[12px] font-bold rounded-sm border transition-colors',
+                                            'py-2 text-[12px] font-bold rounded-lg transition-colors',
                                             addMode === 'merge'
-                                                ? 'bg-primary text-primary-foreground border-primary'
-                                                : 'bg-background text-foreground border-border hover:bg-accent-soft',
+                                                ? 'bg-accent-soft text-primary'
+                                                : 'bg-secondary text-muted-foreground hover:text-foreground',
                                         )}
                                     >
                                         {language === 'ko' ? '물타기 (평단 합산)' : 'Average down (merge)'}
@@ -1376,10 +1375,10 @@ function AddHoldingFloating({
                                         onClick={() => setAddMode('overwrite')}
                                         disabled={adding}
                                         className={cn(
-                                            'py-2 text-[12px] font-bold rounded-sm border transition-colors',
+                                            'py-2 text-[12px] font-bold rounded-lg transition-colors',
                                             addMode === 'overwrite'
-                                                ? 'bg-primary text-primary-foreground border-primary'
-                                                : 'bg-background text-foreground border-border hover:bg-accent-soft',
+                                                ? 'bg-accent-soft text-primary'
+                                                : 'bg-secondary text-muted-foreground hover:text-foreground',
                                         )}
                                     >
                                         {language === 'ko' ? '덮어쓰기' : 'Overwrite'}
@@ -1420,7 +1419,7 @@ function AddHoldingFloating({
                             type="button"
                             onClick={handleAdd}
                             disabled={!newStock || !newQty || !newPrice || adding}
-                            className="w-full bg-primary text-primary-foreground py-3 text-sm font-bold disabled:opacity-50 hover:opacity-90 rounded-md"
+                            className="w-full bg-primary text-primary-foreground py-3 text-sm font-bold disabled:opacity-50 hover:opacity-90 rounded-xl active:scale-[0.98] transition-all"
                         >
                             {adding
                                 ? t('addingProgress')
@@ -1549,7 +1548,7 @@ function EditHoldingDialog({
                         inline
                     />
                     {conflictHolding && (
-                        <div className="border border-border bg-accent-soft rounded-md p-3 space-y-2.5">
+                        <div className="bg-accent-soft rounded-xl p-3 space-y-2.5">
                             <div className="text-[11px] text-muted-foreground leading-snug">
                                 {language === 'ko' ? (
                                     <>
@@ -1569,10 +1568,10 @@ function EditHoldingDialog({
                                     onClick={() => setMode('merge')}
                                     disabled={saving}
                                     className={cn(
-                                        'py-2 text-[12px] font-bold rounded-sm border transition-colors',
+                                        'py-2 text-[12px] font-bold rounded-lg transition-colors',
                                         mode === 'merge'
-                                            ? 'bg-primary text-primary-foreground border-primary'
-                                            : 'bg-background text-foreground border-border hover:bg-accent-soft',
+                                            ? 'bg-accent-soft text-primary'
+                                            : 'bg-secondary text-muted-foreground hover:text-foreground',
                                     )}
                                 >
                                     {language === 'ko' ? '물타기 (평단 합산)' : 'Average down (merge)'}
@@ -1582,10 +1581,10 @@ function EditHoldingDialog({
                                     onClick={() => setMode('overwrite')}
                                     disabled={saving}
                                     className={cn(
-                                        'py-2 text-[12px] font-bold rounded-sm border transition-colors',
+                                        'py-2 text-[12px] font-bold rounded-lg transition-colors',
                                         mode === 'overwrite'
-                                            ? 'bg-primary text-primary-foreground border-primary'
-                                            : 'bg-background text-foreground border-border hover:bg-accent-soft',
+                                            ? 'bg-accent-soft text-primary'
+                                            : 'bg-secondary text-muted-foreground hover:text-foreground',
                                     )}
                                 >
                                     {language === 'ko' ? '덮어쓰기' : 'Overwrite'}
@@ -1626,7 +1625,7 @@ function EditHoldingDialog({
                         type="button"
                         onClick={handleSave}
                         disabled={!selectedStock || !qty || !price || saving}
-                        className="w-full bg-primary text-primary-foreground py-3 text-sm font-bold disabled:opacity-50 hover:opacity-90 rounded-md inline-flex items-center justify-center gap-2"
+                        className="w-full bg-primary text-primary-foreground py-3 text-sm font-bold disabled:opacity-50 hover:opacity-90 rounded-xl active:scale-[0.98] transition-all inline-flex items-center justify-center gap-2"
                     >
                         {saving && <Loader2 className="w-4 h-4 animate-spin" />}
                         {stockChanged && conflictHolding

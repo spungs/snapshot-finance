@@ -49,7 +49,7 @@ export function SettingsClient({ user }: Props) {
             </section>
 
             {/* Profile card */}
-            <div className="mx-4 mb-4 p-5 bg-card border border-border flex items-center gap-3.5">
+            <div className="mx-4 mb-4 p-5 bg-card rounded-2xl flex items-center gap-3.5">
                 <div className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-lg font-bold">
                     {initial}
                 </div>
@@ -65,7 +65,7 @@ export function SettingsClient({ user }: Props) {
 
             {/* App settings */}
             <SectionLabel>{t.appSection}</SectionLabel>
-            <div className="mx-4 bg-card border border-border">
+            <div className="mx-4 bg-card rounded-2xl">
                 {/* Theme */}
                 <Row>
                     <RowMain title={t.themeLabel} sub={theme === 'dark' ? 'Dark' : 'Light'} />
@@ -101,7 +101,7 @@ export function SettingsClient({ user }: Props) {
 
             {/* Account */}
             <SectionLabel>{t.accountSection}</SectionLabel>
-            <div className="mx-4 bg-card border border-border">
+            <div className="mx-4 bg-card rounded-2xl">
                 <button
                     type="button"
                     onClick={() => logout()}
@@ -120,7 +120,7 @@ export function SettingsClient({ user }: Props) {
 
             {/* Legal */}
             <SectionLabel>{t.legalSection}</SectionLabel>
-            <div className="mx-4 mb-4 bg-card border border-border">
+            <div className="mx-4 mb-4 bg-card rounded-2xl">
                 <LinkRow href="/terms" label={t.landing.termsOfService} />
                 <LinkRow href="/privacy" label={t.landing.privacyPolicy} divided />
             </div>

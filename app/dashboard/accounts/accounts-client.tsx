@@ -108,11 +108,11 @@ export function AccountsClient({ initialAccounts }: { initialAccounts: AccountLi
             {/* 계좌 목록 */}
             <SectionLabel>{t.accountsLabel}</SectionLabel>
             {accounts.length === 0 ? (
-                <div className="mx-4 px-5 py-10 bg-card border border-border text-center text-[13px] text-muted-foreground">
+                <div className="mx-4 px-5 py-10 bg-card rounded-2xl text-center text-[13px] text-muted-foreground">
                     {t.empty}
                 </div>
             ) : (
-                <div className="mx-4 bg-card border border-border">
+                <div className="mx-4 bg-card rounded-2xl">
                     <DndContext
                         sensors={sensors}
                         collisionDetection={closestCenter}

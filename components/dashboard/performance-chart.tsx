@@ -45,9 +45,9 @@ const PERIOD_LABELS: Record<Period, { ko: string; en: string }> = {
 
 const PERIODS: Period[] = ['1M', '3M', '6M', '1Y', 'ALL']
 
-// CSS 변수에서 실제 색상값 읽기 (SSR 안전)
-const PROFIT_COLOR = '#f43f5e'
-const LOSS_COLOR = '#3b82f6'
+// 디자인 토큰 직결 — SVG 속성에서 CSS 변수가 그대로 해석되므로 테마 전환에 자동 추종
+const PROFIT_COLOR = 'var(--profit)'
+const LOSS_COLOR = 'var(--loss)'
 
 function CustomTooltip({ active, payload, mode, currency, exchangeRate }: any) {
   const { language } = useLanguage()
@@ -189,17 +189,17 @@ export function PerformanceChart({ initialChartData }: PerformanceChartProps) {
             <div
               role="group"
               aria-label={language === 'ko' ? '차트 메트릭 선택' : 'Chart metric'}
-              className="flex rounded-md border border-border overflow-hidden text-xs"
+              className="flex rounded-lg bg-secondary p-0.5 text-xs"
             >
               <button
                 type="button"
                 aria-pressed={mode === 'profitRate'}
                 onClick={() => setMode('profitRate')}
                 className={cn(
-                  'px-2.5 py-1 whitespace-nowrap transition-colors',
+                  'px-2.5 py-1 whitespace-nowrap rounded-md transition-colors',
                   mode === 'profitRate'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:text-foreground'
+                    ? 'bg-card text-foreground font-bold shadow-sm'
+                    : 'text-muted-foreground font-medium hover:text-foreground'
                 )}
               >
                 {language === 'ko' ? '수익률' : 'Return'}
@@ -209,10 +209,10 @@ export function PerformanceChart({ initialChartData }: PerformanceChartProps) {
                 aria-pressed={mode === 'totalAsset'}
                 onClick={() => setMode('totalAsset')}
                 className={cn(
-                  'px-2.5 py-1 whitespace-nowrap transition-colors',
+                  'px-2.5 py-1 whitespace-nowrap rounded-md transition-colors',
                   mode === 'totalAsset'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:text-foreground'
+                    ? 'bg-card text-foreground font-bold shadow-sm'
+                    : 'text-muted-foreground font-medium hover:text-foreground'
                 )}
               >
                 {language === 'ko' ? '자산' : 'Asset'}
@@ -222,7 +222,7 @@ export function PerformanceChart({ initialChartData }: PerformanceChartProps) {
             <div
               role="group"
               aria-label={language === 'ko' ? '기간 선택' : 'Period'}
-              className="flex rounded-md border border-border overflow-hidden text-xs"
+              className="flex rounded-lg bg-secondary p-0.5 text-xs"
             >
               {PERIODS.map((p) => (
                 <button
@@ -231,10 +231,10 @@ export function PerformanceChart({ initialChartData }: PerformanceChartProps) {
                   aria-pressed={period === p}
                   onClick={() => setPeriod(p)}
                   className={cn(
-                    'px-2.5 py-1 whitespace-nowrap transition-colors',
+                    'px-2.5 py-1 whitespace-nowrap rounded-md transition-colors',
                     period === p
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:text-foreground'
+                      ? 'bg-card text-foreground font-bold shadow-sm'
+                      : 'text-muted-foreground font-medium hover:text-foreground'
                   )}
                 >
                   {PERIOD_LABELS[p][language as 'ko' | 'en']}

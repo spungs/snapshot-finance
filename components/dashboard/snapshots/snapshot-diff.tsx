@@ -253,7 +253,7 @@ function Section({
     }
     return (
         <div className="space-y-1.5">
-            <h4 className={cn('text-[10px] font-bold flex items-center gap-1.5 uppercase tracking-widest', colorMap[color])}>
+            <h4 className={cn('text-[12px] font-semibold flex items-center gap-1.5', colorMap[color])}>
                 {icon} {label} <span className="opacity-60">({count})</span>
             </h4>
             <div className="space-y-1.5">{children}</div>
@@ -289,7 +289,7 @@ function SnapshotSummaryRow({ oldSn, newSn, language }: { oldSn: any; newSn: any
                         {item.date}
                     </div>
                     <div className="mt-1.5">
-                        <div className="text-[9px] text-muted-foreground uppercase tracking-widest mb-0.5">
+                        <div className="text-[11px] text-muted-foreground mb-0.5">
                             {language === 'ko' ? '평가액' : 'Value'}
                         </div>
                         <div className="text-sm font-bold text-foreground numeric leading-tight">
@@ -297,7 +297,7 @@ function SnapshotSummaryRow({ oldSn, newSn, language }: { oldSn: any; newSn: any
                         </div>
                     </div>
                     <div className="mt-1.5">
-                        <div className="text-[9px] text-muted-foreground uppercase tracking-widest mb-0.5">
+                        <div className="text-[11px] text-muted-foreground mb-0.5">
                             {language === 'ko' ? '수익률' : 'Return'}
                         </div>
                         <div className={cn(
