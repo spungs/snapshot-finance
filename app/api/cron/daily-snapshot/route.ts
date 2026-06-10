@@ -30,6 +30,15 @@ async function getStockPrice(symbol: string, market: string): Promise<number> {
     return priceData.price
 }
 
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
+// KIS 시세 API 는 "초당 20건" 제한이 있다. 한 사용자의 전 종목을 Promise.all 로
+// 한꺼번에 띄우고 사용자까지 병렬로 돌리면 동시 호출이 한도를 넘어 EGW00201 로
+// 전부 실패 → (>50% abort) 스냅샷 자체가 생성되지 않는다. 현재가 조회를 청크로
+// 끊고 청크 사이에 간격을 둬 동시 호출 수를 제한한다. (update-prices cron 과 동일 패턴)
+const PRICE_CHUNK_SIZE = 8
+const PRICE_CHUNK_DELAY_MS = 1100
+
 export async function GET(request: NextRequest) {
     // 1. Authentication
     const authHeader = request.headers.get('authorization')
@@ -70,8 +79,10 @@ export async function GET(request: NextRequest) {
             const usdRate = await getUsdExchangeRate()
             console.log(`[Cron] Using USD Rate: ${usdRate}`)
 
-            // 사용자를 청크 단위(10명씩)로 병렬 처리 - 타임아웃 방지 + 외부 API 부하 제어
-            const USER_BATCH_SIZE = 10
+            // 사용자는 순차 처리 — 각 사용자 내부 현재가 조회를 청크로 throttle 하므로,
+            // 사용자까지 병렬로 돌리면 동시 KIS 호출이 "초당 20건" 한도를 넘어 EGW00201 로
+            // 전부 실패한다. 사용자 수가 적어 순차여도 전체 소요는 수십 초 내.
+            const USER_BATCH_SIZE = 1
 
             const processUser = async (user: typeof users[number]) => {
                 try {
@@ -83,18 +94,25 @@ export async function GET(request: NextRequest) {
                     const merged = mergeHoldingsByStock(user.holdings)
                     const usdRateDec = new Decimal(usdRate || 0)
 
-                    // 1) 종목별 현재가 조회 — 실패 종목은 0원 저장 대신 skip 으로 표시
-                    const priced = await Promise.all(
-                        merged.map(async (holding) => {
-                            try {
-                                const currentPrice = await getStockPrice(holding.stock.stockCode, holding.stock.market || 'Unknown')
-                                return { holding, currentPrice, ok: true as const }
-                            } catch (priceError) {
-                                console.warn(`[Cron] Skip ${holding.stock.stockCode} (${holding.stock.market}) for user ${user.id}: price fetch failed.`, priceError)
-                                return { holding, currentPrice: 0, ok: false as const }
-                            }
-                        })
-                    )
+                    // 1) 종목별 현재가 조회 — 실패 종목은 0원 저장 대신 skip 으로 표시.
+                    //    KIS 초당 호출 한도(EGW00201) 회피를 위해 청크 단위로 throttle 한다.
+                    const priced: { holding: (typeof merged)[number]; currentPrice: number; ok: boolean }[] = []
+                    for (let c = 0; c < merged.length; c += PRICE_CHUNK_SIZE) {
+                        const chunk = merged.slice(c, c + PRICE_CHUNK_SIZE)
+                        const chunkResults = await Promise.all(
+                            chunk.map(async (holding) => {
+                                try {
+                                    const currentPrice = await getStockPrice(holding.stock.stockCode, holding.stock.market || 'Unknown')
+                                    return { holding, currentPrice, ok: true as const }
+                                } catch (priceError) {
+                                    console.warn(`[Cron] Skip ${holding.stock.stockCode} (${holding.stock.market}) for user ${user.id}: price fetch failed.`, priceError)
+                                    return { holding, currentPrice: 0, ok: false as const }
+                                }
+                            })
+                        )
+                        priced.push(...chunkResults)
+                        if (c + PRICE_CHUNK_SIZE < merged.length) await sleep(PRICE_CHUNK_DELAY_MS)
+                    }
 
                     const succeeded = priced.filter((p) => p.ok)
                     const skippedCodes = priced.filter((p) => !p.ok).map((p) => p.holding.stock.stockCode)

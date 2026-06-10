@@ -194,11 +194,21 @@ export class KisClient {
                     }
                 }
 
+                // 초당 호출 한도 초과 → 점증 backoff 후 재시도
+                if (errorText.includes('EGW00201') && retryCount < 3) {
+                    await new Promise(r => setTimeout(r, 400 + retryCount * 400))
+                    return this.getCurrentPrice(symbol, market, retryCount + 1)
+                }
+
                 throw new Error(`KIS API Error: ${response.status} - ${errorText}`)
             }
 
             const data = await response.json()
             if (data.rt_cd !== '0') {
+                if (String(data.msg_cd ?? '').includes('EGW00201') && retryCount < 3) {
+                    await new Promise(r => setTimeout(r, 400 + retryCount * 400))
+                    return this.getCurrentPrice(symbol, market, retryCount + 1)
+                }
                 throw new Error(`KIS API Error: ${data.msg1}`)
             }
 
@@ -265,7 +275,8 @@ export class KisClient {
 
     // KIS 해외 현재가 단일 조회 (HHDFS00000300, 15분 지연 시세).
     // 실시간 시세는 별도 신청 필요.
-    private async getKisOverseasPrice(symbol: string): Promise<{ price: number; change: number; changeRate: number }> {
+    // EGW00201("초당 거래건수 초과")는 일시적 rate limit 이므로 짧은 backoff 후 재시도한다.
+    private async getKisOverseasPrice(symbol: string, retryCount = 0): Promise<{ price: number; change: number; changeRate: number }> {
         const token = await this.getAccessToken()
         const excd = await resolveUsExcd(symbol)
 
@@ -291,10 +302,19 @@ export class KisClient {
 
         if (!response.ok) {
             const errorText = await response.text()
+            // 초당 호출 한도 초과 → 점증 backoff 후 재시도 (최대 3회)
+            if (errorText.includes('EGW00201') && retryCount < 3) {
+                await new Promise(r => setTimeout(r, 400 + retryCount * 400))
+                return this.getKisOverseasPrice(symbol, retryCount + 1)
+            }
             throw new Error(`KIS Overseas Price ${response.status}: ${errorText}`)
         }
         const data = await response.json()
         if (data.rt_cd !== '0') {
+            if (String(data.msg_cd ?? '').includes('EGW00201') && retryCount < 3) {
+                await new Promise(r => setTimeout(r, 400 + retryCount * 400))
+                return this.getKisOverseasPrice(symbol, retryCount + 1)
+            }
             throw new Error(`KIS Overseas Price: ${data.msg1}`)
         }
         // output: { last, diff, rate, ... }
