@@ -65,6 +65,8 @@ export function BottomTabBar() {
                                     if (realActive) return
                                     e.preventDefault()
                                     setOptimisticHref(tab.href)
+                                    // 탭 전환 전 스크롤 리셋 — 이전 페이지 스크롤 위치가 전환 중 노출되지 않도록
+                                    window.scrollTo({ top: 0, behavior: 'instant' })
                                     startTransition(() => {
                                         router.push(tab.href)
                                     })

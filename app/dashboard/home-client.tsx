@@ -355,8 +355,13 @@ export function HomeClient({
                             : 0
                         return (
                             <div key={label} className="p-4 bg-card rounded-2xl">
-                                <div className="text-[13px] font-medium text-muted-foreground mb-1.5">
-                                    {label}
+                                <div className="mb-1.5">
+                                    <div className="text-[13px] font-medium text-muted-foreground leading-none">
+                                        {label}
+                                    </div>
+                                    <div className="text-[10px] text-muted-foreground/60 mt-0.5 leading-none">
+                                        {language === 'ko' ? '주식 평가금 기준' : 'Stock value basis'}
+                                    </div>
                                 </div>
                                 {change ? (
                                     <>
