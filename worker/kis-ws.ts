@@ -5,7 +5,7 @@
  *   1. KIS REST /oauth2/Approval 로 approval_key 발급
  *   2. KIS WebSocket 연결 (자동 재연결 + ping/pong + 장 외 시간 sleep)
  *   3. DB holdings 합집합을 30초마다 polling → 신규 종목 register, 사라진 종목 unregister
- *   4. 수신 tick → Supabase Realtime channel "stock:{KR|US}:{code}" broadcast (event "tick")
+ *   4. 수신 tick → 5초마다 종목별 최신값을 묶어 단일 채널 "stock:ticks" 로 broadcast (event "tick", payload.ticks 배열)
  *      동시에 Upstash Redis stock:price:{code} 도 업데이트 → REST fallback 일관
  *   5. 한국(H0STCNT0) + 미국(HDFSCNT0) 둘 다 지원
  *
@@ -249,59 +249,6 @@ function parseUsTick(payload: string): ParsedTick | null {
     }
 }
 
-// ---------------------------------------------------------------------------
-// 가격 push — Supabase Realtime + Redis 동시
-// ---------------------------------------------------------------------------
-async function pushTick(t: ParsedTick) {
-    const payload = {
-        code: t.code,
-        market: t.market,
-        price: t.price,
-        change: t.change,
-        changeRate: t.changeRate,
-        time: t.time,
-        ts: Date.now(),
-    }
-
-    // Realtime broadcast (env 없으면 skip).
-    // 워커는 단발성 broadcast 만 보내므로 REST 사용:
-    //   - 최신 SDK: ch.httpSend(event, payload) — 별도 시그니처
-    //   - 구버전: ch.send({type, event, payload}) — fallback
-    if (supabase) {
-        try {
-            const ch = supabase.channel(`stock:${t.market}:${t.code}`)
-            const chAny = ch as unknown as { httpSend?: (event: string, payload: unknown) => Promise<unknown> }
-            if (typeof chAny.httpSend === 'function') {
-                await chAny.httpSend('tick', payload)
-            } else {
-                await ch.send({ type: 'broadcast', event: 'tick', payload })
-            }
-            tickStats.broadcast++
-        } catch (e) {
-            console.warn(`[push] supabase ${t.code} failed:`, (e as Error).message)
-        }
-    }
-
-    // Redis 캐시 (env 없으면 skip) — REST fallback 경로와 일관 (stock:price:{code})
-    if (redis) {
-        try {
-            await redis.set(
-                `stock:price:${t.code}`,
-                {
-                    price: t.price,
-                    currency: t.market === 'KR' ? 'KRW' : 'USD',
-                    change: t.change,
-                    changeRate: t.changeRate,
-                    updatedAt: new Date().toISOString(),
-                },
-                { ex: PRICE_CACHE_TTL },
-            )
-        } catch (e) {
-            console.warn(`[push] redis ${t.code} failed:`, (e as Error).message)
-        }
-    }
-}
-
 // tick 통계 — 15초마다 출력해 동작 가시화 (장 외/장중 빠른 확인)
 const tickStats = { received: 0, broadcast: 0 }
 const STATS_INTERVAL_MS = 15_000
@@ -311,6 +258,79 @@ setInterval(() => {
     tickStats.received = 0
     tickStats.broadcast = 0
 }, STATS_INTERVAL_MS)
+
+// ---------------------------------------------------------------------------
+// 가격 push — 5초마다 종목별 최신 틱을 "묶어서" 1건만 broadcast
+//   - Realtime 메시지 폭증 방지: 종목당 매 틱 broadcast → 5초에 전 종목 1건으로 집약
+//     (예: 보유 N종목이어도 broadcast 는 5초당 1건. 무료 플랜 한도 보호)
+//   - 버퍼는 code 별 최신 1건만 유지 (덮어쓰기)
+//   - flush 시 단일 채널 "stock:ticks" 로 ticks 배열을 한 번에 전송
+//   - Redis 캐시(REST fallback)도 flush 시점에만 갱신 → Upstash 쓰기도 절감
+// ---------------------------------------------------------------------------
+const TICK_FLUSH_MS = 5_000
+const pendingTicks = new Map<string, ParsedTick>()  // key = `${market}:${code}` — 최신만 유지
+
+function enqueueTick(t: ParsedTick) {
+    pendingTicks.set(`${t.market}:${t.code}`, t)
+}
+
+async function flushTicks() {
+    if (pendingTicks.size === 0) return
+    const batch = Array.from(pendingTicks.values())
+    pendingTicks.clear()
+    const ts = Date.now()
+
+    // Realtime broadcast — 전 종목 묶음 1건 (env 없으면 skip).
+    // 워커는 단발성 broadcast 만 보내므로 REST 사용:
+    //   - 최신 SDK: ch.httpSend(event, payload) — 별도 시그니처
+    //   - 구버전: ch.send({type, event, payload}) — fallback
+    if (supabase) {
+        const ticks = batch.map((t) => ({
+            code: t.code,
+            market: t.market,
+            price: t.price,
+            change: t.change,
+            changeRate: t.changeRate,
+            time: t.time,
+            ts,
+        }))
+        try {
+            const ch = supabase.channel('stock:ticks')
+            const chAny = ch as unknown as { httpSend?: (event: string, payload: unknown) => Promise<unknown> }
+            if (typeof chAny.httpSend === 'function') {
+                await chAny.httpSend('tick', { ticks, ts })
+            } else {
+                await ch.send({ type: 'broadcast', event: 'tick', payload: { ticks, ts } })
+            }
+            tickStats.broadcast++
+        } catch (e) {
+            console.warn(`[push] supabase flush(${ticks.length}) failed:`, (e as Error).message)
+        }
+    }
+
+    // Redis 캐시 — 종목별 최신값 갱신 (env 없으면 skip) — REST fallback 경로와 일관
+    if (redis) {
+        for (const t of batch) {
+            try {
+                await redis.set(
+                    `stock:price:${t.code}`,
+                    {
+                        price: t.price,
+                        currency: t.market === 'KR' ? 'KRW' : 'USD',
+                        change: t.change,
+                        changeRate: t.changeRate,
+                        updatedAt: new Date().toISOString(),
+                    },
+                    { ex: PRICE_CACHE_TTL },
+                )
+            } catch (e) {
+                console.warn(`[push] redis ${t.code} failed:`, (e as Error).message)
+            }
+        }
+    }
+}
+
+setInterval(() => void flushTicks(), TICK_FLUSH_MS)
 
 // ---------------------------------------------------------------------------
 // WebSocket 세션
@@ -409,8 +429,8 @@ class KisSession {
         else if (trId === 'HDFSCNT0') tick = parseUsTick(payload)
         if (!tick) return
         tickStats.received++
-        // push (fire and forget)
-        void pushTick(tick)
+        // 버퍼에 적재 — 5초마다 flushTicks() 가 묶어서 broadcast
+        enqueueTick(tick)
     }
 
     private async syncSubscriptions() {

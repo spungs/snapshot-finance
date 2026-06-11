@@ -15,7 +15,8 @@ export interface StockTick {
 
 /**
  * 특정 종목의 실시간 tick 을 구독하는 hook.
- * Supabase Realtime channel "stock:{market}:{code}" 의 broadcast 이벤트 "tick" 을 받는다.
+ * 워커가 5초마다 전 종목을 묶어 단일 채널 "stock:ticks" 로 broadcast(event "tick", payload.ticks 배열)
+ * 하면, 그중 이 code/market 에 해당하는 항목만 골라 반영한다.
  *
  * env 변수 미설정 시 null 반환 → 기존 SSR currentPrice 그대로 사용 (graceful fallback).
  *
@@ -31,14 +32,16 @@ export function useStockTick(code: string | null | undefined, market: 'KR' | 'US
         const sb = getSupabaseClient()
         if (!sb) return
 
-        const channelName = `stock:${market}:${code}`
-        const channel = sb.channel(channelName, {
+        const channel = sb.channel('stock:ticks', {
             config: { broadcast: { self: false } },
         })
 
         channel
             .on('broadcast', { event: 'tick' }, ({ payload }) => {
-                setTick(payload as StockTick)
+                const incoming = (payload as { ticks?: StockTick[] }).ticks
+                if (!incoming?.length) return
+                const match = incoming.find((t) => t.code === code && t.market === market)
+                if (match) setTick(match)
             })
             .subscribe()
 

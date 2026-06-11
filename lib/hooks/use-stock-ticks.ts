@@ -12,8 +12,9 @@ interface TargetSubscription {
 }
 
 /**
- * 여러 종목의 실시간 tick 을 한꺼번에 구독하는 hook.
- * holdings 배열이 변할 때마다 채널을 자동으로 신규 구독/해제 한다.
+ * 여러 종목의 실시간 tick 을 구독하는 hook.
+ * 워커가 5초마다 전 종목을 묶어 단일 채널 "stock:ticks" 로 broadcast 하면,
+ * 그중 구독 대상(subscriptions)에 해당하는 종목만 골라 Map 에 반영한다.
  *
  * @returns Map<stockCode, StockTick> — 아직 tick 안 받은 종목은 Map 에 없음
  */
@@ -22,57 +23,46 @@ export function useStockTicks(
 ): StockTicksMap {
     const [ticks, setTicks] = useState<Map<string, StockTick>>(new Map())
 
-    // 현재 구독한 채널들을 추적 — holdings 배열 변할 때 diff 처리
-    const channelsRef = useRef<Map<string, ReturnType<NonNullable<ReturnType<typeof getSupabaseClient>>['channel']>>>(new Map())
-
-    // 의존성 비교 위한 안정 key — JSON 화 비용 작음 (~수십 종목)
+    // 관심 종목 집합 — broadcast 핸들러가 ref 로 참조.
+    // 덕분에 holdings 가 바뀌어도 채널을 재구독하지 않고 필터만 갱신된다.
+    const wantRef = useRef<Set<string>>(new Set())
     const subsKey = JSON.stringify(
         subscriptions.map((s) => `${s.market}:${s.code}`).sort()
     )
+    useEffect(() => {
+        wantRef.current = new Set(subscriptions.map((s) => `${s.market}:${s.code}`))
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [subsKey])
 
     useEffect(() => {
         const sb = getSupabaseClient()
         if (!sb) return
 
-        const want = new Set(subscriptions.map((s) => `${s.market}:${s.code}`))
-        const current = channelsRef.current
+        const channel = sb.channel('stock:ticks', {
+            config: { broadcast: { self: false } },
+        })
 
-        // 신규 구독
-        for (const sub of subscriptions) {
-            const channelName = `stock:${sub.market}:${sub.code}`
-            if (current.has(channelName)) continue
-            const ch = sb.channel(channelName, {
-                config: { broadcast: { self: false } },
-            })
-            ch.on('broadcast', { event: 'tick' }, ({ payload }) => {
-                const tick = payload as StockTick
+        channel
+            .on('broadcast', { event: 'tick' }, ({ payload }) => {
+                const incoming = (payload as { ticks?: StockTick[] }).ticks
+                if (!incoming?.length) return
+                const want = wantRef.current
                 setTicks((prev) => {
-                    const next = new Map(prev)
-                    next.set(tick.code, tick)
-                    return next
+                    let next: Map<string, StockTick> | null = null
+                    for (const t of incoming) {
+                        if (!want.has(`${t.market}:${t.code}`)) continue
+                        if (!next) next = new Map(prev)
+                        next.set(t.code, t)
+                    }
+                    return next ?? prev
                 })
-            }).subscribe()
-            current.set(channelName, ch)
-        }
-
-        // 사라진 구독 해제
-        for (const [name, ch] of current) {
-            const market = name.split(':')[1] as 'KR' | 'US'
-            const code = name.split(':')[2]
-            if (want.has(`${market}:${code}`)) continue
-            sb.removeChannel(ch).catch(() => { /* ignore */ })
-            current.delete(name)
-        }
+            })
+            .subscribe()
 
         return () => {
-            // 컴포넌트 unmount 시 전부 정리 (StrictMode 의 double mount 도 안전)
-            for (const ch of current.values()) {
-                sb.removeChannel(ch).catch(() => { /* ignore */ })
-            }
-            current.clear()
+            sb.removeChannel(channel).catch(() => { /* unmount cleanup */ })
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [subsKey])
+    }, [])
 
     return ticks
 }
