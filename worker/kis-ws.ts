@@ -267,7 +267,7 @@ setInterval(() => {
 //   - flush 시 단일 채널 "stock:ticks" 로 ticks 배열을 한 번에 전송
 //   - Redis 캐시(REST fallback)도 flush 시점에만 갱신 → Upstash 쓰기도 절감
 // ---------------------------------------------------------------------------
-const TICK_FLUSH_MS = 5_000
+const TICK_FLUSH_MS = 2_000
 const pendingTicks = new Map<string, ParsedTick>()  // key = `${market}:${code}` — 최신만 유지
 
 function enqueueTick(t: ParsedTick) {
