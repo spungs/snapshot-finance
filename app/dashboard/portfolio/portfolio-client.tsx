@@ -898,7 +898,7 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                                 className={cn(
                                     'text-[11px] font-bold px-2.5 py-1 rounded-md transition-colors',
                                     viewMode === 'byAccount'
-                                        ? 'bg-card text-foreground shadow-sm'
+                                        ? 'bg-foreground text-background'
                                         : 'text-muted-foreground hover:text-foreground',
                                 )}
                             >
@@ -912,7 +912,7 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                                 className={cn(
                                     'text-[11px] font-bold px-2.5 py-1 rounded-md transition-colors',
                                     viewMode === 'unified'
-                                        ? 'bg-card text-foreground shadow-sm'
+                                        ? 'bg-foreground text-background'
                                         : 'text-muted-foreground hover:text-foreground',
                                 )}
                             >
