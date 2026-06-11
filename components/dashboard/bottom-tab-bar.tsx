@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useRef, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
@@ -30,6 +30,17 @@ export function BottomTabBar() {
     const [isPending, startTransition] = useTransition()
     // 클릭 즉시 active 상태 반영 — transition 진행 중에만 사용, 완료되면 pathname 기준으로 자동 복귀
     const [optimisticHref, setOptimisticHref] = useState<string | null>(null)
+
+    // 탭 클릭으로 시작된 전환만 추적 — back/forward 의 스크롤 복원은 건드리지 않는다.
+    const tabNavRef = useRef(false)
+    // 라우트가 실제로 커밋된 뒤 새 페이지를 최상단에서 시작시킨다.
+    // onClick 의 즉시 리셋만으로는 전환(isPending) 중 사용자가 다시 스크롤할 경우
+    // 이전 페이지의 스크롤 위치가 남아 레이아웃이 어긋나므로, 커밋 시점에 한 번 더 보정한다.
+    useEffect(() => {
+        if (!tabNavRef.current) return
+        tabNavRef.current = false
+        window.scrollTo({ top: 0, behavior: 'instant' })
+    }, [pathname])
 
     const isTabActive = (tab: TabDef, target: string) => {
         return tab.exact ? target === tab.href : target === tab.href || target.startsWith(tab.href + '/')
@@ -64,6 +75,7 @@ export function BottomTabBar() {
                                 onClick={(e) => {
                                     if (realActive) return
                                     e.preventDefault()
+                                    tabNavRef.current = true
                                     setOptimisticHref(tab.href)
                                     // 탭 전환 전 스크롤 리셋 — 이전 페이지 스크롤 위치가 전환 중 노출되지 않도록
                                     window.scrollTo({ top: 0, behavior: 'instant' })
