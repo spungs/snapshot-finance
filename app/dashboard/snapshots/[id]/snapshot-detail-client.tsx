@@ -380,6 +380,12 @@ export default function SnapshotDetailClient({ snapshot }: Props) {
                                         <div className="text-[13px] font-bold text-foreground mt-0.5 numeric">
                                             {formatCurrency(avgPrice, currency)}
                                         </div>
+                                        {/* USD 종목 원화 표시 시 달러 원가 병기 */}
+                                        {h.currency === 'USD' && currency === 'KRW' && (
+                                            <div className="text-[10px] text-muted-foreground/70 numeric mt-0.5">
+                                                ${formatNumber(Number(h.averagePrice), 2)}
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="text-right">
                                         <div className="text-[11px] text-muted-foreground">
@@ -388,6 +394,12 @@ export default function SnapshotDetailClient({ snapshot }: Props) {
                                         <div className="text-[13px] font-bold text-foreground mt-0.5 numeric">
                                             {formatCurrency(curPrice, currency)}
                                         </div>
+                                        {/* USD 종목 원화 표시 시 달러 현재가 병기 */}
+                                        {h.currency === 'USD' && currency === 'KRW' && (
+                                            <div className="text-[10px] text-muted-foreground/70 numeric mt-0.5">
+                                                ${formatNumber(Number(h.currentPrice), 2)}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
