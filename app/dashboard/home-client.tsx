@@ -258,7 +258,10 @@ export function HomeClient({
     const today = new Date()
     const currentPoint = {
         date: today,
-        totalValue: liveSummary.totalValue,
+        // 과거 스냅샷의 totalValue 는 주식 평가금만(예수금 제외)이므로,
+        // 현재값도 예수금을 빼 같은 기준으로 비교한다. 안 빼면 변동금액에
+        // 예수금이 통째로 섞여 변동률(순수 수익률)과 부호가 어긋난다.
+        totalValue: liveSummary.totalValue - liveSummary.cashBalance,
         profitRate: liveSummary.totalProfitRate,
     }
     const dailyChange: ChangeResult | null = calcChange(
