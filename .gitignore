@@ -114,6 +114,14 @@ html/
 # Claude Code
 .claude/
 
+# OMC / 리뷰·검수 산출물 — 로컬 보존, git·배포(.vercelignore)에서 제외
+.omc/
+.review-screenshots/
+UI_REVIEW.html
+UI_REVIEW.md
+PROJECT_OVERVIEW.html
+public/logo-mockups.html
+
 # Database dump backups (포함 시 비밀 데이터 노출 위험)
 *.sql.backup
 prod_dump_*.sql
