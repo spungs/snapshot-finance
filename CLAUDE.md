@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## 프로젝트 개요
 
 **Snapshot Finance**는 주식 포트폴리오 스냅샷 관리 시스템으로 다음을 제공합니다:
-- 특정 시점의 포트폴리오 스냅샷 저장 (불변 기록)
+- 특정 시점의 포트폴리오 스냅샷 저장 (시점 기록, 사후 정정 가능)
 - 과거 수익률 및 성과 추적
 - "만약에" 시뮬레이션 (구현 완료)
 - 주식 현재가 조회 및 자산 평가 (KIS / Yahoo Finance)
@@ -79,7 +79,7 @@ middleware.ts           # /dashboard/* 라우트 보호 (NextAuth)
 User
   ├─ Holding (1:N)              [실시간 잔고 — 가변]
   │   └─ Stock (N:1)
-  └─ PortfolioSnapshot (1:N)    [불변 기록 — 수정 불가, 삭제만 가능]
+  └─ PortfolioSnapshot (1:N)    [시점 기록 — 정정(PUT)·삭제 가능]
       └─ SnapshotHolding (1:N)
           └─ Stock (N:1)
 ```
@@ -88,7 +88,7 @@ User
 
 ### 핵심 설계 원칙
 
-1. **스냅샷 불변성:** `PortfolioSnapshot`/`SnapshotHolding`은 생성 후 수정하지 않음 (삭제만 허용)
+1. **스냅샷 정정 가능성:** `PortfolioSnapshot`/`SnapshotHolding`은 시점 기록이지만, **자동 스냅샷이 사용자 입력 없이 생성**되므로 사후 정정을 위해 수정(PUT)을 허용한다. 정정·삭제 모두 **단일 트랜잭션**으로 원자적 처리 (`PUT /api/snapshots/[id]`가 update + deleteMany + createMany를 `$transaction`으로 실행)
 2. **Decimal 타입 강제:** 모든 금액/수익률은 `@db.Decimal`로 저장, JS 측에서는 `decimal.js` 사용
 3. **실시간 ↔ 스냅샷 분리:** `Holding`(현재) ↔ `SnapshotHolding`(특정 시점)
 4. **다통화 대응:** `currency`(KRW/USD), `purchaseRate`(매입 시 환율), `exchangeRate`(스냅샷 시점 환율) 모두 저장

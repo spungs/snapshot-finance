@@ -16,7 +16,28 @@
 | **B-2** 마이그레이션 drift | 깨진 `manual/` 폴더를 `prisma/_manual_migrations_archive/`로 격리(README 동봉) | 운영 `migrate status` = **"up to date"** (reset/데이터손실 위험 해소). 새 환경 재현용 unify 정식 편입은 운영 안전성 우선으로 **보류**(현 상태 유지 결정) |
 | **B-3** 에러 바운더리 | `app/global-error.tsx` · `app/dashboard/error.tsx` · `app/not-found.tsx` · `app/dashboard/snapshots/[id]/not-found.tsx` 추가 | 빌드 통과, 스냅샷 not-found는 기존 `notFound()`와 연결 |
 
-→ **배포 차단 요소 해소.** 아래는 검수 시점(수정 전) 원본 진단 내용이다.
+→ **배포 차단 요소 해소.**
+
+### 권장 조치 처리 (2026-06-12)
+
+비차단 권장 조치도 다음과 같이 반영 완료 (전체 풀빌드·타입체크·lint 통과):
+
+| 항목 | 조치 |
+|---|---|
+| #1 `lang="ko"` | `app/layout.tsx` 적용 |
+| #2 daily-snapshot `maxDuration` | `export const maxDuration = 60` 추가 |
+| #3 `stocks/search` 인증 | `auth()` 가드 추가 (호출처는 모두 대시보드 내부) |
+| #4 `.env.example` | 키·용도 문서화 + `.gitignore` 예외(`!.env.example`) |
+| #5 KIS fetch 타임아웃 | `fetchWithTimeout`(AbortSignal.timeout 5s) 래퍼로 8개 fetch 일괄 적용 |
+| #6 getDailyPrice US | Yahoo `historical()` → KIS `getDailyPriceRange`(HHDFS76240000) 위임, EXCD 추론 |
+| #7 exchange-rate rate limit | `ratelimit.api` IP 제한 추가 |
+| #8 스냅샷 정정 | "수정 유지" 결정(자동 스냅샷 정정 필요) → CLAUDE.md 원칙 3곳 갱신 |
+
+**미처리(의도적 보류):** CSP 도입(#10, GSI·SW 호환 검증 필요)·cron `timingSafeEqual`(#11, 실위험 낮음)·동시성 트랜잭션(#12, 확률 낮음)·`removeConsole`/DB덤프 정리(#13)·AdSense `<ins>` 유닛(#9, 수익화 결정 필요).
+
+---
+
+아래는 검수 시점(수정 전) 원본 진단 내용이다.
 
 ---
 
