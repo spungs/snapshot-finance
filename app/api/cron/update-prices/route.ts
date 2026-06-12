@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { isAuthorizedCron } from '@/lib/cron-auth'
 import { kisClient } from '@/lib/api/kis-client'
 import { getUsdExchangeRate } from '@/lib/api/exchange-rate'
 import { fetchLsePrice } from '@/lib/api/stooq'
@@ -88,7 +89,7 @@ interface UpdateResult {
 export async function GET(request: NextRequest) {
     // 1. 인증 — pg_cron 의 net.http_get 이 Authorization: Bearer ${CRON_SECRET} 부착
     const authHeader = request.headers.get('authorization')
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    if (!isAuthorizedCron(authHeader)) {
         return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
     }
 

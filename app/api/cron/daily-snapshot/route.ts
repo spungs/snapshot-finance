@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
+import { isAuthorizedCron } from '@/lib/cron-auth'
 import { kisClient } from '@/lib/api/kis-client'
 import { getUsdExchangeRate } from '@/lib/api/exchange-rate'
 import { mergeHoldingsByStock } from '@/lib/services/snapshot-service'
@@ -47,7 +48,7 @@ const PRICE_CHUNK_DELAY_MS = 1100
 export async function GET(request: NextRequest) {
     // 1. Authentication
     const authHeader = request.headers.get('authorization')
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    if (!isAuthorizedCron(authHeader)) {
         return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
     }
 
