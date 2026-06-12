@@ -47,6 +47,15 @@ const nextConfig: NextConfig = {
   // - build: package.json 의 "next build --webpack" 그대로 (Serwist PWA 정상 작동)
   turbopack: {},
 
+  // 프로덕션 빌드에서 console.* 제거 (error/warn 은 운영 진단용으로 유지).
+  // console.log 가 대부분 서버사이드라 Vercel 함수 로그를 오염시키므로 정리한다.
+  compiler: {
+    removeConsole:
+      process.env.NODE_ENV === "production"
+        ? { exclude: ["error", "warn"] }
+        : false,
+  },
+
   // Next.js 16 RSC 클라이언트 캐시 유지 시간.
   // dynamic: 0 — CUD (계좌 추가/삭제/이름변경, 종목 변이) 결과가 다른 페이지로 이동
   // 후 돌아왔을 때 즉시 반영되도록 client RSC cache 비활성. trade-off 로 동일 라우트
