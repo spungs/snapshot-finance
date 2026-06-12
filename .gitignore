@@ -134,3 +134,6 @@ report.txt
 # Daily briefing output (generated at runtime, sent via Telegram)
 brief.html
 daily_brief*.html
+
+# .env.example 은 값 없는 템플릿이므로 추적 허용 (.env* 예외)
+!.env.example
