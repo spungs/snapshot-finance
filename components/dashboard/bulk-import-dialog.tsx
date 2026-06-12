@@ -385,7 +385,7 @@ export function BulkImportDialog({ children, onSuccess, isPro = false }: BulkImp
                     {/* 계좌 셀렉터 — 두 모드 공통 */}
                     {accountsLoading ? (
                         <div className="text-xs text-muted-foreground inline-flex items-center gap-1.5">
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" /> ...
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" /> {tx.loadingAccounts}
                         </div>
                     ) : noAccounts ? (
                         <div className="border border-destructive/40 bg-destructive/10 text-destructive px-3 py-2 text-xs rounded-md inline-flex items-center gap-1.5">
