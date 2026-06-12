@@ -1,6 +1,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import yahooFinance from '@/lib/yahoo-finance'
+import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ratelimit, getIP, checkRateLimit } from '@/lib/ratelimit'
 import { cacheGet, cacheSet } from '@/lib/cache'
@@ -65,6 +66,13 @@ async function searchLseFallback(query: string) {
 }
 
 export async function GET(request: NextRequest) {
+    // 인증 가드 — 종목 검색은 로그인 후 기능. 미인증 호출로 외부 API(Yahoo/Finnhub/
+    // TwelveData) 쿼터가 익명 소진되는 것을 차단. (호출처는 모두 대시보드 내부)
+    const session = await auth()
+    if (!session?.user?.id) {
+        return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+    }
+
     // Rate limiting
     const ip = getIP(request)
     const rateLimitResult = await checkRateLimit(ratelimit.search, ip)

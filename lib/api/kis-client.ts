@@ -1,5 +1,4 @@
 import { prisma } from '@/lib/prisma'
-import yahooFinance from '@/lib/yahoo-finance'
 import {
     cacheGet,
     cacheSet,
@@ -19,6 +18,17 @@ const CANO = process.env.KIS_CANO
 const ACNT_PRDT_CD = process.env.KIS_ACNT_PRDT_CD
 const MODE = (process.env.KIS_MODE as 'REAL' | 'VIRTUAL') || 'REAL'
 const BASE_URL = KIS_BASE_URL[MODE]
+
+// 외부 API(KIS/Finnhub) fetch 타임아웃 — 서버가 응답을 매달면(hang) 함수가 무한
+// 대기하며 cron maxDuration / 게이트웨이 한도까지 점유하는 것을 방지한다.
+const EXT_FETCH_TIMEOUT_MS = 5000
+function fetchWithTimeout(
+    url: string,
+    init: RequestInit = {},
+    timeoutMs = EXT_FETCH_TIMEOUT_MS,
+): Promise<Response> {
+    return fetch(url, { ...init, signal: AbortSignal.timeout(timeoutMs) })
+}
 
 interface AccessToken {
     access_token: string
@@ -95,7 +105,7 @@ export class KisClient {
 
                 console.log('Fetching new KIS Access Token...')
 
-                const response = await fetch(`${BASE_URL}/oauth2/tokenP`, {
+                const response = await fetchWithTimeout(`${BASE_URL}/oauth2/tokenP`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -166,7 +176,7 @@ export class KisClient {
                 FID_INPUT_ISCD: symbol.split('.')[0], // Stock Code (remove .KS/.KQ suffix)
             })
 
-            const response = await fetch(`${BASE_URL}${path}?${params}`, {
+            const response = await fetchWithTimeout(`${BASE_URL}${path}?${params}`, {
                 headers: {
                     'Content-Type': 'application/json',
                     authorization: `Bearer ${token}`,
@@ -246,7 +256,7 @@ export class KisClient {
         const finnhubKey = process.env.FINNHUB_API_KEY
         if (finnhubKey) {
             try {
-                const response = await fetch(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${finnhubKey}`, {
+                const response = await fetchWithTimeout(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${finnhubKey}`, {
                     cache: 'no-store',
                 })
                 if (response.ok) {
@@ -288,7 +298,7 @@ export class KisClient {
             SYMB: symbol,
         })
 
-        const response = await fetch(`${BASE_URL}${path}?${params}`, {
+        const response = await fetchWithTimeout(`${BASE_URL}${path}?${params}`, {
             headers: {
                 'Content-Type': 'application/json',
                 authorization: `Bearer ${token}`,
@@ -343,7 +353,7 @@ export class KisClient {
                 FID_ORG_ADJ_PRC: '1', // Adjusted price
             })
 
-            const response = await fetch(`${BASE_URL}${path}?${params}`, {
+            const response = await fetchWithTimeout(`${BASE_URL}${path}?${params}`, {
                 headers: {
                     'Content-Type': 'application/json',
                     authorization: `Bearer ${token}`,
@@ -398,43 +408,19 @@ export class KisClient {
             }
         }
 
-        // Overseas Stock (US)
+        // Overseas Stock (US) — Yahoo historical() 은 429 전량 차단 위험이 커서
+        // KIS 해외 일별시세(getDailyPriceRange, HHDFS76240000)로 조회한다.
         else {
             try {
-                // Fetch historical data from Yahoo Finance
-                // period1: start date, period2: end date (exclusive)
-                // We add a small buffer to ensure we cover the target date in different timezones
-                const startDate = new Date(date)
-                const endDate = new Date(startDate.getTime() + 86400000 * 2) // +2 days
-
-                const result = await yahooFinance.historical(symbol, {
-                    period1: date,
-                    period2: endDate.toISOString().split('T')[0],
-                    interval: '1d',
-                })
-
-                // Find the specific date
-                // Yahoo Finance returns dates as Date objects with time set to 00:00:00 UTC (usually)
-                // We compare YYYY-MM-DD string
-                const quote = result.find((item) => {
-                    const itemDate = item.date.toISOString().split('T')[0]
-                    return itemDate === date
-                })
-
-                if (!quote) {
-                    return null
-                }
-
-                return {
-                    date: date,
-                    close: quote.adjClose || quote.close,
-                    open: quote.open,
-                    high: quote.high,
-                    low: quote.low,
-                    volume: quote.volume,
-                }
+                // 정확한 거래소(EXCD) 추론 후 단일 날짜를 포함하는 짧은 범위를 조회.
+                const excd = await resolveUsExcd(symbol, market)
+                const rangeMarket = excd === 'NYS' ? 'NYSE' : excd === 'AMS' ? 'AMEX' : 'NASD'
+                const endObj = new Date(new Date(date).getTime() + 86400000 * 4) // +4일(주말/시차 버퍼)
+                const end = endObj.toISOString().split('T')[0]
+                const range = await this.getDailyPriceRange(symbol, rangeMarket, date, end)
+                return range.find((item) => item.date === date) ?? null
             } catch (error) {
-                console.error(`Yahoo Finance Daily Price Error for ${symbol}:`, error)
+                console.error(`KIS US Daily Price Error for ${symbol}:`, error)
                 return null
             }
         }
@@ -473,7 +459,7 @@ export class KisClient {
                         MODP: '1', // 주식분할 조정
                     })
 
-                    const response = await fetch(`${BASE_URL}${path}?${params}`, {
+                    const response = await fetchWithTimeout(`${BASE_URL}${path}?${params}`, {
                         headers: {
                             'Content-Type': 'application/json',
                             authorization: `Bearer ${token}`,
@@ -552,7 +538,7 @@ export class KisClient {
                         FID_ORG_ADJ_PRC: '1', // 수정주가
                     })
 
-                    const response = await fetch(`${BASE_URL}${path}?${params}`, {
+                    const response = await fetchWithTimeout(`${BASE_URL}${path}?${params}`, {
                         headers: {
                             'Content-Type': 'application/json',
                             authorization: `Bearer ${token}`,
@@ -637,7 +623,7 @@ export class KisClient {
                 ITEM_CD: 'AAPL' // Dummy
             })
 
-            const response = await fetch(`${BASE_URL}${path}?${params}`, {
+            const response = await fetchWithTimeout(`${BASE_URL}${path}?${params}`, {
                 headers: {
                     'Content-Type': 'application/json',
                     authorization: `Bearer ${token}`,

@@ -7,6 +7,11 @@ import { mergeHoldingsByStock } from '@/lib/services/snapshot-service'
 import Decimal from 'decimal.js'
 import { format } from 'date-fns'
 
+// 사용자×종목을 순차 처리 + 청크당 sleep(throttle) 하므로 실행시간이 사용자 수에
+// 비례해 늘어난다. 기본 함수 타임아웃으로 중간 사용자 스냅샷이 누락되지 않도록
+// 명시적으로 상향 (update-prices 와 동일 정책). 사용자가 크게 늘면 추가 상향 검토.
+export const maxDuration = 60
+
 // Unified Cron Job: Daily Snapshot + User Maintenance
 // Schedule: 22:30 UTC Mon-Fri (07:30 KST Tue-Sat / 화~토)
 
