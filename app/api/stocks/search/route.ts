@@ -65,6 +65,136 @@ async function searchLseFallback(query: string) {
     }))
 }
 
+// 외부 종목 검색 캐스케이드: Yahoo → Finnhub → LSE(Twelve Data).
+// DB(KIS 마스터)에 결과가 없거나, DB 결과가 외국시장 동명 티커뿐이라 US 상장 종목을
+// 보강해야 할 때 공통으로 사용한다. 결과는 KIS 마스터로 한글명을 보완해 캐시한다.
+async function searchExternal(query: string): Promise<{ data: any[]; source?: string }> {
+    const cacheKey = searchCacheKey(query)
+    // 캐시된 결과도 KIS 마스터로 보완 — 캐시 기록 당시 nameKo 가 없었던 경우 대비.
+    // enrichWithKisMaster 가 nameKo 있는 항목은 스킵하므로 이중 DB 조회 없음.
+    const cached = await cacheGet<any[]>(cacheKey)
+    if (cached) {
+        const enriched = await enrichWithKisMaster(cached)
+        return { data: enriched, source: 'cache' }
+    }
+
+    try {
+        // Use singleton instance to share session/cookies and avoid rate limits
+        const results = await yahooFinance.search(query)
+
+        // Yahoo 가 같은 ticker 의 다른 listing (ex: HIMS NYSE + HIMS NMS) 을 별개 quote 로
+        // 반환하는 경우가 있어 symbol+market 으로 dedup. 첫 등장만 유지.
+        const seenKeys = new Set<string>()
+        const rawResults = results.quotes
+            .filter((quote: any) =>
+                quote.quoteType === 'EQUITY' ||
+                quote.quoteType === 'ETF' ||
+                quote.quoteType === 'ETN' // Add ETN support (e.g. FNGU)
+            )
+            .map((quote: any) => ({
+                symbol: quote.symbol,
+                name: quote.shortname || quote.longname || quote.symbol,
+                exchange: quote.exchange,
+                type: quote.quoteType,
+                market: quote.exchange === 'KOE' ? 'KOSPI' : quote.exchange === 'KO' ? 'KOSDAQ' : 'US',
+            }))
+            .filter((r: any) => {
+                const key = `${r.symbol}|${r.market}`
+                if (seenKeys.has(key)) return false
+                seenKeys.add(key)
+                return true
+            })
+
+        // KIS 마스터에서 한글명 보완 후 캐시 (한글명 포함 상태로 저장)
+        const formattedResults = await enrichWithKisMaster(rawResults)
+        // KIS/Yahoo 에 없으면 LSE 후보 추가
+        if (formattedResults.length === 0) {
+            const lseResults = await searchLseFallback(query)
+            if (lseResults.length > 0) {
+                await cacheSet(cacheKey, lseResults, SEARCH_CACHE_TTL_SECONDS)
+                return { data: lseResults, source: 'lse' }
+            }
+        }
+        await cacheSet(cacheKey, formattedResults, SEARCH_CACHE_TTL_SECONDS)
+        return { data: formattedResults }
+    } catch (yahooError: any) {
+        console.warn('Yahoo Search Failed:', yahooError.message)
+
+        // Fallback to Finnhub Symbol Search
+        try {
+            const apiKey = process.env.FINNHUB_API_KEY
+            if (!apiKey) {
+                console.warn('FINNHUB_API_KEY not configured, returning empty results')
+                const lseResults = await searchLseFallback(query)
+                if (lseResults.length > 0) {
+                    await cacheSet(cacheKey, lseResults, SEARCH_CACHE_TTL_SECONDS)
+                    return { data: lseResults, source: 'lse' }
+                }
+                return { data: [] }
+            }
+
+            console.log('Trying Finnhub Symbol Search...')
+            const response = await fetch(
+                `https://finnhub.io/api/v1/search?q=${encodeURIComponent(query)}&exchange=US&token=${apiKey}`,
+                { cache: 'no-store' }
+            )
+
+            if (!response.ok) {
+                throw new Error(`Finnhub API error: ${response.status}`)
+            }
+
+            const data = await response.json()
+
+            // Finnhub returns: { count, result: [{ description, displaySymbol, symbol, type }] }
+            const finnhubSeen = new Set<string>()
+            const rawFinnhubResults = (data.result || [])
+                .filter((item: any) =>
+                    item.type === 'Common Stock' ||
+                    item.type === 'ETP' || // ETF/ETN
+                    item.type === 'ADR'
+                )
+                .slice(0, 10)
+                .map((item: any) => ({
+                    symbol: item.symbol,
+                    name: item.description || item.displaySymbol || item.symbol,
+                    exchange: 'US',
+                    type: item.type === 'Common Stock' ? 'EQUITY' : item.type === 'ETP' ? 'ETF' : 'EQUITY',
+                    market: 'US',
+                    source: 'finnhub'
+                }))
+                .filter((r: any) => {
+                    const key = `${r.symbol}|${r.market}`
+                    if (finnhubSeen.has(key)) return false
+                    finnhubSeen.add(key)
+                    return true
+                })
+
+            // KIS 마스터에서 한글명 보완 후 캐시
+            const formattedResults = await enrichWithKisMaster(rawFinnhubResults)
+            // Finnhub 에도 없으면 LSE 후보 추가
+            if (formattedResults.length === 0) {
+                const lseResults = await searchLseFallback(query)
+                if (lseResults.length > 0) {
+                    await cacheSet(cacheKey, lseResults, SEARCH_CACHE_TTL_SECONDS)
+                    return { data: lseResults, source: 'lse' }
+                }
+            }
+            await cacheSet(cacheKey, formattedResults, SEARCH_CACHE_TTL_SECONDS)
+
+            console.log(`Finnhub Search Success: ${formattedResults.length} results`)
+            return { data: formattedResults, source: 'finnhub' }
+        } catch (finnhubError: any) {
+            console.warn('Finnhub Search Failed:', finnhubError.message)
+            const lseResults = await searchLseFallback(query)
+            if (lseResults.length > 0) {
+                await cacheSet(cacheKey, lseResults, SEARCH_CACHE_TTL_SECONDS)
+                return { data: lseResults, source: 'lse' }
+            }
+            return { data: [] }
+        }
+    }
+}
+
 export async function GET(request: NextRequest) {
     // 인증 가드 — 종목 검색은 로그인 후 기능. 미인증 호출로 외부 API(Yahoo/Finnhub/
     // TwelveData) 쿼터가 익명 소진되는 것을 차단. (호출처는 모두 대시보드 내부)
@@ -170,8 +300,9 @@ export async function GET(request: NextRequest) {
             take: 300,
         })
 
+        const q = query.toLowerCase()
+
         if (dbStocks.length > 0) {
-            const q = query.toLowerCase()
             const scoreOf = (s: typeof dbStocks[number]) => {
                 const code = s.stockCode.toLowerCase()
                 const name = (s.nameKo || '').toLowerCase()
@@ -183,7 +314,7 @@ export async function GET(request: NextRequest) {
                 return 4
             }
 
-            const formattedResults = dbStocks
+            const dbFormatted = dbStocks
                 .map(stock => ({ stock, score: scoreOf(stock) }))
                 .sort((a, b) => {
                     if (a.score !== b.score) return a.score - b.score
@@ -204,137 +335,42 @@ export async function GET(request: NextRequest) {
                     isDbResult: true,
                 }))
 
-            return NextResponse.json({ success: true, data: formattedResults })
-        }
-
-        // 2. English Search - Use Yahoo Finance
-        try {
-            // Check Redis cache first
-            // 캐시된 결과도 KIS 마스터로 보완 — 캐시 기록 당시 nameKo 가 없었던 경우 대비.
-            // enrichWithKisMaster 가 nameKo 있는 항목은 스킵하므로 이중 DB 조회 없음.
-            const cacheKey = searchCacheKey(query)
-            const cached = await cacheGet<any[]>(cacheKey)
-
-            if (cached) {
-                const enriched = await enrichWithKisMaster(cached)
-                return NextResponse.json({ success: true, data: enriched, source: 'cache' })
-            }
-
-            // Use singleton instance to share session/cookies and avoid rate limits
-            const results = await yahooFinance.search(query)
-
-            // Yahoo 가 같은 ticker 의 다른 listing (ex: HIMS NYSE + HIMS NMS) 을 별개 quote 로
-            // 반환하는 경우가 있어 symbol+market 으로 dedup. 첫 등장만 유지.
-            const seenKeys = new Set<string>()
-            const rawResults = results.quotes
-                .filter((quote: any) =>
-                    quote.quoteType === 'EQUITY' ||
-                    quote.quoteType === 'ETF' ||
-                    quote.quoteType === 'ETN' // Add ETN support (e.g. FNGU)
-                )
-                .map((quote: any) => ({
-                    symbol: quote.symbol,
-                    name: quote.shortname || quote.longname || quote.symbol,
-                    exchange: quote.exchange,
-                    type: quote.quoteType,
-                    market: quote.exchange === 'KOE' ? 'KOSPI' : quote.exchange === 'KO' ? 'KOSDAQ' : 'US',
-                }))
-                .filter((r: any) => {
-                    const key = `${r.symbol}|${r.market}`
-                    if (seenKeys.has(key)) return false
-                    seenKeys.add(key)
-                    return true
-                })
-
-            // KIS 마스터에서 한글명 보완 후 캐시 (한글명 포함 상태로 저장)
-            const formattedResults = await enrichWithKisMaster(rawResults)
-            // KIS/Yahoo 에 없으면 LSE 후보 추가
-            if (formattedResults.length === 0) {
-                const lseResults = await searchLseFallback(query)
-                if (lseResults.length > 0) {
-                    await cacheSet(cacheKey, lseResults, SEARCH_CACHE_TTL_SECONDS)
-                    return NextResponse.json({ success: true, data: lseResults, source: 'lse' })
-                }
-            }
-            await cacheSet(cacheKey, formattedResults, SEARCH_CACHE_TTL_SECONDS)
-
-            return NextResponse.json({ success: true, data: formattedResults })
-        } catch (yahooError: any) {
-            console.warn('Yahoo Search Failed:', yahooError.message)
-
-            // 3. Fallback to Finnhub Symbol Search
-            try {
-                const apiKey = process.env.FINNHUB_API_KEY
-                if (!apiKey) {
-                    console.warn('FINNHUB_API_KEY not configured, returning empty results')
-                    const lseResults = await searchLseFallback(query)
-                    if (lseResults.length > 0) {
-                        await cacheSet(searchCacheKey(query), lseResults, SEARCH_CACHE_TTL_SECONDS)
-                        return NextResponse.json({ success: true, data: lseResults, source: 'lse' })
-                    }
-                    return NextResponse.json({ success: true, data: [] })
-                }
-
-                console.log('Trying Finnhub Symbol Search...')
-                const response = await fetch(
-                    `https://finnhub.io/api/v1/search?q=${encodeURIComponent(query)}&exchange=US&token=${apiKey}`,
-                    { cache: 'no-store' }
-                )
-
-                if (!response.ok) {
-                    throw new Error(`Finnhub API error: ${response.status}`)
-                }
-
-                const data = await response.json()
-
-                // Finnhub returns: { count, result: [{ description, displaySymbol, symbol, type }] }
-                const finnhubSeen = new Set<string>()
-                const rawFinnhubResults = (data.result || [])
-                    .filter((item: any) =>
-                        item.type === 'Common Stock' ||
-                        item.type === 'ETP' || // ETF/ETN
-                        item.type === 'ADR'
+            // 정확 티커 질의인데 DB 에 US 주요시장(NASD/NYSE/AMEX) 정확 일치가 없으면,
+            // 외국시장 동명 티커(예: PLTU=LSE 백금 ETF)에 가려 US 상장 종목
+            // (예: PLTU=Direxion Daily PLTR Bull 2X)이 검색에서 누락된다.
+            // 이 경우에만 외부 소스(Yahoo→Finnhub)에서 동일 티커의 US 종목을 끌어와 앞에 병합한다.
+            // (DB 에 US 정확 일치가 있으면 외부 호출 없이 종전대로 — 쿼터 보호)
+            const looksLikeTicker = /^[a-z.]{1,6}$/i.test(query.trim())
+            const hasUsExact = dbStocks.some(
+                s => s.stockCode.toLowerCase() === q && US_MASTER_MARKETS.includes(s.market),
+            )
+            if (looksLikeTicker && !hasUsExact) {
+                try {
+                    const ext = await searchExternal(query)
+                    const seen = new Set(dbFormatted.map(r => `${r.symbol}|${r.market}`))
+                    const extra = ext.data.filter((r: any) =>
+                        typeof r.symbol === 'string' &&
+                        r.symbol.toLowerCase() === q &&
+                        !seen.has(`${r.symbol}|${r.market}`),
                     )
-                    .slice(0, 10)
-                    .map((item: any) => ({
-                        symbol: item.symbol,
-                        name: item.description || item.displaySymbol || item.symbol,
-                        exchange: 'US',
-                        type: item.type === 'Common Stock' ? 'EQUITY' : item.type === 'ETP' ? 'ETF' : 'EQUITY',
-                        market: 'US',
-                        source: 'finnhub'
-                    }))
-                    .filter((r: any) => {
-                        const key = `${r.symbol}|${r.market}`
-                        if (finnhubSeen.has(key)) return false
-                        finnhubSeen.add(key)
-                        return true
-                    })
-
-                // KIS 마스터에서 한글명 보완 후 캐시
-                const formattedResults = await enrichWithKisMaster(rawFinnhubResults)
-                // Finnhub 에도 없으면 LSE 후보 추가
-                if (formattedResults.length === 0) {
-                    const lseResults = await searchLseFallback(query)
-                    if (lseResults.length > 0) {
-                        await cacheSet(searchCacheKey(query), lseResults, SEARCH_CACHE_TTL_SECONDS)
-                        return NextResponse.json({ success: true, data: lseResults, source: 'lse' })
+                    if (extra.length > 0) {
+                        return NextResponse.json({ success: true, data: [...extra, ...dbFormatted] })
                     }
+                } catch (e) {
+                    console.warn('External augment failed:', e instanceof Error ? e.message : e)
                 }
-                await cacheSet(searchCacheKey(query), formattedResults, SEARCH_CACHE_TTL_SECONDS)
-
-                console.log(`Finnhub Search Success: ${formattedResults.length} results`)
-                return NextResponse.json({ success: true, data: formattedResults, source: 'finnhub' })
-            } catch (finnhubError: any) {
-                console.warn('Finnhub Search Failed:', finnhubError.message)
-                const lseResults = await searchLseFallback(query)
-                if (lseResults.length > 0) {
-                    await cacheSet(searchCacheKey(query), lseResults, SEARCH_CACHE_TTL_SECONDS)
-                    return NextResponse.json({ success: true, data: lseResults, source: 'lse' })
-                }
-                return NextResponse.json({ success: true, data: [] })
             }
+
+            return NextResponse.json({ success: true, data: dbFormatted })
         }
+
+        // 3. DB 결과 없음 → 외부 검색 (Yahoo → Finnhub → LSE)
+        const ext = await searchExternal(query)
+        return NextResponse.json({
+            success: true,
+            data: ext.data,
+            ...(ext.source ? { source: ext.source } : {}),
+        })
 
     } catch (error: any) {
         console.error('Search Error:', error)
