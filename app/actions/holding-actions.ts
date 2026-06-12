@@ -2,6 +2,7 @@
 
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { Prisma } from '@prisma/client'
 import { revalidatePath } from 'next/cache'
 import Decimal from 'decimal.js'
 import {
@@ -61,6 +62,28 @@ async function assertAccountOwnership(
         return { ok: false, error: '계좌를 찾을 수 없거나 접근 권한이 없습니다.' }
     }
     return { ok: true }
+}
+
+/**
+ * Serializable 격리수준으로 트랜잭션을 실행하고, 직렬화 충돌(P2034) 시 짧게 재시도한다.
+ * createHolding 의 merge 평단 계산처럼 read-then-write 가 있는 변이를 동시성으로부터 보호한다.
+ */
+async function runSerializable<T>(
+    fn: (tx: Prisma.TransactionClient) => Promise<T>,
+): Promise<T> {
+    for (let attempt = 0; ; attempt++) {
+        try {
+            return await prisma.$transaction(fn, {
+                isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+            })
+        } catch (error) {
+            const isConflict =
+                error instanceof Prisma.PrismaClientKnownRequestError &&
+                error.code === 'P2034'
+            if (isConflict && attempt < 2) continue
+            throw error
+        }
+    }
 }
 
 interface CreateHoldingInput {
@@ -125,62 +148,65 @@ export async function createHolding(input: CreateHoldingInput): Promise<ActionRe
     const averagePrice = priceResult.value
 
     try {
-        // 같은 계좌 + 같은 종목 unique 제약 ([accountId, stockId]) — 기존 row 가 있으면
-        // mode 에 따라 처리.
-        const existing = await prisma.holding.findFirst({
-            where: { userId, accountId: input.accountId, stockCode },
+        // 같은 계좌 + 같은 종목 unique 제약 ([accountId, stockCode]) — 기존 row 가 있으면
+        // mode 에 따라 처리. merge 는 기존 평단을 읽어 가중평균을 다시 쓰는 read-then-write
+        // 라, 동일 종목 동시 추가 시 수량 유실을 막기 위해 Serializable 트랜잭션으로 묶는다.
+        await runSerializable(async (tx) => {
+            const existing = await tx.holding.findFirst({
+                where: { userId, accountId: input.accountId, stockCode },
+            })
+
+            if (existing && mode === 'merge') {
+                const oldQty = existing.quantity
+                const oldAvg = new Decimal(existing.averagePrice.toString())
+                const newQty = oldQty + quantity
+                const oldTotal = oldAvg.times(oldQty)
+                const newTotal = new Decimal(averagePrice).times(quantity)
+                const newAvg = newQty > 0
+                    ? oldTotal.plus(newTotal).div(newQty)
+                    : new Decimal(0)
+
+                await tx.holding.update({
+                    where: { id: existing.id },
+                    data: {
+                        quantity: newQty,
+                        averagePrice: newAvg.toString(),
+                        currentPrice: safeCurrentPrice || existing.currentPrice,
+                        currency,
+                        purchaseRate,
+                        priceUpdatedAt: new Date(),
+                    },
+                })
+            } else if (existing && mode === 'overwrite') {
+                await tx.holding.update({
+                    where: { id: existing.id },
+                    data: {
+                        quantity,
+                        averagePrice,
+                        currentPrice: safeCurrentPrice,
+                        currency,
+                        purchaseRate,
+                        priceUpdatedAt: new Date(),
+                    },
+                })
+            } else {
+                // mode === 'new' 또는 신규
+                // unique 제약 ([accountId, stockCode]) 위반 시 prisma 가 에러 — 호출자가 mode='new' 를 잘못 보낸 것.
+                await tx.holding.create({
+                    data: {
+                        userId,
+                        accountId: input.accountId,
+                        stockCode,
+                        quantity,
+                        averagePrice,
+                        currentPrice: safeCurrentPrice,
+                        currency,
+                        purchaseRate,
+                        priceUpdatedAt: new Date(),
+                    },
+                })
+            }
         })
-
-        if (existing && mode === 'merge') {
-            const oldQty = existing.quantity
-            const oldAvg = new Decimal(existing.averagePrice.toString())
-            const newQty = oldQty + quantity
-            const oldTotal = oldAvg.times(oldQty)
-            const newTotal = new Decimal(averagePrice).times(quantity)
-            const newAvg = newQty > 0
-                ? oldTotal.plus(newTotal).div(newQty)
-                : new Decimal(0)
-
-            await prisma.holding.update({
-                where: { id: existing.id },
-                data: {
-                    quantity: newQty,
-                    averagePrice: newAvg.toString(),
-                    currentPrice: safeCurrentPrice || existing.currentPrice,
-                    currency,
-                    purchaseRate,
-                    priceUpdatedAt: new Date(),
-                },
-            })
-        } else if (existing && mode === 'overwrite') {
-            await prisma.holding.update({
-                where: { id: existing.id },
-                data: {
-                    quantity,
-                    averagePrice,
-                    currentPrice: safeCurrentPrice,
-                    currency,
-                    purchaseRate,
-                    priceUpdatedAt: new Date(),
-                },
-            })
-        } else {
-            // mode === 'new' 또는 신규
-            // unique 제약 ([accountId, stockCode]) 위반 시 prisma 가 에러 — 호출자가 mode='new' 를 잘못 보낸 것.
-            await prisma.holding.create({
-                data: {
-                    userId,
-                    accountId: input.accountId,
-                    stockCode,
-                    quantity,
-                    averagePrice,
-                    currentPrice: safeCurrentPrice,
-                    currency,
-                    purchaseRate,
-                    priceUpdatedAt: new Date(),
-                },
-            })
-        }
 
         await holdingService.invalidate(userId)
         revalidatePath('/dashboard/portfolio')
