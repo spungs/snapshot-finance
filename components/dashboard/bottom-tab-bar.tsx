@@ -55,6 +55,10 @@ export function BottomTabBar() {
                 'bg-card/[0.92] backdrop-blur-xl backdrop-saturate-[180%]',
                 'pb-[env(safe-area-inset-bottom,0px)]',
             )}
+            // iOS Safari: position:fixed + backdrop-filter 조합에서 스크롤 시
+            // GPU 컴포지팅 레이어가 꼬여 위치가 밀리는 버그 방지.
+            // translateZ(0)으로 독립 레이어를 강제해 고정 위치를 유지한다.
+            style={{ transform: 'translateZ(0)', WebkitTransform: 'translateZ(0)' } as React.CSSProperties}
         >
             <ul className="flex items-stretch justify-around max-w-[480px] mx-auto px-1 pt-2 pb-1.5">
                 {TABS.map(tab => {

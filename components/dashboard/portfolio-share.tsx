@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 import Decimal from 'decimal.js'
 import { toPng } from 'html-to-image'
 import { toast } from 'sonner'
-import { Share2, Loader2 } from 'lucide-react'
+import { Share2, Loader2, Braces } from 'lucide-react'
 import { useLanguage } from '@/lib/i18n/context'
 import { useCurrency } from '@/lib/currency/context'
 import { formatCurrency, formatNumber } from '@/lib/utils/formatters'
@@ -57,6 +57,43 @@ export function PortfolioShareButton({ holdings, summary, userName }: Props) {
     const { baseCurrency } = useCurrency()
     const [capturing, setCapturing] = useState(false)
     const [renderCard, setRenderCard] = useState(false)
+    const [copyingJson, setCopyingJson] = useState(false)
+
+    const copyAsJson = useCallback(async () => {
+        if (copyingJson || holdings.length === 0) {
+            if (holdings.length === 0) toast.error(t('shareEmptyHoldings'))
+            return
+        }
+        setCopyingJson(true)
+        try {
+            const payload = {
+                exportedAt: new Date().toISOString(),
+                baseCurrency,
+                summary: {
+                    totalValue: summary.totalValue,
+                    totalCost: summary.totalCost,
+                    cashBalance: summary.cashBalance,
+                    exchangeRate: summary.exchangeRate,
+                },
+                holdings: holdings.map(h => ({
+                    stockCode: h.stockCode,
+                    stockName: h.stockName,
+                    currency: h.currency,
+                    quantity: h.quantity,
+                    averagePrice: h.averagePrice,
+                    purchaseRate: h.purchaseRate,
+                    totalCost: h.totalCost,
+                    currentValue: h.currentValue,
+                })),
+            }
+            await navigator.clipboard.writeText(JSON.stringify(payload, null, 2))
+            toast.success(language === 'ko' ? 'JSON 복사 완료' : 'JSON copied')
+        } catch {
+            toast.error(language === 'ko' ? 'JSON 복사 실패' : 'JSON copy failed')
+        } finally {
+            setCopyingJson(false)
+        }
+    }, [copyingJson, holdings, summary, baseCurrency, language, t])
 
     const captureAndShare = useCallback(async () => {
         if (capturing) return
@@ -155,6 +192,18 @@ export function PortfolioShareButton({ holdings, summary, userName }: Props) {
                     ? <Loader2 className="w-4 h-4 animate-spin" />
                     : <Share2 className="w-4 h-4" />}
                 {t('share')}
+            </button>
+            <button
+                type="button"
+                onClick={copyAsJson}
+                disabled={copyingJson}
+                aria-label={language === 'ko' ? 'JSON 복사' : 'Copy JSON'}
+                className="h-9 px-3 inline-flex items-center gap-1.5 bg-card rounded-lg shadow-sm text-foreground text-[12px] font-semibold hover:bg-muted disabled:opacity-50 transition-colors shrink-0"
+            >
+                {copyingJson
+                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                    : <Braces className="w-4 h-4" />}
+                JSON
             </button>
 
             {renderCard && typeof document !== 'undefined' && createPortal(
