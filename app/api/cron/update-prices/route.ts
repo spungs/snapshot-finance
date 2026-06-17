@@ -157,7 +157,11 @@ export async function GET(request: NextRequest) {
                 chunk.map(async ({ stockCode, market }): Promise<UpdateResult> => {
                     try {
                         const marketType = resolveMarket(market)
-                        const priceData = await kisClient.getCurrentPrice(stockCode, marketType)
+                        // bypassCache=true: cron은 항상 외부 API를 직접 호출해야 함.
+                        // kisClient.getCurrentPrice가 내부에서 Redis를 먼저 읽기 때문에
+                        // false(기본)로 두면 캐시 히트 시 API를 건너뛰고 TTL만 갱신해버림 →
+                        // 마감 후 종가(20:00 UTC) 등락이 캐시에 반영되지 않는 원인.
+                        const priceData = await kisClient.getCurrentPrice(stockCode, marketType, 0, true)
                         if (!Number.isFinite(priceData.price) || priceData.price <= 0) {
                             return { stockCode, market, status: 'failed', error: 'Invalid price' }
                         }

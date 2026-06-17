@@ -152,15 +152,22 @@ export class KisClient {
         return this.tokenPromise
     }
 
-    async getCurrentPrice(symbol: string, market: 'KOSPI' | 'KOSDAQ' | 'US' = 'KOSPI', retryCount = 0): Promise<{ price: number; change: number; changeRate: number }> {
+    // bypassCache: cron 전용 옵션. true 로 넘기면 Redis 캐시를 읽지 않고
+    // 항상 외부 API(Finnhub/KIS)를 호출한다.
+    // ─ cron 이 같은 키를 읽어 캐시 히트 → TTL만 갱신하고 실제 API 미호출하는
+    //   "캐시 고착" 문제를 방지. 사용자 요청 경로(holdingService)는 false(기본).
+    async getCurrentPrice(symbol: string, market: 'KOSPI' | 'KOSDAQ' | 'US' = 'KOSPI', retryCount = 0, bypassCache = false): Promise<{ price: number; change: number; changeRate: number }> {
         // 1. Check Redis Cache (cron 이 갱신해 두는 공용 키)
+        //    bypassCache=true(cron 호출)면 스킵 — 반드시 API 를 직접 호출해 최신 changeRate 확보.
         const cacheKey = stockPriceKey(symbol)
-        const cached = await cacheGet<PriceCacheEntry>(cacheKey)
-        if (cached && Number.isFinite(cached.price) && cached.price > 0) {
-            return {
-                price: cached.price,
-                change: cached.change,
-                changeRate: cached.changeRate,
+        if (!bypassCache) {
+            const cached = await cacheGet<PriceCacheEntry>(cacheKey)
+            if (cached && Number.isFinite(cached.price) && cached.price > 0) {
+                return {
+                    price: cached.price,
+                    change: cached.change,
+                    changeRate: cached.changeRate,
+                }
             }
         }
 
