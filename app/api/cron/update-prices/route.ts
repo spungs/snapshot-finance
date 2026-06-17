@@ -68,13 +68,18 @@ function isKrMarketOpen(now: Date): { open: boolean; reason?: string } {
     return { open: true }
 }
 
-// 미국 정규장 — DST 양쪽 커버. UTC 평일 13~22시.
-// (정규장 EDT: UTC 13:30~20:00, EST: UTC 14:30~21:00. 양 끝에 ~30분 버퍼)
+// 미국 정규장 + 마감 직후 버퍼 — UTC 평일 13~20시.
+// pg_cron 스케줄: */3 13-20 * * 1-5 (UTC)
+//   정규장: EDT 13:30~20:00 / EST 14:30~21:00
+//   20시까지 실행하면 최대 마감(EDT 기준) 직후까지 커버.
+//   마감 후 Finnhub를 계속 때리면 불필요한 API 호출만 늘어나므로
+//   20:57 UTC(마감 약 1시간 이내)에 마지막 실행 후 종료.
+//   이후 캐시(TTL 4h)가 살아있어 23:00 UTC 브리핑까지 종가 유지.
 function isUsMarketOpen(now: Date): { open: boolean; reason?: string } {
     const day = now.getUTCDay()
     if (day === 0 || day === 6) return { open: false, reason: 'WEEKEND_US' }
     const hour = now.getUTCHours()
-    if (hour < 13 || hour > 22) return { open: false, reason: 'OUTSIDE_HOURS_US' }
+    if (hour < 13 || hour > 20) return { open: false, reason: 'OUTSIDE_HOURS_US' }
     return { open: true }
 }
 
