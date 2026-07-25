@@ -6,7 +6,7 @@ import { calculateProfitRate, calculateProfit, calculateCurrentValue, calculateT
 import Decimal from 'decimal.js'
 import { getUsdExchangeRate, FALLBACK_USD_RATE } from '@/lib/api/exchange-rate'
 import { snapshotService } from '@/lib/services/snapshot-service'
-import { auth } from '@/lib/auth'
+import { getPortfolioContext } from '@/lib/portfolio-context'
 import {
   validateQuantity,
   validateAveragePrice,
@@ -22,14 +22,14 @@ const MAX_HOLDINGS_PER_SNAPSHOT = 200
 // POST /api/snapshots - 스냅샷 생성
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
+    const ctx = await getPortfolioContext()
+    if (!ctx) {
       return NextResponse.json(
         { success: false, error: { code: 'UNAUTHORIZED', message: '인증이 필요합니다.' } },
         { status: 401 }
       )
     }
-    const userId = session.user.id
+    const userId = ctx.portfolioUserId
 
     const body = await request.json()
     const { holdings, cashBalance, cashAccounts: cashAccountsInput, note, snapshotDate, exchangeRate: providedExchangeRate } = body
@@ -234,14 +234,14 @@ export async function POST(request: NextRequest) {
 // GET /api/snapshots - 스냅샷 목록 조회
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
+    const ctx = await getPortfolioContext()
+    if (!ctx) {
       return NextResponse.json(
         { success: false, error: { code: 'UNAUTHORIZED', message: '인증이 필요합니다.' } },
         { status: 401 }
       )
     }
-    const userId = session.user.id
+    const userId = ctx.portfolioUserId
 
     const { searchParams } = new URL(request.url)
     const rawLimit = parseInt(searchParams.get('limit') || '20', 10)

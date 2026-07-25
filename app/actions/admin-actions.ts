@@ -1,7 +1,7 @@
 'use server'
 
 import { prisma } from '@/lib/prisma'
-import { auth } from '@/lib/auth'
+import { getPortfolioContext } from '@/lib/portfolio-context'
 import { revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
 import { holdingService } from '@/lib/services/holding-service'
@@ -17,15 +17,16 @@ import Decimal from 'decimal.js'
 const MAX_BULK_IMPORT_ITEMS = 100
 
 export async function updateCashBalance(amount: number) {
-    const session = await auth()
-    if (!session?.user?.id) return { success: false, error: "Unauthorized" }
+    const ctx = await getPortfolioContext()
+    if (!ctx) return { success: false, error: "Unauthorized" }
+    const userId = ctx.portfolioUserId
 
     try {
         await prisma.user.update({
-            where: { id: session.user.id },
+            where: { id: userId },
             data: { cashBalance: amount }
         })
-        await holdingService.invalidate(session.user.id)
+        await holdingService.invalidate(userId)
         revalidatePath('/dashboard')
         return { success: true }
     } catch (error) {
@@ -75,12 +76,12 @@ export async function listBrokerageAccountsForBulkImport(): Promise<{
     accounts: BrokerageAccountSummary[]
     error?: string
 }> {
-    const session = await auth()
-    if (!session?.user?.id) return { success: false, accounts: [], error: 'Unauthorized' }
+    const ctx = await getPortfolioContext()
+    if (!ctx) return { success: false, accounts: [], error: 'Unauthorized' }
 
     try {
         const accounts = await prisma.brokerageAccount.findMany({
-            where: { userId: session.user.id },
+            where: { userId: ctx.portfolioUserId },
             select: { id: true, name: true, displayOrder: true },
             orderBy: [{ displayOrder: 'asc' }, { createdAt: 'asc' }],
         })
@@ -126,9 +127,9 @@ export type ImportAnalysisResult = {
 }
 
 export async function analyzeBulkImport(items: ImportItem[]): Promise<ImportAnalysisResult> {
-    const session = await auth()
-    if (!session?.user?.id) return { success: false, resolved: [], unresolved: [], error: "Unauthorized" }
-    const userId = session.user.id
+    const ctx = await getPortfolioContext()
+    if (!ctx) return { success: false, resolved: [], unresolved: [], error: "Unauthorized" }
+    const userId = ctx.portfolioUserId
 
     if (items.length > MAX_BULK_IMPORT_ITEMS) {
         return {
@@ -241,11 +242,13 @@ export async function executeBulkImport(
     strategy: 'overwrite' | 'add',
     accountId: string,
 ) {
-    const session = await auth()
-    if (!session?.user?.id) {
+    const ctx = await getPortfolioContext()
+    if (!ctx) {
         return { success: false, error: 'Unauthorized' }
     }
-    const userId = session.user.id
+    // 데이터(holdings/계좌)는 관리 대상, rate-limit 키는 로그인한 나(actor)
+    const userId = ctx.portfolioUserId
+    const actorId = ctx.actorId
 
     if (!accountId) {
         return { success: false, error: '계좌를 선택해주세요.' }
@@ -263,7 +266,7 @@ export async function executeBulkImport(
     try {
         const h = await headers()
         const ip = h.get('x-forwarded-for')?.split(',')[0]?.trim() || h.get('x-real-ip') || 'anonymous'
-        const rl = await checkRateLimit(ratelimit.simulation, `bulk-import:${userId}:${ip}`)
+        const rl = await checkRateLimit(ratelimit.simulation, `bulk-import:${actorId}:${ip}`)
         if (rl && !rl.success) {
             return { success: false, error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' }
         }

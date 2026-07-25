@@ -1,4 +1,4 @@
-import { auth } from '@/lib/auth'
+import { getPortfolioContext } from '@/lib/portfolio-context'
 import { redirect } from 'next/navigation'
 import { accountService } from '@/lib/services/account-service'
 import { AccountsClient } from './accounts-client'
@@ -10,10 +10,10 @@ export const dynamic = 'force-dynamic'
  * accountService 가 L2(Redis) 캐시를 내장해 SSR 쿼리도 빠름.
  */
 export default async function AccountsPage() {
-    const session = await auth()
-    if (!session?.user?.id) {
+    const ctx = await getPortfolioContext()
+    if (!ctx) {
         redirect('/auth/signin')
     }
-    const accounts = await accountService.getList(session.user.id)
+    const accounts = await accountService.getList(ctx.portfolioUserId)
     return <AccountsClient initialAccounts={accounts} />
 }

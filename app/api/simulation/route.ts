@@ -4,7 +4,7 @@ import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { kisClient } from '@/lib/api/kis-client'
 import { getUsdExchangeRate } from '@/lib/api/exchange-rate'
-import { auth } from '@/lib/auth'
+import { getPortfolioContext } from '@/lib/portfolio-context'
 import { ratelimit, getIP, checkRateLimit } from '@/lib/ratelimit'
 
 // kisClient.getCurrentPrice 가 받는 시장 코드와 동일한 유니온 — `as any` 우회 없이 사용
@@ -32,8 +32,8 @@ export async function POST(request: NextRequest) {
         }
 
         // 인증 확인
-        const session = await auth()
-        if (!session?.user?.id) {
+        const ctx = await getPortfolioContext()
+        if (!ctx) {
             return NextResponse.json(
                 { success: false, error: { code: 'UNAUTHORIZED', message: '인증이 필요합니다.' } },
                 { status: 401 }
@@ -62,8 +62,8 @@ export async function POST(request: NextRequest) {
             },
         })
 
-        // 스냅샷이 없거나 본인 소유가 아닌 경우
-        if (!snapshot || snapshot.userId !== session.user.id) {
+        // 스냅샷이 없거나 관리 대상 소유가 아닌 경우
+        if (!snapshot || snapshot.userId !== ctx.portfolioUserId) {
             return NextResponse.json(
                 { success: false, error: 'Snapshot not found' },
                 { status: 404 }

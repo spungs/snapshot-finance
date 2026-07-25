@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { auth } from '@/lib/auth'
+import { getPortfolioContext } from '@/lib/portfolio-context'
 import { holdingService } from '@/lib/services/holding-service'
 import { validateCashAmount } from '@/lib/validation/portfolio-input'
 
@@ -50,8 +51,9 @@ export async function googleLogin() {
 }
 
 export async function updateTargetAsset(amount: number) {
-    const session = await auth()
-    if (!session?.user?.id) {
+    // 목표자산은 포트폴리오 데이터 → 관리 대상(portfolioUserId)에 반영
+    const ctx = await getPortfolioContext()
+    if (!ctx) {
         throw new Error("Unauthorized")
     }
 
@@ -63,10 +65,10 @@ export async function updateTargetAsset(amount: number) {
 
     try {
         await prisma.user.update({
-            where: { id: session.user.id },
+            where: { id: ctx.portfolioUserId },
             data: { targetAsset: validated.value },
         })
-        await holdingService.invalidate(session.user.id)
+        await holdingService.invalidate(ctx.portfolioUserId)
         revalidatePath('/dashboard')
         return { success: true }
     } catch (error) {

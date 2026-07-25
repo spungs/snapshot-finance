@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { auth } from '@/lib/auth'
+import { getPortfolioContext } from '@/lib/portfolio-context'
 import { redirect } from 'next/navigation'
 import { holdingService } from '@/lib/services/holding-service'
 import { FALLBACK_USD_RATE } from '@/lib/api/exchange-rate'
@@ -14,8 +14,8 @@ import { isProUser } from '@/lib/billing/subscription'
 export const dynamic = 'force-dynamic'
 
 export default async function PortfolioPage() {
-  const session = await auth()
-  if (!session?.user?.id) {
+  const ctx = await getPortfolioContext()
+  if (!ctx) {
     redirect('/auth/signin')
   }
 
@@ -25,8 +25,9 @@ export default async function PortfolioPage() {
   return (
     <Suspense fallback={<PortfolioSkeleton />}>
       <PortfolioContent
-        userId={session.user.id}
-        userName={session.user.name ?? null}
+        userId={ctx.portfolioUserId}
+        actorId={ctx.actorId}
+        userName={(ctx.isManaging ? ctx.ownerName : ctx.actorName) ?? null}
       />
     </Suspense>
   )
@@ -34,13 +35,15 @@ export default async function PortfolioPage() {
 
 async function PortfolioContent({
   userId,
+  actorId,
   userName,
 }: {
   userId: string
+  actorId: string
   userName: string | null
 }) {
   // 보유 종목과 계좌 목록을 병렬 조회. 계좌 목록은 셀렉터 / 보기 토글의 기반 데이터.
-  // (Phase A 통합 후 prisma.brokerageAccount 가 제공된다.)
+  // 데이터(holdings/계좌)는 관리 대상(userId), PRO 게이트는 AI 라우트와 동일하게 로그인한 나(actorId).
   const [{ data }, accountsRaw, pro] = await Promise.all([
     holdingService.getList(userId),
     prisma.brokerageAccount
@@ -50,7 +53,7 @@ async function PortfolioContent({
         orderBy: [{ displayOrder: 'asc' }, { createdAt: 'asc' }],
       })
       .catch(() => [] as Array<{ id: string; name: string }>),
-    isProUser(userId),
+    isProUser(actorId),
   ])
 
   const summary = {

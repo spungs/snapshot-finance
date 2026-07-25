@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
-import { auth } from '@/lib/auth'
+import { getPortfolioContext } from '@/lib/portfolio-context'
 import { holdingService } from '@/lib/services/holding-service'
 import { accountService } from '@/lib/services/account-service'
 import { fetchCurrentPrice, detectCurrency } from '@/lib/api/stock-price'
@@ -24,8 +24,8 @@ export async function PATCH(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const session = await auth()
-        if (!session?.user) {
+        const ctx = await getPortfolioContext()
+        if (!ctx) {
             return NextResponse.json(
                 { success: false, error: { code: 'UNAUTHORIZED', message: '인증이 필요합니다.' } },
                 { status: 401 }
@@ -64,7 +64,7 @@ export async function PATCH(
             where: { id },
         })
 
-        if (!holding || holding.userId !== session.user.id) {
+        if (!holding || holding.userId !== ctx.portfolioUserId) {
             return NextResponse.json(
                 { success: false, error: { code: 'NOT_FOUND', message: '보유 종목을 찾을 수 없습니다.' } },
                 { status: 404 }
@@ -154,8 +154,8 @@ export async function PATCH(
                 })
             }
 
-            await holdingService.invalidate(session.user.id)
-            await accountService.invalidate(session.user.id).catch((e) => console.warn('[holdings PATCH] accounts invalidate failed:', e))
+            await holdingService.invalidate(ctx.portfolioUserId)
+            await accountService.invalidate(ctx.portfolioUserId).catch((e) => console.warn('[holdings PATCH] accounts invalidate failed:', e))
             safeRevalidate()
             return NextResponse.json({ success: true, data: result })
         }
@@ -172,9 +172,9 @@ export async function PATCH(
             include: { stock: true },
         })
 
-        await holdingService.invalidate(session.user.id)
+        await holdingService.invalidate(ctx.portfolioUserId)
         // accountId 변경 가능성 + 없어도 holdings 정합성 위해 accounts 캐시 무효화
-        await accountService.invalidate(session.user.id).catch((e) => console.warn('[holdings PATCH] accounts invalidate failed:', e))
+        await accountService.invalidate(ctx.portfolioUserId).catch((e) => console.warn('[holdings PATCH] accounts invalidate failed:', e))
         safeRevalidate()
         return NextResponse.json({ success: true, data: updated })
     } catch (error) {
@@ -192,8 +192,8 @@ export async function DELETE(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const session = await auth()
-        if (!session?.user) {
+        const ctx = await getPortfolioContext()
+        if (!ctx) {
             return NextResponse.json(
                 { success: false, error: { code: 'UNAUTHORIZED', message: '인증이 필요합니다.' } },
                 { status: 401 }
@@ -207,7 +207,7 @@ export async function DELETE(
             where: { id },
         })
 
-        if (!holding || holding.userId !== session.user.id) {
+        if (!holding || holding.userId !== ctx.portfolioUserId) {
             return NextResponse.json(
                 { success: false, error: { code: 'NOT_FOUND', message: '보유 종목을 찾을 수 없습니다.' } },
                 { status: 404 }
@@ -216,9 +216,9 @@ export async function DELETE(
 
         await prisma.holding.delete({ where: { id } })
 
-        await holdingService.invalidate(session.user.id)
+        await holdingService.invalidate(ctx.portfolioUserId)
         // holdingsCount 감소 → accounts 캐시 무효화
-        await accountService.invalidate(session.user.id).catch((e) => console.warn('[holdings DELETE] accounts invalidate failed:', e))
+        await accountService.invalidate(ctx.portfolioUserId).catch((e) => console.warn('[holdings DELETE] accounts invalidate failed:', e))
         safeRevalidate()
         return NextResponse.json({ success: true, message: '종목이 삭제되었습니다.' })
     } catch (error) {

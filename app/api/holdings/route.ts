@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
-import { auth } from '@/lib/auth'
+import { getPortfolioContext } from '@/lib/portfolio-context'
 import { assertAccountOwnership } from '@/lib/auth-helpers'
 import { getUsdExchangeRate } from '@/lib/api/exchange-rate'
 import { holdingService } from '@/lib/services/holding-service'
@@ -29,15 +29,15 @@ function safeRevalidate() {
 // GET /api/holdings - 현재 잔고 조회 (저장된 현재가 사용)
 export async function GET() {
     try {
-        const session = await auth()
-        if (!session?.user?.id) {
+        const ctx = await getPortfolioContext()
+        if (!ctx) {
             return NextResponse.json(
                 { success: false, error: { code: 'UNAUTHORIZED', message: '인증이 필요합니다.' } },
                 { status: 401 }
             )
         }
 
-        const result = await holdingService.getList(session.user.id)
+        const result = await holdingService.getList(ctx.portfolioUserId)
 
         if (!result.success) {
             return NextResponse.json(result, { status: 500 })
@@ -56,18 +56,19 @@ export async function GET() {
 // POST /api/holdings - 종목 추가 (현재가 조회 후 저장)
 export async function POST(request: NextRequest) {
     try {
-        const session = await auth()
-        if (!session?.user?.id) {
+        const ctx = await getPortfolioContext()
+        if (!ctx) {
             return NextResponse.json(
                 { success: false, error: { code: 'UNAUTHORIZED', message: '인증이 필요합니다.' } },
                 { status: 401 }
             )
         }
 
-        const userId = session.user.id
+        // 데이터는 관리 대상(portfolioUserId), rate-limit·quota 는 항상 로그인한 나(actorId)
+        const userId = ctx.portfolioUserId
 
-        // KIS 외부 API 호출 어뷰즈 방지
-        const rl = await checkRateLimit(ratelimit.api, userId)
+        // KIS 외부 API 호출 어뷰즈 방지 — 관리 모드여도 내 quota 를 소모
+        const rl = await checkRateLimit(ratelimit.api, ctx.actorId)
         if (rl && !rl.success) {
             return NextResponse.json(
                 { success: false, error: { code: 'RATE_LIMIT', message: '너무 많은 요청입니다.' } },

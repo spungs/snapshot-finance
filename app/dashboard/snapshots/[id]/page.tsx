@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { auth } from '@/lib/auth'
+import { getPortfolioContext } from '@/lib/portfolio-context'
 import { redirect, notFound } from 'next/navigation'
 import { snapshotService } from '@/lib/services/snapshot-service'
 import { FALLBACK_USD_RATE } from '@/lib/api/exchange-rate'
@@ -13,14 +13,14 @@ export default async function SnapshotDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const session = await auth()
-  if (!session?.user?.id) {
+  const ctx = await getPortfolioContext()
+  if (!ctx) {
     redirect('/auth/signin')
   }
 
   return (
     <Suspense fallback={<SnapshotDetailSkeleton />}>
-      <SnapshotDetailContent id={id} userId={session.user.id} />
+      <SnapshotDetailContent id={id} userId={ctx.portfolioUserId} />
     </Suspense>
   )
 }

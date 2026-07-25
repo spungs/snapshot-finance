@@ -1,6 +1,6 @@
 'use server'
 
-import { auth } from '@/lib/auth'
+import { getPortfolioContext } from '@/lib/portfolio-context'
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { ensureUserHasAccount, assertAccountOwnership, accountService } from '@/lib/services/account-service'
@@ -55,9 +55,9 @@ function validateName(raw: unknown): { ok: true; value: string } | { ok: false; 
  * 신규 계좌 생성. displayOrder 는 현재 최대값 + 1 (목록 맨 뒤에 추가).
  */
 export async function createAccount(name: string): Promise<ActionResult<{ id: string }>> {
-    const session = await auth()
-    if (!session?.user?.id) return { success: false, error: 'UNAUTHORIZED' }
-    const userId = session.user.id
+    const ctx = await getPortfolioContext()
+    if (!ctx) return { success: false, error: 'UNAUTHORIZED' }
+    const userId = ctx.portfolioUserId
 
     const validated = validateName(name)
     if (!validated.ok) return { success: false, error: validated.error }
@@ -91,9 +91,9 @@ export async function createAccount(name: string): Promise<ActionResult<{ id: st
  * 계좌 이름 변경. IDOR 방어 적용.
  */
 export async function renameAccount(accountId: string, name: string): Promise<ActionResult> {
-    const session = await auth()
-    if (!session?.user?.id) return { success: false, error: 'UNAUTHORIZED' }
-    const userId = session.user.id
+    const ctx = await getPortfolioContext()
+    if (!ctx) return { success: false, error: 'UNAUTHORIZED' }
+    const userId = ctx.portfolioUserId
 
     const validated = validateName(name)
     if (!validated.ok) return { success: false, error: validated.error }
@@ -119,9 +119,9 @@ export async function renameAccount(accountId: string, name: string): Promise<Ac
  * 모든 id 가 본인 소유인지 한 번에 검증한 뒤, 단일 트랜잭션으로 업데이트.
  */
 export async function reorderAccounts(orderedIds: string[]): Promise<ActionResult> {
-    const session = await auth()
-    if (!session?.user?.id) return { success: false, error: 'UNAUTHORIZED' }
-    const userId = session.user.id
+    const ctx = await getPortfolioContext()
+    if (!ctx) return { success: false, error: 'UNAUTHORIZED' }
+    const userId = ctx.portfolioUserId
 
     if (!Array.isArray(orderedIds) || orderedIds.length === 0) {
         return { success: false, error: 'INVALID_INPUT' }
@@ -171,9 +171,9 @@ export async function reorderAccounts(orderedIds: string[]): Promise<ActionResul
 export async function deleteAccount(
     accountId: string,
 ): Promise<ActionResult<{ deletedHoldingsCount: number; remainingAccountsCount: number }>> {
-    const session = await auth()
-    if (!session?.user?.id) return { success: false, error: 'UNAUTHORIZED' }
-    const userId = session.user.id
+    const ctx = await getPortfolioContext()
+    if (!ctx) return { success: false, error: 'UNAUTHORIZED' }
+    const userId = ctx.portfolioUserId
 
     try {
         await assertAccountOwnership(accountId, userId)
@@ -204,9 +204,9 @@ export async function deleteAccount(
 export async function ensureDefaultAccount(
     defaultName: string = '기본 계좌',
 ): Promise<ActionResult<{ id: string }>> {
-    const session = await auth()
-    if (!session?.user?.id) return { success: false, error: 'UNAUTHORIZED' }
-    const userId = session.user.id
+    const ctx = await getPortfolioContext()
+    if (!ctx) return { success: false, error: 'UNAUTHORIZED' }
+    const userId = ctx.portfolioUserId
 
     try {
         const account = await ensureUserHasAccount(userId, defaultName)

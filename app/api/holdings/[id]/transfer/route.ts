@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
-import { auth } from '@/lib/auth'
+import { getPortfolioContext } from '@/lib/portfolio-context'
 import { assertHoldingOwnership, assertAccountOwnership } from '@/lib/auth-helpers'
 import { holdingService } from '@/lib/services/holding-service'
 import { accountService } from '@/lib/services/account-service'
@@ -23,14 +23,14 @@ export async function POST(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
-    const session = await auth()
-    if (!session?.user?.id) {
+    const ctx = await getPortfolioContext()
+    if (!ctx) {
         return NextResponse.json(
             { success: false, error: { code: 'UNAUTHORIZED', message: '인증이 필요합니다.' } },
             { status: 401 }
         )
     }
-    const userId = session.user.id
+    const userId = ctx.portfolioUserId
     const { id: holdingId } = await params
 
     let body: any

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai'
 import Decimal from 'decimal.js'
-import { auth } from '@/lib/auth'
+import { getPortfolioContext } from '@/lib/portfolio-context'
 import { prisma } from '@/lib/prisma'
 import { ratelimit, checkRateLimit } from '@/lib/ratelimit'
 import { isProUser } from '@/lib/billing/subscription'
@@ -329,17 +329,18 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        const session = await auth()
-        if (!session?.user?.id) {
+        const ctx = await getPortfolioContext()
+        if (!ctx) {
             return NextResponse.json({ success: false, error: '인증이 필요합니다.' }, { status: 401 })
         }
 
+        // 역할/PRO/rate-limit 은 로그인한 나(actor) 기준, 계좌 등 데이터는 관리 대상(portfolioUserId).
         // admin 은 비용/남용 우려 대상이 아니므로 AI 레이트리밋(burst/daily) 전면 통과.
         // role 은 DB UPDATE 로만 부여 가능 (lib/auth-helpers.ts 정책).
-        const isAdmin = session.user.role === 'admin'
+        const isAdmin = ctx.actorRole === 'admin'
 
         // PRO 전용 기능 — UI 잠금 우회 방지용 서버 가드. admin 은 isProUser 안에서 통과.
-        if (!(await isProUser(session.user.id))) {
+        if (!(await isProUser(ctx.actorId))) {
             return NextResponse.json(
                 { success: false, error: 'AI 어시스턴트는 PRO 플랜 전용 기능입니다.', code: 'PRO_REQUIRED' },
                 { status: 403 }
@@ -348,7 +349,7 @@ export async function POST(request: NextRequest) {
 
         // user.id 기준 rate limit (Gemini API 비용/남용 방지)
         // 1) burst: 10회/분 — 단기 남용 차단
-        const rateLimitResult = isAdmin ? null : await checkRateLimit(ratelimit.ai, session.user.id)
+        const rateLimitResult = isAdmin ? null : await checkRateLimit(ratelimit.ai, ctx.actorId)
         if (rateLimitResult && !rateLimitResult.success) {
             return NextResponse.json(
                 { success: false, error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
@@ -364,7 +365,7 @@ export async function POST(request: NextRequest) {
         }
 
         // 2) daily: 10회/24h — 일일 비용 한도. reset 은 epoch seconds.
-        const dailyLimitResult = isAdmin ? null : await checkRateLimit(ratelimit.aiDaily, session.user.id)
+        const dailyLimitResult = isAdmin ? null : await checkRateLimit(ratelimit.aiDaily, ctx.actorId)
         if (dailyLimitResult && !dailyLimitResult.success) {
             return NextResponse.json(
                 {
@@ -397,7 +398,7 @@ export async function POST(request: NextRequest) {
 
         // 사용자의 BrokerageAccount 목록 — 시스템 프롬프트 컨텍스트 + 자연어 계좌명 매핑에 사용.
         const userAccounts = await prisma.brokerageAccount.findMany({
-            where: { userId: session.user.id },
+            where: { userId: ctx.portfolioUserId },
             select: {
                 id: true,
                 name: true,

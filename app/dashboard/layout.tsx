@@ -1,6 +1,9 @@
 import { auth } from '@/lib/auth'
+import { getPortfolioContext, listManagedPortfolios } from '@/lib/portfolio-context'
 import { ScreenHeader } from '@/components/dashboard/screen-header'
 import { BottomTabBar } from '@/components/dashboard/bottom-tab-bar'
+import { PortfolioSwitcher } from '@/components/dashboard/portfolio-switcher'
+import { ManagedBanner } from '@/components/dashboard/managed-banner'
 import { SWRProvider } from '@/components/swr-provider'
 import { User } from 'lucide-react'
 import { redirect } from 'next/navigation'
@@ -24,31 +27,52 @@ export default async function DashboardLayout({
 
   const image = session?.user?.image
 
+  // 위임 컨텍스트 — grant 를 받은 사용자(나)에게만 스위처/배너가 보인다.
+  // 일반 사용자는 managed 가 비어 있어 화면이 기존과 100% 동일하다.
+  const ctx = await getPortfolioContext()
+  const managed = ctx ? await listManagedPortfolios(ctx.actorId) : []
+  const activeOwnerId = ctx?.isManaging ? ctx.portfolioUserId : null
+
+  const avatar = image ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={image}
+      alt=""
+      aria-hidden
+      className="h-9 w-9 rounded-full object-cover border border-border"
+    />
+  ) : (
+    <div
+      aria-hidden
+      className="h-9 w-9 rounded-full bg-muted flex items-center justify-center border border-border"
+    >
+      <User className="h-4 w-4 text-muted-foreground" />
+    </div>
+  )
+
   return (
     <SWRProvider>
       <div className="min-h-[100dvh] bg-background flex flex-col">
         <ScreenHeader
           right={
             session?.user ? (
-              image ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={image}
-                  alt=""
-                  aria-hidden
-                  className="h-9 w-9 rounded-full object-cover border border-border"
-                />
-              ) : (
-                <div
-                  aria-hidden
-                  className="h-9 w-9 rounded-full bg-muted flex items-center justify-center border border-border"
-                >
-                  <User className="h-4 w-4 text-muted-foreground" />
-                </div>
-              )
+              <>
+                {managed.length > 0 && (
+                  <PortfolioSwitcher
+                    selfName={ctx?.actorName ?? null}
+                    managed={managed}
+                    activeOwnerId={activeOwnerId}
+                  />
+                )}
+                {avatar}
+              </>
             ) : null
           }
         />
+
+        {ctx?.isManaging && ctx.ownerName && (
+          <ManagedBanner ownerName={ctx.ownerName} />
+        )}
 
         <main
           className="flex-1 flex flex-col"

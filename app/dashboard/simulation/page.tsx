@@ -1,17 +1,17 @@
 import { prisma } from '@/lib/prisma'
-import { auth } from '@/lib/auth'
+import { getPortfolioContext } from '@/lib/portfolio-context'
 import { FALLBACK_USD_RATE } from '@/lib/api/exchange-rate'
 import SimulationClient from './simulation-client'
 import SimulationError from './simulation-error'
 
 export default async function SimulationPage() {
-    const session = await auth()
+    const ctx = await getPortfolioContext()
 
-    if (!session?.user?.id) {
+    if (!ctx) {
         return <SimulationError />
     }
 
-    const userId = session.user.id
+    const userId = ctx.portfolioUserId
 
     const user = await prisma.user.findUnique({
         where: { id: userId },

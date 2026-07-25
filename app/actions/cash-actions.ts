@@ -1,7 +1,7 @@
 'use server'
 
 import { Prisma } from "@prisma/client"
-import { auth } from "@/lib/auth"
+import { getPortfolioContext } from "@/lib/portfolio-context"
 import { prisma } from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
 import { randomUUID } from "crypto"
@@ -29,11 +29,11 @@ function normalizeLabel(s: string): string {
 // - 삭제는 동기화하지 않는다 (보유 종목까지 cascade 로 사라질 위험 회피 — 명시적 삭제는 설정 페이지에서).
 // - DEFAULT_CASH_LABEL("예수금") 은 라벨 미지정 의미이므로 계좌 생성 대상에서 제외.
 export async function updateCashAccounts(accounts: unknown): Promise<CashActionResult> {
-    const session = await auth()
-    if (!session?.user?.id) {
+    const ctx = await getPortfolioContext()
+    if (!ctx) {
         return { success: false, error: "Unauthorized", code: 'UNAUTHORIZED' }
     }
-    const userId = session.user.id
+    const userId = ctx.portfolioUserId
 
     const validated = validateCashAccounts(accounts)
     if (!validated.ok) {
@@ -101,10 +101,11 @@ export async function updateCashAccounts(accounts: unknown): Promise<CashActionR
 // 사용자가 명시적으로 분리한 여러 계좌를 자의적으로 합치지 않도록,
 // 계좌가 2개 이상이면 거부하고 다이얼로그에서 직접 수정하도록 안내한다 (B안).
 export async function updateCashBalance(amount: number): Promise<CashActionResult> {
-    const session = await auth()
-    if (!session?.user?.id) {
+    const ctx = await getPortfolioContext()
+    if (!ctx) {
         return { success: false, error: "Unauthorized", code: 'UNAUTHORIZED' }
     }
+    const userId = ctx.portfolioUserId
 
     const validated = validateCashAmount(amount)
     if (!validated.ok) {
@@ -113,7 +114,7 @@ export async function updateCashBalance(amount: number): Promise<CashActionResul
 
     try {
         const user = await prisma.user.findUnique({
-            where: { id: session.user.id },
+            where: { id: userId },
             select: { cashAccounts: true },
         })
         const current = (user?.cashAccounts as unknown as CashAccount[] | null) ?? []
@@ -135,13 +136,13 @@ export async function updateCashBalance(amount: number): Promise<CashActionResul
         }]
 
         await prisma.user.update({
-            where: { id: session.user.id },
+            where: { id: userId },
             data: {
                 cashBalance: validated.value,
                 cashAccounts: nextAccounts as unknown as Prisma.InputJsonValue,
             },
         })
-        await holdingService.invalidate(session.user.id)
+        await holdingService.invalidate(userId)
         revalidatePath('/dashboard')
         return { success: true }
     } catch (error) {

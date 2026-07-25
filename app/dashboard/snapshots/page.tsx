@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { auth } from '@/lib/auth'
+import { getPortfolioContext } from '@/lib/portfolio-context'
 import { redirect } from 'next/navigation'
 import { snapshotService } from '@/lib/services/snapshot-service'
 import { prisma } from '@/lib/prisma'
@@ -10,14 +10,14 @@ import { SnapshotsSkeleton } from './snapshots-skeleton'
 export const dynamic = 'force-dynamic'
 
 export default async function SnapshotsPage() {
-  const session = await auth()
-  if (!session?.user?.id) {
+  const ctx = await getPortfolioContext()
+  if (!ctx) {
     redirect('/auth/signin')
   }
 
   return (
     <Suspense fallback={<SnapshotsSkeleton />}>
-      <SnapshotsContent userId={session.user.id} />
+      <SnapshotsContent userId={ctx.portfolioUserId} />
     </Suspense>
   )
 }

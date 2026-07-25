@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { getPortfolioContext } from '@/lib/portfolio-context'
 import { snapshotService } from '@/lib/services/snapshot-service'
 
 // GET /api/snapshots/chart-data
@@ -7,15 +7,15 @@ import { snapshotService } from '@/lib/services/snapshot-service'
 // service 가 Redis 에 캐시(1시간 TTL)하고 변이 시 즉시 invalidate 한다.
 export async function GET(_request: NextRequest) {
     try {
-        const session = await auth()
-        if (!session?.user?.id) {
+        const ctx = await getPortfolioContext()
+        if (!ctx) {
             return NextResponse.json(
                 { success: false, error: { code: 'UNAUTHORIZED', message: '인증이 필요합니다.' } },
                 { status: 401 }
             )
         }
 
-        const data = await snapshotService.getChartData(session.user.id)
+        const data = await snapshotService.getChartData(ctx.portfolioUserId)
         return NextResponse.json({ success: true, data })
     } catch (error) {
         console.error('Chart data fetch error:', error)

@@ -28,8 +28,27 @@ model User {
   payments              Payment[]
   usageCounters         UsageCounter[]
   deletedAt             DateTime?
+  grantedAccess         PortfolioAccess[]   @relation("AccessOwner")   // 내가 남에게 위임한 것
+  receivedAccess        PortfolioAccess[]   @relation("AccessGrantee") // 남이 나에게 위임한 것
 
   @@map("users")
+}
+
+// 포트폴리오 위임 접근 — owner 의 포트폴리오를 grantee 가 대리 CRUD 할 수 있게 하는 grant.
+// 연결/철회는 스키마가 아니라 이 테이블의 행(row) 삽입/삭제로 표현한다(재배포 불필요).
+// 지금은 나→여자친구 단방향 editor 한 건만 쓰지만, role 로 향후 viewer 확장 여지를 둔다.
+model PortfolioAccess {
+  id        String   @id @default(cuid())
+  ownerId   String   // 포트폴리오 주인 (데이터 소유자)
+  granteeId String   // 관리 권한을 받는 사람
+  role      String   @default("editor") // 'editor' | (향후) 'viewer'
+  createdAt DateTime @default(now())
+  owner     User     @relation("AccessOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  grantee   User     @relation("AccessGrantee", fields: [granteeId], references: [id], onDelete: Cascade)
+
+  @@unique([ownerId, granteeId])
+  @@index([granteeId])
+  @@map("portfolio_access")
 }
 
 model Account {

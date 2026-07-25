@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { auth } from '@/lib/auth'
+import { getPortfolioContext } from '@/lib/portfolio-context'
 import { redirect } from 'next/navigation'
 import { holdingService } from '@/lib/services/holding-service'
 import { snapshotService } from '@/lib/services/snapshot-service'
@@ -10,8 +10,8 @@ import { HomeSkeleton } from './home-skeleton'
 export const dynamic = 'force-dynamic'
 
 export default async function DashboardPage() {
-  const session = await auth()
-  if (!session?.user?.id) {
+  const ctx = await getPortfolioContext()
+  if (!ctx) {
     redirect('/auth/signin')
   }
 
@@ -19,7 +19,7 @@ export default async function DashboardPage() {
   // KIS API를 포함한 데이터 페칭은 Suspense 경계 안에서 스트리밍된다.
   return (
     <Suspense fallback={<HomeSkeleton />}>
-      <HomeContent userId={session.user.id} />
+      <HomeContent userId={ctx.portfolioUserId} />
     </Suspense>
   )
 }

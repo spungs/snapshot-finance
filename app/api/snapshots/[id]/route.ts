@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import Decimal from 'decimal.js'
-import { auth } from '@/lib/auth'
+import { getPortfolioContext } from '@/lib/portfolio-context'
 import { snapshotService } from '@/lib/services/snapshot-service'
 import { FALLBACK_USD_RATE } from '@/lib/api/exchange-rate'
 import {
@@ -22,8 +22,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
+    const ctx = await getPortfolioContext()
+    if (!ctx) {
       return NextResponse.json(
         { success: false, error: { code: 'UNAUTHORIZED', message: '인증이 필요합니다.' } },
         { status: 401 }
@@ -44,7 +44,7 @@ export async function GET(
     })
 
     // 스냅샷이 없거나 본인 소유가 아닌 경우
-    if (!snapshot || snapshot.userId !== session.user.id) {
+    if (!snapshot || snapshot.userId !== ctx.portfolioUserId) {
       return NextResponse.json(
         {
           success: false,
@@ -79,8 +79,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
+    const ctx = await getPortfolioContext()
+    if (!ctx) {
       return NextResponse.json(
         { success: false, error: { code: 'UNAUTHORIZED', message: '인증이 필요합니다.' } },
         { status: 401 }
@@ -94,7 +94,7 @@ export async function DELETE(
       where: { id },
     })
 
-    if (!snapshot || snapshot.userId !== session.user.id) {
+    if (!snapshot || snapshot.userId !== ctx.portfolioUserId) {
       return NextResponse.json(
         {
           success: false,
@@ -113,7 +113,7 @@ export async function DELETE(
     })
 
     // 차트 캐시 무효화
-    await snapshotService.invalidateChart(session.user.id)
+    await snapshotService.invalidateChart(ctx.portfolioUserId)
 
     return NextResponse.json({
       success: true,
@@ -140,8 +140,8 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
+    const ctx = await getPortfolioContext()
+    if (!ctx) {
       return NextResponse.json(
         { success: false, error: { code: 'UNAUTHORIZED', message: '인증이 필요합니다.' } },
         { status: 401 }
@@ -155,7 +155,7 @@ export async function PUT(
       where: { id },
     })
 
-    if (!existingSnapshot || existingSnapshot.userId !== session.user.id) {
+    if (!existingSnapshot || existingSnapshot.userId !== ctx.portfolioUserId) {
       return NextResponse.json(
         {
           success: false,
@@ -339,7 +339,7 @@ export async function PUT(
     })
 
     // 차트 캐시 무효화
-    await snapshotService.invalidateChart(session.user.id)
+    await snapshotService.invalidateChart(ctx.portfolioUserId)
 
     return NextResponse.json({
       success: true,

@@ -1,6 +1,6 @@
 'use server'
 
-import { auth } from '@/lib/auth'
+import { getPortfolioContext } from '@/lib/portfolio-context'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { revalidatePath } from 'next/cache'
@@ -98,11 +98,11 @@ interface CreateHoldingInput {
 }
 
 export async function createHolding(input: CreateHoldingInput): Promise<ActionResult> {
-    const session = await auth()
-    if (!session?.user?.id) {
+    const ctx = await getPortfolioContext()
+    if (!ctx) {
         return { success: false, error: 'Unauthorized' }
     }
-    const userId = session.user.id
+    const userId = ctx.portfolioUserId
 
     const ownership = await assertAccountOwnership(input.accountId, userId)
     if (!ownership.ok) return { success: false, error: ownership.error }
@@ -230,11 +230,11 @@ interface UpdateHoldingInput {
 }
 
 export async function updateHolding(input: UpdateHoldingInput): Promise<ActionResult> {
-    const session = await auth()
-    if (!session?.user?.id) {
+    const ctx = await getPortfolioContext()
+    if (!ctx) {
         return { success: false, error: 'Unauthorized' }
     }
-    const userId = session.user.id
+    const userId = ctx.portfolioUserId
 
     if (!input.holdingId) {
         return { success: false, error: '보유 종목 ID 가 누락되었습니다.' }
@@ -295,11 +295,11 @@ export async function updateHolding(input: UpdateHoldingInput): Promise<ActionRe
 }
 
 export async function deleteHolding(holdingId: string): Promise<ActionResult> {
-    const session = await auth()
-    if (!session?.user?.id) {
+    const ctx = await getPortfolioContext()
+    if (!ctx) {
         return { success: false, error: 'Unauthorized' }
     }
-    const userId = session.user.id
+    const userId = ctx.portfolioUserId
 
     if (!holdingId) return { success: false, error: '보유 종목 ID 가 누락되었습니다.' }
 
