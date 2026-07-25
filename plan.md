@@ -1,7 +1,7 @@
 # Snapshot Finance
 
 **작성일:** 2025-11-25  
-**최종 업데이트:** 2026-06-11 (**홈 "일간 변동" 부호 불일치 수정** — 변동률 ▼ -0.26% 인데 변동금액은 +₩13M 로 부호 반대. 원인은 현재값엔 예수금 포함(`liveSummary.totalValue`)·과거 스냅샷 비교값은 주식 평가금만이라 차액에 예수금이 통째로 섞임. `currentPoint.totalValue` 에서 예수금 차감해 같은 기준으로 정렬. 직전: **일간 스냅샷 중단 복구** — KIS "초당 20건" 한도 초과로 06-08 이후 매일 FAILED 되던 daily-snapshot 을 청크 throttle + 사용자 순차 + EGW00201 재시도로 수정. 직전: **토스증권(TDS) 스타일 UI/UX 전면 리디자인** — 디자인 토큰 전면 교체: 라이트 `#F2F4F6` 그레이 페이지+보더리스 화이트 카드 / 다크 `#17171C`+`#202027`, 토스 블루 `#3182F6`, 상승=빨강·하락=파랑, 라운드 14~18px, 세리프 제거 → Pretendard 단일 타이포. 세그먼트 컨트롤·필터 칩·CTA·다이얼로그 토스화, 에디토리얼 잔재(대문자 트래킹 라벨·액센트 스트라이프·컬러바) 제거. 직전: 종목 수정 인라인 폼 → `EditHoldingDialog` 전환, 티커 변경 지원)  
+**최종 업데이트:** 2026-07-25 (**위임 포트폴리오 관리 도입** — 내 계정으로 여자친구 포트폴리오를 대리 CRUD. `session.user.id` 단일 스코핑을 `getPortfolioContext()`(actorId=로그인한 나 / portfolioUserId=데이터 대상)로 분리, `PortfolioAccess(owner·grantee·role)` 모델 + `active_portfolio` 쿠키 기반 헤더 프로필 스위처 + 관리 중 배너. 단방향 위임이라 grant 있을 때만 노출(일반 사용자 화면 변화 0), 신원·quota·PRO/역할은 actor 유지. 직전: **홈 "일간 변동" 부호 불일치 수정** — 변동률 ▼ -0.26% 인데 변동금액은 +₩13M 로 부호 반대. 원인은 현재값엔 예수금 포함(`liveSummary.totalValue`)·과거 스냅샷 비교값은 주식 평가금만이라 차액에 예수금이 통째로 섞임. `currentPoint.totalValue` 에서 예수금 차감해 같은 기준으로 정렬. 직전: **일간 스냅샷 중단 복구** — KIS "초당 20건" 한도 초과로 06-08 이후 매일 FAILED 되던 daily-snapshot 을 청크 throttle + 사용자 순차 + EGW00201 재시도로 수정. 직전: **토스증권(TDS) 스타일 UI/UX 전면 리디자인** — 디자인 토큰 전면 교체: 라이트 `#F2F4F6` 그레이 페이지+보더리스 화이트 카드 / 다크 `#17171C`+`#202027`, 토스 블루 `#3182F6`, 상승=빨강·하락=파랑, 라운드 14~18px, 세리프 제거 → Pretendard 단일 타이포. 세그먼트 컨트롤·필터 칩·CTA·다이얼로그 토스화, 에디토리얼 잔재(대문자 트래킹 라벨·액센트 스트라이프·컬러바) 제거. 직전: 종목 수정 인라인 폼 → `EditHoldingDialog` 전환, 티커 변경 지원)  
 **목표:** 개인용 주식 잔고 관리 MVP (무료 플랜)
 
 ---
@@ -24,6 +24,7 @@
 - [x] 기존 하드코딩 `TEST_ACCOUNT_ID` 제거 및 세션 연동
 - [x] 로그아웃 기능 구현
 - [x] **사용자 프로필 드롭다운 메뉴**: 자동 스냅샷 설정 토글, 로그아웃, 탈퇴 기능 통합
+- [x] **위임 포트폴리오 관리 (2026-07-25)**: 내 계정으로 여자친구 포트폴리오를 대리 CRUD. `getPortfolioContext()` 로 actorId(로그인한 나)/portfolioUserId(데이터 대상) 분리, `PortfolioAccess(owner·grantee·role)` 모델 + `active_portfolio` 쿠키 기반 헤더 프로필 스위처 + 관리 배너. 단방향 위임(grant 있을 때만 노출), 신원·quota·PRO/역할은 actor 유지, 관리 모드 회원탈퇴 하드 잠금. 세팅: `scripts/grant-portfolio-access.ts`, 설계: `docs/superpowers/specs/2026-07-25-managed-portfolio-delegation-design.md`
 
 #### 3. 데이터베이스 리팩토링 및 최적화
 - [x] **사용자 모델 단일화**: `SecuritiesAccount` 모델 제거 및 `User` 모델로 통합
