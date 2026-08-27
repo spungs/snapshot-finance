@@ -4,7 +4,13 @@ import { SWRConfig } from 'swr'
 import { localStorageProvider } from '@/lib/swr/persist-cache'
 
 // 응답 envelope { success, data, error } 를 해제해 SWR data 로 노출.
-async function defaultFetcher(url: string) {
+//
+// 키는 문자열 또는 ['<url>', ...스코프] 배열. SWR v2 는 배열 키를 spread 하지 않고
+// 배열 그대로 fetcher 에 넘기므로(v1 과 다름) 첫 요소를 URL 로 해석한다.
+// 배열 키는 "URL 은 같지만 응답 주체가 다른" 경우(예: 위임 포트폴리오 — active_portfolio
+// 쿠키에 따라 응답이 달라짐)에 캐시를 분리하는 용도.
+async function defaultFetcher(key: string | [string, ...unknown[]]) {
+    const url = Array.isArray(key) ? key[0] : key
     const res = await fetch(url)
     if (!res.ok) {
         throw new Error(`HTTP ${res.status}`)

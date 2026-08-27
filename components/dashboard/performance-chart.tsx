@@ -100,6 +100,8 @@ function CustomTooltip({ active, payload, mode, currency, exchangeRate }: any) {
 
 interface PerformanceChartProps {
   initialChartData?: ChartDataPoint[]
+  /** 현재 보고 있는 포트폴리오 주인의 userId. SWR 캐시 키 분리용. */
+  portfolioUserId: string
 }
 
 // 기간(period) 별 시작일 계산 — 메모리 필터용. 모든 period 가 동일 SWR 캐시
@@ -116,7 +118,7 @@ function startDateForPeriod(period: Period): Date | null {
   }
 }
 
-export function PerformanceChart({ initialChartData }: PerformanceChartProps) {
+export function PerformanceChart({ initialChartData, portfolioUserId }: PerformanceChartProps) {
   const { language } = useLanguage()
   const { baseCurrency } = useCurrency()
   const [period, setPeriod] = useState<Period>('3M')
@@ -128,8 +130,13 @@ export function PerformanceChart({ initialChartData }: PerformanceChartProps) {
   // 차트 배열이 fallbackData 보다 우선해 표시될 수 있다. 이때 마운트 재검증을 생략하면
   // (구: revalidateOnMount: !initialChartData) 새로고침해도 stale 값(예: 시세 수리 전
   // -91%)이 영구히 남는다 → 항상 마운트 시 서버 기준으로 재검증해 영속 캐시를 정정한다.
+  //
+  // 키에 portfolioUserId 를 포함하는 이유(위임 포트폴리오): 응답 내용은 active_portfolio
+  // 쿠키에 따라 사람마다 다른데 URL 은 같다. 키가 URL 뿐이면 프로필 전환 후에도 내
+  // 차트 캐시가 그대로 재사용되고, 전환은 router.refresh() 라 컴포넌트가 언마운트되지
+  // 않아 revalidateOnMount 도 다시 돌지 않는다 → 남의 포트폴리오에서 내 성과가 보인다.
   const { data: allData, error, isLoading, isValidating, mutate } = useSWR<ChartDataPoint[]>(
-    '/api/snapshots/chart-data',
+    ['/api/snapshots/chart-data', portfolioUserId],
     {
       fallbackData: initialChartData,
       revalidateOnMount: true,

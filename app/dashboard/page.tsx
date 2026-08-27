@@ -85,6 +85,7 @@ async function HomeContent({ userId }: { userId: string }) {
       holdings={holdings}
       recentSnapshots={recentSnapshots}
       initialChartData={chartData}
+      portfolioUserId={userId}
       todayLabel={todayLabel + ' · ' + (new Date().getHours() < 12 ? '오전' : '오후')}
     />
   )

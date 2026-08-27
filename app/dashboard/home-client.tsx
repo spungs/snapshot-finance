@@ -73,6 +73,8 @@ interface HomeClientProps {
     holdings: Holding[]
     recentSnapshots: SnapshotLite[]
     initialChartData: ChartDataPoint[]
+    /** 현재 보고 있는 포트폴리오 주인의 userId — 차트 SWR 캐시를 사람별로 분리하는 데 쓴다. */
+    portfolioUserId: string
     todayLabel: string
 }
 
@@ -97,6 +99,7 @@ export function HomeClient({
     holdings: ssrHoldings,
     recentSnapshots,
     initialChartData,
+    portfolioUserId,
     todayLabel,
 }: HomeClientProps) {
     const { t, language } = useLanguage()
@@ -337,7 +340,7 @@ export function HomeClient({
             {/* Performance chart — 성과 흐름 */}
             {hasChart && (
                 <section className="mx-4 mb-4">
-                    <PerformanceChart initialChartData={initialChartData} />
+                    <PerformanceChart initialChartData={initialChartData} portfolioUserId={portfolioUserId} />
                 </section>
             )}
 
