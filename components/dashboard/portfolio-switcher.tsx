@@ -2,7 +2,7 @@
 
 import { useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Check, ChevronDown, Users } from 'lucide-react'
+import { Check, ChevronDown, Loader2, Users } from 'lucide-react'
 import {
     DropdownMenu,
     DropdownMenuTrigger,
@@ -12,6 +12,7 @@ import {
     DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
 import { setActivePortfolio } from '@/app/actions/portfolio-access-actions'
+import { PortfolioSwitchProgress } from '@/components/dashboard/portfolio-switch-progress'
 
 type ManagedPortfolio = { ownerId: string; name: string }
 
@@ -40,34 +41,42 @@ export function PortfolioSwitcher({ selfName, managed, activeOwnerId }: Portfoli
     }
 
     return (
-        <DropdownMenu>
-            <DropdownMenuTrigger
-                disabled={isPending}
-                className="flex items-center gap-1 rounded-full border border-border px-2.5 h-9 text-sm text-foreground disabled:opacity-60"
-                aria-label="포트폴리오 전환"
-            >
-                <Users className="h-3.5 w-3.5 text-muted-foreground" />
-                <span className="max-w-[7rem] truncate">{activeLabel}</span>
-                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="min-w-[12rem]">
-                <DropdownMenuLabel>포트폴리오 선택</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => switchTo('self')} className="justify-between">
-                    <span className="truncate">{selfName || '내 포트폴리오'}</span>
-                    {activeOwnerId === null && <Check className="h-4 w-4" />}
-                </DropdownMenuItem>
-                {managed.map((m) => (
-                    <DropdownMenuItem
-                        key={m.ownerId}
-                        onClick={() => switchTo(m.ownerId)}
-                        className="justify-between"
-                    >
-                        <span className="truncate">{m.name}</span>
-                        {activeOwnerId === m.ownerId && <Check className="h-4 w-4" />}
+        <>
+            {isPending && <PortfolioSwitchProgress />}
+            <DropdownMenu>
+                <DropdownMenuTrigger
+                    disabled={isPending}
+                    aria-busy={isPending}
+                    className="flex items-center gap-1 rounded-full border border-border px-2.5 h-9 text-sm text-foreground disabled:opacity-60"
+                    aria-label="포트폴리오 전환"
+                >
+                    <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="max-w-[7rem] truncate">{activeLabel}</span>
+                    {isPending ? (
+                        <Loader2 className="h-3.5 w-3.5 text-muted-foreground animate-spin" />
+                    ) : (
+                        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                    )}
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="min-w-[12rem]">
+                    <DropdownMenuLabel>포트폴리오 선택</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => switchTo('self')} className="justify-between">
+                        <span className="truncate">{selfName || '내 포트폴리오'}</span>
+                        {activeOwnerId === null && <Check className="h-4 w-4" />}
                     </DropdownMenuItem>
-                ))}
-            </DropdownMenuContent>
-        </DropdownMenu>
+                    {managed.map((m) => (
+                        <DropdownMenuItem
+                            key={m.ownerId}
+                            onClick={() => switchTo(m.ownerId)}
+                            className="justify-between"
+                        >
+                            <span className="truncate">{m.name}</span>
+                            {activeOwnerId === m.ownerId && <Check className="h-4 w-4" />}
+                        </DropdownMenuItem>
+                    ))}
+                </DropdownMenuContent>
+            </DropdownMenu>
+        </>
     )
 }
