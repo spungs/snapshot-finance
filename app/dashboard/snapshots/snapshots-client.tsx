@@ -6,8 +6,12 @@ import { snapshotsApi } from '@/lib/api/client'
 import { formatCurrency, formatDate } from '@/lib/utils/formatters'
 import { cn } from '@/lib/utils'
 import { useLanguage } from '@/lib/i18n/context'
-import { SnapshotBottomPanel } from '@/components/dashboard/snapshots/snapshot-bottom-panel'
 import { EmptySnapshotState } from '@/components/dashboard/empty-snapshot-state'
+import { SnapshotFilterBar, type DateRange } from '@/components/dashboard/snapshots/snapshot-filter-bar'
+import { SnapshotTrendChart, type TrendPoint } from '@/components/dashboard/snapshots/snapshot-trend-chart'
+import { SelectionTray } from '@/components/dashboard/snapshots/selection-tray'
+import { SnapshotCompareSheet } from '@/components/dashboard/snapshots/snapshot-compare-sheet'
+import type { SnapshotDetail } from '@/types/snapshot'
 import { Loader2, Plus, MoreVertical, Eye, TrendingUp, Trash2, ChevronDown } from 'lucide-react'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import {
@@ -46,6 +50,9 @@ interface SnapshotsClientProps {
     currentHoldings: any[]
     availableMonths: AvailableMonth[]
 }
+
+const MAX_COMPARE = 10
+const PAGE_SIZE = 30
 
 const EN_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
@@ -91,27 +98,33 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings, availableMo
     const [deleting, setDeleting] = useState<string | null>(null)
     const [selectedIds, setSelectedIds] = useState<string[]>([])
     const [activeId, setActiveId] = useState<string | null>(initialSnapshots[0]?.id ?? null)
-    const [filter, setFilter] = useState<{ year: number; month: number } | null>(null)
+    const [range, setRange] = useState<DateRange | null>(null)
     const [isFiltering, setIsFiltering] = useState(false)
+
+    // 선택 항목 상세 캐시 — 기간 필터를 바꾸면 고른 스냅샷이 목록에서 사라지므로,
+    // 비교/그래프가 계속 그릴 수 있도록 목록과 분리해 보관한다. (?ids= 로 채운다)
+    const [selectedById, setSelectedById] = useState<Record<string, SnapshotDetail>>({})
+    const [compareOpen, setCompareOpen] = useState(false)
+    const [trendAll, setTrendAll] = useState<TrendPoint[]>([])
 
     const [nextCursor, setNextCursor] = useState<string | undefined>(undefined)
     const [hasMore, setHasMore] = useState(initialSnapshots.length >= 20)
     const [isLoadingMore, setIsLoadingMore] = useState(false)
-    const observerTarget = useRef<HTMLDivElement>(null)
     const loadMoreAbortRef = useRef<AbortController | null>(null)
+    const selectionAbortRef = useRef<AbortController | null>(null)
 
     // 필터가 없을 때만 서버 props(initialSnapshots)와 동기화한다.
     // (부모가 router.refresh() 로 재렌더하거나 삭제로 목록이 줄어든 경우 반영, '전체' 복귀 시 복원)
     // 필터가 걸리면 목록은 클라이언트가 소유하므로 props 로 덮어쓰지 않는다.
     useEffect(() => {
-        if (filter) return
+        if (range) return
         setSnapshots(initialSnapshots)
         setNextCursor(initialSnapshots.length > 0 ? initialSnapshots[initialSnapshots.length - 1].id : undefined)
         setHasMore(initialSnapshots.length >= 20)
         setActiveId(prev =>
             prev && initialSnapshots.some(s => s.id === prev) ? prev : (initialSnapshots[0]?.id ?? null),
         )
-    }, [initialSnapshots, filter])
+    }, [initialSnapshots, range])
 
     // Cancel any in-flight pagination fetch when the component unmounts (e.g., tab switch)
     useEffect(() => () => loadMoreAbortRef.current?.abort(), [])
@@ -125,7 +138,7 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings, availableMo
 
         setIsLoadingMore(true)
         try {
-            const response = await snapshotsApi.getList(nextCursor, controller.signal, filter ?? undefined)
+            const response = await snapshotsApi.getList(nextCursor, controller.signal, range ?? undefined, PAGE_SIZE)
             if (controller.signal.aborted) return
             if (response.success && response.data) {
                 const newSnapshots = response.data
@@ -143,34 +156,97 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings, availableMo
         } finally {
             if (!controller.signal.aborted) setIsLoadingMore(false)
         }
-    }, [nextCursor, hasMore, isLoadingMore, filter])
+    }, [nextCursor, hasMore, isLoadingMore, range])
 
+    // 무한스크롤(IntersectionObserver) 제거 — 204개를 거슬러 올라가려면 스크롤로는 답이 없다.
+    // 기간 범위로 좁히고 '더 보기'로 이어받는다. cursor 페이징 자체는 그대로 쓴다.
+
+    // 선택된 스냅샷의 상세(holdings 포함)를 목록과 무관하게 확보한다.
+    // 목록 props 의 holdings 는 개수 표시용으로 축약돼 있어 종목 비교표에 쓸 수 없고,
+    // 기간 필터를 바꾸면 선택 항목이 목록에서 빠지기 때문에 여기서 따로 받아 캐시한다.
     useEffect(() => {
-        const observer = new IntersectionObserver(
-            entries => {
-                if (entries[0].isIntersecting && hasMore && !isLoadingMore) loadMore()
-            },
-            { threshold: 1.0 }
-        )
-        if (observerTarget.current) observer.observe(observerTarget.current)
-        return () => observer.disconnect()
-    }, [loadMore, hasMore, isLoadingMore])
+        const missing = selectedIds.filter(id => !selectedById[id])
+        if (missing.length === 0) return
+
+        selectionAbortRef.current?.abort()
+        const controller = new AbortController()
+        selectionAbortRef.current = controller
+
+        snapshotsApi.getByIds(missing, controller.signal)
+            .then(res => {
+                if (controller.signal.aborted) return
+                if (res.success && res.data) {
+                    setSelectedById(prev => {
+                        const next = { ...prev }
+                        for (const snap of res.data ?? []) next[snap.id] = snap
+                        return next
+                    })
+                }
+            })
+            .catch(err => {
+                if ((err as Error).name !== 'AbortError') console.error('Failed to load selected snapshots:', err)
+            })
+    }, [selectedIds, selectedById])
+
+    useEffect(() => () => selectionAbortRef.current?.abort(), [])
+
+    // 추이 그래프용 전체 시계열 — 요약만 담겨 가볍고 서버가 캐시한다.
+    useEffect(() => {
+        let alive = true
+        fetch('/api/snapshots/chart-data')
+            .then(r => r.json())
+            .then(j => {
+                if (!alive || !j?.success) return
+                const rows = j.data as Array<{ id: string; date: string; totalAsset: number; profitRate: number }>
+                setTrendAll(rows.map(d => ({
+                    id: d.id,
+                    date: d.date,
+                    totalAsset: Number(d.totalAsset),
+                    profitRate: Number(d.profitRate),
+                })))
+            })
+            .catch(() => { /* 그래프는 보조 정보 — 실패해도 목록은 정상 동작 */ })
+        return () => { alive = false }
+    }, [])
+
+    // 연도 칩 + '전체' 프리셋의 하한. availableMonths 는 snapshotDate desc 순서다.
+    const availableYears = useMemo(() => {
+        const seen = new Set<number>()
+        const out: number[] = []
+        for (const m of availableMonths) {
+            if (!seen.has(m.year)) { seen.add(m.year); out.push(m.year) }
+        }
+        return out
+    }, [availableMonths])
+
+    const earliestDate = useMemo(() => {
+        const last = availableMonths[availableMonths.length - 1]
+        return last ? `${last.year}-${String(last.month).padStart(2, '0')}-01` : undefined
+    }, [availableMonths])
 
     const handleActiveSelect = useCallback((id: string) => {
         setActiveId(id)
         window.scrollTo({ top: 0, behavior: 'smooth' })
     }, [])
 
-    // 연/월 필터 적용 — 첫 페이지부터 새로 조회해 목록을 교체. 무한스크롤은 이 필터 안에서 이어진다.
-    const applyFilter = useCallback(async (year: number, month: number) => {
+    /**
+     * 기간 범위 적용 — 첫 페이지부터 새로 조회해 목록을 교체한다.
+     * **선택은 일부러 유지한다.** 2022년에서 하나 고르고 2025년으로 옮겨 또 고르는 것이
+     * 이 기능의 목적이기 때문. 목록에서 사라진 선택 항목은 selectedById 가 들고 있다.
+     * null 이면 서버 props(최신 목록)로 복원한다.
+     */
+    const applyRange = useCallback(async (next: DateRange | null) => {
         loadMoreAbortRef.current?.abort()
+        setRange(next)
+        if (!next) {
+            setIsFiltering(false)
+            return
+        }
         const controller = new AbortController()
         loadMoreAbortRef.current = controller
-        setFilter({ year, month })
-        setSelectedIds([])
         setIsFiltering(true)
         try {
-            const response = await snapshotsApi.getList(undefined, controller.signal, { year, month })
+            const response = await snapshotsApi.getList(undefined, controller.signal, next, PAGE_SIZE)
             if (controller.signal.aborted) return
             if (response.success && response.data) {
                 setSnapshots(response.data)
@@ -188,15 +264,6 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings, availableMo
         }
     }, [t])
 
-    // '전체' — filter=null 로 두면 동기화 effect 가 initialSnapshots(최신 목록)로 복원한다.
-    const clearFilter = useCallback(() => {
-        if (!filter) return
-        loadMoreAbortRef.current?.abort()
-        setSelectedIds([])
-        setIsFiltering(false)
-        setFilter(null)
-    }, [filter])
-
     const handleSelect = (id: string, e: React.MouseEvent) => {
         e.stopPropagation()
         // toast/side-effect는 setState reducer 안이 아니라 바깥에서 처리한다 — React strict
@@ -205,18 +272,22 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings, availableMo
             setSelectedIds(prev => prev.filter(p => p !== id))
             return
         }
-        if (selectedIds.length >= 2) {
+        if (selectedIds.length >= MAX_COMPARE) {
             toast.info(
                 language === 'ko'
-                    ? '비교는 2개를 선택했을 때만 가능해요'
-                    : 'Compare works with exactly 2 snapshots',
+                    ? `최대 ${MAX_COMPARE}개까지 비교할 수 있어요`
+                    : `You can compare up to ${MAX_COMPARE} snapshots`,
                 { id: 'snapshot-compare-limit' },
             )
             return
         }
         setSelectedIds(prev => [...prev, id])
     }
-    const handleClearSelection = () => setSelectedIds([])
+    const handleClearSelection = () => {
+        setSelectedIds([])
+        setCompareOpen(false)
+    }
+    const handleRemoveSelected = (id: string) => setSelectedIds(prev => prev.filter(p => p !== id))
 
     // 삭제 확인: native confirm() 대신 ConfirmDialog 사용 (UX 일관성)
     const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null)
@@ -250,7 +321,7 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings, availableMo
     }
 
     // 필터 없는 진짜 빈 상태(스냅샷 0개) — 첫 스냅샷 작성 유도
-    if (snapshots.length === 0 && !filter) {
+    if (snapshots.length === 0 && !range) {
         return (
             <div className="max-w-[420px] md:max-w-2xl mx-auto w-full pb-20">
                 <Hero t={t} />
@@ -263,22 +334,48 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings, availableMo
 
     const activeSnapshot = snapshots.find(s => s.id === activeId) ?? snapshots[0] ?? null
     const activeIndex = activeSnapshot ? snapshots.findIndex(s => s.id === activeSnapshot.id) : -1
-    // 필터 적용 시엔 "LATEST/N일 전" 대신 선택한 연·월을 라벨로 표기
-    const activeEyebrow = filter
-        ? `${filter.year}.${String(filter.month).padStart(2, '0')}${language === 'ko' ? ' · 선택' : ''}`
+    // 기간을 좁혔으면 "LATEST/N일 전" 대신 그 범위를 라벨로 표기
+    const activeEyebrow = range
+        ? `${range.from} ~ ${range.to}`
         : undefined
+
+    // 선택된 스냅샷(날짜 오름차순). 목록 밖 항목은 selectedById 에서 가져온다.
+    const selectedSnapshots: SnapshotDetail[] = selectedIds
+        .map(id => selectedById[id])
+        .filter((s): s is SnapshotDetail => Boolean(s))
+        .sort((a, b) => new Date(a.snapshotDate).getTime() - new Date(b.snapshotDate).getTime())
+
+    // 그래프: 선택이 있으면 그것만, 없으면 현재 목록 구간.
+    const visibleIds = new Set(selectedIds.length > 0 ? selectedIds : snapshots.map(s => s.id))
+    const trendPoints = trendAll.filter(p => visibleIds.has(p.id))
 
     return (
         <div className={cn('max-w-[420px] md:max-w-2xl mx-auto w-full relative', selectedIds.length > 0 ? 'pb-28' : 'pb-4')}>
             <Hero t={t} />
-            <FilterBar
-                availableMonths={availableMonths}
-                filter={filter}
-                onApply={applyFilter}
-                onClear={clearFilter}
-                isFiltering={isFiltering}
+            <SnapshotFilterBar
+                range={range}
+                onChange={applyRange}
+                years={availableYears}
+                earliest={earliestDate}
+                disabled={isFiltering}
                 language={language}
-                t={t}
+            />
+
+            {trendPoints.length > 0 && (
+                <SnapshotTrendChart
+                    points={trendPoints}
+                    isSelection={selectedIds.length > 0}
+                    language={language}
+                />
+            )}
+
+            <SelectionTray
+                selected={selectedSnapshots}
+                max={MAX_COMPARE}
+                onRemove={handleRemoveSelected}
+                onClear={handleClearSelection}
+                onCompare={() => setCompareOpen(true)}
+                language={language}
             />
 
             {snapshots.length === 0 ? (
@@ -309,13 +406,17 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings, availableMo
                     />
 
                     {hasMore && (
-                        <div ref={observerTarget} className="py-8 flex justify-center">
-                            {isLoadingMore && (
-                                <div className="flex items-center gap-2 text-muted-foreground">
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                    <span className="text-sm">{t('loadingMore')}</span>
-                                </div>
-                            )}
+                        <div className="px-4 py-5">
+                            <button
+                                type="button"
+                                onClick={loadMore}
+                                disabled={isLoadingMore}
+                                className="w-full rounded-xl bg-card py-3 text-[13px] font-bold text-foreground hover:bg-accent-soft transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
+                            >
+                                {isLoadingMore
+                                    ? <><Loader2 className="h-4 w-4 animate-spin" />{t('loadingMore')}</>
+                                    : (language === 'ko' ? '더 보기' : 'Load more')}
+                            </button>
                         </div>
                     )}
                     {!hasMore && snapshots.length > 0 && (
@@ -342,11 +443,12 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings, availableMo
                 <Plus className="w-5 h-5" strokeWidth={2.5} />
             </Link>
 
-            <SnapshotBottomPanel
+            <SnapshotCompareSheet
+                open={compareOpen}
+                snapshots={selectedSnapshots}
                 currentHoldings={currentHoldings}
-                snapshots={snapshots}
-                selectedIds={selectedIds}
-                onClearSelection={handleClearSelection}
+                onClose={() => setCompareOpen(false)}
+                language={language}
             />
 
             {/* 스냅샷 삭제 확인 — native confirm() 대체 */}
@@ -473,107 +575,6 @@ function ActiveSnapshotCard({
 }
 
 /* ─── Filter bar (연/월 선택) ─── */
-function FilterBar({
-    availableMonths, filter, onApply, onClear, isFiltering, language, t,
-}: {
-    availableMonths: AvailableMonth[]
-    filter: { year: number; month: number } | null
-    onApply: (year: number, month: number) => void
-    onClear: () => void
-    isFiltering: boolean
-    language: string
-    t: (k: any) => string
-}) {
-    const years = useMemo(() => {
-        const seen = new Set<number>()
-        const out: number[] = []
-        for (const m of availableMonths) {
-            if (!seen.has(m.year)) { seen.add(m.year); out.push(m.year) }
-        }
-        return out
-    }, [availableMonths])
-
-    // availableMonths 는 snapshotDate desc 순서 → 같은 해의 첫 항목이 그 해의 최신 월
-    const monthsOfYear = useMemo(
-        () => (filter ? availableMonths.filter(m => m.year === filter.year) : []),
-        [availableMonths, filter],
-    )
-
-    if (availableMonths.length === 0) return null
-
-    const handleYear = (year: number) => {
-        const latest = availableMonths.find(m => m.year === year)
-        if (latest) onApply(year, latest.month)
-    }
-
-    const triggerCls =
-        'inline-flex items-center gap-1.5 rounded-lg bg-card shadow-sm px-3 py-1.5 text-[12.5px] font-semibold text-foreground disabled:opacity-40 disabled:cursor-not-allowed'
-
-    return (
-        <div className="px-6 pb-3 flex items-center gap-2 flex-wrap">
-            {/* 연도 */}
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <button type="button" className={triggerCls} aria-label={t('selectYear')}>
-                        {filter ? filter.year : (language === 'ko' ? '연도' : 'Year')}
-                        <ChevronDown className="w-3.5 h-3.5 opacity-60" />
-                    </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="min-w-[100px] max-h-[260px] overflow-y-auto">
-                    {years.map(y => (
-                        <DropdownMenuItem key={y} onClick={() => handleYear(y)} className="cursor-pointer">
-                            {y}
-                        </DropdownMenuItem>
-                    ))}
-                </DropdownMenuContent>
-            </DropdownMenu>
-
-            {/* 월 — '전체'(filter=null)일 땐 표시할 월 목록이 없으므로 트리거 자체를 비활성화.
-                disabled 를 자식 button 에만 주면 Radix Trigger 가 pointerdown 으로 빈 메뉴를 여는
-                모순(회색인데 열림)이 생긴다 → Trigger primitive 에 직접 disabled 를 전달한다. */}
-            <DropdownMenu>
-                <DropdownMenuTrigger
-                    type="button"
-                    disabled={!filter}
-                    aria-label={t('selectMonth')}
-                    className={triggerCls}
-                >
-                    {filter ? monthLabel(filter.month, language) : (language === 'ko' ? '월' : 'Month')}
-                    <ChevronDown className="w-3.5 h-3.5 opacity-60" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="min-w-[120px] max-h-[260px] overflow-y-auto">
-                    {monthsOfYear.map(m => (
-                        <DropdownMenuItem
-                            key={m.month}
-                            onClick={() => filter && onApply(filter.year, m.month)}
-                            className="cursor-pointer"
-                        >
-                            <span>{monthLabel(m.month, language)}</span>
-                            <span className="ml-auto pl-3 text-[11px] text-muted-foreground numeric">{m.count}</span>
-                        </DropdownMenuItem>
-                    ))}
-                </DropdownMenuContent>
-            </DropdownMenu>
-
-            {/* 전체 */}
-            <button
-                type="button"
-                onClick={onClear}
-                className={cn(
-                    'px-3 py-1.5 text-[12px] font-medium rounded-lg transition-colors',
-                    !filter
-                        ? 'bg-accent-soft text-primary font-bold'
-                        : 'bg-secondary text-muted-foreground hover:text-foreground',
-                )}
-            >
-                {t('allPeriods')}
-            </button>
-
-            {isFiltering && <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground ml-1" />}
-        </div>
-    )
-}
-
 /* ─── 선택한 기간에 스냅샷이 없을 때 ─── */
 function PeriodEmpty({ t }: { t: (k: any) => string }) {
     return (

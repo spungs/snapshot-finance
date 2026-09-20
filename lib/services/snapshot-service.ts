@@ -88,9 +88,13 @@ export function mergeHoldingsByStock(holdings: RawHoldingForMerge[]): MergedHold
 // - 변이(create/delete/update)는 invalidateChart() 로 즉시 무효화
 // - 따라서 TTL 을 길게 가져가도 안전. cron(일일 스냅샷)은 1시간 TTL 이 자연 처리.
 const SNAPSHOTS_CHART_TTL_SECONDS = 3600
-const snapshotsChartKey = (userId: string) => `chart:snapshots:${userId}`
+// v2: ChartDataPoint 에 id 를 추가하면서 키를 올린다. 구버전 캐시(id 없음)를 그대로
+// 읽으면 목록에서 선택한 스냅샷을 차트에서 찾지 못한다.
+const snapshotsChartKey = (userId: string) => `chart:snapshots:v2:${userId}`
 
 export interface ChartDataPoint {
+    /** 스냅샷 id — 목록에서 선택한 항목을 차트에서 찾아 강조/필터하는 데 쓴다. */
+    id: string
     date: string
     totalValue: number
     totalCost: number
@@ -105,15 +109,24 @@ export const snapshotService = {
         userId: string,
         limit: number = 20,
         cursor?: string,
-        filter?: { year: number; month: number },
+        /**
+         * 기간 범위 필터 (YYYY-MM-DD, 양 끝 포함).
+         * UTC 경계로 해석한다 — formatDate(date-fns, 런타임 로컬=Vercel UTC) 및
+         * getAvailableMonths 의 UTC 버킷팅과 동일 기준이라 표시값과 일관된다.
+         */
+        range?: { from?: string; to?: string },
     ) {
-        // 연/월 필터: UTC 월 경계로 범위 지정. formatDate(date-fns, 런타임 로컬=Vercel UTC)
-        // 및 getAvailableMonths 의 UTC 버킷팅과 동일 기준이라 표시값과 일관된다.
-        const where: { userId: string; snapshotDate?: { gte: Date; lt: Date } } = { userId }
-        if (filter) {
-            where.snapshotDate = {
-                gte: new Date(Date.UTC(filter.year, filter.month - 1, 1)),
-                lt: new Date(Date.UTC(filter.year, filter.month, 1)),
+        const where: { userId: string; snapshotDate?: { gte?: Date; lt?: Date } } = { userId }
+        if (range?.from || range?.to) {
+            where.snapshotDate = {}
+            if (range.from) {
+                const [y, m, d] = range.from.split('-').map(Number)
+                where.snapshotDate.gte = new Date(Date.UTC(y, m - 1, d))
+            }
+            if (range.to) {
+                // to 를 포함하려면 다음 날 00:00 미만으로 본다.
+                const [y, m, d] = range.to.split('-').map(Number)
+                where.snapshotDate.lt = new Date(Date.UTC(y, m - 1, d + 1))
             }
         }
 
@@ -173,6 +186,26 @@ export const snapshotService = {
         return Array.from(map.values())
     },
 
+    /**
+     * 선택된 스냅샷들을 id 로 직접 조회한다 (holdings 포함).
+     *
+     * 비교 기능의 핵심 — 목록은 기간 필터로 갈아끼워지지만 선택은 그대로 유지돼야 한다.
+     * 목록에 없는 id(예: 필터를 2025년으로 바꾼 뒤에도 남아있는 2022년 선택)를
+     * 화면이 계속 그릴 수 있게 한다. 소유권은 userId 로 강제한다.
+     */
+    async getByIds(userId: string, ids: string[]) {
+        if (ids.length === 0) return []
+        return prisma.portfolioSnapshot.findMany({
+            where: { userId, id: { in: ids } },
+            orderBy: { snapshotDate: 'asc' },
+            include: {
+                holdings: {
+                    include: { stock: true },
+                },
+            },
+        })
+    },
+
     async getDetail(id: string) {
         const snapshot = await prisma.portfolioSnapshot.findUnique({
             where: { id },
@@ -203,6 +236,7 @@ export const snapshotService = {
             where: { userId },
             orderBy: { snapshotDate: 'asc' },
             select: {
+                id: true,
                 snapshotDate: true,
                 totalValue: true,
                 totalCost: true,
@@ -213,6 +247,7 @@ export const snapshotService = {
         })
 
         const items: ChartDataPoint[] = snapshots.map((s) => ({
+            id: s.id,
             date: s.snapshotDate.toISOString(),
             totalValue: Number(s.totalValue),
             totalCost: Number(s.totalCost),

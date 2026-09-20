@@ -1,3 +1,5 @@
+import type { SnapshotDetail } from '@/types/snapshot'
+
 // API 클라이언트 유틸리티
 
 const BASE_URL = '/api'
@@ -36,16 +38,27 @@ export const snapshotsApi = {
   getList: (
     cursor?: string,
     signal?: AbortSignal,
-    filter?: { year: number; month: number },
+    /** 기간 범위 (YYYY-MM-DD, 양 끝 포함). 한쪽만 줘도 된다. */
+    range?: { from?: string; to?: string },
+    limit?: number,
   ) => {
     const params = new URLSearchParams()
     if (cursor) params.set('cursor', cursor)
-    if (filter) {
-      params.set('year', String(filter.year))
-      params.set('month', String(filter.month))
-    }
+    if (range?.from) params.set('from', range.from)
+    if (range?.to) params.set('to', range.to)
+    if (limit) params.set('limit', String(limit))
     const qs = params.toString()
     return fetchApi<any[]>(`/snapshots${qs ? `?${qs}` : ''}`, { cache: 'no-store', signal })
+  },
+
+  /**
+   * 선택된 스냅샷을 id 로 직접 조회. 기간 필터를 바꿔 목록에서 사라진 선택 항목도
+   * 계속 비교·표시할 수 있게 한다.
+   */
+  getByIds: (ids: string[], signal?: AbortSignal) => {
+    const empty: SnapshotDetail[] = []
+    if (ids.length === 0) return Promise.resolve({ success: true as const, data: empty })
+    return fetchApi<SnapshotDetail[]>(`/snapshots?ids=${ids.join(',')}`, { cache: 'no-store', signal })
   },
 
   getDetail: (id: string, signal?: AbortSignal) =>

@@ -17,6 +17,8 @@ import {
 import type { CashAccount } from '@/types/cash'
 
 const MAX_HOLDINGS_PER_SNAPSHOT = 200
+const MAX_COMPARE_IDS = 10
+const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/
 
 
 // POST /api/snapshots - 스냅샷 생성
@@ -244,19 +246,44 @@ export async function GET(request: NextRequest) {
     const userId = ctx.portfolioUserId
 
     const { searchParams } = new URL(request.url)
+
+    // ?ids=a,b,c — 선택된 스냅샷만 직접 조회한다. 목록은 기간 필터로 갈아끼워지지만
+    // 선택은 유지돼야 하므로, 현재 목록에 없는 id 도 화면이 계속 그릴 수 있어야 한다.
+    const idsParam = searchParams.get('ids')
+    if (idsParam !== null) {
+      const ids = idsParam.split(',').map((v) => v.trim()).filter(Boolean)
+      if (ids.length === 0) {
+        return NextResponse.json({ success: true, data: [] })
+      }
+      if (ids.length > MAX_COMPARE_IDS) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: { code: 'INVALID_REQUEST', message: `비교는 최대 ${MAX_COMPARE_IDS}개까지 가능합니다.` },
+          },
+          { status: 400 }
+        )
+      }
+      const selected = await snapshotService.getByIds(userId, ids)
+      return NextResponse.json({ success: true, data: selected })
+    }
+
     const rawLimit = parseInt(searchParams.get('limit') || '20', 10)
     const limit = Number.isFinite(rawLimit) ? Math.max(1, Math.min(rawLimit, 100)) : 20
     const cursor = searchParams.get('cursor')
 
-    // 연/월 필터 (둘 다 유효할 때만 적용)
-    const yearRaw = parseInt(searchParams.get('year') || '', 10)
-    const monthRaw = parseInt(searchParams.get('month') || '', 10)
-    const filter =
-      Number.isInteger(yearRaw) && monthRaw >= 1 && monthRaw <= 12
-        ? { year: yearRaw, month: monthRaw }
+    // 기간 범위 필터 (YYYY-MM-DD, 양 끝 포함). 한쪽만 줘도 된다.
+    const from = searchParams.get('from')
+    const to = searchParams.get('to')
+    const range =
+      (from && ISO_DATE_PATTERN.test(from)) || (to && ISO_DATE_PATTERN.test(to))
+        ? {
+            ...(from && ISO_DATE_PATTERN.test(from) ? { from } : {}),
+            ...(to && ISO_DATE_PATTERN.test(to) ? { to } : {}),
+          }
         : undefined
 
-    const { data: snapshots, pagination } = await snapshotService.getList(userId, limit, cursor || undefined, filter)
+    const { data: snapshots, pagination } = await snapshotService.getList(userId, limit, cursor || undefined, range)
 
     return NextResponse.json({
       success: true,
