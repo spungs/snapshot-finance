@@ -148,6 +148,45 @@ export async function getUsdExchangeRate(): Promise<number> {
 }
 
 /**
+ * 과거 날짜 환율 소스. 앞에서부터 시도하고 첫 성공을 쓴다.
+ *
+ * fawazahmed0 는 **2024-03-06 이전 데이터가 없어** 404 를 낸다(검증: 03-06 200 / 03-01 404).
+ * 그래서 ECB 기반 frankfurter 를 뒤에 둔다 — 1999년까지 커버하고 키도 필요 없다.
+ * 단 ECB 는 영업일만 있어 주말·공휴일을 요청하면 직전 영업일 값을 돌려준다
+ * (예: 2021-01-02 토 → 2020-12-31 값). 그 날의 기록으로는 이게 최선이라 그대로 쓴다.
+ */
+const HISTORICAL_SOURCES: Array<{
+    name: string
+    url: (date: string) => string
+    parse: (data: unknown) => number | null
+}> = [
+    {
+        name: 'fawazahmed0-jsdelivr',
+        url: (d) => `https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@${d}/v1/currencies/usd.json`,
+        parse: (data) => {
+            const rate = (data as { usd?: { krw?: unknown } })?.usd?.krw
+            return typeof rate === 'number' && rate > 0 ? rate : null
+        },
+    },
+    {
+        name: 'fawazahmed0-mirror',
+        url: (d) => `https://${d}.currency-api.pages.dev/v1/currencies/usd.json`,
+        parse: (data) => {
+            const rate = (data as { usd?: { krw?: unknown } })?.usd?.krw
+            return typeof rate === 'number' && rate > 0 ? rate : null
+        },
+    },
+    {
+        name: 'frankfurter-ecb',
+        url: (d) => `https://api.frankfurter.dev/v1/${d}?base=USD&symbols=KRW`,
+        parse: (data) => {
+            const rate = (data as { rates?: { KRW?: unknown } })?.rates?.KRW
+            return typeof rate === 'number' && rate > 0 ? rate : null
+        },
+    },
+]
+
+/**
  * 특정 과거 날짜(YYYY-MM-DD)의 USD→KRW 환율.
  *
  * 과거 스냅샷 작성 시 "그 날의 환율"이 필요하다. 기존에는 클라이언트가
@@ -155,7 +194,6 @@ export async function getUsdExchangeRate(): Promise<number> {
  * Yahoo → KIS 해외시세로 교체되면서 KIS 에 없는 `KRW=X` 는 항상 null 을 반환했고,
  * 결과적으로 모든 과거 스냅샷이 FALLBACK_USD_RATE 로 굳어졌다.
  *
- * fawazahmed0/currency-api 는 날짜별 스냅샷 엔드포인트를 제공하므로 이를 사용한다.
  * 조회 실패 시 null — 호출부가 "당시 환율 확인 불가"를 사용자에게 알릴 수 있게 한다.
  */
 export async function getUsdExchangeRateOn(date: string): Promise<number | null> {
@@ -169,20 +207,14 @@ export async function getUsdExchangeRateOn(date: string): Promise<number | null>
         // fail-open
     }
 
-    const urls = [
-        `https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@${date}/v1/currencies/usd.json`,
-        `https://${date}.currency-api.pages.dev/v1/currencies/usd.json`,
-    ]
-
-    for (const url of urls) {
+    for (const source of HISTORICAL_SOURCES) {
         const controller = new AbortController()
         const timer = setTimeout(() => controller.abort(), 4000)
         try {
-            const res = await fetch(url, { cache: 'no-store', signal: controller.signal })
+            const res = await fetch(source.url(date), { cache: 'no-store', signal: controller.signal })
             if (!res.ok) continue
-            const data = await res.json()
-            const rate = data?.usd?.krw
-            if (typeof rate === 'number' && rate > 0) {
+            const rate = source.parse(await res.json())
+            if (rate !== null) {
                 // 과거 환율은 변하지 않으므로 길게 캐시한다.
                 cacheSet(
                     cacheKey,
@@ -192,11 +224,12 @@ export async function getUsdExchangeRateOn(date: string): Promise<number | null>
                 return rate
             }
         } catch (e) {
-            console.warn(`Historical FX fetch failed (${url}):`, e instanceof Error ? e.message : e)
+            console.warn(`Historical FX source ${source.name} failed for ${date}:`, e instanceof Error ? e.message : e)
         } finally {
             clearTimeout(timer)
         }
     }
 
+    console.warn(`All historical FX sources failed for ${date}.`)
     return null
 }
