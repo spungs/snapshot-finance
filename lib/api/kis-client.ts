@@ -350,14 +350,20 @@ export class KisClient {
         // Domestic Stock
         if (market === 'KOSPI' || market === 'KOSDAQ') {
             const cleanSymbol = symbol.split('.')[0]
-            const path = '/uapi/domestic-stock/v1/quotations/inquire-daily-price'
-            const tr_id = 'FHKST01010400'
+            // inquire-daily-price(FHKST01010400)는 최근 30영업일치만 반환해서 그보다 과거
+            // 날짜는 항상 null 이 됐다(과거 스냅샷의 국내 종목 종가 조회 불가). 조회 기간을
+            // 지정할 수 있는 국내주식 기간별시세(FHKST03010100)로 조회한다.
+            const path = '/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice'
+            const tr_id = 'FHKST03010100'
+            const ymd = date.replace(/-/g, '')
 
             const params = new URLSearchParams({
                 FID_COND_MRKT_DIV_CODE: 'J',
                 FID_INPUT_ISCD: cleanSymbol,
+                FID_INPUT_DATE_1: ymd,
+                FID_INPUT_DATE_2: ymd,
                 FID_PERIOD_DIV_CODE: 'D', // Daily
-                FID_ORG_ADJ_PRC: '1', // Adjusted price
+                FID_ORG_ADJ_PRC: '1', // 기존 동작 유지 (수정주가 미반영)
             })
 
             const response = await fetchWithTimeout(`${BASE_URL}${path}?${params}`, {
@@ -396,12 +402,13 @@ export class KisClient {
                 throw new Error(`KIS API Error: ${data.msg1}`)
             }
 
-            // Find specific date
+            // 기간별시세는 output2 에 일자별 배열을 담는다. 휴장일이면 비어 있다.
             // Date format in API: YYYYMMDD
             const targetDate = date.replace(/-/g, '')
-            const output = data.output.find((item: any) => item.stck_bsop_date === targetDate)
+            const rows: Array<Record<string, string>> = Array.isArray(data.output2) ? data.output2 : []
+            const output = rows.find((item) => item?.stck_bsop_date === targetDate)
 
-            if (!output) {
+            if (!output || !output.stck_clpr) {
                 return null
             }
 

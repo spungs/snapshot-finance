@@ -37,6 +37,12 @@ interface HoldingInput {
    * 'auto' 면 스냅샷 시점 환율을 쓰는 기본값이라 날짜 변경 시 갱신한다.
    */
   purchaseRateSource: 'auto' | 'manual'
+  /**
+   * true 면 시세 조회에 실패해 붙여넣은 시트의 가격을 그대로 쓰고 있다는 뜻.
+   * 시트의 "현재가"는 시트를 만든 시점 값이라 스냅샷 날짜의 종가가 아닐 수 있어
+   * UI 에 반드시 표시한다.
+   */
+  priceFromSheet?: boolean
 }
 
 /**
@@ -167,6 +173,7 @@ export default function NewSnapshotPage() {
             return {
               ...h,
               currentPrice: typeof price === 'number' ? price.toString() : '',
+              priceFromSheet: false,
               currency,
               purchaseRate: keepRate
                 ? h.purchaseRate
@@ -288,22 +295,29 @@ export default function NewSnapshotPage() {
     setHoldings(mapped)
     setError(null)
 
-    // 시트에 현재가가 없던 종목만 조회해 채운다.
-    const missing = mapped.filter((h) => !h.currentPrice)
-    if (missing.length === 0) return
+    // 시트의 "현재가"는 시트를 만든 시점의 값이라 스냅샷 날짜의 종가라는 보장이 없다.
+    // (과거 날짜 스냅샷에 오늘 시세가 박혀 수익률이 통째로 어긋난 사고가 있었다.)
+    // 그래서 값이 있어도 **항상** 스냅샷 날짜 기준으로 다시 조회하고,
+    // 조회에 실패한 종목만 시트 값을 남기되 priceFromSheet 로 표시한다.
+    const targets = mapped.filter((h) => h.stockCode)
+    if (targets.length === 0) return
 
     const controller = new AbortController()
     dateChangeAbortRef.current?.abort()
     dateChangeAbortRef.current = controller
     setUpdatingPrices(true)
-    fetchPricesBatch(missing, snapshotDate === today ? null : snapshotDate, controller.signal)
+    fetchPricesBatch(targets, snapshotDate === today ? null : snapshotDate, controller.signal)
       .then((priceByCode) => {
         if (controller.signal.aborted) return
-        setHoldings((prev) => prev.map((h) => (
-          h.currentPrice || !(h.stockCode in priceByCode)
-            ? h
-            : { ...h, currentPrice: priceByCode[h.stockCode].toString() }
-        )))
+        setHoldings((prev) => prev.map((h) => {
+          if (!h.stockCode) return h
+          const price = priceByCode[h.stockCode]
+          if (typeof price === 'number') {
+            return { ...h, currentPrice: price.toString(), priceFromSheet: false }
+          }
+          // 조회 실패 — 시트 값이라도 남겨 사용자가 고칠 수 있게 하고, 출처를 표시한다.
+          return { ...h, priceFromSheet: Boolean(h.currentPrice) }
+        }))
       })
       .catch((e) => {
         if ((e as Error).name !== 'AbortError') console.error('Failed to fetch pasted prices', e)
@@ -620,7 +634,14 @@ export default function NewSnapshotPage() {
 
                 {holding.stockCode && (holding.currentPrice ? (
                   <div className="mt-2 flex items-center justify-between gap-2 text-[11px]">
-                    <span className="text-muted-foreground">{priceLabel}</span>
+                    <span className="text-muted-foreground">
+                      {priceLabel}
+                      {holding.priceFromSheet && (
+                        <span className="ml-1 text-primary">
+                          · {language === 'ko' ? '조회 실패, 붙여넣은 값' : 'lookup failed, pasted value'}
+                        </span>
+                      )}
+                    </span>
                     <span className="font-bold text-foreground numeric">
                       {formatCurrency(parseFloat(holding.currentPrice) || 0, holding.currency)}
                     </span>
