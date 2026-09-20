@@ -38,6 +38,24 @@ export function SnapshotCompareSheet({ open, snapshots, currentHoldings, onClose
         [snapshots],
     )
 
+    /**
+     * 열 머리글. 같은 날 스냅샷이 둘 이상이면(수동 생성 + 자동 생성 등) 날짜만으로는
+     * 구분이 안 되므로 그 날짜에 한해 시각을 덧붙인다.
+     */
+    const labelById = useMemo(() => {
+        const counts = new Map<string, number>()
+        for (const s of ordered) {
+            const d = formatDate(s.snapshotDate, 'yy.MM.dd')
+            counts.set(d, (counts.get(d) ?? 0) + 1)
+        }
+        const out: Record<string, string> = {}
+        for (const s of ordered) {
+            const d = formatDate(s.snapshotDate, 'yy.MM.dd')
+            out[s.id] = (counts.get(d) ?? 0) > 1 ? `${d} ${formatDate(s.snapshotDate, 'HH:mm')}` : d
+        }
+        return out
+    }, [ordered])
+
     // 종목 탭: 행=종목, 열=스냅샷. 어느 스냅샷에도 없는 종목은 나오지 않는다.
     const holdingRows = useMemo(() => {
         const names = new Map<string, string>()
@@ -127,7 +145,7 @@ export function SnapshotCompareSheet({ open, snapshots, currentHoldings, onClose
                                 return (
                                     <tr key={s.id} className="border-t border-border">
                                         <td className="px-4 py-2.5 font-semibold text-foreground numeric whitespace-nowrap">
-                                            {formatDate(s.snapshotDate, 'yy.MM.dd')}
+                                            {labelById[s.id]}
                                         </td>
                                         <td className="px-3 py-2.5 text-right text-foreground numeric whitespace-nowrap">
                                             {formatCurrency(Number(s.totalValue), 'KRW')}
@@ -155,7 +173,7 @@ export function SnapshotCompareSheet({ open, snapshots, currentHoldings, onClose
                                     </th>
                                     {ordered.map((s) => (
                                         <th key={s.id} className="text-right font-semibold px-3 py-2 whitespace-nowrap numeric">
-                                            {formatDate(s.snapshotDate, 'yy.MM.dd')}
+                                            {labelById[s.id]}
                                         </th>
                                     ))}
                                 </tr>
