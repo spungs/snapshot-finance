@@ -388,8 +388,9 @@ export default function SnapshotDetailClient({ snapshot }: Props) {
                                         )}
                                     </div>
                                     <div className="text-right">
+                                        {/* 스냅샷은 과거 시점 기록이라 '현재가'는 오해를 부른다 — 그 시점 종가다. */}
                                         <div className="text-[11px] text-muted-foreground">
-                                            {t('currentPrice')}
+                                            {t('closingPrice')}
                                         </div>
                                         <div className="text-[13px] font-bold text-foreground mt-0.5 numeric">
                                             {formatCurrency(curPrice, currency)}
