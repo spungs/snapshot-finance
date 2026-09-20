@@ -146,3 +146,57 @@ export async function getUsdExchangeRate(): Promise<number> {
     const { rate } = await getUsdExchangeRateWithMeta()
     return rate
 }
+
+/**
+ * 특정 과거 날짜(YYYY-MM-DD)의 USD→KRW 환율.
+ *
+ * 과거 스냅샷 작성 시 "그 날의 환율"이 필요하다. 기존에는 클라이언트가
+ * `/api/stocks/history?symbol=KRW=X&market=FX` 로 조회했지만, kis-client 의 US 분기가
+ * Yahoo → KIS 해외시세로 교체되면서 KIS 에 없는 `KRW=X` 는 항상 null 을 반환했고,
+ * 결과적으로 모든 과거 스냅샷이 FALLBACK_USD_RATE 로 굳어졌다.
+ *
+ * fawazahmed0/currency-api 는 날짜별 스냅샷 엔드포인트를 제공하므로 이를 사용한다.
+ * 조회 실패 시 null — 호출부가 "당시 환율 확인 불가"를 사용자에게 알릴 수 있게 한다.
+ */
+export async function getUsdExchangeRateOn(date: string): Promise<number | null> {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null
+
+    const cacheKey = exchangeRateKey(date)
+    try {
+        const cached = await cacheGet<ExchangeRateCacheEntry>(cacheKey)
+        if (cached && Number.isFinite(cached.rate) && cached.rate > 0) return cached.rate
+    } catch {
+        // fail-open
+    }
+
+    const urls = [
+        `https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@${date}/v1/currencies/usd.json`,
+        `https://${date}.currency-api.pages.dev/v1/currencies/usd.json`,
+    ]
+
+    for (const url of urls) {
+        const controller = new AbortController()
+        const timer = setTimeout(() => controller.abort(), 4000)
+        try {
+            const res = await fetch(url, { cache: 'no-store', signal: controller.signal })
+            if (!res.ok) continue
+            const data = await res.json()
+            const rate = data?.usd?.krw
+            if (typeof rate === 'number' && rate > 0) {
+                // 과거 환율은 변하지 않으므로 길게 캐시한다.
+                cacheSet(
+                    cacheKey,
+                    { rate, updatedAt: date } satisfies ExchangeRateCacheEntry,
+                    60 * 60 * 24 * 30,
+                ).catch(() => { })
+                return rate
+            }
+        } catch (e) {
+            console.warn(`Historical FX fetch failed (${url}):`, e instanceof Error ? e.message : e)
+        } finally {
+            clearTimeout(timer)
+        }
+    }
+
+    return null
+}

@@ -12,6 +12,7 @@ import { formatCurrency } from '@/lib/utils/formatters'
 import { useLanguage } from '@/lib/i18n/context'
 import { cn } from '@/lib/utils'
 import { FALLBACK_USD_RATE } from '@/lib/api/exchange-rate'
+import { toPriceApiMarket, detectMarketCurrency } from '@/lib/utils/market-hours'
 import {
     CashAccountEditor,
     type CashAccountRow,
@@ -23,11 +24,46 @@ import type { CashAccount } from '@/types/cash'
 interface HoldingInput {
     stockName: string
     stockCode: string
+    /** Stock.market 원본값 (KOSPI/KOSDAQ/NASD/NYSE/AMEX/LSE). 통화 판정과 시세 조회에 쓴다. */
+    market: string
     quantity: string
     averagePrice: string
     currentPrice: string
     currency: 'KRW' | 'USD'
     purchaseRate: string
+}
+
+/**
+ * 여러 종목의 가격을 배치 엔드포인트로 한 번에 조회한다 (stockCode → 가격).
+ * 종목마다 요청을 따로 치면 ratelimit(10req/10s)에 걸려 일부만 채워진다.
+ */
+async function fetchPricesBatch(
+    targets: Array<{ stockCode: string; market: string }>,
+    date: string | null,
+    signal: AbortSignal,
+): Promise<Record<string, number>> {
+    const out: Record<string, number> = {}
+    if (targets.length === 0) return out
+
+    const res = await fetch('/api/stocks/prices/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            date,
+            items: targets.map((t) => ({
+                symbol: t.stockCode,
+                market: toPriceApiMarket(t.market, t.stockCode),
+            })),
+        }),
+        signal,
+    })
+    const data = await res.json()
+    if (!data?.success) return out
+
+    for (const [code, price] of Object.entries(data.data.prices as Record<string, number | null>)) {
+        if (typeof price === 'number' && price > 0) out[code] = price
+    }
+    return out
 }
 
 export default function EditSnapshotPage() {
@@ -44,6 +80,8 @@ export default function EditSnapshotPage() {
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
     const [updatingPrices, setUpdatingPrices] = useState(false)
+    // 해당 날짜 환율을 못 받아왔을 때 true — 폴백 상수로 조용히 저장되는 것을 막는다.
+    const [rateUnavailable, setRateUnavailable] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [summaryDisplayCurrency, setSummaryDisplayCurrency] = useState<'KRW' | 'USD'>('KRW')
     const [exchangeRate, setExchangeRate] = useState<number>(FALLBACK_USD_RATE)
@@ -100,7 +138,7 @@ export default function EditSnapshotPage() {
 
                     const mappedHoldings = snapshot.holdings.map((h: {
                         stockCode: string
-                        stock: { stockName: string; stockCode: string }
+                        stock: { stockName: string; stockCode: string; nameKo?: string; market?: string }
                         quantity: number | string
                         averagePrice: number | string
                         currentPrice: number | string
@@ -113,8 +151,9 @@ export default function EditSnapshotPage() {
                             purchaseRate = String(FALLBACK_USD_RATE)
                         }
                         return {
-                            stockName: h.stock.stockName,
+                            stockName: h.stock.stockName ?? h.stock.nameKo ?? h.stock.stockCode,
                             stockCode: h.stock.stockCode,
+                            market: h.stock.market ?? '',
                             quantity: h.quantity.toString(),
                             averagePrice: h.averagePrice.toString(),
                             currentPrice: h.currentPrice.toString(),
@@ -148,45 +187,54 @@ export default function EditSnapshotPage() {
 
         async function updateData() {
             setUpdatingPrices(true)
+            setRateUnavailable(false)
             try {
-                if (snapshotDate === today) {
-                    if (!controller.signal.aborted) setExchangeRate(FALLBACK_USD_RATE)
-                } else {
-                    try {
-                        const res = await fetch(`/api/stocks/history?symbol=KRW=X&market=FX&date=${snapshotDate}`, { signal: controller.signal })
-                        const data = await res.json()
-                        if (controller.signal.aborted) return
-                        setExchangeRate(data?.success && data?.data?.close ? data.data.close : FALLBACK_USD_RATE)
-                    } catch (e) {
-                        if ((e as Error).name === 'AbortError') return
-                        setExchangeRate(FALLBACK_USD_RATE)
-                    }
-                }
-
-                if (holdings.length > 0 && !(holdings.length === 1 && !holdings[0].stockCode)) {
-                    const updatedHoldings = await Promise.all(holdings.map(async (h) => {
-                        if (!h.stockCode) return h
-                        const market = isNaN(Number(h.stockCode)) ? 'US' : 'KOSPI'
-                        let price = h.currentPrice
-                        try {
-                            if (snapshotDate === today) {
-                                const res = await fetch(`/api/kis/price?symbol=${h.stockCode}&market=${market}`, { signal: controller.signal })
-                                const data = await res.json()
-                                if (data?.success && data?.data?.price) price = data.data.price.toString()
-                            } else {
-                                const res = await fetch(`/api/stocks/history?symbol=${h.stockCode}&market=${market}&date=${snapshotDate}`, { signal: controller.signal })
-                                const data = await res.json()
-                                if (data?.success && data?.data?.close) price = data.data.close.toString()
-                            }
-                        } catch (e) {
-                            if ((e as Error).name === 'AbortError') return h
-                            console.error(`Failed to update price for ${h.stockCode}`, e)
-                        }
-                        return { ...h, currentPrice: price }
-                    }))
+                // 1) 환율 — 과거 날짜면 그 날짜의 환율. 구버전은 /api/stocks/history?market=FX 를
+                //    썼는데 KIS 로 교체된 뒤 KRW=X 를 못 찾아 항상 폴백 상수로 굳어졌다.
+                let currentRate = FALLBACK_USD_RATE
+                try {
+                    const url = snapshotDate === today
+                        ? '/api/exchange-rate'
+                        : `/api/exchange-rate?date=${snapshotDate}`
+                    const res = await fetch(url, { signal: controller.signal })
+                    const data = await res.json()
                     if (controller.signal.aborted) return
-                    setHoldings(updatedHoldings)
+                    if (data?.success && data?.rate) {
+                        currentRate = data.rate
+                    } else {
+                        setRateUnavailable(true)
+                    }
+                } catch (e) {
+                    if ((e as Error).name === 'AbortError') return
+                    setRateUnavailable(true)
                 }
+                setExchangeRate(currentRate)
+
+                // 2) 시세 — 배치 1회. 실패한 종목은 빈칸으로 두고 저장 시 명시적으로 알린다.
+                const targets = holdings.filter((h) => h.stockCode)
+                if (targets.length > 0) {
+                    const priceByCode = await fetchPricesBatch(
+                        targets,
+                        snapshotDate === today ? null : snapshotDate,
+                        controller.signal,
+                    )
+                    if (controller.signal.aborted) return
+
+                    setHoldings((prev) => prev.map((h) => {
+                        if (!h.stockCode) return h
+                        const price = priceByCode[h.stockCode]
+                        const currency = detectMarketCurrency(h.market, h.stockCode)
+                        return {
+                            ...h,
+                            currentPrice: typeof price === 'number' ? price.toString() : '',
+                            currency,
+                            purchaseRate: currency === 'USD' ? currentRate.toString() : '1',
+                        }
+                    }))
+                }
+            } catch (e) {
+                if ((e as Error).name === 'AbortError') return
+                console.error('Failed to refresh snapshot data', e)
             } finally {
                 if (!controller.signal.aborted) setUpdatingPrices(false)
             }
@@ -202,6 +250,7 @@ export default function EditSnapshotPage() {
             {
                 stockName: '',
                 stockCode: '',
+                market: '',
                 quantity: '',
                 averagePrice: '',
                 currentPrice: '',
@@ -226,11 +275,20 @@ export default function EditSnapshotPage() {
         index: number,
         stock: { stockCode: string; nameKo: string; stockName?: string; market?: string }
     ) {
+        const market = stock.market ?? ''
+        // 통화는 즉시 확정. Stock.market 은 NASD/NYSE/AMEX 이므로 'US' 와 직접 비교하면
+        // 미국 종목이 전부 KRW 로 기록된다 ($ 금액이 환산 없이 원화로 저장되는 사고).
+        const newCurrency = detectMarketCurrency(market, stock.stockCode)
+        const newPurchaseRate = newCurrency === 'USD' ? exchangeRate.toString() : '1'
+
         const updated = [...holdings]
         updated[index] = {
             ...updated[index],
             stockName: stock.stockName ?? stock.nameKo,
             stockCode: stock.stockCode,
+            market,
+            currency: newCurrency,
+            purchaseRate: newPurchaseRate,
         }
         setHoldings(updated)
 
@@ -238,20 +296,12 @@ export default function EditSnapshotPage() {
         stockSelectAbortsRef.current.add(controller)
 
         try {
-            const market = stock.market || (isNaN(Number(stock.stockCode)) ? 'US' : 'KOSPI')
-            const newCurrency = market === 'US' ? 'USD' : 'KRW'
-            const newPurchaseRate = market === 'US' ? exchangeRate.toString() : '1'
-
-            let price = '0'
-            if (snapshotDate === today) {
-                const res = await fetch(`/api/kis/price?symbol=${stock.stockCode}&market=${market}`, { signal: controller.signal })
-                const data = await res.json()
-                if (data?.success && data?.data?.price) price = data.data.price.toString()
-            } else {
-                const res = await fetch(`/api/stocks/history?symbol=${stock.stockCode}&market=${market}&date=${snapshotDate}`, { signal: controller.signal })
-                const data = await res.json()
-                if (data?.success && data?.data?.close) price = data.data.close.toString()
-            }
+            const priceByCode = await fetchPricesBatch(
+                [{ stockCode: stock.stockCode, market }],
+                snapshotDate === today ? null : snapshotDate,
+                controller.signal,
+            )
+            const price = priceByCode[stock.stockCode]
 
             if (controller.signal.aborted) return
 
@@ -260,9 +310,7 @@ export default function EditSnapshotPage() {
                 if (!current[index] || current[index].stockCode !== stock.stockCode) return prev
                 current[index] = {
                     ...current[index],
-                    currentPrice: price === '0' ? current[index].currentPrice : price,
-                    currency: newCurrency,
-                    purchaseRate: newPurchaseRate,
+                    currentPrice: typeof price === 'number' ? price.toString() : '',
                 }
                 return current
             })
@@ -309,18 +357,33 @@ export default function EditSnapshotPage() {
         e.preventDefault()
         setError(null)
 
-        const validHoldings = holdings.filter(
-            (h) =>
-                h.stockCode &&
-                parseFloat(h.quantity) > 0 &&
-                parseFloat(h.averagePrice) > 0 &&
-                parseFloat(h.currentPrice) > 0,
-        )
+        // 종목이 선택된 행은 전부 저장 대상. 값이 빈 행을 말없이 걸러내면
+        // 사용자 모르게 종목이 사라진다 → 어떤 종목이 왜 빠지는지 알린다.
+        const selected = holdings.filter((h) => h.stockCode)
 
-        if (validHoldings.length === 0) {
+        if (selected.length === 0) {
             setError(t('minHoldingsError'))
             return
         }
+
+        const incomplete = selected.filter(
+            (h) =>
+                !(parseFloat(h.quantity) > 0) ||
+                !(parseFloat(h.averagePrice) > 0) ||
+                !(parseFloat(h.currentPrice) > 0),
+        )
+
+        if (incomplete.length > 0) {
+            const names = incomplete.map((h) => h.stockName || h.stockCode).join(', ')
+            setError(
+                language === 'ko'
+                    ? `${incomplete.length}개 종목의 수량·평단가·가격이 비어 있습니다: ${names}`
+                    : `${incomplete.length} holding(s) missing quantity, average price, or price: ${names}`,
+            )
+            return
+        }
+
+        const validHoldings = selected
 
         setSaving(true)
         try {
@@ -569,6 +632,11 @@ export default function EditSnapshotPage() {
                         </span>
                         <span className="text-[12px] font-bold text-foreground numeric">
                             {formatCurrency(exchangeRate, 'KRW')} / USD
+                            {rateUnavailable && (
+                                <span className="ml-1.5 font-medium text-muted-foreground">
+                                    ({language === 'ko' ? '조회 실패, 기본값' : 'fallback'})
+                                </span>
+                            )}
                         </span>
                     </div>
                     {isHistorical && (
@@ -633,14 +701,25 @@ export default function EditSnapshotPage() {
                                     disabled={saving}
                                 />
 
-                                {holding.stockCode && (
+                                {holding.stockCode && (holding.currentPrice ? (
                                     <div className="mt-2 flex items-center justify-between gap-2 text-[11px]">
                                         <span className="text-muted-foreground">{priceLabel}</span>
                                         <span className="font-bold text-foreground numeric">
                                             {formatCurrency(parseFloat(holding.currentPrice) || 0, holding.currency)}
                                         </span>
                                     </div>
-                                )}
+                                ) : (
+                                    /* 시세 조회 실패 — 빈 채로 두면 저장 시 이 종목이 빠진다. 직접 입력받는다. */
+                                    <div className="mt-2">
+                                        <FormattedNumberInput
+                                            label={`${priceLabel} · ${language === 'ko' ? '조회 실패, 직접 입력' : 'not found, enter manually'}`}
+                                            prefix={holding.currency === 'USD' ? '$' : '₩'}
+                                            value={holding.currentPrice}
+                                            disabled={saving}
+                                            onChange={(val) => updateHolding(index, 'currentPrice', val)}
+                                        />
+                                    </div>
+                                ))}
 
                                 <div className="mt-3 grid grid-cols-2 gap-2">
                                     <FormattedNumberInput

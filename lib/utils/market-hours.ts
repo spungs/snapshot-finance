@@ -57,3 +57,30 @@ export function normalizeMarket(market: string | null | undefined): Market | nul
     if (m === 'US' || m === 'NASD' || m === 'NAS' || m === 'NYSE' || m === 'NYS' || m === 'AMEX' || m === 'AMS') return 'US'
     return null
 }
+
+/**
+ * Stock.market(KOSPI/KOSDAQ/NASD/NYSE/AMEX/LSE) → 시세 API 가 받는 market 파라미터.
+ *
+ * `/api/kis/price` 와 `/api/stocks/history` 는 'KOSPI'|'KOSDAQ'|'US' 만 허용하고,
+ * 그 외 값은 각각 조용히 KOSPI 로 폴백하거나 400 을 낸다. DB 에는 'US' 가 한 건도 없고
+ * NASD/NYSE/AMEX 로만 들어있으므로, 호출 전 반드시 이 함수를 거쳐야 한다.
+ */
+export function toPriceApiMarket(
+    market: string | null | undefined,
+    stockCode?: string,
+): 'KOSPI' | 'KOSDAQ' | 'US' {
+    const m = (market ?? '').toUpperCase()
+    if (m === 'KOSDAQ' || m === 'KQ') return 'KOSDAQ'
+    if (m === 'KOSPI' || m === 'KS') return 'KOSPI'
+    if (normalizeMarket(m) === 'US' || m === 'LSE') return 'US'
+    // market 미상 — 숫자 종목코드면 국내, 아니면 미국으로 추정
+    return stockCode && stockCode.trim() !== '' && !Number.isNaN(Number(stockCode)) ? 'KOSPI' : 'US'
+}
+
+/** 종목이 기록될 통화. LSE 는 USD 표기 라인이므로 USD. */
+export function detectMarketCurrency(
+    market: string | null | undefined,
+    stockCode?: string,
+): 'KRW' | 'USD' {
+    return toPriceApiMarket(market, stockCode) === 'US' ? 'USD' : 'KRW'
+}

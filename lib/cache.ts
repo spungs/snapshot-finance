@@ -94,4 +94,6 @@ export const PRICE_CACHE_TTL_SECONDS = 14400 // 4시간
 export const EXCHANGE_RATE_CACHE_TTL_SECONDS = 21600 // 6시간 — 환율 변동 작음
 
 export const stockPriceKey = (stockCode: string) => `stock:price:${stockCode}`
-export const exchangeRateKey = () => `exchange:usd-krw`
+// date 를 주면 그 날짜의 과거 환율 키. 과거 값은 변하지 않으므로 별도 키로 길게 캐시한다.
+export const exchangeRateKey = (date?: string) =>
+    date ? `exchange:usd-krw:${date}` : `exchange:usd-krw`

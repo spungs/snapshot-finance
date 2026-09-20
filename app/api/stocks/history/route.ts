@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { kisClient } from '@/lib/api/kis-client'
+import { getUsdExchangeRateOn } from '@/lib/api/exchange-rate'
 import { auth } from '@/lib/auth'
 import { ratelimit, checkRateLimit } from '@/lib/ratelimit'
 
@@ -44,11 +45,18 @@ export async function GET(request: NextRequest) {
             )
         }
 
-        // Special handling for FX (Exchange Rate)
+        // FX(환율) — kisClient 의 US 분기가 Yahoo → KIS 해외시세로 교체된 뒤로는
+        // KIS 에 없는 'KRW=X' 를 조회해 항상 null 을 반환했고, 그런데도 success:true 로
+        // 응답해 호출부가 조용히 폴백 상수를 쓰게 만들었다. 전용 FX 소스로 연결한다.
         if (market === 'FX') {
-            // Use 'US' logic in kisClient which uses Yahoo Finance, valid for tickers like "KRW=X"
-            const result = await kisClient.getDailyPrice(symbol, 'US', date)
-            return NextResponse.json({ success: true, data: result })
+            const rate = await getUsdExchangeRateOn(date)
+            if (rate === null) {
+                return NextResponse.json(
+                    { success: false, error: { message: 'No exchange rate found for this date' } },
+                    { status: 404 }
+                )
+            }
+            return NextResponse.json({ success: true, data: { date, close: rate } })
         }
 
         const result = await kisClient.getDailyPrice(symbol, market, date)
