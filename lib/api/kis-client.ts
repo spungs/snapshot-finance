@@ -363,7 +363,11 @@ export class KisClient {
                 FID_INPUT_DATE_1: ymd,
                 FID_INPUT_DATE_2: ymd,
                 FID_PERIOD_DIV_CODE: 'D', // Daily
-                FID_ORG_ADJ_PRC: '1', // 기존 동작 유지 (수정주가 미반영)
+                // 0=수정주가 반영, 1=원주가. **반드시 0** — 1이면 액면분할 전 원주가가 와서
+                // 분할 후 기준인 사용자 평단과 어긋난다. 실제 사고: 2011-11-01 삼성전자우가
+                // 642,000원(2018-05-16 50:1 분할 전 주가)으로 조회돼 수익률이 +1,050% 로 표시됐다.
+                // 해외 분기의 MODP:'1'(주식분할 조정)과도 이래야 기준이 일치한다.
+                FID_ORG_ADJ_PRC: '0',
             })
 
             const response = await fetchWithTimeout(`${BASE_URL}${path}?${params}`, {
@@ -549,7 +553,9 @@ export class KisClient {
                         FID_INPUT_DATE_1: startDate.replace(/-/g, ''),
                         FID_INPUT_DATE_2: bymd,
                         FID_PERIOD_DIV_CODE: 'D',
-                        FID_ORG_ADJ_PRC: '1', // 수정주가
+                        // 0=수정주가 반영, 1=원주가. 주석이 '수정주가'였지만 값은 반대였다.
+                        // 분할 전후가 섞이면 차트에 계단이 생기므로 0 으로 통일한다.
+                        FID_ORG_ADJ_PRC: '0',
                     })
 
                     const response = await fetchWithTimeout(`${BASE_URL}${path}?${params}`, {
