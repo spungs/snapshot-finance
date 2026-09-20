@@ -66,6 +66,32 @@ async function fetchPricesBatch(
     return out
 }
 
+/**
+ * 휴장일이면 직전 거래일로 바꿔준다 (신규 작성 화면과 동일 규칙).
+ * 조회에 실패하면 날짜를 건드리지 않는다 — 조용한 변경이 더 나쁘다.
+ */
+async function resolveTradingDay(
+    date: string,
+    markets: string[],
+    signal: AbortSignal,
+): Promise<string> {
+    if (markets.length === 0) return date
+    try {
+        const res = await fetch(
+            `/api/stocks/trading-day?date=${date}&markets=${markets.join(',')}`,
+            { signal },
+        )
+        const data = await res.json()
+        if (data?.success && data.data?.resolved && data.data.tradingDay) {
+            return data.data.tradingDay as string
+        }
+    } catch (e) {
+        if ((e as Error).name === 'AbortError') throw e
+        console.error('Trading day lookup failed', e)
+    }
+    return date
+}
+
 export default function EditSnapshotPage() {
     const { t, language } = useLanguage()
     const router = useRouter()
@@ -82,6 +108,8 @@ export default function EditSnapshotPage() {
     const [updatingPrices, setUpdatingPrices] = useState(false)
     // 해당 날짜 환율을 못 받아왔을 때 true — 폴백 상수로 조용히 저장되는 것을 막는다.
     const [rateUnavailable, setRateUnavailable] = useState(false)
+    // 휴장일이라 날짜를 직전 거래일로 옮겼을 때 알린다.
+    const [adjustedFrom, setAdjustedFrom] = useState<string | null>(null)
     const [error, setError] = useState<string | null>(null)
     const [summaryDisplayCurrency, setSummaryDisplayCurrency] = useState<'KRW' | 'USD'>('KRW')
     const [exchangeRate, setExchangeRate] = useState<number>(FALLBACK_USD_RATE)
@@ -189,6 +217,22 @@ export default function EditSnapshotPage() {
             setUpdatingPrices(true)
             setRateUnavailable(false)
             try {
+                // 0) 휴장일이면 직전 거래일로. 날짜가 바뀌면 이 effect 가 다시 돈다.
+                if (snapshotDate !== today) {
+                    const markets = Array.from(new Set(
+                        holdings.filter(h => h.stockCode)
+                            .map(h => (toPriceApiMarket(h.market, h.stockCode) === 'US' ? 'US' : 'KR')),
+                    ))
+                    const resolved = await resolveTradingDay(snapshotDate, markets, controller.signal)
+                    if (controller.signal.aborted) return
+                    if (resolved !== snapshotDate) {
+                        setAdjustedFrom(snapshotDate)
+                        setSnapshotDate(resolved)
+                        return
+                    }
+                }
+                setAdjustedFrom(null)
+
                 // 1) 환율 — 과거 날짜면 그 날짜의 환율. 구버전은 /api/stocks/history?market=FX 를
                 //    썼는데 KIS 로 교체된 뒤 KRW=X 를 못 찾아 항상 폴백 상수로 굳어졌다.
                 let currentRate = FALLBACK_USD_RATE
@@ -639,7 +683,14 @@ export default function EditSnapshotPage() {
                             )}
                         </span>
                     </div>
-                    {isHistorical && (
+                    {adjustedFrom && (
+                        <div className="mt-3 pt-3 border-t border-border text-[11px] text-primary leading-relaxed">
+                            {language === 'ko'
+                                ? `${adjustedFrom}은 휴장일이라 직전 거래일 ${snapshotDate}로 맞췄습니다.`
+                                : `${adjustedFrom} was a market holiday — adjusted to the previous trading day ${snapshotDate}.`}
+                        </div>
+                    )}
+                    {isHistorical && !adjustedFrom && (
                         <div className="mt-3 pt-3 border-t border-border text-[11px] text-primary leading-relaxed">
                             {t('historicalMode')}
                         </div>
