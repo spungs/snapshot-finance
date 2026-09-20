@@ -70,6 +70,15 @@ async function fetchPricesBatch(
  * 휴장일이면 직전 거래일로 바꿔준다 (신규 작성 화면과 동일 규칙).
  * 조회에 실패하면 날짜를 건드리지 않는다 — 조용한 변경이 더 나쁘다.
  */
+/** 보유 종목이 걸친 시장. 종목이 없으면 KR·US 둘 다 본다 (신규 작성 화면과 동일). */
+function marketsOf(holdings: Array<{ stockCode: string; market: string }>): string[] {
+    const codes = holdings.filter(h => h.stockCode)
+    if (codes.length === 0) return ['KR', 'US']
+    return Array.from(new Set(
+        codes.map(h => (toPriceApiMarket(h.market, h.stockCode) === 'US' ? 'US' : 'KR')),
+    ))
+}
+
 async function resolveTradingDay(
     date: string,
     markets: string[],
@@ -219,11 +228,7 @@ export default function EditSnapshotPage() {
             try {
                 // 0) 휴장일이면 직전 거래일로. 날짜가 바뀌면 이 effect 가 다시 돈다.
                 if (snapshotDate !== today) {
-                    const markets = Array.from(new Set(
-                        holdings.filter(h => h.stockCode)
-                            .map(h => (toPriceApiMarket(h.market, h.stockCode) === 'US' ? 'US' : 'KR')),
-                    ))
-                    const resolved = await resolveTradingDay(snapshotDate, markets, controller.signal)
+                    const resolved = await resolveTradingDay(snapshotDate, marketsOf(holdings), controller.signal)
                     if (controller.signal.aborted) return
                     if (resolved !== snapshotDate) {
                         setAdjustedFrom(snapshotDate)

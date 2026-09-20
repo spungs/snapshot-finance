@@ -87,6 +87,19 @@ async function fetchPricesBatch(
  * 주말·공휴일·임시 폐장(2021-12-31 한국 증시 등)에 스냅샷을 만들면 그날 종가가 없어
  * 전 종목 조회가 실패하고, 값이 빈 채로 저장되거나 붙여넣은 시트 값이 그대로 남는다.
  */
+/**
+ * 보유 종목이 걸친 시장. **종목이 아직 없으면 KR·US 둘 다** 로 본다.
+ * 빈 배열을 넘기면 거래일 판정을 건너뛰게 되는데, 날짜를 먼저 고르고 종목을 넣는
+ * 순서에서 휴장일이 그대로 저장되는 사고가 났다 (2021-10-04 개천절 대체공휴일).
+ */
+function marketsOf(holdings: Array<{ stockCode: string; market: string }>): string[] {
+  const codes = holdings.filter(h => h.stockCode)
+  if (codes.length === 0) return ['KR', 'US']
+  return Array.from(new Set(
+    codes.map(h => (toPriceApiMarket(h.market, h.stockCode) === 'US' ? 'US' : 'KR')),
+  ))
+}
+
 async function resolveTradingDay(
   date: string,
   markets: string[],
@@ -164,11 +177,7 @@ export default function NewSnapshotPage() {
         // 0) 휴장일이면 직전 거래일로 옮긴다. 날짜가 바뀌면 이 effect 가 다시 돌면서
         //    바뀐 날짜로 환율·시세를 조회하므로 여기서는 바로 빠져나간다.
         if (snapshotDate !== today) {
-          const markets = Array.from(new Set(
-            holdings.filter(h => h.stockCode)
-              .map(h => (toPriceApiMarket(h.market, h.stockCode) === 'US' ? 'US' : 'KR')),
-          ))
-          const resolved = await resolveTradingDay(snapshotDate, markets, controller.signal)
+          const resolved = await resolveTradingDay(snapshotDate, marketsOf(holdings), controller.signal)
           if (controller.signal.aborted) return
           if (resolved !== snapshotDate) {
             setAdjustedFrom(snapshotDate)
@@ -325,7 +334,7 @@ export default function NewSnapshotPage() {
    * 붙여넣기로 해석된 종목들로 목록을 교체한다.
    * 시트에 현재가가 있으면 그대로 쓰고(조회 실패해도 값이 남는다), 없으면 배치로 채운다.
    */
-  function applyPastedHoldings(rows: ResolvedPastedHolding[]) {
+  async function applyPastedHoldings(rows: ResolvedPastedHolding[]) {
     const mapped: HoldingInput[] = rows.map((r) => ({
       stockName: r.stockName,
       stockCode: r.stockCode,
@@ -341,6 +350,23 @@ export default function NewSnapshotPage() {
     }))
     setHoldings(mapped)
     setError(null)
+
+    // 종목이 확정됐으니 그 시장 구성으로 날짜를 다시 판정한다. 날짜를 먼저 고른 뒤
+    // 붙여넣는 순서에서는 날짜 선택 시점에 종목이 없어 휴장일이 걸러지지 않는다.
+    // 날짜가 바뀌면 date effect 가 이어받아 시세를 채우므로 여기서는 끝낸다.
+    if (snapshotDate !== today) {
+      const dateController = new AbortController()
+      try {
+        const resolved = await resolveTradingDay(snapshotDate, marketsOf(mapped), dateController.signal)
+        if (resolved !== snapshotDate) {
+          setAdjustedFrom(snapshotDate)
+          setSnapshotDate(resolved)
+          return
+        }
+      } catch (e) {
+        if ((e as Error).name !== 'AbortError') console.error('Trading day lookup failed', e)
+      }
+    }
 
     // 시트의 "현재가"는 시트를 만든 시점의 값이라 스냅샷 날짜의 종가라는 보장이 없다.
     // (과거 날짜 스냅샷에 오늘 시세가 박혀 수익률이 통째로 어긋난 사고가 있었다.)
