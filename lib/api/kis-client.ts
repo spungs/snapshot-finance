@@ -44,6 +44,36 @@ let cachedToken: AccessToken | null = null
 // cron(/api/cron/update-prices) 이 같은 키를 주기적으로 갱신하므로
 // 캐시 hit 시 사용자 요청에서 KIS 호출이 발생하지 않는다.
 
+/**
+ * 과거 종가 분할 보정 테이블.
+ *
+ * KIS 는 **현재 주식 수 기준으로 소급 조정된** 과거 주가를 준다(해외 MODP:'1',
+ * 국내 FID_ORG_ADJ_PRC:'0'). 반면 사용자가 입력하는 평단은 매수 당시 원주가라,
+ * 역분할 이력이 있는 종목은 과거 스냅샷 수익률이 배수만큼 부풀어 보인다.
+ *
+ * 실제 사고: UAVS 2021-09-03 조정가 3,420 vs 평단 4.83 → 수익률 +70,700%.
+ * 당시 실제 주가는 $3.42 다.
+ *
+ * 조회 날짜보다 **나중에** 일어난 분할의 비율만 곱해 나눈다. 예를 들어
+ * 2024-03-01 조회는 10월 분할(1:50)만 이후이므로 50 으로 나눈다.
+ *
+ * ⚠ 현재가(getCurrentPrice)에는 적용하지 않는다 — 이미 현재 주식 수 기준이다.
+ */
+const SPLIT_HISTORY: Record<string, Array<{ effective: string; ratio: number }>> = {
+    // AgEagle Aerial Systems — 1:20(2024-02-09) × 1:50(2024-10-14) = 누적 1:1000
+    UAVS: [
+        { effective: '2024-02-09', ratio: 20 },
+        { effective: '2024-10-14', ratio: 50 },
+    ],
+}
+
+/** 해당 날짜의 조정가를 당시 원주가로 되돌리기 위해 나눌 값. 해당 없으면 1. */
+function splitDivisorFor(symbol: string, date: string): number {
+    const history = SPLIT_HISTORY[symbol.toUpperCase()]
+    if (!history) return 1
+    return history.reduce((acc, s) => (date < s.effective ? acc * s.ratio : acc), 1)
+}
+
 // 미국 거래소 코드 매핑 — Stock.market 값(혼재) → KIS EXCD.
 // 'NASD'/'NYSE'/'AMEX' 가 들어있으면 직접 매핑. 'US' 만 있는 종목은
 // KisStockMaster 를 조회해 추론, 그래도 없으면 NAS 폴백.
@@ -611,6 +641,21 @@ export class KisClient {
                         volume: parseInt(item.acml_vol || 0),
                     }))
                     .reverse()
+            }
+
+            // 분할 보정 — 날짜마다 적용 배수가 다르므로 행 단위로 계산한다.
+            if (SPLIT_HISTORY[symbol.toUpperCase()]) {
+                formattedData = formattedData.map((row) => {
+                    const d = splitDivisorFor(symbol, row.date)
+                    if (d === 1) return row
+                    return {
+                        ...row,
+                        close: row.close / d,
+                        open: row.open / d,
+                        high: row.high / d,
+                        low: row.low / d,
+                    }
+                })
             }
 
             return formattedData
