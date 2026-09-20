@@ -260,27 +260,32 @@ export async function PUT(
       const purchaseRate = Number.isFinite(pRateNum) && pRateNum > 0 ? new Decimal(pRateNum) : new Decimal(1)
       const currency = h.currency === 'USD' ? 'USD' : 'KRW'
 
-      // 매입가는 매입 환율로 동결, 평가가는 스냅샷 환율로 KRW 환산
-      const costFx = currency === 'USD' ? purchaseRate : new Decimal(1)
+      // 종목 행은 **네이티브 통화**로 저장한다 (POST /api/snapshots 와 동일 규약).
+      // 화면(snapshot-detail-client)이 currency==='USD' 인 행에 환율을 곱해 원화를 만들기
+      // 때문에, 여기서 환산해 저장하면 이중 환산이 되어 금액이 환율배(약 1,400배)로 부푼다.
+      const cost = averagePrice.times(quantity)
+      const value = currentPrice.times(quantity)
+      const profit = value.minus(cost)
+      const profitRate = cost.isZero() ? new Decimal(0) : profit.div(cost).times(100)
+
+      // 스냅샷 합계만 KRW 로 환산한다. 매입가는 매입 환율로 동결, 평가가는 스냅샷 환율.
+      // purchaseRate 가 1 이면 데이터 누락으로 보고 스냅샷 환율을 쓴다(POST 와 동일).
+      const effectivePurchaseRate = purchaseRate.equals(1) ? fxRate : purchaseRate
+      const costFx = currency === 'USD' ? effectivePurchaseRate : new Decimal(1)
       const valueFx = currency === 'USD' ? fxRate : new Decimal(1)
 
-      const holdingCost = averagePrice.times(quantity).times(costFx)
-      const holdingValue = currentPrice.times(quantity).times(valueFx)
-      const profit = holdingValue.minus(holdingCost)
-      const profitRate = holdingCost.isZero() ? new Decimal(0) : profit.div(holdingCost).times(100)
-
-      totalCost = totalCost.plus(holdingCost)
-      totalValue = totalValue.plus(holdingValue)
+      totalCost = totalCost.plus(cost.times(costFx))
+      totalValue = totalValue.plus(value.times(valueFx))
 
       processedHoldings.push({
         stockCode: String((h as { stockCode?: unknown; stockId?: unknown }).stockCode ?? (h as { stockId?: unknown }).stockId),
         quantity,
         averagePrice,
         currentPrice,
-        totalCost: holdingCost,
-        currentValue: holdingValue,
-        profit,
-        profitRate,
+        totalCost: cost,        // Native
+        currentValue: value,    // Native
+        profit,                 // Native
+        profitRate,             // Native
         currency,
         purchaseRate,
       })
