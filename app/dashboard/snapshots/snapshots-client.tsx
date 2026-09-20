@@ -345,9 +345,21 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings, availableMo
         .filter((s): s is SnapshotDetail => Boolean(s))
         .sort((a, b) => new Date(a.snapshotDate).getTime() - new Date(b.snapshotDate).getTime())
 
-    // 그래프: 선택이 있으면 그것만, 없으면 현재 목록 구간.
-    const visibleIds = new Set(selectedIds.length > 0 ? selectedIds : snapshots.map(s => s.id))
-    const trendPoints = trendAll.filter(p => visibleIds.has(p.id))
+    /**
+     * 그래프 대상: 선택이 있으면 그 스냅샷들, 없으면 **기간 필터** 구간.
+     *
+     * 목록(snapshots)을 기준으로 삼으면 안 된다 — 목록은 30개씩 페이징돼서
+     * '전체'를 골라도 최근 한 달만 그려진다. trendAll 은 전체 시계열을 이미 들고 있고
+     * 요약만 담겨 가벼우므로 여기서 기간으로 자른다.
+     */
+    const trendPoints = selectedIds.length > 0
+        ? trendAll.filter(p => selectedIds.includes(p.id))
+        : range
+            ? trendAll.filter(p => {
+                const d = p.date.slice(0, 10)
+                return d >= range.from && d <= range.to
+            })
+            : trendAll
 
     return (
         <div className={cn('max-w-[420px] md:max-w-2xl mx-auto w-full relative', selectedIds.length > 0 ? 'pb-28' : 'pb-4')}>

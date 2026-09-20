@@ -132,8 +132,9 @@ export function SnapshotTrendChart({ points, isSelection, language }: Props) {
                         dataKey={mode === 'asset' ? 'totalAsset' : 'profitRate'}
                         stroke={color}
                         strokeWidth={2}
-                        // 점이 적을 때(2~10개)가 주 용도라 항상 마커를 보여준다.
-                        dot={{ r: 3, fill: color, strokeWidth: 0 }}
+                        // 점이 적을 때(2~10개)가 주 용도라 마커를 보여주지만,
+                        // 전체 기간(수백 개)에서는 점이 뭉개지므로 선만 그린다.
+                        dot={data.length <= 40 ? { r: 3, fill: color, strokeWidth: 0 } : false}
                         activeDot={{ r: 5 }}
                         isAnimationActive={false}
                     />
