@@ -636,24 +636,34 @@ function TimelineSection({
                     return (
                         <div
                             key={s.id}
-                            onClick={() => onSelect(s.id)}
                             className={cn(
-                                'flex items-start gap-4 py-3 cursor-pointer transition-opacity',
+                                'flex items-start gap-4 py-3 transition-opacity',
                                 isActive ? 'opacity-100' : 'opacity-70 hover:opacity-100',
                             )}
                         >
-                            {/* dot */}
-                            <div
-                                className={cn(
-                                    'w-[22px] h-[22px] rounded-full flex-shrink-0 mt-1 relative z-10',
-                                    'flex items-center justify-center border-2',
-                                    isActive
-                                        ? 'bg-primary border-primary'
-                                        : 'bg-card border-border',
-                                )}
+                            {/* dot — 상단 요약 카드에 띄울 시점을 고르는 유일한 컨트롤.
+                                탭 영역을 44px 로 넓히되(모바일에서 안 눌리면 기능이 없는 것과 같다)
+                                음수 마진 대신 의사요소를 쓴다 — -m-* 는 mt-1 과 같은 margin 속성이라
+                                충돌해 세로 정렬이 어긋난다. before 는 레이아웃에 영향을 주지 않는다. */}
+                            <button
+                                type="button"
+                                onClick={() => onSelect(s.id)}
+                                aria-pressed={isActive}
+                                aria-label={language === 'ko' ? '이 시점 요약 보기' : 'Show this snapshot summary'}
+                                className="flex-shrink-0 mt-1 relative z-10 cursor-pointer before:absolute before:-inset-[0.6875rem] before:content-['']"
                             >
-                                {isActive && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
-                            </div>
+                                <span
+                                    className={cn(
+                                        'w-[1.375rem] h-[1.375rem] rounded-full',
+                                        'flex items-center justify-center border-2 transition-colors',
+                                        isActive
+                                            ? 'bg-primary border-primary'
+                                            : 'bg-card border-border hover:border-primary',
+                                    )}
+                                >
+                                    {isActive && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
+                                </span>
+                            </button>
 
                             {/* card */}
                             <div
@@ -662,22 +672,26 @@ function TimelineSection({
                                     isSelected && 'ring-1 ring-primary border-primary',
                                 )}
                             >
-                                <div className="flex justify-between items-baseline">
-                                    <span className="font-serif text-sm font-semibold text-foreground" suppressHydrationWarning>
-                                        {formatDate(s.snapshotDate, 'yyyy.MM.dd')}
-                                    </span>
-                                    <UpDown value={profitRate} />
-                                </div>
-                                <div className="flex justify-between items-baseline mt-1 gap-2">
-                                    <span className="text-[0.6875rem] text-muted-foreground">
-                                        <span suppressHydrationWarning>{formatDate(s.snapshotDate, 'HH:mm')}</span>
-                                        {' · '}
-                                        {holdingsCount}{t('stock')}
-                                    </span>
-                                    <span className="text-[0.8125rem] font-bold text-foreground numeric">
-                                        {formatCurrency(displayValue, currency)}
-                                    </span>
-                                </div>
+                                {/* 정보 영역만 Link 로 감싼다 — 액션 행을 밖에 두어 링크 중첩을 피하고,
+                                    앞으로 추가될 버튼이 stopPropagation 을 빠뜨려도 상세로 튀지 않게 한다. */}
+                                <Link href={`/dashboard/snapshots/${s.id}`} className="block -mx-3.5 -mt-3.5 px-3.5 pt-3.5">
+                                    <div className="flex justify-between items-baseline">
+                                        <span className="font-serif text-sm font-semibold text-foreground" suppressHydrationWarning>
+                                            {formatDate(s.snapshotDate, 'yyyy.MM.dd')}
+                                        </span>
+                                        <UpDown value={profitRate} />
+                                    </div>
+                                    <div className="flex justify-between items-baseline mt-1 gap-2">
+                                        <span className="text-[0.6875rem] text-muted-foreground">
+                                            <span suppressHydrationWarning>{formatDate(s.snapshotDate, 'HH:mm')}</span>
+                                            {' · '}
+                                            {holdingsCount}{t('stock')}
+                                        </span>
+                                        <span className="text-[0.8125rem] font-bold text-foreground numeric">
+                                            {formatCurrency(displayValue, currency)}
+                                        </span>
+                                    </div>
+                                </Link>
 
                                 {/* actions row — primary CTA + overflow menu + selection */}
                                 <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/60 gap-2">
