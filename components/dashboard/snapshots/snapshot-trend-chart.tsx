@@ -40,8 +40,8 @@ function TrendTooltip({ active, payload, mode }: {
     const p = payload[0].payload
     return (
         <div className="rounded-lg bg-popover px-3 py-2 shadow-lg border border-border">
-            <div className="text-[11px] text-muted-foreground">{p.label}</div>
-            <div className="text-[13px] font-bold text-foreground numeric mt-0.5">
+            <div className="text-[0.6875rem] text-muted-foreground">{p.label}</div>
+            <div className="text-[0.8125rem] font-bold text-foreground numeric mt-0.5">
                 {mode === 'asset'
                     ? formatCurrency(p.totalAsset, 'KRW')
                     : `${p.profitRate >= 0 ? '+' : ''}${p.profitRate.toFixed(2)}%`}
@@ -78,7 +78,7 @@ export function SnapshotTrendChart({ points, isSelection, language }: Props) {
 
     const tabCls = (active: boolean) =>
         cn(
-            'text-[11px] font-bold tracking-wide px-2.5 py-1 rounded-md transition-colors',
+            'text-[0.6875rem] font-bold tracking-wide px-2.5 py-1 rounded-md transition-colors',
             active ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground',
         )
 

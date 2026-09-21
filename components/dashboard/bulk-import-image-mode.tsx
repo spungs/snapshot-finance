@@ -342,7 +342,7 @@ export function BulkImportImageMode({ accountId, onSubmit, resetSignal }: BulkIm
                     <button
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
-                        className="inline-flex items-center gap-1 text-[11px] underline"
+                        className="inline-flex items-center gap-1 text-[0.6875rem] underline"
                     >
                         <RefreshCw className="w-3 h-3" /> {tx.ocrRetry}
                     </button>

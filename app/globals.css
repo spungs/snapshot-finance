@@ -76,7 +76,10 @@
   --secondary: #F2F4F6;
   --secondary-foreground: #4E5968;
   --muted: #F2F4F6;
-  --muted-foreground: #6B7684;
+  /* 페이지 배경(#F2F4F6) 위 대비 4.92:1 / 카드(#FFF) 위 5.43:1 — WCAG AA 충족.
+     이전 값 #6B7684 는 페이지 위 4.19:1 로 AA(4.5:1) 미달이었고, 본문 상당수가
+     11px 이하라 특히 읽기 어려웠다. 다크모드는 5.33:1 로 이미 통과라 건드리지 않는다. */
+  --muted-foreground: #5F6B7A;
 
   --destructive: #F04452;
   --border: rgba(0, 19, 43, 0.06);
@@ -204,7 +207,8 @@
 
   /* Toss 섹션 라벨 — 작고 단단한 캡션 (대문자 트래킹 제거) */
   .eyebrow {
-    font-size: 13px;
+    /* 13px. 글자 크기 설정이 루트 font-size 를 조정할 때 함께 스케일되도록 rem 으로 둔다. */
+    font-size: 0.8125rem;
     font-weight: 600;
     letter-spacing: -0.01em;
     text-transform: none;

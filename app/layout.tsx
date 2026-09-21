@@ -74,6 +74,14 @@ export default async function RootLayout({
         />
         <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6002876774605337" crossOrigin="anonymous"></script>
         <script src="https://accounts.google.com/gsi/client" async defer></script>
+        {/* 글자 크기 설정을 페인트 전에 적용 — effect 로 하면 100% 로 그려진 뒤 커져서 글자가 튄다.
+            배율 표는 lib/text-scale/context.tsx 의 TEXT_SCALE_PX 와 일치시킬 것
+            (hydration 전에 실행돼야 해서 모듈을 import 할 수 없다). */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var s=localStorage.getItem('textScale'),m={normal:16,large:18,xlarge:20};if(m[s])document.documentElement.style.fontSize=m[s]+'px'}catch(e){}})()`,
+          }}
+        />
       </head>
       <body
         className={`${jetbrainsMono.variable} font-sans antialiased`}

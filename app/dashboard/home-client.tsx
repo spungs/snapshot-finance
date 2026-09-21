@@ -86,7 +86,7 @@ function UpDown({ value, big = false }: { value: number; big?: boolean }) {
             className={cn(
                 'numeric font-bold tracking-tight inline-flex items-center gap-0.5',
                 isUp ? 'text-profit' : 'text-loss',
-                big ? 'text-[15px]' : 'text-[12.5px]',
+                big ? 'text-[0.9375rem]' : 'text-[0.78125rem]',
             )}
         >
             <span aria-hidden>{isUp ? '▲' : '▼'}</span>
@@ -320,7 +320,7 @@ export function HomeClient({
                         </div>
                     )}
                 </div>
-                <div className="hero-serif text-[40px] sm:text-5xl text-foreground numeric flex items-center gap-2.5">
+                <div className="hero-serif text-[2.5rem] sm:text-5xl text-foreground numeric flex items-center gap-2.5">
                     <span>{formatCurrency(displayValue, baseCurrency)}</span>
                     {isRefreshing && (
                         <Loader2
@@ -332,7 +332,7 @@ export function HomeClient({
                 </div>
                 <div className="flex gap-2 items-center mt-2.5">
                     <UpDown value={liveSummary.totalProfitRate} big />
-                    <span className={cn('text-[13px] font-semibold numeric', isProfit ? 'text-profit' : 'text-loss')}>
+                    <span className={cn('text-[0.8125rem] font-semibold numeric', isProfit ? 'text-profit' : 'text-loss')}>
                         {isProfit ? '+' : ''}{formatCurrency(displayProfit, baseCurrency)}
                     </span>
                 </div>
@@ -360,24 +360,24 @@ export function HomeClient({
                         return (
                             <div key={label} className="p-4 bg-card rounded-2xl">
                                 <div className="mb-1.5">
-                                    <div className="text-[13px] font-medium text-muted-foreground leading-none">
+                                    <div className="text-[0.8125rem] font-medium text-muted-foreground leading-none">
                                         {label}
                                     </div>
-                                    <div className="text-[10px] text-muted-foreground/60 mt-0.5 leading-none">
+                                    <div className="text-[0.625rem] text-muted-foreground/60 mt-0.5 leading-none">
                                         {language === 'ko' ? '주식 평가금 기준' : 'Stock value basis'}
                                     </div>
                                 </div>
                                 {change ? (
                                     <>
                                         <div className={cn(
-                                            'numeric font-bold text-[15px] tracking-tight inline-flex items-center gap-0.5',
+                                            'numeric font-bold text-[0.9375rem] tracking-tight inline-flex items-center gap-0.5',
                                             isUp ? 'text-profit' : 'text-loss',
                                         )}>
                                             <span aria-hidden>{isUp ? '▲' : '▼'}</span>
                                             <span>{Math.abs(change.profitRateDiff).toFixed(2)}%</span>
                                         </div>
                                         <div className={cn(
-                                            'text-[11px] font-semibold numeric mt-0.5',
+                                            'text-[0.6875rem] font-semibold numeric mt-0.5',
                                             valueIsUp ? 'text-profit' : 'text-loss',
                                         )}>
                                             {valueIsUp ? '+' : '−'}
@@ -385,7 +385,7 @@ export function HomeClient({
                                         </div>
                                     </>
                                 ) : (
-                                    <div className="text-[15px] font-bold text-muted-foreground">—</div>
+                                    <div className="text-[0.9375rem] font-bold text-muted-foreground">—</div>
                                 )}
                             </div>
                         )
@@ -396,7 +396,7 @@ export function HomeClient({
             {/* Two-up — 매입금 / 평가손익금 (1억 이상은 자동 축약) */}
             <section className="mx-4 mb-2 grid grid-cols-2 gap-2">
                 <div className="p-4 bg-card rounded-2xl">
-                    <div className="text-[13px] font-medium text-muted-foreground">
+                    <div className="text-[0.8125rem] font-medium text-muted-foreground">
                         {language === 'ko' ? '매입금' : 'Cost'}
                     </div>
                     <div className="text-lg font-bold text-foreground mt-1 numeric tracking-tight">
@@ -404,7 +404,7 @@ export function HomeClient({
                     </div>
                 </div>
                 <div className="p-4 bg-card rounded-2xl">
-                    <div className="text-[13px] font-medium text-muted-foreground">
+                    <div className="text-[0.8125rem] font-medium text-muted-foreground">
                         {language === 'ko' ? '평가손익금' : 'Unrealized P/L'}
                     </div>
                     <div className={cn(
@@ -415,7 +415,7 @@ export function HomeClient({
                     </div>
                     {/* 수익 발생 시 — "이 수익 = 연 N% 예금 X원 의 1년치 이자" 동기부여 시그널 */}
                     {liveSummary.totalProfit > 0 && (
-                        <div className="mt-2 text-[11px] text-muted-foreground numeric flex items-baseline gap-1 flex-wrap">
+                        <div className="mt-2 text-[0.6875rem] text-muted-foreground numeric flex items-baseline gap-1 flex-wrap">
                             <span aria-hidden>≈</span>
                             <Popover>
                                 <PopoverTrigger asChild>
@@ -474,7 +474,7 @@ export function HomeClient({
                     <Wallet className="w-[18px] h-[18px] text-primary" strokeWidth={2} />
                 </div>
                 <div className="min-w-0 flex-1">
-                    <div className="text-[14px] font-medium text-muted-foreground">
+                    <div className="text-[0.875rem] font-medium text-muted-foreground">
                         {language === 'ko' ? '예수금' : 'Cash balance'}
                     </div>
                 </div>
@@ -486,7 +486,7 @@ export function HomeClient({
             {/* Recent snapshot ribbon */}
             {latestSnap && (
                 <section className="mx-4 mb-4 p-[18px] bg-accent-soft rounded-2xl">
-                    <div className="text-[13px] font-semibold text-primary mb-1.5">
+                    <div className="text-[0.8125rem] font-semibold text-primary mb-1.5">
                         {language === 'ko' ? '최근 스냅샷' : 'Recent snapshot'}
                     </div>
                     <div className="flex items-center justify-between gap-3">
@@ -494,7 +494,7 @@ export function HomeClient({
                             <div className="text-base font-bold text-foreground numeric" suppressHydrationWarning>
                                 {formatDate(latestSnap.snapshotDate, 'yyyy.MM.dd')}
                             </div>
-                            <div className="text-[11px] text-muted-foreground">
+                            <div className="text-[0.6875rem] text-muted-foreground">
                                 {language === 'ko' ? '지금과 ' : 'vs now '}
                                 <span className={cn('font-semibold numeric', diffFromLatest >= 0 ? 'text-profit' : 'text-loss')}>
                                     {diffFromLatest >= 0 ? '+' : ''}{diffFromLatest.toFixed(2)}%
@@ -527,19 +527,19 @@ export function HomeClient({
                                     key={h.id}
                                     className="flex items-center gap-3.5 py-3"
                                 >
-                                    <span className="text-[15px] font-bold text-primary numeric w-6 shrink-0">
+                                    <span className="text-[0.9375rem] font-bold text-primary numeric w-6 shrink-0">
                                         {i + 1}
                                     </span>
                                     <div className="flex-1 min-w-0">
-                                        <div className="text-[14px] font-semibold text-foreground truncate">
+                                        <div className="text-[0.875rem] font-semibold text-foreground truncate">
                                             {h.stockName}
                                         </div>
-                                        <div className="text-[12px] text-muted-foreground mt-0.5">
+                                        <div className="text-[0.75rem] text-muted-foreground mt-0.5">
                                             {h.stockCode}
                                         </div>
                                     </div>
                                     <div className="text-right shrink-0">
-                                        <div className="text-[13px] font-bold text-foreground numeric">
+                                        <div className="text-[0.8125rem] font-bold text-foreground numeric">
                                             {formatCurrency(displayHValue, baseCurrency)}
                                         </div>
                                         <div className="mt-0.5"><UpDown value={h.profitRate} /></div>

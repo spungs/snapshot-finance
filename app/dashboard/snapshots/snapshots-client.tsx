@@ -82,7 +82,7 @@ function UpDown({ value, big = false }: { value: number; big?: boolean }) {
             className={cn(
                 'numeric font-bold tracking-tight inline-flex items-center gap-0.5',
                 isUp ? 'text-profit' : 'text-loss',
-                big ? 'text-[15px]' : 'text-[12.5px]',
+                big ? 'text-[0.9375rem]' : 'text-[0.78125rem]',
             )}
         >
             <span aria-hidden>{isUp ? '▲' : '▼'}</span>
@@ -423,7 +423,7 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings, availableMo
                                 type="button"
                                 onClick={loadMore}
                                 disabled={isLoadingMore}
-                                className="w-full rounded-xl bg-card py-3 text-[13px] font-bold text-foreground hover:bg-accent-soft transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
+                                className="w-full rounded-xl bg-card py-3 text-[0.8125rem] font-bold text-foreground hover:bg-accent-soft transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
                             >
                                 {isLoadingMore
                                     ? <><Loader2 className="h-4 w-4 animate-spin" />{t('loadingMore')}</>
@@ -482,7 +482,7 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings, availableMo
 function Hero({ t }: { t: (k: any) => string }) {
     return (
         <section className="px-6 pt-3 pb-4">
-            <h1 className="hero-serif text-[32px] text-foreground">
+            <h1 className="hero-serif text-[2rem] text-foreground">
                 {t('snapshots')}
             </h1>
             <span className="serif-italic text-xs text-muted-foreground block mt-1">
@@ -517,38 +517,38 @@ function ActiveSnapshotCard({
 
             <div className="flex items-center justify-between mb-1">
                 <span className="eyebrow">{labelKey}</span>
-                <span className="text-[11px] text-muted-foreground">{sourceLabel}</span>
+                <span className="text-[0.6875rem] text-muted-foreground">{sourceLabel}</span>
             </div>
 
-            <div className="text-[22px] font-bold tracking-tight text-foreground mt-1.5 numeric" suppressHydrationWarning>
+            <div className="text-[1.375rem] font-bold tracking-tight text-foreground mt-1.5 numeric" suppressHydrationWarning>
                 {formatDate(snapshot.snapshotDate, 'yyyy.MM.dd')}
             </div>
-            <div className="text-[11px] text-muted-foreground mb-[18px]">
+            <div className="text-[0.6875rem] text-muted-foreground mb-[18px]">
                 <span suppressHydrationWarning>{formatDate(snapshot.snapshotDate, 'HH:mm')}</span>
                 {' · '}
                 {holdingsCount}{t('countUnit')} {t('stock')}
             </div>
 
-            <div className="text-[11px] font-semibold text-muted-foreground mb-1">
+            <div className="text-[0.6875rem] font-semibold text-muted-foreground mb-1">
                 {t('totalValue')}
             </div>
-            <div className="amount-display text-[30px] text-foreground leading-none">
+            <div className="amount-display text-[1.875rem] text-foreground leading-none">
                 {formatCurrency(displayValue, currency)}
             </div>
 
             <div className="flex gap-4 mt-3.5 items-stretch">
                 <div>
-                    <div className="text-[12px] font-medium text-muted-foreground">
+                    <div className="text-[0.75rem] font-medium text-muted-foreground">
                         {t('returnRate')}
                     </div>
                     <div className="mt-1"><UpDown value={profitRate} big /></div>
                 </div>
                 <div className="w-px bg-border self-stretch" />
                 <div>
-                    <div className="text-[12px] font-medium text-muted-foreground">
+                    <div className="text-[0.75rem] font-medium text-muted-foreground">
                         {t('pl')}
                     </div>
-                    <div className={cn('text-[15px] font-bold mt-1 numeric', isProfit ? 'text-profit' : 'text-loss')}>
+                    <div className={cn('text-[0.9375rem] font-bold mt-1 numeric', isProfit ? 'text-profit' : 'text-loss')}>
                         {isProfit ? '+' : ''}{formatCurrency(displayProfit, currency)}
                     </div>
                 </div>
@@ -558,7 +558,7 @@ function ActiveSnapshotCard({
             <div className="flex items-center justify-between mt-4 pt-3 border-t border-border/60">
                 <Link
                     href={`/dashboard/snapshots/${snapshot.id}`}
-                    className="text-[12px] font-semibold text-primary hover:underline inline-flex items-center gap-1"
+                    className="text-[0.75rem] font-semibold text-primary hover:underline inline-flex items-center gap-1"
                 >
                     <Eye className="w-3.5 h-3.5" /> {t('details')}
                 </Link>
@@ -591,7 +591,7 @@ function ActiveSnapshotCard({
 function PeriodEmpty({ t }: { t: (k: any) => string }) {
     return (
         <div className="mx-4 my-6 p-8 bg-card rounded-2xl text-center">
-            <p className="text-[13px] text-muted-foreground">{t('noSnapshotsInPeriod')}</p>
+            <p className="text-[0.8125rem] text-muted-foreground">{t('noSnapshotsInPeriod')}</p>
         </div>
     )
 }
@@ -669,12 +669,12 @@ function TimelineSection({
                                     <UpDown value={profitRate} />
                                 </div>
                                 <div className="flex justify-between items-baseline mt-1 gap-2">
-                                    <span className="text-[11px] text-muted-foreground">
+                                    <span className="text-[0.6875rem] text-muted-foreground">
                                         <span suppressHydrationWarning>{formatDate(s.snapshotDate, 'HH:mm')}</span>
                                         {' · '}
                                         {holdingsCount}{t('stock')}
                                     </span>
-                                    <span className="text-[13px] font-bold text-foreground numeric">
+                                    <span className="text-[0.8125rem] font-bold text-foreground numeric">
                                         {formatCurrency(displayValue, currency)}
                                     </span>
                                 </div>
@@ -684,7 +684,7 @@ function TimelineSection({
                                     <Link
                                         href={`/dashboard/snapshots/${s.id}`}
                                         onClick={e => e.stopPropagation()}
-                                        className="text-[11px] font-semibold text-primary hover:underline inline-flex items-center gap-1"
+                                        className="text-[0.6875rem] font-semibold text-primary hover:underline inline-flex items-center gap-1"
                                     >
                                         <Eye className="w-3 h-3" /> {t('details')}
                                     </Link>
@@ -693,7 +693,7 @@ function TimelineSection({
                                             type="button"
                                             onClick={e => onToggleSelect(s.id, e)}
                                             className={cn(
-                                                'inline-flex items-center gap-1 px-1.5 py-0.5 text-[11px] font-medium rounded-md transition-colors',
+                                                'inline-flex items-center gap-1 px-1.5 py-0.5 text-[0.6875rem] font-medium rounded-md transition-colors',
                                                 isSelected
                                                     ? 'bg-accent-soft text-primary font-bold'
                                                     : 'bg-secondary text-muted-foreground hover:text-foreground',

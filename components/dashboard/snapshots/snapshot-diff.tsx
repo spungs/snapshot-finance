@@ -171,7 +171,7 @@ export function SnapshotDiff({ currentHoldings, snapshots, selectedIds }: Props)
                                     </span>
                                     <span
                                         className={cn(
-                                            'px-1.5 py-0.5 rounded text-[10px] font-semibold border',
+                                            'px-1.5 py-0.5 rounded text-[0.625rem] font-semibold border',
                                             isIncrease
                                                 ? 'text-blue-600 bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800'
                                                 : 'text-red-600 bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800',
@@ -253,7 +253,7 @@ function Section({
     }
     return (
         <div className="space-y-1.5">
-            <h4 className={cn('text-[12px] font-semibold flex items-center gap-1.5', colorMap[color])}>
+            <h4 className={cn('text-[0.75rem] font-semibold flex items-center gap-1.5', colorMap[color])}>
                 {icon} {label} <span className="opacity-60">({count})</span>
             </h4>
             <div className="space-y-1.5">{children}</div>
@@ -285,11 +285,11 @@ function SnapshotSummaryRow({ oldSn, newSn, language }: { oldSn: any; newSn: any
                     key={i}
                     className="bg-muted/40 rounded-lg px-3 py-2.5 space-y-1"
                 >
-                    <div className="text-[10px] font-semibold text-muted-foreground tracking-wider">
+                    <div className="text-[0.625rem] font-semibold text-muted-foreground tracking-wider">
                         {item.date}
                     </div>
                     <div className="mt-1.5">
-                        <div className="text-[11px] text-muted-foreground mb-0.5">
+                        <div className="text-[0.6875rem] text-muted-foreground mb-0.5">
                             {language === 'ko' ? '평가액' : 'Value'}
                         </div>
                         <div className="text-sm font-bold text-foreground numeric leading-tight">
@@ -297,11 +297,11 @@ function SnapshotSummaryRow({ oldSn, newSn, language }: { oldSn: any; newSn: any
                         </div>
                     </div>
                     <div className="mt-1.5">
-                        <div className="text-[11px] text-muted-foreground mb-0.5">
+                        <div className="text-[0.6875rem] text-muted-foreground mb-0.5">
                             {language === 'ko' ? '수익률' : 'Return'}
                         </div>
                         <div className={cn(
-                            'text-[11px] font-semibold numeric',
+                            'text-[0.6875rem] font-semibold numeric',
                             item.profitRate >= 0 ? 'text-profit' : 'text-loss',
                         )}>
                             {item.profitRate >= 0 ? '▲' : '▼'}{Math.abs(item.profitRate).toFixed(2)}%
@@ -325,7 +325,7 @@ function StockLabel({
     return (
         <span className={cn('flex-1 min-w-0 text-sm font-medium truncate', strikethrough && 'line-through')}>
             {name}
-            <span className="text-muted-foreground font-normal text-[11px] ml-1.5">({code})</span>
+            <span className="text-muted-foreground font-normal text-[0.6875rem] ml-1.5">({code})</span>
         </span>
     )
 }

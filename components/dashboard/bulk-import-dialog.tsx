@@ -364,7 +364,7 @@ export function BulkImportDialog({ children, onSuccess, isPro = false }: BulkImp
                         >
                             {tx.ocrModeTab}
                             {!isPro && (
-                                <span className="text-[9px] bg-foreground text-background px-1 rounded">🔒</span>
+                                <span className="text-[0.5625rem] bg-foreground text-background px-1 rounded">🔒</span>
                             )}
                         </button>
                         <button
@@ -395,7 +395,7 @@ export function BulkImportDialog({ children, onSuccess, isPro = false }: BulkImp
                         </div>
                     ) : showAccountSelector ? (
                         <div>
-                            <label className="block text-[13px] font-medium text-muted-foreground mb-1.5">
+                            <label className="block text-[0.8125rem] font-medium text-muted-foreground mb-1.5">
                                 {tx.accountSelector}
                             </label>
                             <select
@@ -415,10 +415,10 @@ export function BulkImportDialog({ children, onSuccess, isPro = false }: BulkImp
                     <>
                     {/* 형식 안내 */}
                     <div className="border border-border bg-accent-soft/50 rounded-md p-3">
-                        <div className="text-[13px] font-medium text-muted-foreground mb-1">
+                        <div className="text-[0.8125rem] font-medium text-muted-foreground mb-1">
                             {tx.formatInstructions}
                         </div>
-                        <pre className="text-[11px] text-foreground/80 leading-relaxed whitespace-pre-wrap font-mono">
+                        <pre className="text-[0.6875rem] text-foreground/80 leading-relaxed whitespace-pre-wrap font-mono">
                             {tx.formatDesc}
                         </pre>
                     </div>
@@ -426,7 +426,7 @@ export function BulkImportDialog({ children, onSuccess, isPro = false }: BulkImp
                     {/* Raw 입력 */}
                     <div>
                         <div className="flex items-center justify-between mb-1.5">
-                            <label className="text-[13px] font-medium text-muted-foreground">
+                            <label className="text-[0.8125rem] font-medium text-muted-foreground">
                                 {tx.rawData}
                             </label>
                             {rawText.length > 0 && (
@@ -434,7 +434,7 @@ export function BulkImportDialog({ children, onSuccess, isPro = false }: BulkImp
                                     type="button"
                                     onClick={handleClear}
                                     disabled={isBusy}
-                                    className="text-[11px] text-muted-foreground hover:text-foreground disabled:opacity-50"
+                                    className="text-[0.6875rem] text-muted-foreground hover:text-foreground disabled:opacity-50"
                                 >
                                     {tx.clear}
                                 </button>
@@ -456,7 +456,7 @@ export function BulkImportDialog({ children, onSuccess, isPro = false }: BulkImp
                         />
                         <div className="mt-1 space-y-1">
                             {(parsedItems.length > 0 || skippedCount > 0 || errorLines.length > 0) && (
-                                <div className="text-[11px] text-muted-foreground flex flex-wrap gap-x-2">
+                                <div className="text-[0.6875rem] text-muted-foreground flex flex-wrap gap-x-2">
                                     <span className="text-foreground">{tx.linesRecognized.replace('{count}', String(parsedItems.length))}</span>
                                     {skippedCount > 0 && (
                                         <span>· {tx.linesSkipped.replace('{count}', String(skippedCount))}</span>
@@ -467,7 +467,7 @@ export function BulkImportDialog({ children, onSuccess, isPro = false }: BulkImp
                                 </div>
                             )}
                             {errorLines.length > 0 && (
-                                <ul className="text-[10px] text-amber-600/90 space-y-0.5">
+                                <ul className="text-[0.625rem] text-amber-600/90 space-y-0.5">
                                     {errorLines.slice(0, 5).map(e => (
                                         <li key={e.lineNo} className="truncate">
                                             {tx.lineErrorDetail.replace('{line}', String(e.lineNo)).replace('{text}', e.raw)}

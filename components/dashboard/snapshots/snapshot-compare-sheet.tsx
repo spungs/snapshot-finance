@@ -90,7 +90,7 @@ export function SnapshotCompareSheet({ open, snapshots, currentHoldings, onClose
 
     const tabCls = (active: boolean) =>
         cn(
-            'px-3 py-1.5 text-[12px] font-bold rounded-md transition-colors',
+            'px-3 py-1.5 text-[0.75rem] font-bold rounded-md transition-colors',
             active ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground',
         )
 
@@ -98,7 +98,7 @@ export function SnapshotCompareSheet({ open, snapshots, currentHoldings, onClose
         <div className="fixed inset-0 z-50 flex flex-col bg-background">
             {/* 헤더 */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
-                <span className="text-[15px] font-bold text-foreground">
+                <span className="text-[0.9375rem] font-bold text-foreground">
                     {ko ? `스냅샷 비교 · ${ordered.length}개` : `Compare · ${ordered.length}`}
                 </span>
                 <button
@@ -129,7 +129,7 @@ export function SnapshotCompareSheet({ open, snapshots, currentHoldings, onClose
             {/* 본문 */}
             <div className="flex-1 overflow-auto">
                 {tab === 'summary' && (
-                    <table className="w-full text-[12px]">
+                    <table className="w-full text-[0.75rem]">
                         <thead className="sticky top-0 bg-background">
                             <tr className="text-muted-foreground">
                                 <th className="text-left font-semibold px-4 py-2">{ko ? '날짜' : 'Date'}</th>
@@ -165,7 +165,7 @@ export function SnapshotCompareSheet({ open, snapshots, currentHoldings, onClose
 
                 {tab === 'holdings' && (
                     <div className="overflow-x-auto">
-                        <table className="w-full text-[12px]">
+                        <table className="w-full text-[0.75rem]">
                             <thead className="sticky top-0 bg-background">
                                 <tr className="text-muted-foreground">
                                     <th className="text-left font-semibold px-4 py-2 sticky left-0 bg-background">
@@ -183,14 +183,14 @@ export function SnapshotCompareSheet({ open, snapshots, currentHoldings, onClose
                                     <tr key={row.code} className="border-t border-border">
                                         <td className="px-4 py-2.5 sticky left-0 bg-background">
                                             <div className="font-semibold text-foreground truncate max-w-[130px]">{row.name}</div>
-                                            <div className="text-[10px] text-muted-foreground">{row.code}</div>
+                                            <div className="text-[0.625rem] text-muted-foreground">{row.code}</div>
                                         </td>
                                         {row.cells.map((cell, i) => (
                                             <td key={i} className="px-3 py-2.5 text-right numeric whitespace-nowrap">
                                                 {cell ? (
                                                     <>
                                                         <div className="text-foreground">{formatCurrency(cell.price, 'KRW')}</div>
-                                                        <div className="text-[10px] text-muted-foreground">
+                                                        <div className="text-[0.625rem] text-muted-foreground">
                                                             {cell.qty}{ko ? '주' : ''}
                                                         </div>
                                                     </>

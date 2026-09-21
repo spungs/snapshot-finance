@@ -40,7 +40,7 @@ export default function MorePage() {
     return (
         <div className="max-w-[480px] md:max-w-2xl mx-auto w-full">
             <section className="px-6 pt-3 pb-4">
-                <h1 className="hero-serif text-[32px] text-foreground">
+                <h1 className="hero-serif text-[2rem] text-foreground">
                     {t('tabMore')}
                 </h1>
             </section>
@@ -61,11 +61,11 @@ export default function MorePage() {
                                         <Icon className="w-4 h-4 text-primary" strokeWidth={2} />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <div className="font-serif text-[15px] font-semibold text-foreground">
+                                        <div className="font-serif text-[0.9375rem] font-semibold text-foreground">
                                             {t(item.titleKey)}
                                         </div>
                                         {item.descKey && (
-                                            <div className="text-[11px] text-muted-foreground mt-0.5">
+                                            <div className="text-[0.6875rem] text-muted-foreground mt-0.5">
                                                 {t(item.descKey)}
                                             </div>
                                         )}

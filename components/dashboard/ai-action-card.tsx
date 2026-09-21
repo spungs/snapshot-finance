@@ -280,12 +280,12 @@ function AddHoldingCard({
             )}
 
             {estimatedTotalKrw != null && (
-                <p className="text-[11px] text-muted-foreground leading-snug">
+                <p className="text-[0.6875rem] text-muted-foreground leading-snug">
                     매입금액 약 ₩{formatNumber(estimatedTotalKrw.toString(), 0)}
                 </p>
             )}
 
-            <p className="text-[11px] text-muted-foreground leading-snug">
+            <p className="text-[0.6875rem] text-muted-foreground leading-snug">
                 이미 보유 중이면 가중평균 평단가로 합산됩니다.
             </p>
 
@@ -508,7 +508,7 @@ function SellHoldingCard({
                         placeholder="줄일 수량"
                     />
                     {holding && (
-                        <span className="text-[11px] text-muted-foreground shrink-0">
+                        <span className="text-[0.6875rem] text-muted-foreground shrink-0">
                             (보유 {formatNumber(holding.quantity, 0)}주)
                         </span>
                     )}
@@ -516,7 +516,7 @@ function SellHoldingCard({
             </Field>
 
             {remainingAfter != null && !exceeds && (
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-[0.6875rem] text-muted-foreground">
                     수정 후 {formatNumber(remainingAfter.toString(), 0)}주
                 </p>
             )}
@@ -526,7 +526,7 @@ function SellHoldingCard({
             </Field>
 
             {exceeds && (
-                <p className="text-[11px] text-destructive">
+                <p className="text-[0.6875rem] text-destructive">
                     보유 수량보다 많이 줄일 수 없습니다.
                 </p>
             )}
@@ -645,7 +645,7 @@ function Field({
 }) {
     return (
         <div className="flex flex-col gap-0.5">
-            <Label className="text-[11px] text-muted-foreground">{label}</Label>
+            <Label className="text-[0.6875rem] text-muted-foreground">{label}</Label>
             {children}
         </div>
     )

@@ -575,7 +575,7 @@ export default function NewSnapshotPage() {
       <div className="px-6 pt-3 flex items-center justify-between">
         <Link
           href="/dashboard/snapshots"
-          className="text-[12px] font-semibold text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+          className="text-[0.75rem] font-semibold text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
         >
           <ArrowLeft className="w-3 h-3" />
           {t('snapshots')}
@@ -585,7 +585,7 @@ export default function NewSnapshotPage() {
             type="button"
             onClick={() => setPasteOpen(true)}
             disabled={loading || updatingPrices}
-            className="inline-flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-primary px-2.5 py-1.5 hover:bg-accent-soft transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 text-[0.6875rem] font-bold tracking-wide text-primary px-2.5 py-1.5 hover:bg-accent-soft transition-colors disabled:opacity-50"
           >
             <ClipboardPaste className="w-3.5 h-3.5" />
             {language === 'ko' ? '붙여넣기' : 'Paste'}
@@ -594,7 +594,7 @@ export default function NewSnapshotPage() {
             type="button"
             onClick={loadCurrentHoldings}
             disabled={loading || updatingPrices}
-            className="inline-flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-primary px-2.5 py-1.5 hover:bg-accent-soft transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 text-[0.6875rem] font-bold tracking-wide text-primary px-2.5 py-1.5 hover:bg-accent-soft transition-colors disabled:opacity-50"
           >
             <Download className="w-3.5 h-3.5" />
             {t('loadCurrentHoldings')}
@@ -604,7 +604,7 @@ export default function NewSnapshotPage() {
 
       {/* Hero */}
       <section className="px-6 pt-2 pb-4">
-        <h1 className="hero-serif text-[32px] text-foreground">
+        <h1 className="hero-serif text-[2rem] text-foreground">
           {t('newSnapshot')}
         </h1>
         <span className="serif-italic text-xs text-muted-foreground block mt-1">
@@ -634,13 +634,13 @@ export default function NewSnapshotPage() {
             max={today}
             value={snapshotDate}
             onChange={(e) => setSnapshotDate(e.target.value)}
-            className="w-full bg-transparent text-[22px] font-semibold text-foreground numeric outline-none border-b border-border pb-1.5 focus:border-primary transition-colors"
+            className="w-full bg-transparent text-[1.375rem] font-semibold text-foreground numeric outline-none border-b border-border pb-1.5 focus:border-primary transition-colors"
           />
           <div className="mt-3 flex items-center justify-between gap-2">
-            <span className="text-[11px] text-muted-foreground">
+            <span className="text-[0.6875rem] text-muted-foreground">
               {t('exchangeRate')}
             </span>
-            <span className="text-[12px] font-bold text-foreground numeric">
+            <span className="text-[0.75rem] font-bold text-foreground numeric">
               {formatCurrency(exchangeRate, 'KRW')} / USD
               {rateUnavailable && (
                 <span className="ml-1.5 font-medium text-muted-foreground">
@@ -650,14 +650,14 @@ export default function NewSnapshotPage() {
             </span>
           </div>
           {adjustedFrom && (
-            <div className="mt-3 pt-3 border-t border-border text-[11px] text-primary leading-relaxed">
+            <div className="mt-3 pt-3 border-t border-border text-[0.6875rem] text-primary leading-relaxed">
               {language === 'ko'
                 ? `${adjustedFrom}은 휴장일이라 직전 거래일 ${snapshotDate}로 맞췄습니다.`
                 : `${adjustedFrom} was a market holiday — adjusted to the previous trading day ${snapshotDate}.`}
             </div>
           )}
           {isHistorical && !adjustedFrom && (
-            <div className="mt-3 pt-3 border-t border-border text-[11px] text-primary leading-relaxed">
+            <div className="mt-3 pt-3 border-t border-border text-[0.6875rem] text-primary leading-relaxed">
               {t('historicalMode') || '* Past date selected. Stock prices and exchange rates will be automatically fetched for this date.'}
             </div>
           )}
@@ -671,7 +671,7 @@ export default function NewSnapshotPage() {
           <button
             type="button"
             onClick={addHolding}
-            className="inline-flex items-center gap-1 text-[11px] font-bold tracking-wide text-primary px-2 py-1 hover:bg-accent-soft transition-colors"
+            className="inline-flex items-center gap-1 text-[0.6875rem] font-bold tracking-wide text-primary px-2 py-1 hover:bg-accent-soft transition-colors"
           >
             <Plus className="w-3.5 h-3.5" />
             {t('addStock')}
@@ -692,7 +692,7 @@ export default function NewSnapshotPage() {
                 style={{ borderLeftWidth: '3px', borderLeftColor: holding.stockCode ? 'var(--primary)' : 'var(--border)' }}
               >
                 <div className="flex items-center justify-between mb-2.5">
-                  <span className="text-[13px] font-medium text-muted-foreground">
+                  <span className="text-[0.8125rem] font-medium text-muted-foreground">
                     {language === 'ko' ? `종목 ${index + 1}` : `Stock ${index + 1}`}
                   </span>
                   {holdings.length > 1 && (
@@ -713,7 +713,7 @@ export default function NewSnapshotPage() {
                 />
 
                 {holding.stockCode && (holding.currentPrice ? (
-                  <div className="mt-2 flex items-center justify-between gap-2 text-[11px]">
+                  <div className="mt-2 flex items-center justify-between gap-2 text-[0.6875rem]">
                     <span className="text-muted-foreground">
                       {priceLabel}
                       {holding.priceFromSheet && (
@@ -775,7 +775,7 @@ export default function NewSnapshotPage() {
           <span className="eyebrow">{t('additionalInfo')}</span>
         </div>
         <section className="mx-4 mb-4 p-4 bg-card rounded-2xl">
-          <label htmlFor="note" className="text-[13px] font-medium text-muted-foreground">
+          <label htmlFor="note" className="text-[0.8125rem] font-medium text-muted-foreground">
             {t('memo')}
           </label>
           <input
@@ -784,7 +784,7 @@ export default function NewSnapshotPage() {
             placeholder={t('memoPlaceholder')}
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            className="w-full mt-1.5 bg-transparent font-serif text-base md:text-[15px] text-foreground outline-none border-b border-border pb-1.5 placeholder:text-muted-foreground/60 focus:border-primary transition-colors"
+            className="w-full mt-1.5 bg-transparent font-serif text-base md:text-[0.9375rem] text-foreground outline-none border-b border-border pb-1.5 placeholder:text-muted-foreground/60 focus:border-primary transition-colors"
           />
         </section>
 
@@ -796,7 +796,7 @@ export default function NewSnapshotPage() {
               type="button"
               onClick={() => setSummaryDisplayCurrency('KRW')}
               className={cn(
-                'text-[10px] font-bold tracking-wide px-2.5 py-1 transition-colors',
+                'text-[0.625rem] font-bold tracking-wide px-2.5 py-1 transition-colors',
                 summaryDisplayCurrency === 'KRW'
                   ? 'bg-primary text-primary-foreground'
                   : 'text-muted-foreground hover:text-foreground',
@@ -808,7 +808,7 @@ export default function NewSnapshotPage() {
               type="button"
               onClick={() => setSummaryDisplayCurrency('USD')}
               className={cn(
-                'text-[10px] font-bold tracking-wide px-2.5 py-1 transition-colors',
+                'text-[0.625rem] font-bold tracking-wide px-2.5 py-1 transition-colors',
                 summaryDisplayCurrency === 'USD'
                   ? 'bg-primary text-primary-foreground'
                   : 'text-muted-foreground hover:text-foreground',
@@ -820,21 +820,21 @@ export default function NewSnapshotPage() {
         </div>
 
         <section className="mx-4 mb-4 p-5 bg-card rounded-2xl">
-          <div className="text-[13px] font-medium text-muted-foreground">
+          <div className="text-[0.8125rem] font-medium text-muted-foreground">
             {t('totalValue')}
           </div>
-          <div className="amount-display text-[28px] text-foreground leading-none mt-1.5">
+          <div className="amount-display text-[1.75rem] text-foreground leading-none mt-1.5">
             {formatCurrency(totals.totalValue, totals.currency)}
           </div>
 
           <div className="flex gap-4 mt-4 items-stretch">
             <div className="flex-1">
-              <div className="text-[13px] font-medium text-muted-foreground">
+              <div className="text-[0.8125rem] font-medium text-muted-foreground">
                 {t('returnRate')}
               </div>
               <div
                 className={cn(
-                  'text-[15px] font-bold mt-1 numeric inline-flex items-center gap-0.5',
+                  'text-[0.9375rem] font-bold mt-1 numeric inline-flex items-center gap-0.5',
                   isProfit ? 'text-profit' : 'text-loss',
                 )}
               >
@@ -844,12 +844,12 @@ export default function NewSnapshotPage() {
             </div>
             <div className="w-px bg-border self-stretch" />
             <div className="flex-1">
-              <div className="text-[13px] font-medium text-muted-foreground">
+              <div className="text-[0.8125rem] font-medium text-muted-foreground">
                 {t('pl')}
               </div>
               <div
                 className={cn(
-                  'text-[15px] font-bold mt-1 numeric',
+                  'text-[0.9375rem] font-bold mt-1 numeric',
                   isProfit ? 'text-profit' : 'text-loss',
                 )}
               >
@@ -858,7 +858,7 @@ export default function NewSnapshotPage() {
             </div>
           </div>
 
-          <div className="mt-4 pt-4 border-t border-border flex items-center justify-between text-[11px]">
+          <div className="mt-4 pt-4 border-t border-border flex items-center justify-between text-[0.6875rem]">
             <span className="text-muted-foreground">{t('totalInvested')}</span>
             <span className="font-bold text-foreground numeric">
               {formatCurrency(totals.totalCost, totals.currency)}
@@ -868,7 +868,7 @@ export default function NewSnapshotPage() {
 
         {/* Error */}
         {error && (
-          <div className="mx-4 mb-4 p-3 bg-destructive/10 border border-destructive/30 text-destructive text-[12px]">
+          <div className="mx-4 mb-4 p-3 bg-destructive/10 border border-destructive/30 text-destructive text-[0.75rem]">
             {error}
           </div>
         )}

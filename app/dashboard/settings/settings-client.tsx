@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useTheme } from 'next-themes'
 import { useLanguage } from '@/lib/i18n/context'
+import { useTextScale, type TextScale } from '@/lib/text-scale/context'
 import { translations } from '@/lib/i18n/translations'
 import { logout, toggleAutoSnapshot } from '@/app/actions'
 import { Switch } from '@/components/ui/switch'
@@ -25,6 +26,7 @@ export function SettingsClient({ user }: Props) {
     const { language, setLanguage } = useLanguage()
     const t = translations[language]
     const { theme, setTheme } = useTheme()
+    const { textScale, setTextScale } = useTextScale()
     const [isAutoSnapshot, setIsAutoSnapshot] = useState(user.isAutoSnapshotEnabled ?? false)
     const [autoPending, setAutoPending] = useState(false)
 
@@ -43,7 +45,7 @@ export function SettingsClient({ user }: Props) {
     return (
         <div className="max-w-[480px] md:max-w-2xl mx-auto w-full">
             <section className="px-6 pt-3 pb-4">
-                <h1 className="hero-serif text-[32px] text-foreground">
+                <h1 className="hero-serif text-[2rem] text-foreground">
                     {t.tabSettings}
                 </h1>
             </section>
@@ -54,10 +56,10 @@ export function SettingsClient({ user }: Props) {
                     {initial}
                 </div>
                 <div className="flex-1 min-w-0">
-                    <div className="font-serif text-[17px] font-semibold text-foreground truncate">
+                    <div className="font-serif text-[1.0625rem] font-semibold text-foreground truncate">
                         {user.name || 'User'}
                     </div>
-                    <div className="text-[11px] text-muted-foreground truncate mt-0.5">
+                    <div className="text-[0.6875rem] text-muted-foreground truncate mt-0.5">
                         {user.email}
                     </div>
                 </div>
@@ -89,6 +91,27 @@ export function SettingsClient({ user }: Props) {
                         onChange={v => setLanguage(v as 'ko' | 'en')}
                     />
                 </Row>
+                {/* 글자 크기 — 루트 font-size 를 바꾼다. 앱의 모든 텍스트가 rem 이라
+                    이 한 값으로 전체가 함께 스케일된다(카드 폭·차트 높이는 고정). */}
+                <Row>
+                    <RowMain
+                        title={t.textScaleLabel}
+                        sub={
+                            textScale === 'xlarge' ? t.textScaleXLarge
+                                : textScale === 'large' ? t.textScaleLarge
+                                    : t.textScaleNormal
+                        }
+                    />
+                    <SegControl
+                        options={[
+                            { value: 'normal', label: t.textScaleNormal },
+                            { value: 'large', label: t.textScaleLarge },
+                            { value: 'xlarge', label: t.textScaleXLarge },
+                        ]}
+                        value={textScale}
+                        onChange={v => setTextScale(v as TextScale)}
+                    />
+                </Row>
                 <Row>
                     <RowMain title={t.autoSnapshot} sub={isAutoSnapshot ? t.autoSnapshotOn : t.autoSnapshotOff} />
                     <Switch
@@ -108,7 +131,7 @@ export function SettingsClient({ user }: Props) {
                     className="w-full flex items-center gap-2 px-5 py-4 text-left hover:bg-card-hover transition-colors"
                 >
                     <LogOut className="w-4 h-4 text-muted-foreground shrink-0" />
-                    <span className="flex-1 text-[14px] font-semibold text-foreground">
+                    <span className="flex-1 text-[0.875rem] font-semibold text-foreground">
                         {t.logout}
                     </span>
                     <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
@@ -147,8 +170,8 @@ function Row({ children }: { children: React.ReactNode }) {
 function RowMain({ title, sub }: { title: string; sub?: string }) {
     return (
         <div className="flex-1 min-w-0">
-            <div className="text-[14px] font-semibold text-foreground">{title}</div>
-            {sub && <div className="text-[11px] text-muted-foreground mt-0.5">{sub}</div>}
+            <div className="text-[0.875rem] font-semibold text-foreground">{title}</div>
+            {sub && <div className="text-[0.6875rem] text-muted-foreground mt-0.5">{sub}</div>}
         </div>
     )
 }
@@ -168,7 +191,7 @@ function SegControl({
                     type="button"
                     onClick={() => onChange(opt.value)}
                     className={cn(
-                        'px-2.5 py-1 text-[11px] font-semibold transition-colors',
+                        'px-2.5 py-1 text-[0.6875rem] font-semibold transition-colors',
                         value === opt.value
                             ? 'bg-card text-foreground shadow-sm'
                             : 'text-muted-foreground',
@@ -190,7 +213,7 @@ function LinkRow({ href, label, divided }: { href: string; label: string; divide
                 divided && 'border-t border-border',
             )}
         >
-            <span className="flex-1 text-[14px] font-semibold text-foreground">{label}</span>
+            <span className="flex-1 text-[0.875rem] font-semibold text-foreground">{label}</span>
             <ChevronRight className="w-4 h-4 text-muted-foreground" />
         </Link>
     )

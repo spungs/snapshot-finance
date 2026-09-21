@@ -32,7 +32,7 @@ export function SelectionTray({ selected, max, onRemove, onClear, onCompare, lan
                 <button
                     type="button"
                     onClick={onClear}
-                    className="text-[11px] font-semibold text-muted-foreground hover:text-foreground"
+                    className="text-[0.6875rem] font-semibold text-muted-foreground hover:text-foreground"
                 >
                     {ko ? '모두 해제' : 'Clear'}
                 </button>
@@ -42,7 +42,7 @@ export function SelectionTray({ selected, max, onRemove, onClear, onCompare, lan
                 {selected.map((s) => (
                     <span
                         key={s.id}
-                        className="inline-flex items-center gap-1 rounded-full bg-muted/50 pl-2.5 pr-1 py-1 text-[11.5px] font-semibold text-foreground numeric"
+                        className="inline-flex items-center gap-1 rounded-full bg-muted/50 pl-2.5 pr-1 py-1 text-[0.71875rem] font-semibold text-foreground numeric"
                     >
                         {formatDate(s.snapshotDate, 'yy.MM.dd')}
                         <button
@@ -61,7 +61,7 @@ export function SelectionTray({ selected, max, onRemove, onClear, onCompare, lan
                 type="button"
                 onClick={onCompare}
                 disabled={selected.length < 2}
-                className="mt-3 w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary py-2.5 text-[13px] font-bold text-primary-foreground disabled:opacity-40 hover:opacity-90 transition-opacity"
+                className="mt-3 w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary py-2.5 text-[0.8125rem] font-bold text-primary-foreground disabled:opacity-40 hover:opacity-90 transition-opacity"
             >
                 <GitCompareArrows className="w-4 h-4" />
                 {selected.length < 2

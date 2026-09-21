@@ -99,7 +99,7 @@ function UpDown({ value, big = false }: { value: number; big?: boolean }) {
             className={cn(
                 'numeric font-bold tracking-tight inline-flex items-center gap-0.5',
                 isUp ? 'text-profit' : 'text-loss',
-                big ? 'text-[15px]' : 'text-[12.5px]',
+                big ? 'text-[0.9375rem]' : 'text-[0.78125rem]',
             )}
         >
             <span aria-hidden>{isUp ? '▲' : '▼'}</span>
@@ -599,11 +599,11 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                 {/* Row 1: 종목명 (full) + overflow menu */}
                 <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
-                        <div className="font-serif text-[15px] font-semibold text-foreground leading-snug break-keep">
+                        <div className="font-serif text-[0.9375rem] font-semibold text-foreground leading-snug break-keep">
                             {h.stockName}
                         </div>
                         {h.engName && h.engName !== h.stockName && (
-                            <div className="text-[11px] text-muted-foreground mt-0.5 truncate">
+                            <div className="text-[0.6875rem] text-muted-foreground mt-0.5 truncate">
                                 {h.engName}
                             </div>
                         )}
@@ -648,7 +648,7 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
 
                 {/* Row 2: 메타 (좌) + 평가금액·등락률 (우) */}
                 <div className="mt-1.5 flex items-end justify-between gap-3">
-                    <div className="text-[10px] text-muted-foreground flex-1 min-w-0 space-y-0.5">
+                    <div className="text-[0.625rem] text-muted-foreground flex-1 min-w-0 space-y-0.5">
                         <div>
                             {h.stockCode} · {formatNumber(h.quantity)}{language === 'ko' ? '주' : 'shr'}
                             {' · '}
@@ -660,16 +660,16 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                         </div>
                     </div>
                     <div className="text-right shrink-0">
-                        <div className="text-[10px] text-muted-foreground numeric">
+                        <div className="text-[0.625rem] text-muted-foreground numeric">
                             {language === 'ko' ? '매입' : 'Cost'} {formatCurrency(costDisplay, baseCurrency)}
                         </div>
-                        <div className="text-[14px] font-bold text-foreground numeric mt-0.5">
+                        <div className="text-[0.875rem] font-bold text-foreground numeric mt-0.5">
                             {formatCurrency(valueDisplay, baseCurrency)}
                         </div>
                         <div className="mt-0.5 flex items-center justify-end gap-1.5">
                             <UpDown value={displayProfitRate} />
                             <span className={cn(
-                                'text-[11px] font-semibold numeric',
+                                'text-[0.6875rem] font-semibold numeric',
                                 h.profit >= 0 ? 'text-profit' : 'text-loss',
                             )}>
                                 {profitText}
@@ -685,14 +685,14 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
         <div className="max-w-[480px] md:max-w-2xl mx-auto w-full">
             {/* Hero — page title + page-level actions (일괄 등록 + 공유) */}
             <section className="px-6 pt-3 pb-4 flex items-end justify-between gap-3">
-                <h1 className="hero-serif text-[32px] text-foreground leading-tight">
+                <h1 className="hero-serif text-[2rem] text-foreground leading-tight">
                     {language === 'ko' ? '현재 보유 자산' : 'Current Holdings'}
                 </h1>
                 <div className="flex items-center gap-1">
                     <BulkImportDialog onSuccess={refresh} isPro={isPro}>
                         <button
                             type="button"
-                            className="text-[11px] font-bold tracking-wide text-muted-foreground hover:text-foreground px-2.5 py-2 inline-flex items-center gap-1 min-h-[36px]"
+                            className="text-[0.6875rem] font-bold tracking-wide text-muted-foreground hover:text-foreground px-2.5 py-2 inline-flex items-center gap-1 min-h-[36px]"
                             aria-label={language === 'ko' ? '일괄 등록' : 'Bulk import'}
                         >
                             <Upload className="w-3.5 h-3.5" />
@@ -753,33 +753,33 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                                                 className="w-2 h-2 rounded-sm shrink-0"
                                                 style={{ background: selectedSeg!.color }}
                                             />
-                                            <span className="text-[13px] font-medium text-muted-foreground truncate">
+                                            <span className="text-[0.8125rem] font-medium text-muted-foreground truncate">
                                                 {selectedHolding.stockCode}
                                             </span>
                                         </div>
-                                        <div className="font-serif text-[18px] font-semibold text-foreground numeric leading-tight">
+                                        <div className="font-serif text-[1.125rem] font-semibold text-foreground numeric leading-tight">
                                             {formatCurrency(selectedValueDisplay, baseCurrency)}
                                         </div>
-                                        <div className="mt-1 flex items-center gap-2 text-[11px] text-muted-foreground">
+                                        <div className="mt-1 flex items-center gap-2 text-[0.6875rem] text-muted-foreground">
                                             <span className="numeric font-semibold text-foreground">
                                                 {selectedWeight.toFixed(1)}%
                                             </span>
                                             <span>·</span>
                                             <UpDown value={calcDisplayProfitRate(selectedHolding)} />
                                         </div>
-                                        <div className="mt-1 text-[11px] text-muted-foreground truncate">
+                                        <div className="mt-1 text-[0.6875rem] text-muted-foreground truncate">
                                             {selectedHolding.stockName}
                                         </div>
                                     </>
                                 ) : (
                                     <>
-                                        <div className="text-[13px] font-medium text-muted-foreground">
+                                        <div className="text-[0.8125rem] font-medium text-muted-foreground">
                                             {t('totalValue')}
                                         </div>
-                                        <div className="font-serif text-[20px] font-semibold text-foreground numeric leading-tight mt-0.5">
+                                        <div className="font-serif text-[1.25rem] font-semibold text-foreground numeric leading-tight mt-0.5">
                                             {formatCurrency(displayTotal, baseCurrency)}
                                         </div>
-                                        <div className="mt-1 text-[11px] text-muted-foreground">
+                                        <div className="mt-1 text-[0.6875rem] text-muted-foreground">
                                             {language === 'ko' ? `${holdings.length}개 종목` : `${holdings.length} holdings`}
                                         </div>
                                     </>
@@ -809,10 +809,10 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                                             className="w-2 h-2 rounded-sm shrink-0"
                                             style={{ background: seg.color }}
                                         />
-                                        <span className="text-[11px] text-muted-foreground truncate flex-1">
+                                        <span className="text-[0.6875rem] text-muted-foreground truncate flex-1">
                                             {seg.holding.stockCode}
                                         </span>
-                                        <span className="text-[11px] font-bold text-foreground numeric">
+                                        <span className="text-[0.6875rem] font-bold text-foreground numeric">
                                             {w.toFixed(1)}%
                                         </span>
                                     </button>
@@ -832,10 +832,10 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                                         )}
                                     >
                                         <span className="w-2 h-2 rounded-sm shrink-0 bg-muted-foreground/40" />
-                                        <span className="text-[11px] text-muted-foreground truncate flex-1">
+                                        <span className="text-[0.6875rem] text-muted-foreground truncate flex-1">
                                             {language === 'ko' ? `기타 ${restCount}개` : `Others (${restCount})`}
                                         </span>
-                                        <span className="text-[11px] font-bold text-foreground numeric">
+                                        <span className="text-[0.6875rem] font-bold text-foreground numeric">
                                             {restWeight.toFixed(1)}%
                                         </span>
                                     </div>
@@ -855,10 +855,10 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                                         )}
                                     >
                                         <span className="w-2 h-2 rounded-sm shrink-0 bg-muted-foreground/40" />
-                                        <span className="text-[11px] text-muted-foreground truncate flex-1">
+                                        <span className="text-[0.6875rem] text-muted-foreground truncate flex-1">
                                             {language === 'ko' ? '예수금' : 'Cash'}
                                         </span>
-                                        <span className="text-[11px] font-bold text-foreground numeric">
+                                        <span className="text-[0.6875rem] font-bold text-foreground numeric">
                                             {cashWeight.toFixed(1)}%
                                         </span>
                                     </div>
@@ -884,7 +884,7 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                         <Wallet className="w-4 h-4 text-primary" strokeWidth={2} />
                     </div>
                     <div className="min-w-0">
-                        <div className="text-[13px] font-medium text-muted-foreground">
+                        <div className="text-[0.8125rem] font-medium text-muted-foreground">
                             {language === 'ko' ? '예수금' : 'Cash balance'}
                         </div>
                         <div className="font-serif text-lg font-semibold text-foreground mt-0.5 numeric truncate">
@@ -902,7 +902,7 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                 >
                     <button
                         type="button"
-                        className="text-[11px] font-bold tracking-wide text-primary px-3 py-2 inline-flex items-center gap-1 min-h-[40px] hover:bg-accent-soft transition-colors shrink-0"
+                        className="text-[0.6875rem] font-bold tracking-wide text-primary px-3 py-2 inline-flex items-center gap-1 min-h-[40px] hover:bg-accent-soft transition-colors shrink-0"
                     >
                         <Edit2 className="w-3.5 h-3.5" />
                         {language === 'ko' ? '수정' : 'Edit'}
@@ -928,7 +928,7 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                                 aria-selected={viewMode === 'byAccount'}
                                 onClick={() => handleViewModeChange('byAccount')}
                                 className={cn(
-                                    'text-[11px] font-bold px-2.5 py-1 rounded-md transition-colors',
+                                    'text-[0.6875rem] font-bold px-2.5 py-1 rounded-md transition-colors',
                                     viewMode === 'byAccount'
                                         ? 'bg-foreground text-background'
                                         : 'text-muted-foreground hover:text-foreground',
@@ -942,7 +942,7 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                                 aria-selected={viewMode === 'unified'}
                                 onClick={() => handleViewModeChange('unified')}
                                 className={cn(
-                                    'text-[11px] font-bold px-2.5 py-1 rounded-md transition-colors',
+                                    'text-[0.6875rem] font-bold px-2.5 py-1 rounded-md transition-colors',
                                     viewMode === 'unified'
                                         ? 'bg-foreground text-background'
                                         : 'text-muted-foreground hover:text-foreground',
@@ -1011,7 +1011,7 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                             aria-selected={accountFilter === 'all'}
                             onClick={() => handleAccountFilterChange('all')}
                             className={cn(
-                                'shrink-0 text-[12px] font-semibold px-3 py-1.5 rounded-full transition-colors',
+                                'shrink-0 text-[0.75rem] font-semibold px-3 py-1.5 rounded-full transition-colors',
                                 accountFilter === 'all'
                                     ? 'bg-foreground text-background'
                                     : 'bg-secondary text-muted-foreground hover:text-foreground',
@@ -1027,7 +1027,7 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                                 aria-selected={accountFilter === a.id}
                                 onClick={() => handleAccountFilterChange(a.id)}
                                 className={cn(
-                                    'shrink-0 text-[12px] font-semibold px-3 py-1.5 rounded-full transition-colors',
+                                    'shrink-0 text-[0.75rem] font-semibold px-3 py-1.5 rounded-full transition-colors',
                                     accountFilter === a.id
                                         ? 'bg-foreground text-background'
                                         : 'bg-secondary text-muted-foreground hover:text-foreground',
@@ -1117,18 +1117,18 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                                         </div>
                                         <div className="flex flex-col items-end gap-0 shrink-0 leading-tight">
                                             <div className="flex items-baseline gap-1">
-                                                <span className="text-[10px] text-muted-foreground tracking-wide">
+                                                <span className="text-[0.625rem] text-muted-foreground tracking-wide">
                                                     {language === 'ko' ? '평가' : 'Value'}
                                                 </span>
-                                                <span className="text-[12px] font-bold numeric text-foreground">
+                                                <span className="text-[0.75rem] font-bold numeric text-foreground">
                                                     {formatCurrency(groupValueDisplay, baseCurrency)}
                                                 </span>
                                             </div>
                                             <div className="flex items-baseline gap-1">
-                                                <span className="text-[10px] text-muted-foreground tracking-wide">
+                                                <span className="text-[0.625rem] text-muted-foreground tracking-wide">
                                                     {language === 'ko' ? '매입' : 'Cost'}
                                                 </span>
-                                                <span className="text-[10px] numeric text-muted-foreground">
+                                                <span className="text-[0.625rem] numeric text-muted-foreground">
                                                     {formatCurrency(groupCostDisplay, baseCurrency)}
                                                 </span>
                                             </div>
@@ -1136,10 +1136,10 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                                                 'flex items-baseline gap-1',
                                                 isProfit ? 'text-profit' : 'text-loss',
                                             )}>
-                                                <span className="text-[10px] tracking-wide opacity-80">
+                                                <span className="text-[0.625rem] tracking-wide opacity-80">
                                                     {language === 'ko' ? '수익' : 'P/L'}
                                                 </span>
-                                                <span className="text-[10px] font-bold numeric">
+                                                <span className="text-[0.625rem] font-bold numeric">
                                                     {isProfit ? '+' : ''}{formatCurrency(groupProfitDisplay, baseCurrency)}
                                                 </span>
                                             </div>
@@ -1184,18 +1184,18 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                                     </div>
                                     <div className="flex flex-col items-end gap-0 shrink-0 leading-tight">
                                         <div className="flex items-baseline gap-1">
-                                            <span className="text-[10px] text-muted-foreground tracking-wide">
+                                            <span className="text-[0.625rem] text-muted-foreground tracking-wide">
                                                 {language === 'ko' ? '평가' : 'Value'}
                                             </span>
-                                            <span className="text-[12px] font-bold numeric text-foreground">
+                                            <span className="text-[0.75rem] font-bold numeric text-foreground">
                                                 {formatCurrency(totalStockValueDisplay, baseCurrency)}
                                             </span>
                                         </div>
                                         <div className="flex items-baseline gap-1">
-                                            <span className="text-[10px] text-muted-foreground tracking-wide">
+                                            <span className="text-[0.625rem] text-muted-foreground tracking-wide">
                                                 {language === 'ko' ? '매입' : 'Cost'}
                                             </span>
-                                            <span className="text-[10px] numeric text-muted-foreground">
+                                            <span className="text-[0.625rem] numeric text-muted-foreground">
                                                 {formatCurrency(totalCostDisplay, baseCurrency)}
                                             </span>
                                         </div>
@@ -1203,10 +1203,10 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                                             'flex items-baseline gap-1',
                                             isProfit ? 'text-profit' : 'text-loss',
                                         )}>
-                                            <span className="text-[10px] tracking-wide opacity-80">
+                                            <span className="text-[0.625rem] tracking-wide opacity-80">
                                                 {language === 'ko' ? '수익' : 'P/L'}
                                             </span>
-                                            <span className="text-[10px] font-bold numeric">
+                                            <span className="text-[0.625rem] font-bold numeric">
                                                 {isProfit ? '+' : ''}{formatCurrency(totalProfitDisplay, baseCurrency)}
                                             </span>
                                         </div>
@@ -1373,7 +1373,7 @@ function AddHoldingFloating({
                         />
                         {existingHolding && (
                             <div className="bg-accent-soft rounded-xl p-3 space-y-2.5">
-                                <div className="text-[11px] text-muted-foreground leading-snug">
+                                <div className="text-[0.6875rem] text-muted-foreground leading-snug">
                                     {language === 'ko' ? (
                                         <>
                                             이미 보유 중인 종목입니다 — <span className="numeric font-semibold text-foreground">{formatNumber(existingHolding.quantity)}{qtySuffix}</span>
@@ -1394,7 +1394,7 @@ function AddHoldingFloating({
                                         onClick={() => setAddMode('merge')}
                                         disabled={adding}
                                         className={cn(
-                                            'py-2 text-[12px] font-bold rounded-lg transition-colors',
+                                            'py-2 text-[0.75rem] font-bold rounded-lg transition-colors',
                                             addMode === 'merge'
                                                 ? 'bg-accent-soft text-primary'
                                                 : 'bg-secondary text-muted-foreground hover:text-foreground',
@@ -1407,7 +1407,7 @@ function AddHoldingFloating({
                                         onClick={() => setAddMode('overwrite')}
                                         disabled={adding}
                                         className={cn(
-                                            'py-2 text-[12px] font-bold rounded-lg transition-colors',
+                                            'py-2 text-[0.75rem] font-bold rounded-lg transition-colors',
                                             addMode === 'overwrite'
                                                 ? 'bg-accent-soft text-primary'
                                                 : 'bg-secondary text-muted-foreground hover:text-foreground',
@@ -1416,7 +1416,7 @@ function AddHoldingFloating({
                                         {language === 'ko' ? '덮어쓰기' : 'Overwrite'}
                                     </button>
                                 </div>
-                                <div className="text-[10.5px] text-muted-foreground leading-snug">
+                                <div className="text-[0.65625rem] text-muted-foreground leading-snug">
                                     {addMode === 'merge'
                                         ? (language === 'ko' ? '입력한 수량을 더하고 평단가는 가중평균으로 계산됩니다.' : 'Quantity is added; average price is recalculated as a weighted mean.')
                                         : (language === 'ko' ? '기존 보유분을 입력값으로 교체합니다.' : 'Existing holding is replaced with the new values.')}
@@ -1581,7 +1581,7 @@ function EditHoldingDialog({
                     />
                     {conflictHolding && (
                         <div className="bg-accent-soft rounded-xl p-3 space-y-2.5">
-                            <div className="text-[11px] text-muted-foreground leading-snug">
+                            <div className="text-[0.6875rem] text-muted-foreground leading-snug">
                                 {language === 'ko' ? (
                                     <>
                                         이미 이 계좌에 보유 중인 종목입니다 — <span className="numeric font-semibold text-foreground">{formatNumber(conflictHolding.quantity)}{qtySuffix}</span>
@@ -1600,7 +1600,7 @@ function EditHoldingDialog({
                                     onClick={() => setMode('merge')}
                                     disabled={saving}
                                     className={cn(
-                                        'py-2 text-[12px] font-bold rounded-lg transition-colors',
+                                        'py-2 text-[0.75rem] font-bold rounded-lg transition-colors',
                                         mode === 'merge'
                                             ? 'bg-accent-soft text-primary'
                                             : 'bg-secondary text-muted-foreground hover:text-foreground',
@@ -1613,7 +1613,7 @@ function EditHoldingDialog({
                                     onClick={() => setMode('overwrite')}
                                     disabled={saving}
                                     className={cn(
-                                        'py-2 text-[12px] font-bold rounded-lg transition-colors',
+                                        'py-2 text-[0.75rem] font-bold rounded-lg transition-colors',
                                         mode === 'overwrite'
                                             ? 'bg-accent-soft text-primary'
                                             : 'bg-secondary text-muted-foreground hover:text-foreground',
@@ -1622,7 +1622,7 @@ function EditHoldingDialog({
                                     {language === 'ko' ? '덮어쓰기' : 'Overwrite'}
                                 </button>
                             </div>
-                            <div className="text-[10.5px] text-muted-foreground leading-snug">
+                            <div className="text-[0.65625rem] text-muted-foreground leading-snug">
                                 {mode === 'merge'
                                     ? (language === 'ko' ? '입력한 수량을 기존 보유분에 더하고 평단가는 가중평균으로 계산됩니다. 수정 중인 항목은 합쳐지며 사라집니다.' : 'Quantity is added to the existing holding; average price is recalculated. The edited entry is merged and removed.')
                                     : (language === 'ko' ? '기존 보유분을 입력값으로 교체합니다. 수정 중인 항목은 사라집니다.' : 'The existing holding is replaced with these values. The edited entry is removed.')}
@@ -1692,7 +1692,7 @@ function SortToggle({
             aria-label={ariaLabel}
             onClick={onClick}
             className={cn(
-                'text-[11px] font-bold tracking-wide px-2 py-1 inline-flex items-center gap-0.5 transition-colors',
+                'text-[0.6875rem] font-bold tracking-wide px-2 py-1 inline-flex items-center gap-0.5 transition-colors',
                 active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
             )}
         >

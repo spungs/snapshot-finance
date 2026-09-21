@@ -279,7 +279,7 @@ export function PerformanceChart({ initialChartData, portfolioUserId }: Performa
             {/* SWR revalidate 실패했지만 fallback/캐시 데이터로 차트는 그대로 표시 — 사용자가 빈 화면을 보지 않게.
                 재시도 버튼은 여기에서만 노출 (정상 상태엔 전역 새로고침으로 충분). */}
             {staleWarning && (
-              <div className="flex items-center gap-1.5 mb-2 text-[11px] text-muted-foreground">
+              <div className="flex items-center gap-1.5 mb-2 text-[0.6875rem] text-muted-foreground">
                 <AlertCircle className="h-3 w-3 text-loss/70 shrink-0" />
                 <span>
                   {language === 'ko'

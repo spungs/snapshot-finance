@@ -109,13 +109,13 @@ export function TransferHoldingDialog({
                     <div className="text-sm space-y-1">
                         <div>
                             <span className="font-medium">{holding.stockName}</span>
-                            <span className="ml-2 text-[12px] text-muted-foreground">
+                            <span className="ml-2 text-[0.75rem] text-muted-foreground">
                                 {language === 'ko' ? '보유' : 'Hold'} {holding.quantity}
                                 {language === 'ko' ? '주' : ' shr'}
                             </span>
                         </div>
                         {holding.accountName && (
-                            <div className="text-[12px] text-muted-foreground">
+                            <div className="text-[0.75rem] text-muted-foreground">
                                 {language === 'ko' ? '보내는 계좌' : 'From'}: {holding.accountName}
                             </div>
                         )}

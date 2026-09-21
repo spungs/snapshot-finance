@@ -50,7 +50,7 @@ export function LoadingHint({
         <div
             // key 로 메시지 전환 시 fade-in 다시 트리거
             key={index}
-            className="px-6 pt-3 pb-1 text-[12px] text-muted-foreground text-center animate-fade-in"
+            className="px-6 pt-3 pb-1 text-[0.75rem] text-muted-foreground text-center animate-fade-in"
             aria-live="polite"
         >
             {messages[index]}

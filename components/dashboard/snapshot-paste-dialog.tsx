@@ -162,17 +162,17 @@ export function SnapshotPasteDialog({ open, onOpenChange, onApply }: Props) {
                     className="w-full resize-y rounded-md border border-input bg-background p-3 font-mono text-xs outline-none placeholder:text-muted-foreground/50 focus:border-primary"
                 />
 
-                <p className="text-[11px] leading-relaxed text-muted-foreground">
+                <p className="text-[0.6875rem] leading-relaxed text-muted-foreground">
                     {ko
                         ? '인식 열: 종목명 · 종목코드 · 평균매수단가 · 보유수량 · 현재가 · 투자금액. 투자금액이 있으면 미국 종목의 매입환율을 역산합니다.'
                         : 'Columns: name · code · average price · quantity · price · cost. Cost is used to derive the purchase FX rate for US holdings.'}
                 </p>
 
                 {error && (
-                    <p className="text-[12px] text-destructive">{error}</p>
+                    <p className="text-[0.75rem] text-destructive">{error}</p>
                 )}
                 {unresolved.length > 0 && (
-                    <p className="text-[12px] text-muted-foreground">
+                    <p className="text-[0.75rem] text-muted-foreground">
                         {ko ? '매칭 실패: ' : 'Not matched: '}
                         {unresolved.join(', ')}
                     </p>

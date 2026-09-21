@@ -481,10 +481,10 @@ export default function EditSnapshotPage() {
     if (error && !holdings.length) {
         return (
             <div className="max-w-[420px] md:max-w-2xl mx-auto w-full px-6 pt-12 text-center">
-                <p className="text-loss text-[13px] mb-4">{error}</p>
+                <p className="text-loss text-[0.8125rem] mb-4">{error}</p>
                 <Link
                     href="/dashboard/snapshots"
-                    className="inline-flex items-center gap-1 text-[12px] font-semibold text-primary hover:underline"
+                    className="inline-flex items-center gap-1 text-[0.75rem] font-semibold text-primary hover:underline"
                 >
                     <ChevronLeft className="w-3 h-3" />
                     {t('backToList')}
@@ -504,7 +504,7 @@ export default function EditSnapshotPage() {
                     <div className="absolute inset-0 bg-background/60 backdrop-blur-sm z-50 flex items-center justify-center">
                         <div className="flex flex-col items-center gap-3">
                             <Loader2 className="w-9 h-9 animate-spin text-primary" />
-                            <p className="text-[13px] font-medium text-muted-foreground">
+                            <p className="text-[0.8125rem] font-medium text-muted-foreground">
                                 {t('saving')}
                             </p>
                         </div>
@@ -515,14 +515,14 @@ export default function EditSnapshotPage() {
                 <section className="px-6 pt-3 pb-4">
                     <Link
                         href={`/dashboard/snapshots/${params.id}`}
-                        className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors mb-2"
+                        className="inline-flex items-center gap-1 text-[0.6875rem] text-muted-foreground hover:text-foreground transition-colors mb-2"
                     >
                         <ChevronLeft className="w-3 h-3" />
                         {t('cancel')}
                     </Link>
                     <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                            <h1 className="hero-serif text-[32px] text-foreground leading-tight">
+                            <h1 className="hero-serif text-[2rem] text-foreground leading-tight">
                                 {t('editSnapshot')}
                             </h1>
                             <span className="serif-italic text-xs text-muted-foreground block mt-1">
@@ -534,7 +534,7 @@ export default function EditSnapshotPage() {
                         <button
                             type="submit"
                             disabled={saving || updatingPrices}
-                            className="bg-primary text-primary-foreground px-3 py-1.5 text-[11px] font-bold disabled:opacity-50 hover:opacity-90 transition-opacity inline-flex items-center justify-center gap-1.5 min-w-[72px] shrink-0"
+                            className="bg-primary text-primary-foreground px-3 py-1.5 text-[0.6875rem] font-bold disabled:opacity-50 hover:opacity-90 transition-opacity inline-flex items-center justify-center gap-1.5 min-w-[72px] shrink-0"
                         >
                             {saving || updatingPrices
                                 ? <Loader2 className="w-3 h-3 animate-spin" />
@@ -545,7 +545,7 @@ export default function EditSnapshotPage() {
 
                 {/* Inline error */}
                 {error && (
-                    <div className="mx-4 mb-4 p-3 bg-destructive/10 border border-destructive/30 text-destructive text-[12px]">
+                    <div className="mx-4 mb-4 p-3 bg-destructive/10 border border-destructive/30 text-destructive text-[0.75rem]">
                         {error}
                     </div>
                 )}
@@ -559,7 +559,7 @@ export default function EditSnapshotPage() {
                             onClick={() => setSummaryDisplayCurrency('KRW')}
                             disabled={saving}
                             className={cn(
-                                'text-[10px] font-bold tracking-wide px-2.5 py-1 transition-colors disabled:opacity-50',
+                                'text-[0.625rem] font-bold tracking-wide px-2.5 py-1 transition-colors disabled:opacity-50',
                                 summaryDisplayCurrency === 'KRW'
                                     ? 'bg-primary text-primary-foreground'
                                     : 'text-muted-foreground hover:text-foreground',
@@ -572,7 +572,7 @@ export default function EditSnapshotPage() {
                             onClick={() => setSummaryDisplayCurrency('USD')}
                             disabled={saving}
                             className={cn(
-                                'text-[10px] font-bold tracking-wide px-2.5 py-1 transition-colors disabled:opacity-50',
+                                'text-[0.625rem] font-bold tracking-wide px-2.5 py-1 transition-colors disabled:opacity-50',
                                 summaryDisplayCurrency === 'USD'
                                     ? 'bg-primary text-primary-foreground'
                                     : 'text-muted-foreground hover:text-foreground',
@@ -584,21 +584,21 @@ export default function EditSnapshotPage() {
                 </div>
 
                 <section className="mx-4 mb-4 p-5 bg-card rounded-2xl">
-                    <div className="text-[13px] font-medium text-muted-foreground">
+                    <div className="text-[0.8125rem] font-medium text-muted-foreground">
                         {t('totalValue')}
                     </div>
-                    <div className="amount-display text-[28px] text-foreground leading-none mt-1.5">
+                    <div className="amount-display text-[1.75rem] text-foreground leading-none mt-1.5">
                         {formatCurrency(totals.totalValue, totals.currency)}
                     </div>
 
                     <div className="flex gap-4 mt-4 items-stretch">
                         <div className="flex-1">
-                            <div className="text-[13px] font-medium text-muted-foreground">
+                            <div className="text-[0.8125rem] font-medium text-muted-foreground">
                                 {t('returnRate')}
                             </div>
                             <div
                                 className={cn(
-                                    'text-[15px] font-bold mt-1 numeric inline-flex items-center gap-0.5',
+                                    'text-[0.9375rem] font-bold mt-1 numeric inline-flex items-center gap-0.5',
                                     isProfit ? 'text-profit' : 'text-loss',
                                 )}
                             >
@@ -608,12 +608,12 @@ export default function EditSnapshotPage() {
                         </div>
                         <div className="w-px bg-border self-stretch" />
                         <div className="flex-1">
-                            <div className="text-[13px] font-medium text-muted-foreground">
+                            <div className="text-[0.8125rem] font-medium text-muted-foreground">
                                 {t('pl')}
                             </div>
                             <div
                                 className={cn(
-                                    'text-[15px] font-bold mt-1 numeric',
+                                    'text-[0.9375rem] font-bold mt-1 numeric',
                                     isProfit ? 'text-profit' : 'text-loss',
                                 )}
                             >
@@ -622,7 +622,7 @@ export default function EditSnapshotPage() {
                         </div>
                     </div>
 
-                    <div className="mt-4 pt-4 border-t border-border flex items-center justify-between text-[11px]">
+                    <div className="mt-4 pt-4 border-t border-border flex items-center justify-between text-[0.6875rem]">
                         <span className="text-muted-foreground">{t('totalInvested')}</span>
                         <span className="font-bold text-foreground numeric">
                             {formatCurrency(totals.totalCost, totals.currency)}
@@ -642,7 +642,7 @@ export default function EditSnapshotPage() {
                         value={note}
                         disabled={saving}
                         onChange={(e) => setNote(e.target.value)}
-                        className="w-full bg-transparent font-serif text-base md:text-[14px] text-foreground outline-none placeholder:text-muted-foreground/60"
+                        className="w-full bg-transparent font-serif text-base md:text-[0.875rem] text-foreground outline-none placeholder:text-muted-foreground/60"
                     />
                 </section>
 
@@ -673,13 +673,13 @@ export default function EditSnapshotPage() {
                             loadedDateRef.current = null
                             setSnapshotDate(e.target.value)
                         }}
-                        className="w-full bg-transparent font-serif text-[22px] font-semibold text-foreground numeric outline-none border-b border-border pb-1.5 focus:border-primary transition-colors"
+                        className="w-full bg-transparent font-serif text-[1.375rem] font-semibold text-foreground numeric outline-none border-b border-border pb-1.5 focus:border-primary transition-colors"
                     />
                     <div className="mt-3 flex items-center justify-between gap-2">
-                        <span className="text-[11px] text-muted-foreground">
+                        <span className="text-[0.6875rem] text-muted-foreground">
                             {t('exchangeRate')}
                         </span>
-                        <span className="text-[12px] font-bold text-foreground numeric">
+                        <span className="text-[0.75rem] font-bold text-foreground numeric">
                             {formatCurrency(exchangeRate, 'KRW')} / USD
                             {rateUnavailable && (
                                 <span className="ml-1.5 font-medium text-muted-foreground">
@@ -689,14 +689,14 @@ export default function EditSnapshotPage() {
                         </span>
                     </div>
                     {adjustedFrom && (
-                        <div className="mt-3 pt-3 border-t border-border text-[11px] text-primary leading-relaxed">
+                        <div className="mt-3 pt-3 border-t border-border text-[0.6875rem] text-primary leading-relaxed">
                             {language === 'ko'
                                 ? `${adjustedFrom}은 휴장일이라 직전 거래일 ${snapshotDate}로 맞췄습니다.`
                                 : `${adjustedFrom} was a market holiday — adjusted to the previous trading day ${snapshotDate}.`}
                         </div>
                     )}
                     {isHistorical && !adjustedFrom && (
-                        <div className="mt-3 pt-3 border-t border-border text-[11px] text-primary leading-relaxed">
+                        <div className="mt-3 pt-3 border-t border-border text-[0.6875rem] text-primary leading-relaxed">
                             {t('historicalMode')}
                         </div>
                     )}
@@ -711,7 +711,7 @@ export default function EditSnapshotPage() {
                         type="button"
                         onClick={addHolding}
                         disabled={saving}
-                        className="inline-flex items-center gap-1 text-[11px] font-bold tracking-wide text-primary px-2 py-1 hover:bg-accent-soft transition-colors disabled:opacity-50"
+                        className="inline-flex items-center gap-1 text-[0.6875rem] font-bold tracking-wide text-primary px-2 py-1 hover:bg-accent-soft transition-colors disabled:opacity-50"
                     >
                         <Plus className="w-3.5 h-3.5" />
                         {t('addStock')}
@@ -735,7 +735,7 @@ export default function EditSnapshotPage() {
                                 }}
                             >
                                 <div className="flex items-center justify-between mb-2.5">
-                                    <span className="text-[13px] font-medium text-muted-foreground">
+                                    <span className="text-[0.8125rem] font-medium text-muted-foreground">
                                         {language === 'ko' ? `종목 ${index + 1}` : `Stock ${index + 1}`}
                                     </span>
                                     {holdings.length > 1 && (
@@ -758,7 +758,7 @@ export default function EditSnapshotPage() {
                                 />
 
                                 {holding.stockCode && (holding.currentPrice ? (
-                                    <div className="mt-2 flex items-center justify-between gap-2 text-[11px]">
+                                    <div className="mt-2 flex items-center justify-between gap-2 text-[0.6875rem]">
                                         <span className="text-muted-foreground">{priceLabel}</span>
                                         <span className="font-bold text-foreground numeric">
                                             {formatCurrency(parseFloat(holding.currentPrice) || 0, holding.currency)}

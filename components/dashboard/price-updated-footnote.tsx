@@ -30,7 +30,7 @@ export function PriceUpdatedFootnote({
         if (!Number.isFinite(age) || age < STALE_THRESHOLD_MS) return null
         if (!relative) return null
         return (
-            <span className="text-[10px] text-loss/70 truncate">
+            <span className="text-[0.625rem] text-loss/70 truncate">
                 {language === 'ko' ? `주가 ${relative} · 시세 지연` : `Price ${relative} · delayed`}
             </span>
         )
@@ -40,7 +40,7 @@ export function PriceUpdatedFootnote({
     const dow = new Date().getDay()
     const isWeekend = dow === 0 || dow === 6
     return (
-        <span className="text-[10px] text-muted-foreground truncate">
+        <span className="text-[0.625rem] text-muted-foreground truncate">
             {isWeekend
                 ? (language === 'ko' ? '휴장' : 'Closed')
                 : (language === 'ko' ? '장 마감' : 'Market closed')}

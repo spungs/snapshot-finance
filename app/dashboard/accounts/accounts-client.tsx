@@ -113,15 +113,15 @@ export function AccountsClient({ initialAccounts }: { initialAccounts: AccountLi
         <div className="max-w-[480px] md:max-w-2xl mx-auto w-full">
             <section className="px-6 pt-3 pb-4 flex items-center justify-between">
                 <div className="min-w-0">
-                    <h1 className="hero-serif text-[32px] text-foreground">{t.title}</h1>
-                    <p className="text-[12px] text-muted-foreground mt-1">{t.desc}</p>
+                    <h1 className="hero-serif text-[2rem] text-foreground">{t.title}</h1>
+                    <p className="text-[0.75rem] text-muted-foreground mt-1">{t.desc}</p>
                 </div>
             </section>
 
             {/* 계좌 목록 */}
             <SectionLabel>{t.accountsLabel}</SectionLabel>
             {accounts.length === 0 ? (
-                <div className="mx-4 px-5 py-10 bg-card rounded-2xl text-center text-[13px] text-muted-foreground">
+                <div className="mx-4 px-5 py-10 bg-card rounded-2xl text-center text-[0.8125rem] text-muted-foreground">
                     {t.empty}
                 </div>
             ) : (
@@ -156,7 +156,7 @@ export function AccountsClient({ initialAccounts }: { initialAccounts: AccountLi
 
             {accounts.length > 1 && (
                 <div className="px-6 pt-2">
-                    <p className="text-[11px] text-muted-foreground">{t.reorderHint}</p>
+                    <p className="text-[0.6875rem] text-muted-foreground">{t.reorderHint}</p>
                 </div>
             )}
 
@@ -167,7 +167,7 @@ export function AccountsClient({ initialAccounts }: { initialAccounts: AccountLi
                     onClick={() => setAddOpen(true)}
                     disabled={pending}
                     className={cn(
-                        'w-full flex items-center justify-center gap-2 py-3.5 bg-primary text-primary-foreground text-[14px] font-semibold rounded-md hover:opacity-90 transition-opacity disabled:opacity-50',
+                        'w-full flex items-center justify-center gap-2 py-3.5 bg-primary text-primary-foreground text-[0.875rem] font-semibold rounded-md hover:opacity-90 transition-opacity disabled:opacity-50',
                     )}
                 >
                     <Plus className="w-4 h-4" />
@@ -279,10 +279,10 @@ function SortableRow({
             </button>
 
             <div className="flex-1 min-w-0">
-                <div className="font-serif text-[15px] font-semibold text-foreground truncate">
+                <div className="font-serif text-[0.9375rem] font-semibold text-foreground truncate">
                     {account.name}
                 </div>
-                <div className="text-[11px] text-muted-foreground mt-0.5">
+                <div className="text-[0.6875rem] text-muted-foreground mt-0.5">
                     {holdingsCountLabel}: {account.holdingsCount}
                     {holdingsCountUnit}
                 </div>

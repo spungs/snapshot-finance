@@ -15,21 +15,21 @@ export function InterestSection() {
                 <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-center md:text-left">
 
                     <div className="flex-1 space-y-1">
-                        <p className="text-[13px] font-medium text-muted-foreground">{t.nominal}</p>
+                        <p className="text-[0.8125rem] font-medium text-muted-foreground">{t.nominal}</p>
                         <p className="text-2xl font-bold">2.5%</p>
                     </div>
 
                     <Minus className="hidden md:block text-muted-foreground" />
 
                     <div className="flex-1 space-y-1">
-                        <p className="text-[13px] font-medium text-muted-foreground">{t.inflation}</p>
+                        <p className="text-[0.8125rem] font-medium text-muted-foreground">{t.inflation}</p>
                         <p className="text-2xl font-bold text-red-500">2.4%</p>
                     </div>
 
                     <Minus className="hidden md:block text-muted-foreground" />
 
                     <div className="flex-1 space-y-1">
-                        <p className="text-[13px] font-medium text-muted-foreground">{t.tax}</p>
+                        <p className="text-[0.8125rem] font-medium text-muted-foreground">{t.tax}</p>
                         <p className="text-2xl font-bold">15.4%</p>
                     </div>
 

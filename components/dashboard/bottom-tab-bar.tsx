@@ -98,7 +98,7 @@ export function BottomTabBar() {
                                 </span>
                                 <span
                                     className={cn(
-                                        'text-[10.5px] tracking-tight leading-none',
+                                        'text-[0.65625rem] tracking-tight leading-none',
                                         isActive ? 'font-semibold' : 'font-medium',
                                     )}
                                 >

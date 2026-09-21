@@ -63,7 +63,7 @@ function UpDown({ value, big = false }: { value: number; big?: boolean }) {
             className={cn(
                 'numeric font-bold tracking-tight inline-flex items-center gap-0.5',
                 isUp ? 'text-profit' : 'text-loss',
-                big ? 'text-[15px]' : 'text-[12.5px]',
+                big ? 'text-[0.9375rem]' : 'text-[0.78125rem]',
             )}
         >
             <span aria-hidden>{isUp ? '▲' : '▼'}</span>
@@ -260,7 +260,7 @@ export function WhatIfClient() {
         <div className="max-w-[480px] md:max-w-2xl mx-auto w-full pb-8">
             {/* Hero */}
             <section className="px-6 pt-3 pb-4">
-                <h1 className="hero-serif text-[32px] text-foreground">
+                <h1 className="hero-serif text-[2rem] text-foreground">
                     {t('whatIf')}
                 </h1>
                 <span className="serif-italic text-xs text-muted-foreground block mt-1">
@@ -276,7 +276,7 @@ export function WhatIfClient() {
 
                 <div className="space-y-3">
                     <div>
-                        <label className="text-[13px] font-medium text-muted-foreground block mb-1.5">
+                        <label className="text-[0.8125rem] font-medium text-muted-foreground block mb-1.5">
                             {t('stock')}
                         </label>
                         <StockSearchCombobox
@@ -286,7 +286,7 @@ export function WhatIfClient() {
                     </div>
 
                     <div>
-                        <label className="text-[13px] font-medium text-muted-foreground block mb-1.5">
+                        <label className="text-[0.8125rem] font-medium text-muted-foreground block mb-1.5">
                             {t('whatIfBuyDate')}
                         </label>
                         <input
@@ -300,7 +300,7 @@ export function WhatIfClient() {
 
                     <div>
                         <div className="flex items-center justify-between mb-1.5">
-                            <label className="text-[13px] font-medium text-muted-foreground">
+                            <label className="text-[0.8125rem] font-medium text-muted-foreground">
                                 {t('whatIfInvestAmount')}
                             </label>
                             <CurrencyToggle
@@ -352,20 +352,20 @@ export function WhatIfClient() {
                 <section className="mx-4 mb-4 bg-card rounded-2xl p-4 flex gap-3">
                     <Info className="h-4 w-4 text-loss shrink-0 mt-0.5" />
                     <div>
-                        <div className="text-[12px] font-semibold text-loss">
+                        <div className="text-[0.75rem] font-semibold text-loss">
                             {t('error')}
                         </div>
-                        <div className="text-[13px] text-foreground mt-1">{error}</div>
+                        <div className="text-[0.8125rem] text-foreground mt-1">{error}</div>
                     </div>
                 </section>
             )}
 
             {!loading && !error && chartData.length === 0 && (
                 <section className="mx-4 mb-4 bg-card rounded-2xl p-10 text-center">
-                    <div className="hero-serif text-[20px] text-foreground mb-1.5">
+                    <div className="hero-serif text-[1.25rem] text-foreground mb-1.5">
                         {t('whatIfSelectTitle')}
                     </div>
-                    <p className="serif-italic text-[13px] text-muted-foreground">
+                    <p className="serif-italic text-[0.8125rem] text-muted-foreground">
                         {t('whatIfSelectHint')}
                     </p>
                 </section>
@@ -415,7 +415,7 @@ function CurrencyToggle({
                         type="button"
                         onClick={() => onChange(c)}
                         className={cn(
-                            'px-2 h-6 text-[11px] font-bold rounded-md transition-colors',
+                            'px-2 h-6 text-[0.6875rem] font-bold rounded-md transition-colors',
                             active
                                 ? 'bg-card text-foreground shadow-sm'
                                 : 'text-muted-foreground hover:text-foreground',
@@ -480,21 +480,21 @@ function ResultBlock({
                     <span className="eyebrow">
                         {language === 'ko' ? t('whatIfIfBought') : 'If you bought then'}
                     </span>
-                    <span className="text-[11px] text-muted-foreground" suppressHydrationWarning>
+                    <span className="text-[0.6875rem] text-muted-foreground" suppressHydrationWarning>
                         {periodLabel}
                     </span>
                 </div>
 
-                <div className="font-serif text-[16px] text-foreground mt-1.5 truncate">
+                <div className="font-serif text-[1rem] text-foreground mt-1.5 truncate">
                     {stockDisplayName}
                 </div>
 
-                <div className="text-[11px] font-semibold text-muted-foreground mt-3.5 mb-1">
+                <div className="text-[0.6875rem] font-semibold text-muted-foreground mt-3.5 mb-1">
                     {t('returnRate')}
                 </div>
                 <div
                     className={cn(
-                        'amount-display text-[36px] leading-none numeric',
+                        'amount-display text-[2.25rem] leading-none numeric',
                         isProfit ? 'text-profit' : 'text-loss',
                     )}
                 >
@@ -503,19 +503,19 @@ function ResultBlock({
 
                 <div className="flex gap-4 mt-3.5 items-stretch">
                     <div>
-                        <div className="text-[12px] font-medium text-muted-foreground">
+                        <div className="text-[0.75rem] font-medium text-muted-foreground">
                             {t('pastPrice')}
                         </div>
-                        <div className="text-[14px] font-bold mt-1 numeric text-foreground">
+                        <div className="text-[0.875rem] font-bold mt-1 numeric text-foreground">
                             {fmtMoney(firstPrice, stockCurrency)}
                         </div>
                     </div>
                     <div className="w-px bg-border self-stretch" />
                     <div>
-                        <div className="text-[12px] font-medium text-muted-foreground">
+                        <div className="text-[0.75rem] font-medium text-muted-foreground">
                             {t('currentPrice')}
                         </div>
-                        <div className="text-[14px] font-bold mt-1 numeric text-foreground">
+                        <div className="text-[0.875rem] font-bold mt-1 numeric text-foreground">
                             {fmtMoney(lastPrice, stockCurrency)}
                         </div>
                     </div>
@@ -526,7 +526,7 @@ function ResultBlock({
             {hasAmount && (
                 <section className="mx-4 mb-4 grid grid-cols-2 gap-2">
                     <div className="p-4 bg-card rounded-2xl">
-                        <div className="text-[13px] font-medium text-muted-foreground">
+                        <div className="text-[0.8125rem] font-medium text-muted-foreground">
                             {t('whatIfTodayValue')}
                         </div>
                         <div className={cn(
@@ -535,7 +535,7 @@ function ResultBlock({
                         )}>
                             {fmtMoney(todayValueDisplay, amountCurrency, { compact: showCompact(todayValueDisplay), integer: true })}
                         </div>
-                        <div className="text-[10px] text-muted-foreground mt-2 pt-2 border-t border-border/60 flex justify-between">
+                        <div className="text-[0.625rem] text-muted-foreground mt-2 pt-2 border-t border-border/60 flex justify-between">
                             <span>{t('whatIfShares')}</span>
                             <span className="numeric text-foreground">
                                 {formatShares(sharesAcquired)}{t('whatIfSharesUnit')}
@@ -543,7 +543,7 @@ function ResultBlock({
                         </div>
                     </div>
                     <div className="p-4 bg-card rounded-2xl">
-                        <div className="text-[13px] font-medium text-muted-foreground">
+                        <div className="text-[0.8125rem] font-medium text-muted-foreground">
                             {t('pl')}
                         </div>
                         <div className={cn(
@@ -552,7 +552,7 @@ function ResultBlock({
                         )}>
                             {isProfit ? '+' : ''}{fmtMoney(absoluteProfit, amountCurrency, { compact: showCompact(absoluteProfit), integer: true })}
                         </div>
-                        <div className="text-[10px] text-muted-foreground mt-2 pt-2 border-t border-border/60 flex justify-between">
+                        <div className="text-[0.625rem] text-muted-foreground mt-2 pt-2 border-t border-border/60 flex justify-between">
                             <span>{t('totalInvested')}</span>
                             <span className="numeric text-foreground">
                                 {fmtMoney(parsedAmount, amountCurrency, { compact: showCompact(parsedAmount), integer: true })}
@@ -567,7 +567,7 @@ function ResultBlock({
                 <span className="eyebrow">
                     {language === 'ko' ? `CHART · ${t('whatIfChartTitle')}` : 'CHART · PRICE HISTORY'}
                 </span>
-                <span className="text-[10px] text-muted-foreground">
+                <span className="text-[0.625rem] text-muted-foreground">
                     {chartData.length}{language === 'ko' ? '일' : 'd'}
                 </span>
             </div>
@@ -712,21 +712,21 @@ function InsightRow({
         >
             <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
-                    <div className="font-serif text-[14px] font-semibold text-foreground">
+                    <div className="font-serif text-[0.875rem] font-semibold text-foreground">
                         {label}
                     </div>
-                    <div className="text-[11px] text-muted-foreground mt-0.5">
+                    <div className="text-[0.6875rem] text-muted-foreground mt-0.5">
                         {desc}
                     </div>
                 </div>
                 <div className="text-right shrink-0">
                     <div className={cn(
-                        'text-[13px] font-bold numeric',
+                        'text-[0.8125rem] font-bold numeric',
                         tone === 'profit' ? 'text-profit' : 'text-loss',
                     )}>
                         {valueLabel}
                     </div>
-                    <div className="text-[10px] text-muted-foreground mt-0.5 numeric" suppressHydrationWarning>
+                    <div className="text-[0.625rem] text-muted-foreground mt-0.5 numeric" suppressHydrationWarning>
                         {format(new Date(date), language === 'ko' ? 'yyyy.MM.dd' : 'MMM dd, yyyy')}
                     </div>
                 </div>

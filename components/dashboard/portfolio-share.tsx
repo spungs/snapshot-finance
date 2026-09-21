@@ -186,7 +186,7 @@ export function PortfolioShareButton({ holdings, summary, userName }: Props) {
                 onClick={captureAndShare}
                 disabled={capturing}
                 aria-label={t('share')}
-                className="h-9 px-3 inline-flex items-center gap-1.5 bg-card rounded-lg shadow-sm text-foreground text-[12px] font-semibold hover:bg-muted disabled:opacity-50 transition-colors shrink-0"
+                className="h-9 px-3 inline-flex items-center gap-1.5 bg-card rounded-lg shadow-sm text-foreground text-[0.75rem] font-semibold hover:bg-muted disabled:opacity-50 transition-colors shrink-0"
             >
                 {capturing
                     ? <Loader2 className="w-4 h-4 animate-spin" />
@@ -198,7 +198,7 @@ export function PortfolioShareButton({ holdings, summary, userName }: Props) {
                 onClick={copyAsJson}
                 disabled={copyingJson}
                 aria-label={language === 'ko' ? 'JSON 복사' : 'Copy JSON'}
-                className="h-9 px-3 inline-flex items-center gap-1.5 bg-card rounded-lg shadow-sm text-foreground text-[12px] font-semibold hover:bg-muted disabled:opacity-50 transition-colors shrink-0"
+                className="h-9 px-3 inline-flex items-center gap-1.5 bg-card rounded-lg shadow-sm text-foreground text-[0.75rem] font-semibold hover:bg-muted disabled:opacity-50 transition-colors shrink-0"
             >
                 {copyingJson
                     ? <Loader2 className="w-4 h-4 animate-spin" />

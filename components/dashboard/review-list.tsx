@@ -104,7 +104,7 @@ export function ReviewList({ cards, onUpdate, onSubmit, imageHeader }: ReviewLis
                         height={48}
                         className="w-12 h-12 object-cover rounded border border-border shrink-0"
                     />
-                    <div className="flex-1 text-[11px] text-muted-foreground min-w-0">
+                    <div className="flex-1 text-[0.6875rem] text-muted-foreground min-w-0">
                         {tx.ocrCountSummary.replace('{total}', String(total)).replace('{ready}', String(ready))}
                     </div>
                     <Button type="button" variant="outline" size="sm" onClick={imageHeader.onChangeImage} className="shrink-0">
@@ -115,7 +115,7 @@ export function ReviewList({ cards, onUpdate, onSubmit, imageHeader }: ReviewLis
             )}
 
             {!imageHeader && (
-                <div className="text-[11px] text-muted-foreground">
+                <div className="text-[0.6875rem] text-muted-foreground">
                     {tx.ocrCountSummary.replace('{total}', String(total)).replace('{ready}', String(ready))}
                 </div>
             )}
@@ -123,7 +123,7 @@ export function ReviewList({ cards, onUpdate, onSubmit, imageHeader }: ReviewLis
             {/* 데스크톱 테이블 — 컨테이너 너비 ≥ 672px(@2xl) 일 때 (다이얼로그 넓은 화면) */}
             <div className="hidden @2xl:block max-h-[50vh] overflow-y-auto rounded-md">
                 <table className="w-full text-sm">
-                    <thead className="bg-accent-soft/50 text-[11px] text-muted-foreground sticky top-0">
+                    <thead className="bg-accent-soft/50 text-[0.6875rem] text-muted-foreground sticky top-0">
                         <tr>
                             <th className="w-8 px-2 py-2"></th>
                             <th className="text-left px-2 py-2">{tx.stock}</th>
@@ -159,7 +159,7 @@ export function ReviewList({ cards, onUpdate, onSubmit, imageHeader }: ReviewLis
             </div>
 
             <div>
-                <label className="block text-[13px] font-medium text-muted-foreground mb-1.5">
+                <label className="block text-[0.8125rem] font-medium text-muted-foreground mb-1.5">
                     {tx.strategy}
                 </label>
                 <div className="grid grid-cols-2 gap-1.5">
@@ -235,12 +235,12 @@ function ReviewRowDesktop({ card, onChange, onRemove }: {
                     {isResolved ? (
                         <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-bold text-sm">{card.draft.stockName}</span>
-                            <span className="text-[10px] text-muted-foreground">{card.draft.stockCode}</span>
-                            {isUSD && <span className="text-[10px] bg-accent-soft px-1.5 py-0.5 rounded">USD</span>}
-                            {card.replaced && <span className="text-[10px] text-amber-600 dark:text-amber-400">{tx.ocrReplaced}</span>}
+                            <span className="text-[0.625rem] text-muted-foreground">{card.draft.stockCode}</span>
+                            {isUSD && <span className="text-[0.625rem] bg-accent-soft px-1.5 py-0.5 rounded">USD</span>}
+                            {card.replaced && <span className="text-[0.625rem] text-amber-600 dark:text-amber-400">{tx.ocrReplaced}</span>}
                         </div>
                     ) : (
-                        <div className="text-[11px] text-amber-700 dark:text-amber-400">
+                        <div className="text-[0.6875rem] text-amber-700 dark:text-amber-400">
                             {tx.ocrUnresolvedHint}
                             <div className="opacity-70 mt-0.5 truncate">{tx.ocrOriginalLabel}: &quot;{card.analyzed.identifier}&quot;</div>
                         </div>
@@ -310,7 +310,7 @@ function ReviewRowDesktop({ card, onChange, onRemove }: {
                             className="w-full border border-input bg-background rounded-md h-9 px-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                         />
                     ) : (
-                        <span className="text-[10px] text-muted-foreground">—</span>
+                        <span className="text-[0.625rem] text-muted-foreground">—</span>
                     )}
                 </td>
                 <td className="px-2 py-2 align-top text-right">
@@ -401,11 +401,11 @@ function ReviewCardMobile({ card, onChange, onRemove }: {
                     {isResolved ? (
                         <div className="flex items-center gap-1.5 min-w-0">
                             <span className="font-bold text-sm truncate">{card.draft.stockName}</span>
-                            <span className="text-[10px] text-muted-foreground shrink-0">{card.draft.stockCode}</span>
-                            {isUSD && <span className="text-[9px] bg-accent-soft px-1 py-0.5 rounded shrink-0">USD</span>}
+                            <span className="text-[0.625rem] text-muted-foreground shrink-0">{card.draft.stockCode}</span>
+                            {isUSD && <span className="text-[0.5625rem] bg-accent-soft px-1 py-0.5 rounded shrink-0">USD</span>}
                         </div>
                     ) : (
-                        <div className="text-[11px] text-amber-700 dark:text-amber-400 truncate">{tx.ocrUnresolvedHint} (&quot;{card.analyzed.identifier}&quot;)</div>
+                        <div className="text-[0.6875rem] text-amber-700 dark:text-amber-400 truncate">{tx.ocrUnresolvedHint} (&quot;{card.analyzed.identifier}&quot;)</div>
                     )}
                 </div>
                 {isResolved && !showSwap && (
@@ -440,7 +440,7 @@ function ReviewCardMobile({ card, onChange, onRemove }: {
             )}
 
             <div className="grid grid-cols-2 gap-2">
-                <label className="text-[10px]">
+                <label className="text-[0.625rem]">
                     <div className="text-muted-foreground mb-0.5">{tx.quantity}</div>
                     <input
                         type="number"
@@ -457,10 +457,10 @@ function ReviewCardMobile({ card, onChange, onRemove }: {
                         className="w-full border border-input bg-background rounded-md h-9 px-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                     />
                 </label>
-                <label className="text-[10px]">
+                <label className="text-[0.625rem]">
                     <div className="text-muted-foreground mb-0.5 inline-flex items-center gap-1">
                         {tx.averagePrice}
-                        {priceMissing && <span className="text-amber-600 dark:text-amber-400 text-[9px]">{tx.ocrPriceMissing}</span>}
+                        {priceMissing && <span className="text-amber-600 dark:text-amber-400 text-[0.5625rem]">{tx.ocrPriceMissing}</span>}
                     </div>
                     <input
                         type="number"
@@ -487,7 +487,7 @@ function ReviewCardMobile({ card, onChange, onRemove }: {
             </div>
 
             {isUSD && (
-                <label className="text-[10px] block">
+                <label className="text-[0.625rem] block">
                     <div className="text-muted-foreground mb-0.5">{tx.rate}</div>
                     <input
                         type="number"
@@ -514,7 +514,7 @@ function ReviewCardMobile({ card, onChange, onRemove }: {
                 </label>
             )}
 
-            {card.replaced && <div className="text-[10px] text-amber-600 dark:text-amber-400 pl-6">{tx.ocrReplaced}</div>}
+            {card.replaced && <div className="text-[0.625rem] text-amber-600 dark:text-amber-400 pl-6">{tx.ocrReplaced}</div>}
         </div>
     )
 }

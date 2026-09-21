@@ -59,7 +59,7 @@ function UpDown({ value, big = false }: { value: number; big?: boolean }) {
             className={cn(
                 'numeric font-bold tracking-tight inline-flex items-center gap-0.5',
                 isUp ? 'text-profit' : 'text-loss',
-                big ? 'text-[15px]' : 'text-[12.5px]',
+                big ? 'text-[0.9375rem]' : 'text-[0.78125rem]',
             )}
         >
             <span aria-hidden>{isUp ? '▲' : '▼'}</span>
@@ -125,14 +125,14 @@ export default function SnapshotDetailClient({ snapshot }: Props) {
             <section className="px-6 pt-3 pb-4">
                 <Link
                     href="/dashboard/snapshots"
-                    className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors mb-2"
+                    className="inline-flex items-center gap-1 text-[0.6875rem] text-muted-foreground hover:text-foreground transition-colors mb-2"
                 >
                     <ChevronLeft className="w-3 h-3" />
                     {t('snapshotList')}
                 </Link>
                 <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                        <h1 className="hero-serif text-[32px] text-foreground leading-tight">
+                        <h1 className="hero-serif text-[2rem] text-foreground leading-tight">
                             {t('snapshotDetail')}
                         </h1>
                         <span
@@ -183,10 +183,10 @@ export default function SnapshotDetailClient({ snapshot }: Props) {
                 <section className="mx-4 mb-4 bg-card rounded-2xl p-4 flex gap-3">
                     <AlertCircle className="h-4 w-4 text-loss shrink-0 mt-0.5" />
                     <div>
-                        <div className="text-[12px] font-semibold text-loss">
+                        <div className="text-[0.75rem] font-semibold text-loss">
                             {t('error')}
                         </div>
-                        <div className="text-[13px] text-foreground mt-1">{error}</div>
+                        <div className="text-[0.8125rem] text-foreground mt-1">{error}</div>
                     </div>
                 </section>
             )}
@@ -197,7 +197,7 @@ export default function SnapshotDetailClient({ snapshot }: Props) {
                     <div className="eyebrow mb-1.5">
                         {language === 'ko' ? '메모' : 'Memo'}
                     </div>
-                    <p className="serif-italic text-[13px] text-foreground leading-relaxed break-words">
+                    <p className="serif-italic text-[0.8125rem] text-foreground leading-relaxed break-words">
                         “{formatSnapshotNote(snapshot.note, language === 'en' ? 'en' : 'ko')}”
                     </p>
                 </section>
@@ -210,37 +210,37 @@ export default function SnapshotDetailClient({ snapshot }: Props) {
                     <span className="eyebrow">
                         {language === 'ko' ? '기록' : 'Snapshot'}
                     </span>
-                    <span className="text-[11px] text-muted-foreground" suppressHydrationWarning>
+                    <span className="text-[0.6875rem] text-muted-foreground" suppressHydrationWarning>
                         {formatDate(snapshot.snapshotDate, 'HH:mm')}
                         {' · '}
                         {snapshot.holdings.length}{t('countUnit')} {t('stock')}
                     </span>
                 </div>
 
-                <div className="font-serif text-[22px] text-foreground mt-1.5" suppressHydrationWarning>
+                <div className="font-serif text-[1.375rem] text-foreground mt-1.5" suppressHydrationWarning>
                     {formatDate(snapshot.snapshotDate, 'yyyy.MM.dd')}
                 </div>
 
-                <div className="text-[11px] font-semibold text-muted-foreground mt-3.5 mb-1">
+                <div className="text-[0.6875rem] font-semibold text-muted-foreground mt-3.5 mb-1">
                     {t('totalValue')}
                 </div>
-                <div className="amount-display text-[30px] text-foreground leading-none">
+                <div className="amount-display text-[1.875rem] text-foreground leading-none">
                     {formatCurrency(totalAssets, currency)}
                 </div>
 
                 <div className="flex gap-4 mt-3.5 items-stretch">
                     <div>
-                        <div className="text-[12px] font-medium text-muted-foreground">
+                        <div className="text-[0.75rem] font-medium text-muted-foreground">
                             {t('returnRate')}
                         </div>
                         <div className="mt-1"><UpDown value={profitRate} big /></div>
                     </div>
                     <div className="w-px bg-border self-stretch" />
                     <div>
-                        <div className="text-[12px] font-medium text-muted-foreground">
+                        <div className="text-[0.75rem] font-medium text-muted-foreground">
                             {t('pl')}
                         </div>
-                        <div className={cn('text-[15px] font-bold mt-1 numeric', isProfit ? 'text-profit' : 'text-loss')}>
+                        <div className={cn('text-[0.9375rem] font-bold mt-1 numeric', isProfit ? 'text-profit' : 'text-loss')}>
                             {isProfit ? '+' : ''}{formatCurrency(totalProfit, currency)}
                         </div>
                     </div>
@@ -250,19 +250,19 @@ export default function SnapshotDetailClient({ snapshot }: Props) {
             {/* Two-up: stock value / cash */}
             <section className="mx-4 mb-4 grid grid-cols-2 gap-2">
                 <div className="p-4 bg-card rounded-2xl">
-                    <div className="text-[13px] font-medium text-muted-foreground">
+                    <div className="text-[0.8125rem] font-medium text-muted-foreground">
                         {t('stockValue')}
                     </div>
                     <div className="text-lg font-bold text-foreground mt-1 numeric tracking-tight">
                         {formatCurrency(stockValue, currency)}
                     </div>
-                    <div className="text-[10px] text-muted-foreground mt-2 pt-2 border-t border-border/60 flex justify-between">
+                    <div className="text-[0.625rem] text-muted-foreground mt-2 pt-2 border-t border-border/60 flex justify-between">
                         <span>{t('totalCost')}</span>
                         <span className="numeric text-foreground">{formatCurrency(totalCost, currency)}</span>
                     </div>
                 </div>
                 <div className="p-4 bg-card rounded-2xl">
-                    <div className="text-[13px] font-medium text-muted-foreground">
+                    <div className="text-[0.8125rem] font-medium text-muted-foreground">
                         {t('cash')}
                     </div>
                     <div className="text-lg font-bold text-foreground mt-1 numeric tracking-tight">
@@ -275,7 +275,7 @@ export default function SnapshotDetailClient({ snapshot }: Props) {
                                 const krw = Number(a.amount) || 0
                                 const display = conv(krw)
                                 return (
-                                    <li key={a.id} className="flex items-baseline justify-between gap-2 text-[10px]">
+                                    <li key={a.id} className="flex items-baseline justify-between gap-2 text-[0.625rem]">
                                         <span className="text-muted-foreground truncate">{a.label}</span>
                                         <span className="numeric text-foreground shrink-0">{formatCurrency(display, currency)}</span>
                                     </li>
@@ -284,7 +284,7 @@ export default function SnapshotDetailClient({ snapshot }: Props) {
                         </ul>
                     )}
                     {isEn && (
-                        <div className="text-[10px] text-muted-foreground mt-2 pt-2 border-t border-border/60 flex justify-between">
+                        <div className="text-[0.625rem] text-muted-foreground mt-2 pt-2 border-t border-border/60 flex justify-between">
                             <span>Rate</span>
                             <span className="numeric text-foreground">{formatNumber(rate, 0)}</span>
                         </div>
@@ -299,14 +299,14 @@ export default function SnapshotDetailClient({ snapshot }: Props) {
                         ? `보유 종목 · ${snapshot.holdings.length}`
                         : `Holdings · ${snapshot.holdings.length}`}
                 </span>
-                <span className="text-[10px] text-muted-foreground">
+                <span className="text-[0.625rem] text-muted-foreground">
                     {t('holdings')}
                 </span>
             </div>
 
             {snapshot.holdings.length === 0 ? (
                 <div className="mx-4 p-8 bg-card rounded-2xl text-center">
-                    <p className="text-[12px] text-muted-foreground">{t('holdingsEmpty')}</p>
+                    <p className="text-[0.75rem] text-muted-foreground">{t('holdingsEmpty')}</p>
                 </div>
             ) : (
                 <div className="px-4 space-y-1.5">
@@ -348,14 +348,14 @@ export default function SnapshotDetailClient({ snapshot }: Props) {
                                 className="bg-card rounded-2xl p-4"
                             >
                                 <div className="flex items-start justify-between gap-2">
-                                    <div className="text-[15px] font-semibold text-foreground leading-snug break-keep flex-1 min-w-0">
+                                    <div className="text-[0.9375rem] font-semibold text-foreground leading-snug break-keep flex-1 min-w-0">
                                         {h.stock.stockName}
                                     </div>
                                     <UpDown value={profitRateDisplay} />
                                 </div>
 
                                 <div className="mt-1.5 flex items-end justify-between gap-3">
-                                    <div className="text-[10px] text-muted-foreground flex-1 min-w-0">
+                                    <div className="text-[0.625rem] text-muted-foreground flex-1 min-w-0">
                                         {h.stock.stockCode}
                                         {' · '}
                                         {formatNumber(h.quantity)}{language === 'ko' ? '주' : 'shr'}
@@ -365,39 +365,39 @@ export default function SnapshotDetailClient({ snapshot }: Props) {
                                             : `${formatNumber(weight, 1)}% wt`}
                                     </div>
                                     <div className={cn(
-                                        'text-[14px] font-bold numeric shrink-0',
+                                        'text-[0.875rem] font-bold numeric shrink-0',
                                         isItemUp ? 'text-profit' : 'text-loss',
                                     )}>
                                         {isItemUp ? '+' : ''}{formatCurrency(profit, currency)}
                                     </div>
                                 </div>
 
-                                <div className="mt-2.5 pt-2.5 border-t border-border/60 grid grid-cols-2 gap-3 text-[11px]">
+                                <div className="mt-2.5 pt-2.5 border-t border-border/60 grid grid-cols-2 gap-3 text-[0.6875rem]">
                                     <div>
-                                        <div className="text-[11px] text-muted-foreground">
+                                        <div className="text-[0.6875rem] text-muted-foreground">
                                             {t('averagePrice')}
                                         </div>
-                                        <div className="text-[13px] font-bold text-foreground mt-0.5 numeric">
+                                        <div className="text-[0.8125rem] font-bold text-foreground mt-0.5 numeric">
                                             {formatCurrency(avgPrice, currency)}
                                         </div>
                                         {/* USD 종목 원화 표시 시 달러 원가 병기 */}
                                         {h.currency === 'USD' && currency === 'KRW' && (
-                                            <div className="text-[10px] text-muted-foreground/70 numeric mt-0.5">
+                                            <div className="text-[0.625rem] text-muted-foreground/70 numeric mt-0.5">
                                                 ${formatNumber(Number(h.averagePrice), 2)}
                                             </div>
                                         )}
                                     </div>
                                     <div className="text-right">
                                         {/* 스냅샷은 과거 시점 기록이라 '현재가'는 오해를 부른다 — 그 시점 종가다. */}
-                                        <div className="text-[11px] text-muted-foreground">
+                                        <div className="text-[0.6875rem] text-muted-foreground">
                                             {t('closingPrice')}
                                         </div>
-                                        <div className="text-[13px] font-bold text-foreground mt-0.5 numeric">
+                                        <div className="text-[0.8125rem] font-bold text-foreground mt-0.5 numeric">
                                             {formatCurrency(curPrice, currency)}
                                         </div>
                                         {/* USD 종목 원화 표시 시 달러 현재가 병기 */}
                                         {h.currency === 'USD' && currency === 'KRW' && (
-                                            <div className="text-[10px] text-muted-foreground/70 numeric mt-0.5">
+                                            <div className="text-[0.625rem] text-muted-foreground/70 numeric mt-0.5">
                                                 ${formatNumber(Number(h.currentPrice), 2)}
                                             </div>
                                         )}

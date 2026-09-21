@@ -72,7 +72,7 @@ export const FormattedNumberInput = React.forwardRef<HTMLInputElement, Formatted
                         className={cn(
                             "pointer-events-none absolute left-3 transition-all duration-150 z-[1]",
                             isFloated
-                                ? "top-1 text-[9px] font-bold tracking-[0.5px] uppercase text-muted-foreground"
+                                ? "top-1 text-[0.5625rem] font-bold tracking-[0.5px] uppercase text-muted-foreground"
                                 : "top-1/2 -translate-y-1/2 text-sm text-muted-foreground",
                         )}
                     >

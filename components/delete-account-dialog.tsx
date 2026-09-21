@@ -60,7 +60,7 @@ export function DeleteAccountDialog({ className, variant = 'icon' }: DeleteAccou
                         )}
                     >
                         <Trash2 className="w-4 h-4 shrink-0" />
-                        <span className="flex-1 text-[14px] font-semibold">
+                        <span className="flex-1 text-[0.875rem] font-semibold">
                             {t.landing.deleteAccount}
                         </span>
                     </button>

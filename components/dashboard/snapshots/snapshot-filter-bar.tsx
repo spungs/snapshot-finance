@@ -36,7 +36,7 @@ export function SnapshotFilterBar({ range, onChange, years, earliest, disabled, 
 
     const chip = (active: boolean) =>
         cn(
-            'rounded-full px-3 py-1 text-[12px] font-semibold transition-colors disabled:opacity-40',
+            'rounded-full px-3 py-1 text-[0.75rem] font-semibold transition-colors disabled:opacity-40',
             active ? 'bg-primary text-primary-foreground' : 'bg-card text-muted-foreground hover:text-foreground',
         )
 
@@ -93,17 +93,17 @@ export function SnapshotFilterBar({ range, onChange, years, earliest, disabled, 
                     disabled={disabled}
                     value={range?.from ?? ''}
                     onChange={(e) => e.target.value && setPart('from', e.target.value)}
-                    className="flex-1 min-w-0 rounded-lg bg-card px-2.5 py-1.5 text-[12px] font-medium text-foreground numeric outline-none focus:ring-1 focus:ring-primary disabled:opacity-40"
+                    className="flex-1 min-w-0 rounded-lg bg-card px-2.5 py-1.5 text-[0.75rem] font-medium text-foreground numeric outline-none focus:ring-1 focus:ring-primary disabled:opacity-40"
                     aria-label={ko ? '시작일' : 'Start date'}
                 />
-                <span className="text-[12px] text-muted-foreground shrink-0">~</span>
+                <span className="text-[0.75rem] text-muted-foreground shrink-0">~</span>
                 <input
                     type="date"
                     max={today}
                     disabled={disabled}
                     value={range?.to ?? ''}
                     onChange={(e) => e.target.value && setPart('to', e.target.value)}
-                    className="flex-1 min-w-0 rounded-lg bg-card px-2.5 py-1.5 text-[12px] font-medium text-foreground numeric outline-none focus:ring-1 focus:ring-primary disabled:opacity-40"
+                    className="flex-1 min-w-0 rounded-lg bg-card px-2.5 py-1.5 text-[0.75rem] font-medium text-foreground numeric outline-none focus:ring-1 focus:ring-primary disabled:opacity-40"
                     aria-label={ko ? '종료일' : 'End date'}
                 />
                 {range && (

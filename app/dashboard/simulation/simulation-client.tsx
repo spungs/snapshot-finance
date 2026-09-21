@@ -67,7 +67,7 @@ function UpDown({ value, big = false }: { value: number; big?: boolean }) {
             className={cn(
                 'numeric font-bold tracking-tight inline-flex items-center gap-0.5',
                 isUp ? 'text-profit' : 'text-loss',
-                big ? 'text-[15px]' : 'text-[12.5px]',
+                big ? 'text-[0.9375rem]' : 'text-[0.78125rem]',
             )}
         >
             <span aria-hidden>{isUp ? '▲' : '▼'}</span>
@@ -147,7 +147,7 @@ export default function SimulationClient({ initialSnapshots }: SimulationClientP
         <div className="max-w-[480px] md:max-w-2xl mx-auto w-full pb-8">
             {/* Hero */}
             <section className="px-6 pt-3 pb-4">
-                <h1 className="hero-serif text-[32px] text-foreground">
+                <h1 className="hero-serif text-[2rem] text-foreground">
                     {t('simulationTitle')}
                 </h1>
                 <span className="serif-italic text-xs text-muted-foreground block mt-1">
@@ -160,12 +160,12 @@ export default function SimulationClient({ initialSnapshots }: SimulationClientP
                 <div className="eyebrow mb-2">
                     {t('selectSnapshot')}
                 </div>
-                <p className="text-[11px] text-muted-foreground mb-3">
+                <p className="text-[0.6875rem] text-muted-foreground mb-3">
                     {t('selectSnapshotDesc')}
                 </p>
 
                 <Select value={selectedSnapshotId} onValueChange={handleSnapshotChange}>
-                    <SelectTrigger className="w-full h-11 bg-background border-border rounded-none text-[14px]">
+                    <SelectTrigger className="w-full h-11 bg-background border-border rounded-none text-[0.875rem]">
                         <SelectValue placeholder={t('selectSnapshotPlaceholder')} />
                     </SelectTrigger>
                     <SelectContent>
@@ -213,8 +213,8 @@ export default function SimulationClient({ initialSnapshots }: SimulationClientP
                 <section className="mx-4 mb-4 bg-card rounded-2xl p-4 flex gap-3">
                     <AlertCircle className="h-4 w-4 text-loss shrink-0 mt-0.5" />
                     <div>
-                        <div className="text-[12px] font-semibold text-loss">{t('error')}</div>
-                        <div className="text-[13px] text-foreground mt-1">{error}</div>
+                        <div className="text-[0.75rem] font-semibold text-loss">{t('error')}</div>
+                        <div className="text-[0.8125rem] text-foreground mt-1">{error}</div>
                     </div>
                 </section>
             )}
@@ -283,17 +283,17 @@ function ResultBlock({
                     <span className="eyebrow">
                         {t('simulationResult')}
                     </span>
-                    <span className="text-[11px] text-muted-foreground" suppressHydrationWarning>
+                    <span className="text-[0.6875rem] text-muted-foreground" suppressHydrationWarning>
                         {formatDate(result.snapshotDate, 'yyyy.MM.dd')} {t('basedOn')}
                     </span>
                 </div>
 
-                <div className="text-[11px] font-semibold text-muted-foreground mt-3 mb-1">
+                <div className="text-[0.6875rem] font-semibold text-muted-foreground mt-3 mb-1">
                     {language === 'ko' ? '시뮬레이션 차이' : 'Simulation difference'}
                 </div>
                 <div
                     className={cn(
-                        'amount-display text-[30px] leading-none numeric',
+                        'amount-display text-[1.875rem] leading-none numeric',
                         isUp ? 'text-profit' : 'text-loss',
                     )}
                 >
@@ -302,19 +302,19 @@ function ResultBlock({
 
                 <div className="flex gap-4 mt-3.5 items-stretch">
                     <div>
-                        <div className="text-[12px] font-medium text-muted-foreground">
+                        <div className="text-[0.75rem] font-medium text-muted-foreground">
                             {language === 'ko' ? '시뮬레이션 수익률' : 'Sim. yield'}
                         </div>
                         <div className="mt-1"><UpDown value={simulationYield} big /></div>
                     </div>
                     <div className="w-px bg-border self-stretch" />
                     <div>
-                        <div className="text-[12px] font-medium text-muted-foreground">
+                        <div className="text-[0.75rem] font-medium text-muted-foreground">
                             {language === 'ko' ? '평가손익 변화' : 'P/L change'}
                         </div>
                         <div
                             className={cn(
-                                'text-[15px] font-bold mt-1 numeric',
+                                'text-[0.9375rem] font-bold mt-1 numeric',
                                 totalGain - snapshotProfit >= 0 ? 'text-profit' : 'text-loss',
                             )}
                         >
@@ -328,13 +328,13 @@ function ResultBlock({
             {/* Two-up: 과거 가치 / 현재 가치 */}
             <section className="mx-4 mb-2 grid grid-cols-2 gap-2">
                 <div className="p-4 bg-card rounded-2xl">
-                    <div className="text-[13px] font-medium text-muted-foreground">
+                    <div className="text-[0.8125rem] font-medium text-muted-foreground">
                         {t('pastValue')}
                     </div>
                     <div className="text-lg font-bold text-foreground mt-1 numeric tracking-tight">
                         {formatCurrency(displaySnapshotValue, currency)}
                     </div>
-                    <div className="text-[10px] text-muted-foreground mt-2 pt-2 border-t border-border/60">
+                    <div className="text-[0.625rem] text-muted-foreground mt-2 pt-2 border-t border-border/60">
                         <div className="flex justify-between">
                             <span>{t('totalInvested')}</span>
                             <span className="numeric text-foreground">{formatCurrency(totalInvested, currency)}</span>
@@ -346,16 +346,16 @@ function ResultBlock({
                     </div>
                 </div>
                 <div className="p-4 bg-card rounded-2xl">
-                    <div className="text-[13px] font-medium text-muted-foreground">
+                    <div className="text-[0.8125rem] font-medium text-muted-foreground">
                         {t('currentValue')}
                     </div>
                     <div className="text-lg font-bold text-foreground mt-1 numeric tracking-tight">
                         {formatCurrency(currentTotalValue, currency)}
                     </div>
-                    <div className="text-[10px] text-muted-foreground mt-2 pt-2 border-t border-border/60">
+                    <div className="text-[0.625rem] text-muted-foreground mt-2 pt-2 border-t border-border/60">
                         <div className="flex justify-between">
                             <span>{t('basedOnRealtime')}</span>
-                            <span className="text-[9px]">({t('exclCash')})</span>
+                            <span className="text-[0.5625rem]">({t('exclCash')})</span>
                         </div>
                         {isEn && (
                             <div className="flex justify-between mt-1">
@@ -370,22 +370,22 @@ function ResultBlock({
             {/* P/L detail card */}
             <section className="mx-4 mb-4 p-4 bg-card rounded-2xl">
                 <div className="flex justify-between items-center py-1">
-                    <span className="text-[11px] text-muted-foreground">
+                    <span className="text-[0.6875rem] text-muted-foreground">
                         {t('currentPL')}
                     </span>
                     <span className={cn(
-                        'text-[13px] font-bold numeric',
+                        'text-[0.8125rem] font-bold numeric',
                         totalGain >= 0 ? 'text-profit' : 'text-loss',
                     )}>
                         {totalGain >= 0 ? '+' : ''}{formatCurrency(totalGain, currency)}
                     </span>
                 </div>
                 <div className="flex justify-between items-center py-1 mt-1 pt-2 border-t border-border/60">
-                    <span className="text-[11px] text-muted-foreground">
+                    <span className="text-[0.6875rem] text-muted-foreground">
                         {t('snapshotPL')}
                     </span>
                     <span className={cn(
-                        'text-[13px] font-bold numeric',
+                        'text-[0.8125rem] font-bold numeric',
                         snapshotProfit >= 0 ? 'text-profit' : 'text-loss',
                     )}>
                         {snapshotProfit >= 0 ? '+' : ''}{formatCurrency(snapshotProfit, currency)}
@@ -400,7 +400,7 @@ function ResultBlock({
                         ? `HOLDINGS · ${result.holdings.length}`
                         : `HOLDINGS · ${result.holdings.length}`}
                 </span>
-                <span className="text-[10px] text-muted-foreground">
+                <span className="text-[0.625rem] text-muted-foreground">
                     {t('holdingsComparison')}
                 </span>
             </div>
@@ -441,7 +441,7 @@ function ResultBlock({
                         >
                             {/* Row 1: 종목명 + 수익률 */}
                             <div className="flex items-start justify-between gap-2">
-                                <div className="font-serif text-[15px] font-semibold text-foreground leading-snug break-keep flex-1 min-w-0">
+                                <div className="font-serif text-[0.9375rem] font-semibold text-foreground leading-snug break-keep flex-1 min-w-0">
                                     {item.stockName}
                                 </div>
                                 <UpDown value={item.gainRate} />
@@ -449,7 +449,7 @@ function ResultBlock({
 
                             {/* Row 2: 메타 + gain */}
                             <div className="mt-1.5 flex items-end justify-between gap-3">
-                                <div className="text-[10px] text-muted-foreground flex-1 min-w-0">
+                                <div className="text-[0.625rem] text-muted-foreground flex-1 min-w-0">
                                     {item.stockCode}
                                     {' · '}
                                     {formatNumber(item.quantity)}{language === 'ko' ? '주' : 'shr'}
@@ -458,14 +458,14 @@ function ResultBlock({
                                 </div>
                                 <div className="text-right shrink-0">
                                     <div className={cn(
-                                        'text-[14px] font-bold numeric',
+                                        'text-[0.875rem] font-bold numeric',
                                         isItemUp ? 'text-profit' : 'text-loss',
                                     )}>
                                         {isItemUp ? '+' : ''}{formatCurrency(displayGain, displayCurrency)}
                                     </div>
                                     {displayCurrency === 'USD' && item.gainKRW !== undefined && (
                                         <div className={cn(
-                                            'text-[10px] mt-0.5 numeric',
+                                            'text-[0.625rem] mt-0.5 numeric',
                                             item.gainKRW >= 0 ? 'text-profit/70' : 'text-loss/70',
                                         )}>
                                             ({item.gainKRW >= 0 ? '+' : ''}{formatCurrency(item.gainKRW, 'KRW')})
@@ -475,22 +475,22 @@ function ResultBlock({
                             </div>
 
                             {/* Row 3: avg → current price */}
-                            <div className="mt-2.5 pt-2.5 border-t border-border/60 grid grid-cols-2 gap-3 text-[11px]">
+                            <div className="mt-2.5 pt-2.5 border-t border-border/60 grid grid-cols-2 gap-3 text-[0.6875rem]">
                                 <div>
-                                    <div className="text-[11px] text-muted-foreground">
+                                    <div className="text-[0.6875rem] text-muted-foreground">
                                         {t('pastPrice')}
                                     </div>
-                                    <div className="text-[13px] font-bold text-foreground mt-0.5 numeric">
+                                    <div className="text-[0.8125rem] font-bold text-foreground mt-0.5 numeric">
                                         {formatCurrency(displayAvgPrice, displayCurrency)}
                                     </div>
                                 </div>
                                 <div className="text-right">
-                                    <div className="text-[11px] text-muted-foreground">
+                                    <div className="text-[0.6875rem] text-muted-foreground">
                                         {t('currentPrice')}
                                     </div>
-                                    <div className="text-[13px] font-bold text-foreground mt-0.5 numeric">
+                                    <div className="text-[0.8125rem] font-bold text-foreground mt-0.5 numeric">
                                         {item.error ? (
-                                            <span className="text-loss text-[11px]">{t('fetchFailed')}</span>
+                                            <span className="text-loss text-[0.6875rem]">{t('fetchFailed')}</span>
                                         ) : (
                                             formatCurrency(displayCurrentPrice, displayCurrency)
                                         )}

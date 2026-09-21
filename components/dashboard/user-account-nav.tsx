@@ -73,7 +73,7 @@ export function UserAccountNav({ user }: UserAccountNavProps) {
                 <DropdownMenuLabel className="flex items-center justify-between font-normal py-2">
                     <div className="flex flex-col space-y-0.5">
                         <span className="text-sm font-medium">{t.autoSnapshot}</span>
-                        <span className="text-[10px] text-muted-foreground">
+                        <span className="text-[0.625rem] text-muted-foreground">
                             {isAutoSnapshot ? t.autoSnapshotOn : t.autoSnapshotOff}
                         </span>
                     </div>

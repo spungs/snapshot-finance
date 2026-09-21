@@ -64,7 +64,7 @@ export function AccountSelector({
     return (
         <div className={className}>
             {label && (
-                <div className="text-[13px] font-medium text-muted-foreground mb-1">
+                <div className="text-[0.8125rem] font-medium text-muted-foreground mb-1">
                     {label}
                 </div>
             )}
