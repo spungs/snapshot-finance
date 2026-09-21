@@ -20,7 +20,8 @@ import {
 import { BulkImportImageMode } from './bulk-import-image-mode'
 import { ReviewList, buildInitialCards, type ReviewCard } from './review-list'
 
-const RECENT_ACCOUNT_KEY = 'snapshot.bulkImport.lastAccountId'
+// 값이 accountId — 포트폴리오 전환 시 폐기되도록 공유 모듈의 키를 쓴다.
+import { BULK_IMPORT_RECENT_ACCOUNT_KEY as RECENT_ACCOUNT_KEY } from '@/lib/portfolio-scoped-cache'
 const MAX_ITEMS = 100
 
 interface BulkImportDialogProps {
@@ -281,9 +282,9 @@ export function BulkImportDialog({ children, onSuccess, isPro = false }: BulkImp
         setOpen(false)
         reset()
         onSuccess?.()
+        // portfolio-client 는 렌더 단계에서 props 를 동기화하므로 router.refresh() 하나면
+        // holdings 가 갱신된다. 과거의 'portfolio:refresh' 이벤트는 중복 로드만 유발했다.
         startTransition(() => router.refresh())
-        // 외부 client (portfolio-client) 의 holdings 자동 갱신
-        try { window.dispatchEvent(new Event('portfolio:refresh')) } catch { /* ignore */ }
         return { ok: true }
     }
 

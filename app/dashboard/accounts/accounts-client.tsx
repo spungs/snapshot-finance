@@ -61,6 +61,19 @@ export function AccountsClient({ initialAccounts }: { initialAccounts: AccountLi
     // 같은 페이지 mutation 은 setAccounts 직접 호출로 즉시 반영 + router.refresh() 로 서버 동기화.
     const [accounts, setAccounts] = useState<AccountListItem[]>(initialAccounts)
 
+    // 서버가 새 목록을 내려보내면(router.refresh() / 포트폴리오 전환 / 다른 화면에서의 변이)
+    // 로컬 state 를 거기에 맞춘다. useState 초기값은 마운트 때 한 번만 쓰이므로
+    // 이 동기화가 없으면 화면이 옛 목록에 영구히 고정된다.
+    //
+    // useEffect 가 아니라 렌더 단계에서 조정하는 이유(React 공식 "prop 이 바뀔 때 state 조정"):
+    // effect 로 하면 "옛 목록으로 커밋 → effect → 새 목록으로 다시 커밋" 이라 깜빡임이 눈에 보인다.
+    // 렌더 중 setState 는 DOM 커밋 없이 즉시 재렌더되므로 중간 상태가 화면에 노출되지 않는다.
+    const [syncedFrom, setSyncedFrom] = useState<AccountListItem[]>(initialAccounts)
+    if (syncedFrom !== initialAccounts) {
+        setSyncedFrom(initialAccounts)
+        setAccounts(initialAccounts)
+    }
+
     const [addOpen, setAddOpen] = useState(false)
     const [renameTarget, setRenameTarget] = useState<AccountListItem | null>(null)
     const [deleteTarget, setDeleteTarget] = useState<AccountListItem | null>(null)

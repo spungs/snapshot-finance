@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useState, useCallback, useMemo, useEffect, useOptimistic, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { createPortal } from 'react-dom'
 import { toast } from 'sonner'
@@ -33,9 +33,11 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+// 계좌 필터는 값이 accountId 라 포트폴리오 종속 — 전환 시 폐기 목록과 키를 공유한다.
+import { ACCOUNT_FILTER_STORAGE_KEY } from '@/lib/portfolio-scoped-cache'
 
+// 보기 모드는 사람의 취향이라 포트폴리오가 바뀌어도 유지한다 (전환 시 폐기 대상 아님).
 const VIEW_MODE_STORAGE_KEY = 'holdings-view-mode'
-const ACCOUNT_FILTER_STORAGE_KEY = 'holdings-account-filter'
 
 const SEGMENT_COLORS = [
     '#3b82f6', '#a855f7', '#10b981', '#ef4444', '#f59e0b',
@@ -109,8 +111,36 @@ function UpDown({ value, big = false }: { value: number; big?: boolean }) {
 export function PortfolioClient({ initialHoldings, summary, userName, accounts = [], isPro = false }: Props) {
     const { t, language } = useLanguage()
     const { baseCurrency } = useCurrency()
-    const [holdings, setHoldings] = useState<Holding[]>(initialHoldings)
+    // holdingsBase = 서버/실시간 tick 이 쓰는 진짜 상태.
+    // holdings     = 화면이 읽는 낙관적 뷰. 삭제 중인 행이 미리 빠져 있다.
+    const [holdingsBase, setHoldings] = useState<Holding[]>(initialHoldings)
     const [currentSummary, setCurrentSummary] = useState<Summary>(summary)
+
+    // 삭제 낙관적 반영 — 서버 응답을 기다리지 않고 행을 즉시 제거한다.
+    // transition 이 끝날 때(= router.refresh() 로 새 데이터가 도착할 때) 자동 해제되므로
+    // 성공 시엔 사라진 채로 확정되고, 실패 시엔 행이 되돌아온다.
+    const [holdings, removeHoldingOptimistic] = useOptimistic(
+        holdingsBase,
+        (state: Holding[], removedId: string) => state.filter((h) => h.id !== removedId),
+    )
+
+    // 서버가 새 데이터를 내려보내면(router.refresh() 이후) 로컬 state 를 거기에 맞춘다.
+    // useState 초기값은 마운트 때 한 번만 쓰이므로 이 동기화가 없으면 화면이 고정된다.
+    //
+    // useEffect 가 아니라 렌더 단계에서 조정하는 이유(React 공식 "prop 이 바뀔 때 state 조정"):
+    // effect 로 하면 "옛 값으로 커밋 → effect → 새 값으로 다시 커밋" 이라 변이할 때마다
+    // 숫자가 한 번 더 튀는 게 보인다. 렌더 중 setState 는 DOM 커밋 없이 즉시 재렌더되므로
+    // 중간 상태가 화면에 노출되지 않는다.
+    const [syncedHoldings, setSyncedHoldings] = useState(initialHoldings)
+    if (syncedHoldings !== initialHoldings) {
+        setSyncedHoldings(initialHoldings)
+        setHoldings(initialHoldings)
+    }
+    const [syncedSummary, setSyncedSummary] = useState(summary)
+    if (syncedSummary !== summary) {
+        setSyncedSummary(summary)
+        setCurrentSummary(summary)
+    }
     const isMultiAccount = accounts.length > 1
 
     // 실시간 시세 구독 (KIS WebSocket worker → Supabase Realtime broadcast)
@@ -137,7 +167,9 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
     useEffect(() => {
         if (ticks.size === 0) return
         let mutated = false
-        const next = holdings.map((h) => {
+        // 낙관적 뷰(holdings)가 아니라 base 를 읽는다 — 삭제 실패로 되돌려야 할 행이
+        // tick 을 통해 base 에 "삭제된 채로" 굳어버리는 것을 막는다.
+        const next = holdingsBase.map((h) => {
             const t = ticks.get(h.stockCode)
             if (!t) return h
             if (t.price === h.currentPrice) return h
@@ -172,7 +204,7 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
             const totalValue = totalStockValue + prevSummary.cashBalance
             return { ...prevSummary, totalCost, totalValue, totalProfit, totalProfitRate }
         })
-    }, [ticks, holdings])
+    }, [ticks, holdingsBase])
 
     // 보기 모드: byAccount(계좌별 섹션) ↔ unified(통합 합산)
     // 단일 계좌일 때 토글 자체를 숨기고 모드는 무관 (UI 영향 없음).
@@ -220,17 +252,6 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
         }
     }
 
-    // 부모 server component 가 router.refresh() 로 새 props 를 내려보내면
-    // useState 의 초기값은 마운트 시점에만 적용되므로 자동 갱신 안 됨.
-    // 명시적으로 props 변경을 감지해 state 를 동기화한다.
-    // (예: 예수금/목표금액/스냅샷 변이 후 home 또는 portfolio 가 fresh 데이터로
-    //  rerender 되었을 때 화면이 즉시 반영되어야 함.)
-    useEffect(() => {
-        setHoldings(initialHoldings)
-    }, [initialHoldings])
-    useEffect(() => {
-        setCurrentSummary(summary)
-    }, [summary])
     const [sortKey, setSortKey] = useState<SortKey>('profit')
     const [sortDir, setSortDir] = useState<SortDir>('desc')
     const [selectedSegIdx, setSelectedSegIdx] = useState<number | null>(null)
@@ -293,7 +314,6 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
 
     // Edit (다이얼로그) / delete
     const [editTargetId, setEditTargetId] = useState<string | null>(null)
-    const [deletingId, setDeletingId] = useState<string | null>(null)
     const editTargetHolding = useMemo(
         () => (editTargetId ? holdings.find(h => h.id === editTargetId) ?? null : null),
         [editTargetId, holdings]
@@ -318,25 +338,23 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
     }
 
     const router = useRouter()
-    const refresh = useCallback(async () => {
-        const res = await holdingsApi.getList()
-        if (res.success && res.data) {
-            setHoldings(res.data.holdings)
-            setCurrentSummary(res.data.summary)
-            setSelectedSegIdx(null)
-        }
-        // RSC payload cache 무효화 — F5 시 stale segment 가 재사용되어 추가/수정/삭제
-        // 결과가 보이지 않는 문제를 막는다. server action 이 아닌 REST API mutation 이라
-        // 자동 revalidate 가 일어나지 않아 명시적으로 호출.
-        router.refresh()
-    }, [router])
+    const [isRefreshing, startRefreshTransition] = useTransition()
 
-    // AI 챗 등 외부 컴포넌트에서 발행한 'portfolio:refresh' 이벤트를 받으면 보유 목록을 다시 가져온다.
-    useEffect(() => {
-        const handler = () => { refresh() }
-        window.addEventListener('portfolio:refresh', handler)
-        return () => window.removeEventListener('portfolio:refresh', handler)
-    }, [refresh])
+    // 변이 후 갱신 경로는 router.refresh() 하나로 통일한다.
+    //
+    // 과거에는 여기서 holdingsApi.getList() 로 직접 받아 setState 까지 했는데,
+    // 그러면 같은 데이터를 REST 와 RSC 로 두 번 로드하고 커밋도 두 번 일어나
+    // 숫자가 눈에 띄게 두 번 튀었다. REST mutation 경로도 라우트 핸들러의
+    // safeRevalidate() 가 revalidatePath 를 호출하므로 router.refresh() 만으로 fresh 가 온다.
+    //
+    // transition 으로 감싸는 이유: isRefreshing 이 새 RSC payload 가 도착할 때까지
+    // true 로 유지돼 낙관적 상태의 수명과 정확히 일치한다.
+    const refresh = useCallback(() => {
+        setSelectedSegIdx(null)
+        startRefreshTransition(() => {
+            router.refresh()
+        })
+    }, [router])
 
     // 통합 모드 — 같은 stockCode 의 여러 계좌 row 를 합쳐 가중평균 평단으로 표시.
     // Decimal.js 사용 — 누적 부동소수점 오차 방지 (평단가는 한 번 어긋나면 영구 오류).
@@ -476,7 +494,7 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                 setNewPrice('')
                 setNewPurchaseRate('')
                 setShowAdd(false)
-                await refresh()
+                refresh()
             } else {
                 toast.error(res.error?.message || t('addStockFailed'))
             }
@@ -514,20 +532,37 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
         setDeleteTargetId(id)
     }
 
-    const performDelete = useCallback(async () => {
-        if (!deleteTargetId) return
-        setDeletingId(deleteTargetId)
-        try {
-            const res = await holdingsApi.delete(deleteTargetId)
-            if (res.success) await refresh()
-            else toast.error(res.error?.message || t('deleteFailed'))
-        } catch {
-            toast.error(t('networkError'))
-        } finally {
-            setDeletingId(null)
-            setDeleteTargetId(null)
-        }
-    }, [deleteTargetId, refresh, t])
+    // 삭제는 낙관적으로 처리한다 — 확인 즉시 행이 사라지고, 서버 왕복은 뒤에서 끝난다.
+    // 실패하면 transition 이 끝나며 useOptimistic 이 행을 자동으로 되돌리고 토스트를 띄운다.
+    //
+    // 성공 시 base 에서도 직접 제거하는 이유(중요):
+    // router.refresh() 는 void 를 반환해 await 할 수 없다. transition 이 새 RSC payload
+    // 도착보다 먼저 끝나면 낙관적 상태가 해제되는데, 그때 holdingsBase 에 아직 삭제된 행이
+    // 남아 있으면 행이 잠깐 되살아났다 다시 사라진다. base 를 먼저 확정해두면 transition
+    // 종료 시점이 언제든 화면이 흔들리지 않는다. 뒤이어 도착하는 서버 데이터가
+    // 렌더 단계 동기화로 최종 진실을 덮어쓴다.
+    // (DELETE 라우트가 응답 전에 holdingService.invalidate + revalidatePath 를 끝내므로
+    //  이어지는 refresh 는 항상 삭제가 반영된 데이터를 가져온다.)
+    const performDelete = useCallback(() => {
+        const id = deleteTargetId
+        if (!id) return
+        setDeleteTargetId(null)
+        startRefreshTransition(async () => {
+            removeHoldingOptimistic(id)
+            try {
+                const res = await holdingsApi.delete(id)
+                if (!res.success) {
+                    toast.error(res.error?.message || t('deleteFailed'))
+                    return
+                }
+                setHoldings((prev) => prev.filter((h) => h.id !== id))
+                setSelectedSegIdx(null)
+                router.refresh()
+            } catch {
+                toast.error(t('networkError'))
+            }
+        })
+    }, [deleteTargetId, removeHoldingOptimistic, router, t])
 
     const convert = (v: number) => baseCurrency === 'KRW' ? v : v / exRate
     const displayTotal = convert(currentSummary.totalValue)
@@ -578,13 +613,10 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                             <DropdownMenuTrigger asChild>
                                 <button
                                     type="button"
-                                    disabled={deletingId === h.id}
                                     className="-mt-1 -mr-2 p-2 text-muted-foreground hover:text-foreground disabled:opacity-50 shrink-0"
                                     aria-label={language === 'ko' ? '더보기' : 'More'}
                                 >
-                                    {deletingId === h.id
-                                        ? <Loader2 className="w-4 h-4 animate-spin" />
-                                        : <MoreVertical className="w-4 h-4" />}
+                                    <MoreVertical className="w-4 h-4" />
                                 </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="min-w-[140px]">
@@ -1199,7 +1231,7 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                     setNewPrice={setNewPrice}
                     newPurchaseRate={newPurchaseRate}
                     setNewPurchaseRate={setNewPurchaseRate}
-                    adding={adding}
+                    adding={adding || isRefreshing}
                     handleAdd={handleAdd}
                     existingHolding={existingHolding}
                     addMode={addMode}

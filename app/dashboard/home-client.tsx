@@ -21,7 +21,8 @@ import { findPreviousSnapshot, calcChange, type ChangeResult } from '@/lib/utils
 
 // sessionStorage stash: 메뉴 전환 후 60초 이내 재진입 시 직전 commit 즉시 복원.
 // 60초 — 그 이상 지나면 시세 차이가 체감될 가능성이 높아 그냥 SSR 값으로 시작.
-const HOME_TICKS_STORAGE_KEY = 'home:committed-ticks:v1'
+// 값이 이 포트폴리오의 시세 — 전환 시 폐기되도록 공유 모듈의 키를 쓴다.
+import { HOME_TICKS_STORAGE_KEY } from '@/lib/portfolio-scoped-cache'
 const HOME_TICKS_FRESHNESS_MS = 60_000
 
 interface Holding {

@@ -67,10 +67,6 @@ async function callApi<T = unknown>(input: RequestInfo, init?: RequestInit): Pro
     return data as T
 }
 
-// 포트폴리오 데이터 변경 후 portfolio-client가 자체 갱신하도록 신호.
-// portfolio-client는 useState(initialHoldings)로 로컬 상태를 들고 있어 router.refresh()만으로는 갱신되지 않는다.
-const PORTFOLIO_REFRESH_EVENT = 'portfolio:refresh'
-
 // msg.content 를 innerHTML 로 렌더하기 전 5문자 HTML 이스케이프.
 // AI 응답·종목명에 사용자 입력이 섞일 수 있어 raw 삽입 금지. **bold** 변환은 escape 이후에 적용.
 function escapeHtml(s: string): string {
@@ -359,11 +355,9 @@ export function AiChat({ isAuthenticated = false, isPro = false }: AiChatProps) 
                 )
                 await fetchHoldingsData()
                 await fetchAccountsData()
+                // portfolio-client 는 렌더 단계에서 props 를 동기화하므로 이것만으로 갱신된다.
+                // (fetchHoldingsData 는 챗이 다음 턴의 액션 카드를 만들 때 쓰는 자기 사본이라 별개.)
                 router.refresh()
-                // portfolio-client는 useState로 holdings를 들고 있어 router.refresh만으로는 갱신되지 않음 → 명시 신호.
-                if (typeof window !== 'undefined') {
-                    window.dispatchEvent(new CustomEvent(PORTFOLIO_REFRESH_EVENT))
-                }
             } catch (e: unknown) {
                 const message = e instanceof Error ? e.message : '실행에 실패했습니다.'
                 toast.error(message)
