@@ -1,10 +1,8 @@
 'use client'
 
-import { useTransition } from 'react'
-import { useRouter } from 'next/navigation'
 import { UserCog } from 'lucide-react'
-import { setActivePortfolio } from '@/app/actions/portfolio-access-actions'
 import { PortfolioSwitchProgress } from '@/components/dashboard/portfolio-switch-progress'
+import { usePortfolioSwitch } from '@/lib/hooks/use-portfolio-switch'
 
 interface ManagedBannerProps {
     ownerName: string
@@ -15,15 +13,10 @@ interface ManagedBannerProps {
  * "내 것처럼 보이는데 사실 남의 것" 혼동을 막는 안전장치 — 눈에 띄는 색조 + 복귀 버튼.
  */
 export function ManagedBanner({ ownerName }: ManagedBannerProps) {
-    const router = useRouter()
-    const [isPending, startTransition] = useTransition()
-
-    const backToSelf = () => {
-        startTransition(async () => {
-            await setActivePortfolio('self')
-            router.refresh()
-        })
-    }
+    // 드롭다운과 같은 훅을 쓴다. 과거엔 이 버튼만 구버전 경로로 남아 있어,
+    // 여기로 복귀하면 SWR 캐시가 비워지지 않아 성과 흐름 그래프만 이전 사람 데이터로 남았다.
+    const { switchTo, isPending } = usePortfolioSwitch()
+    const backToSelf = () => switchTo('self')
 
     return (
         <>
