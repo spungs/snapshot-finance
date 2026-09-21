@@ -10,8 +10,13 @@ import {
     Tooltip,
     ResponsiveContainer,
 } from 'recharts'
+import { Loader2 } from 'lucide-react'
 import { formatCurrency, formatDate } from '@/lib/utils/formatters'
 import { cn } from '@/lib/utils'
+
+/** 차트 본문 높이(px). 로딩 스피너 자리와 차트가 반드시 같은 값을 써야
+ *  데이터 도착 시 목록이 밀리지 않는다 — 그래서 한 곳에서만 정의한다. */
+const CHART_HEIGHT = 190
 
 export type TrendPoint = {
     id: string
@@ -28,6 +33,13 @@ interface Props {
     points: TrendPoint[]
     /** 선택 모드인지 — 헤더 문구만 달라진다. */
     isSelection: boolean
+    /**
+     * 시계열을 아직 받아오는 중. 차트와 **같은 껍데기**(섹션·헤더·190px 본문)를 그리고
+     * 본문 자리에만 스피너를 돌린다 — 자리를 미리 잡아 데이터 도착 시 목록이 밀리지 않게.
+     * 껍데기를 별도 스켈레톤 컴포넌트로 빼지 않은 이유: 두 벌이 되면 한쪽만 바뀌어
+     * 높이가 어긋난다. 같은 컴포넌트에서 나오면 어긋날 수가 없다.
+     */
+    loading?: boolean
     language: string
 }
 
@@ -57,7 +69,7 @@ function TrendTooltip({ active, payload, mode }: {
  * 점을 항상 표시하고 X축은 균등 간격(카테고리)으로 둔다 — 2022년과 2025년만 고른
  * 경우 시간 비례 축으로 그리면 두 점이 양 끝에 몰려 변화를 읽기 어렵다.
  */
-export function SnapshotTrendChart({ points, isSelection, language }: Props) {
+export function SnapshotTrendChart({ points, isSelection, loading = false, language }: Props) {
     const ko = language === 'ko'
     const [mode, setMode] = useState<Mode>('asset')
 
@@ -67,7 +79,9 @@ export function SnapshotTrendChart({ points, isSelection, language }: Props) {
             .map((p) => ({ ...p, label: formatDate(p.date, 'yy.MM.dd') }))
     }, [points])
 
-    if (data.length === 0) return null
+    // 로딩 중이면 빈 데이터여도 자리를 잡는다. 로딩이 끝났는데 비어 있으면
+    // 그릴 게 없는 것이므로 빈 박스를 남기지 않고 접는다.
+    if (data.length === 0 && !loading) return null
 
     const isUp = data.length >= 2
         ? (mode === 'asset'
@@ -86,7 +100,7 @@ export function SnapshotTrendChart({ points, isSelection, language }: Props) {
         <section className="mx-4 mb-4 rounded-2xl bg-card p-4">
             <div className="flex items-center justify-between mb-2">
                 <span className="eyebrow">
-                    {isSelection
+                    {isSelection && !loading
                         ? (ko ? `선택 ${data.length}개 추이` : `${data.length} selected`)
                         : (ko ? '기간 추이' : 'Trend')}
                 </span>
@@ -100,7 +114,17 @@ export function SnapshotTrendChart({ points, isSelection, language }: Props) {
                 </div>
             </div>
 
-            <ResponsiveContainer width="100%" height={190}>
+            {loading ? (
+                <div
+                    style={{ height: CHART_HEIGHT }}
+                    className="flex items-center justify-center"
+                    role="status"
+                    aria-label={ko ? '추이 불러오는 중' : 'Loading trend'}
+                >
+                    <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                </div>
+            ) : (
+            <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
                 <LineChart data={data} margin={{ top: 6, right: 8, left: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" strokeOpacity={0.5} />
                     <XAxis
@@ -140,6 +164,7 @@ export function SnapshotTrendChart({ points, isSelection, language }: Props) {
                     />
                 </LineChart>
             </ResponsiveContainer>
+            )}
         </section>
     )
 }

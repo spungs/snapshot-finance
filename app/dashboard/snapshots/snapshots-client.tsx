@@ -106,6 +106,8 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings, availableMo
     const [selectedById, setSelectedById] = useState<Record<string, SnapshotDetail>>({})
     const [compareOpen, setCompareOpen] = useState(false)
     const [trendAll, setTrendAll] = useState<TrendPoint[]>([])
+    // 초기값 true — fetch 는 클라이언트에서만 도니 SSR·첫 페인트부터 차트 자리를 잡아둔다.
+    const [trendLoading, setTrendLoading] = useState(true)
 
     const [nextCursor, setNextCursor] = useState<string | undefined>(undefined)
     const [hasMore, setHasMore] = useState(initialSnapshots.length >= 20)
@@ -206,6 +208,8 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings, availableMo
                 })))
             })
             .catch(() => { /* 그래프는 보조 정보 — 실패해도 목록은 정상 동작 */ })
+            // 실패해도 로딩을 내려야 스피너가 영원히 돌지 않는다(차트는 조용히 접힘).
+            .finally(() => { if (alive) setTrendLoading(false) })
         return () => { alive = false }
     }, [])
 
@@ -373,13 +377,15 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings, availableMo
                 language={language}
             />
 
-            {trendPoints.length > 0 && (
-                <SnapshotTrendChart
-                    points={trendPoints}
-                    isSelection={selectedIds.length > 0}
-                    language={language}
-                />
-            )}
+            {/* 조건부 렌더를 없애고 loading 을 넘긴다 — 차트가 "없다가 갑자기 생기며" 목록을
+                밀어내던 문제. 자리는 컴포넌트가 잡고, 비어 있을 때 접는 판단도 컴포넌트가 한다.
+                snapshots.length 조건: 스냅샷이 아예 없는 새 계정에서 스피너만 돌다 사라지는 걸 막는다. */}
+            <SnapshotTrendChart
+                points={trendPoints}
+                loading={trendLoading && snapshots.length > 0}
+                isSelection={selectedIds.length > 0}
+                language={language}
+            />
 
             <SelectionTray
                 selected={selectedSnapshots}
