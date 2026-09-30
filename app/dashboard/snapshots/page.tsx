@@ -23,13 +23,14 @@ export default async function SnapshotsPage() {
 }
 
 async function SnapshotsContent({ userId }: { userId: string }) {
-  const [{ data: snapshots }, currentHoldingsRaw, availableMonths] = await Promise.all([
+  const [{ data: snapshots }, currentHoldingsRaw, availableMonths, snapshotStocks] = await Promise.all([
     snapshotService.getList(userId),
     prisma.holding.findMany({
       where: { userId },
       include: { stock: true },
     }),
     snapshotService.getAvailableMonths(userId),
+    snapshotService.getSnapshotStocks(userId),
   ])
 
   const currentHoldings = currentHoldingsRaw.map(h => ({
@@ -54,6 +55,10 @@ async function SnapshotsContent({ userId }: { userId: string }) {
       id: h.id,
       stockCode: h.stockCode,
       quantity: h.quantity,
+      // 종목 검색 시 카드에 그 종목의 평단·종가를 보여주는 데 쓴다 (원래 통화 그대로)
+      averagePrice: h.averagePrice.toString(),
+      currentPrice: h.currentPrice.toString(),
+      currency: h.currency,
 
       stock: {
         stockName: h.stock.nameKo,
@@ -67,6 +72,7 @@ async function SnapshotsContent({ userId }: { userId: string }) {
       initialSnapshots={serializedSnapshots}
       currentHoldings={currentHoldings}
       availableMonths={availableMonths}
+      snapshotStocks={snapshotStocks}
     />
   )
 }

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import { snapshotsApi } from '@/lib/api/client'
-import { formatCurrency, formatDate } from '@/lib/utils/formatters'
+import { formatCurrency, formatDate, formatNumber } from '@/lib/utils/formatters'
 import { cn } from '@/lib/utils'
 import { useLanguage } from '@/lib/i18n/context'
 import { EmptySnapshotState } from '@/components/dashboard/empty-snapshot-state'
@@ -11,8 +11,9 @@ import { SnapshotFilterBar, type DateRange } from '@/components/dashboard/snapsh
 import { SnapshotTrendChart, type TrendPoint } from '@/components/dashboard/snapshots/snapshot-trend-chart'
 import { SelectionTray } from '@/components/dashboard/snapshots/selection-tray'
 import { SnapshotCompareSheet } from '@/components/dashboard/snapshots/snapshot-compare-sheet'
+import { SnapshotStockSearch, type SnapshotStock } from '@/components/dashboard/snapshots/snapshot-stock-search'
 import type { SnapshotDetail } from '@/types/snapshot'
-import { Loader2, Plus, MoreVertical, Eye, TrendingUp, Trash2, ChevronDown } from 'lucide-react'
+import { Loader2, Plus, MoreVertical, Eye, TrendingUp, Trash2, ChevronDown, Search } from 'lucide-react'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import {
     DropdownMenu,
@@ -33,6 +34,11 @@ interface Snapshot {
     cashBalance: string | number | any
     holdings: Array<{
         id: string
+        stockCode?: string
+        quantity?: number
+        averagePrice?: string | number
+        currentPrice?: string | number
+        currency?: string
         stock: { stockName: string }
     }>
     note?: string | null
@@ -49,6 +55,7 @@ interface SnapshotsClientProps {
     initialSnapshots: Snapshot[]
     currentHoldings: any[]
     availableMonths: AvailableMonth[]
+    snapshotStocks: SnapshotStock[]
 }
 
 const MAX_COMPARE = 10
@@ -74,6 +81,22 @@ function getDisplay(snapshot: Snapshot, language: string) {
     return { displayValue, displayProfit, currency }
 }
 
+/**
+ * 종목 필터가 걸렸을 때 카드에 붙일 그 종목의 평단·종가·수량.
+ * 매도 전 마지막 스냅샷에서 "얼마에 사서 얼마일 때까지 들고 있었나"를 보려는 용도라
+ * 환산하지 않고 종목 원래 통화(USD 종목은 $) 그대로 보여준다.
+ */
+function findStockHolding(snapshot: Snapshot, stockCode: string) {
+    const h = snapshot.holdings.find(h => h.stockCode === stockCode)
+    if (!h || h.averagePrice == null || h.currentPrice == null) return null
+    const currency = h.currency === 'USD' ? 'USD' : 'KRW'
+    return {
+        averagePrice: formatCurrency(h.averagePrice, currency),
+        closingPrice: formatCurrency(h.currentPrice, currency),
+        quantity: h.quantity ?? 0,
+    }
+}
+
 // Up/Down with ▲▼ unicode symbols — matches Variation B design
 function UpDown({ value, big = false }: { value: number; big?: boolean }) {
     const isUp = value >= 0
@@ -91,7 +114,7 @@ function UpDown({ value, big = false }: { value: number; big?: boolean }) {
     )
 }
 
-export function SnapshotsClient({ initialSnapshots, currentHoldings, availableMonths }: SnapshotsClientProps) {
+export function SnapshotsClient({ initialSnapshots, currentHoldings, availableMonths, snapshotStocks }: SnapshotsClientProps) {
     const { t, language } = useLanguage()
     const router = useRouter()
     const [snapshots, setSnapshots] = useState<Snapshot[]>(initialSnapshots)
@@ -99,6 +122,8 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings, availableMo
     const [selectedIds, setSelectedIds] = useState<string[]>([])
     const [activeId, setActiveId] = useState<string | null>(initialSnapshots[0]?.id ?? null)
     const [range, setRange] = useState<DateRange | null>(null)
+    const [stock, setStock] = useState<SnapshotStock | null>(null)
+    const [searchOpen, setSearchOpen] = useState(false)
     const [isFiltering, setIsFiltering] = useState(false)
 
     // 선택 항목 상세 캐시 — 기간 필터를 바꾸면 고른 스냅샷이 목록에서 사라지므로,
@@ -115,18 +140,18 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings, availableMo
     const loadMoreAbortRef = useRef<AbortController | null>(null)
     const selectionAbortRef = useRef<AbortController | null>(null)
 
-    // 필터가 없을 때만 서버 props(initialSnapshots)와 동기화한다.
+    // 필터(기간·종목)가 없을 때만 서버 props(initialSnapshots)와 동기화한다.
     // (부모가 router.refresh() 로 재렌더하거나 삭제로 목록이 줄어든 경우 반영, '전체' 복귀 시 복원)
     // 필터가 걸리면 목록은 클라이언트가 소유하므로 props 로 덮어쓰지 않는다.
     useEffect(() => {
-        if (range) return
+        if (range || stock) return
         setSnapshots(initialSnapshots)
         setNextCursor(initialSnapshots.length > 0 ? initialSnapshots[initialSnapshots.length - 1].id : undefined)
         setHasMore(initialSnapshots.length >= 20)
         setActiveId(prev =>
             prev && initialSnapshots.some(s => s.id === prev) ? prev : (initialSnapshots[0]?.id ?? null),
         )
-    }, [initialSnapshots, range])
+    }, [initialSnapshots, range, stock])
 
     // Cancel any in-flight pagination fetch when the component unmounts (e.g., tab switch)
     useEffect(() => () => loadMoreAbortRef.current?.abort(), [])
@@ -140,7 +165,7 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings, availableMo
 
         setIsLoadingMore(true)
         try {
-            const response = await snapshotsApi.getList(nextCursor, controller.signal, range ?? undefined, PAGE_SIZE)
+            const response = await snapshotsApi.getList(nextCursor, controller.signal, range ?? undefined, PAGE_SIZE, stock?.stockCode)
             if (controller.signal.aborted) return
             if (response.success && response.data) {
                 const newSnapshots = response.data
@@ -158,7 +183,7 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings, availableMo
         } finally {
             if (!controller.signal.aborted) setIsLoadingMore(false)
         }
-    }, [nextCursor, hasMore, isLoadingMore, range])
+    }, [nextCursor, hasMore, isLoadingMore, range, stock])
 
     // 무한스크롤(IntersectionObserver) 제거 — 204개를 거슬러 올라가려면 스크롤로는 답이 없다.
     // 기간 범위로 좁히고 '더 보기'로 이어받는다. cursor 페이징 자체는 그대로 쓴다.
@@ -234,15 +259,16 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings, availableMo
     }, [])
 
     /**
-     * 기간 범위 적용 — 첫 페이지부터 새로 조회해 목록을 교체한다.
+     * 기간 범위·종목 필터 적용 — 첫 페이지부터 새로 조회해 목록을 교체한다. 둘은 함께 걸린다.
      * **선택은 일부러 유지한다.** 2022년에서 하나 고르고 2025년으로 옮겨 또 고르는 것이
      * 이 기능의 목적이기 때문. 목록에서 사라진 선택 항목은 selectedById 가 들고 있다.
-     * null 이면 서버 props(최신 목록)로 복원한다.
+     * 둘 다 null 이면 서버 props(최신 목록)로 복원한다.
      */
-    const applyRange = useCallback(async (next: DateRange | null) => {
+    const applyFilter = useCallback(async (nextRange: DateRange | null, nextStock: SnapshotStock | null) => {
         loadMoreAbortRef.current?.abort()
-        setRange(next)
-        if (!next) {
+        setRange(nextRange)
+        setStock(nextStock)
+        if (!nextRange && !nextStock) {
             setIsFiltering(false)
             return
         }
@@ -250,7 +276,9 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings, availableMo
         loadMoreAbortRef.current = controller
         setIsFiltering(true)
         try {
-            const response = await snapshotsApi.getList(undefined, controller.signal, next, PAGE_SIZE)
+            const response = await snapshotsApi.getList(
+                undefined, controller.signal, nextRange ?? undefined, PAGE_SIZE, nextStock?.stockCode,
+            )
             if (controller.signal.aborted) return
             if (response.success && response.data) {
                 setSnapshots(response.data)
@@ -267,6 +295,17 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings, availableMo
             if (!controller.signal.aborted) setIsFiltering(false)
         }
     }, [t])
+
+    // 🔍 는 종목 검색창만 여닫는다. 닫을 때 걸려 있던 종목 필터도 함께 푼다.
+    const searchVisible = searchOpen || stock !== null
+    const closeSearch = () => {
+        setSearchOpen(false)
+        if (stock) applyFilter(range, null)
+    }
+    const handleStockSelect = (next: SnapshotStock | null) => {
+        if (!next) setSearchOpen(false)
+        applyFilter(range, next)
+    }
 
     const handleSelect = (id: string, e: React.MouseEvent) => {
         e.stopPropagation()
@@ -325,7 +364,7 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings, availableMo
     }
 
     // 필터 없는 진짜 빈 상태(스냅샷 0개) — 첫 스냅샷 작성 유도
-    if (snapshots.length === 0 && !range) {
+    if (snapshots.length === 0 && !range && !stock) {
         return (
             <div className="max-w-[420px] md:max-w-2xl mx-auto w-full pb-20">
                 <Hero t={t} />
@@ -338,10 +377,13 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings, availableMo
 
     const activeSnapshot = snapshots.find(s => s.id === activeId) ?? snapshots[0] ?? null
     const activeIndex = activeSnapshot ? snapshots.findIndex(s => s.id === activeSnapshot.id) : -1
-    // 기간을 좁혔으면 "LATEST/N일 전" 대신 그 범위를 라벨로 표기
-    const activeEyebrow = range
-        ? `${range.from} ~ ${range.to}`
-        : undefined
+    // 필터가 걸리면 "LATEST/N일 전"(목록 순번 기준이라 거른 목록에선 틀린다) 대신
+    // 종목명 또는 기간을 라벨로 표기
+    const activeEyebrow = stock
+        ? stock.nameKo
+        : range
+            ? `${range.from} ~ ${range.to}`
+            : undefined
 
     // 선택된 스냅샷(날짜 오름차순). 목록 밖 항목은 selectedById 에서 가져온다.
     const selectedSnapshots: SnapshotDetail[] = selectedIds
@@ -367,10 +409,36 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings, availableMo
 
     return (
         <div className={cn('max-w-[420px] md:max-w-2xl mx-auto w-full relative', selectedIds.length > 0 ? 'pb-28' : 'pb-4')}>
-            <Hero t={t} />
+            <Hero
+                t={t}
+                action={snapshotStocks.length > 0 && (
+                    <button
+                        type="button"
+                        onClick={() => (searchVisible ? closeSearch() : setSearchOpen(true))}
+                        aria-expanded={searchVisible}
+                        aria-label={language === 'ko' ? '종목으로 찾기' : 'Find by stock'}
+                        className={cn(
+                            'shrink-0 p-1.5 -mr-1.5 rounded-full transition-colors',
+                            searchVisible ? 'text-primary' : 'text-muted-foreground hover:text-foreground',
+                        )}
+                    >
+                        <Search className="w-5 h-5" />
+                    </button>
+                )}
+            />
+            {searchVisible && (
+                <SnapshotStockSearch
+                    stocks={snapshotStocks}
+                    selected={stock}
+                    onSelect={handleStockSelect}
+                    onClose={closeSearch}
+                    disabled={isFiltering}
+                    language={language}
+                />
+            )}
             <SnapshotFilterBar
                 range={range}
-                onChange={applyRange}
+                onChange={(next) => applyFilter(next, stock)}
                 years={availableYears}
                 earliest={earliestDate}
                 disabled={isFiltering}
@@ -397,7 +465,11 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings, availableMo
             />
 
             {snapshots.length === 0 ? (
-                <PeriodEmpty t={t} />
+                <PeriodEmpty
+                    message={stock
+                        ? (language === 'ko' ? '조건에 맞는 스냅샷이 없어요' : 'No snapshots match these filters')
+                        : t('noSnapshotsInPeriod')}
+                />
             ) : (
                 <>
                     {activeSnapshot && (
@@ -405,6 +477,7 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings, availableMo
                             snapshot={activeSnapshot}
                             index={activeIndex}
                             eyebrowOverride={activeEyebrow}
+                            stockCode={stock?.stockCode}
                             language={language}
                             t={t}
                             onSimulate={(id) => router.push(`/dashboard/simulation?snapshotId=${id}`)}
@@ -421,6 +494,7 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings, availableMo
                         onDelete={handleDelete}
                         onSimulate={(id) => router.push(`/dashboard/simulation?snapshotId=${id}`)}
                         deletingId={deleting}
+                        stockCode={stock?.stockCode}
                     />
 
                     {hasMore && (
@@ -485,12 +559,15 @@ export function SnapshotsClient({ initialSnapshots, currentHoldings, availableMo
 }
 
 /* ─── Hero — 보유 탭과 동일한 헤더 구조 (eyebrow + 32px H1) ─── */
-function Hero({ t }: { t: (k: any) => string }) {
+function Hero({ t, action }: { t: (k: any) => string; action?: React.ReactNode }) {
     return (
         <section className="px-6 pt-3 pb-4">
-            <h1 className="hero-serif text-[2rem] text-foreground">
-                {t('snapshots')}
-            </h1>
+            <div className="flex items-center justify-between gap-3">
+                <h1 className="hero-serif text-[2rem] text-foreground">
+                    {t('snapshots')}
+                </h1>
+                {action}
+            </div>
             <span className="serif-italic text-xs text-muted-foreground block mt-1">
                 {t('snapshotsHeroSubtitle')}
             </span>
@@ -500,11 +577,12 @@ function Hero({ t }: { t: (k: any) => string }) {
 
 /* ─── Active/Latest snapshot detail card ─── */
 function ActiveSnapshotCard({
-    snapshot, index, eyebrowOverride, language, t, onSimulate,
+    snapshot, index, eyebrowOverride, stockCode, language, t, onSimulate,
 }: {
     snapshot: Snapshot
     index: number
     eyebrowOverride?: string
+    stockCode?: string
     language: string
     t: (k: any) => string
     onSimulate: (id: string) => void
@@ -517,6 +595,7 @@ function ActiveSnapshotCard({
         ? (language === 'ko' ? '최신' : 'Latest')
         : (language === 'ko' ? `${index}일 전` : `${index}d ago`))
     const sourceLabel = t('autoSnapshotLabel')
+    const held = stockCode ? findStockHolding(snapshot, stockCode) : null
 
     return (
         <div className="mx-4 mb-4 relative overflow-hidden rounded-2xl bg-card" style={{ padding: 22 }}>
@@ -560,6 +639,26 @@ function ActiveSnapshotCard({
                 </div>
             </div>
 
+            {/* 종목 필터 중 — 그 종목의 이 시점 평단·종가·수량 */}
+            {held && (
+                <div className="grid grid-cols-3 gap-2 mt-4 rounded-xl bg-secondary px-3.5 py-3">
+                    <div>
+                        <div className="text-[0.6875rem] text-muted-foreground">{t('averagePrice')}</div>
+                        <div className="text-[0.8125rem] font-bold text-foreground mt-0.5 numeric">{held.averagePrice}</div>
+                    </div>
+                    <div>
+                        <div className="text-[0.6875rem] text-muted-foreground">{t('closingPrice')}</div>
+                        <div className="text-[0.8125rem] font-bold text-foreground mt-0.5 numeric">{held.closingPrice}</div>
+                    </div>
+                    <div className="text-right">
+                        <div className="text-[0.6875rem] text-muted-foreground">{language === 'ko' ? '수량' : 'Qty'}</div>
+                        <div className="text-[0.8125rem] font-bold text-foreground mt-0.5 numeric">
+                            {formatNumber(held.quantity)}{language === 'ko' ? '주' : ' shr'}
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* 컴팩트 액션 라인 — 상세보기(텍스트 링크) + ⋮(시뮬레이션). 타임라인/상세 패턴과 일치 */}
             <div className="flex items-center justify-between mt-4 pt-3 border-t border-border/60">
                 <Link
@@ -593,18 +692,18 @@ function ActiveSnapshotCard({
 }
 
 /* ─── Filter bar (연/월 선택) ─── */
-/* ─── 선택한 기간에 스냅샷이 없을 때 ─── */
-function PeriodEmpty({ t }: { t: (k: any) => string }) {
+/* ─── 선택한 기간(·종목)에 스냅샷이 없을 때 ─── */
+function PeriodEmpty({ message }: { message: string }) {
     return (
         <div className="mx-4 my-6 p-8 bg-card rounded-2xl text-center">
-            <p className="text-[0.8125rem] text-muted-foreground">{t('noSnapshotsInPeriod')}</p>
+            <p className="text-[0.8125rem] text-muted-foreground">{message}</p>
         </div>
     )
 }
 
 /* ─── Timeline list with vertical rail + dots ─── */
 function TimelineSection({
-    snapshots, activeId, onSelect, language, t, selectedIds, onToggleSelect, onDelete, onSimulate, deletingId,
+    snapshots, activeId, onSelect, language, t, selectedIds, onToggleSelect, onDelete, onSimulate, deletingId, stockCode,
 }: {
     snapshots: Snapshot[]
     activeId: string
@@ -616,6 +715,7 @@ function TimelineSection({
     onDelete: (id: string, e: React.MouseEvent) => void
     onSimulate: (id: string) => void
     deletingId: string | null
+    stockCode?: string
 }) {
     return (
         <>
@@ -638,6 +738,7 @@ function TimelineSection({
                     const holdingsCount = s.holdings.length
                     const isSelected = selectedIds.includes(s.id)
                     const deleting = deletingId === s.id
+                    const held = stockCode ? findStockHolding(s, stockCode) : null
 
                     return (
                         <div
@@ -697,6 +798,13 @@ function TimelineSection({
                                             {formatCurrency(displayValue, currency)}
                                         </span>
                                     </div>
+                                    {held && (
+                                        <div className="flex flex-wrap gap-x-2 mt-1 text-[0.6875rem] text-muted-foreground">
+                                            <span>{t('averagePrice')} <span className="font-bold text-foreground numeric">{held.averagePrice}</span></span>
+                                            <span>{t('closingPrice')} <span className="font-bold text-foreground numeric">{held.closingPrice}</span></span>
+                                            <span className="numeric">{formatNumber(held.quantity)}{language === 'ko' ? '주' : ' shr'}</span>
+                                        </div>
+                                    )}
                                 </Link>
 
                                 {/* actions row — primary CTA + overflow menu + selection */}

@@ -41,12 +41,15 @@ export const snapshotsApi = {
     /** 기간 범위 (YYYY-MM-DD, 양 끝 포함). 한쪽만 줘도 된다. */
     range?: { from?: string; to?: string },
     limit?: number,
+    /** 이 종목을 보유한 스냅샷만 */
+    stockCode?: string,
   ) => {
     const params = new URLSearchParams()
     if (cursor) params.set('cursor', cursor)
     if (range?.from) params.set('from', range.from)
     if (range?.to) params.set('to', range.to)
     if (limit) params.set('limit', String(limit))
+    if (stockCode) params.set('stockCode', stockCode)
     const qs = params.toString()
     return fetchApi<any[]>(`/snapshots${qs ? `?${qs}` : ''}`, { cache: 'no-store', signal })
   },

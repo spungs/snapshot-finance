@@ -19,6 +19,7 @@ import type { CashAccount } from '@/types/cash'
 const MAX_HOLDINGS_PER_SNAPSHOT = 200
 const MAX_COMPARE_IDS = 10
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/
+const MAX_STOCK_CODE_LENGTH = 20
 
 
 // POST /api/snapshots - 스냅샷 생성
@@ -283,7 +284,11 @@ export async function GET(request: NextRequest) {
           }
         : undefined
 
-    const { data: snapshots, pagination } = await snapshotService.getList(userId, limit, cursor || undefined, range)
+    // 종목 필터 — 이 종목을 보유한 스냅샷만. 비정상 값은 기간 필터처럼 조용히 무시한다.
+    const stockCodeParam = searchParams.get('stockCode')?.trim()
+    const stockCode = stockCodeParam && stockCodeParam.length <= MAX_STOCK_CODE_LENGTH ? stockCodeParam : undefined
+
+    const { data: snapshots, pagination } = await snapshotService.getList(userId, limit, cursor || undefined, range, stockCode)
 
     return NextResponse.json({
       success: true,

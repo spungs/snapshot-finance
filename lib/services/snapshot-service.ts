@@ -115,8 +115,15 @@ export const snapshotService = {
          * getAvailableMonths 의 UTC 버킷팅과 동일 기준이라 표시값과 일관된다.
          */
         range?: { from?: string; to?: string },
+        /** 이 종목을 보유한 스냅샷만. 기간 범위와 함께 걸 수 있다. */
+        stockCode?: string,
     ) {
-        const where: { userId: string; snapshotDate?: { gte?: Date; lt?: Date } } = { userId }
+        const where: {
+            userId: string
+            snapshotDate?: { gte?: Date; lt?: Date }
+            holdings?: { some: { stockCode: string } }
+        } = { userId }
+        if (stockCode) where.holdings = { some: { stockCode } }
         if (range?.from || range?.to) {
             where.snapshotDate = {}
             if (range.from) {
@@ -184,6 +191,19 @@ export const snapshotService = {
 
         // Map 삽입 순서 = snapshotDate desc 순서이므로 그대로 내림차순 유지
         return Array.from(map.values())
+    },
+
+    /**
+     * 종목 검색 후보 — 이 사용자의 스냅샷에 한 번이라도 담긴 종목.
+     * 지금은 매도해 잔고에 없는 종목도 과거 스냅샷에서 찾을 수 있어야 하므로 Holding 이 아닌
+     * SnapshotHolding 기준이다. 결과가 0건인 종목은 애초에 후보로 뜨지 않는다.
+     */
+    async getSnapshotStocks(userId: string): Promise<{ stockCode: string; nameKo: string; nameEn: string | null }[]> {
+        return prisma.stock.findMany({
+            where: { holdings: { some: { snapshot: { userId } } } },
+            select: { stockCode: true, nameKo: true, nameEn: true },
+            orderBy: { nameKo: 'asc' },
+        })
     },
 
     /**
