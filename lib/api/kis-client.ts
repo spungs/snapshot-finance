@@ -189,6 +189,7 @@ export class KisClient {
     async getCurrentPrice(symbol: string, market: 'KOSPI' | 'KOSDAQ' | 'US' = 'KOSPI', retryCount = 0, bypassCache = false): Promise<{ price: number; change: number; changeRate: number }> {
         // 1. Check Redis Cache (cron 이 갱신해 두는 공용 키)
         //    bypassCache=true(cron 호출)면 스킵 — 반드시 API 를 직접 호출해 최신 changeRate 확보.
+        //    재시도(토큰 만료·EGW00201)에도 그대로 넘겨야 한다 — 빠뜨리면 재시도가 캐시 값을 돌려준다.
         const cacheKey = stockPriceKey(symbol)
         if (!bypassCache) {
             const cached = await cacheGet<PriceCacheEntry>(cacheKey)
@@ -237,14 +238,14 @@ export class KisClient {
                             where: { provider: 'KIS' }
                         })
                         // Retry with new token
-                        return this.getCurrentPrice(symbol, market, retryCount + 1)
+                        return this.getCurrentPrice(symbol, market, retryCount + 1, bypassCache)
                     }
                 }
 
                 // 초당 호출 한도 초과 → 점증 backoff 후 재시도
                 if (errorText.includes('EGW00201') && retryCount < 3) {
                     await new Promise(r => setTimeout(r, 400 + retryCount * 400))
-                    return this.getCurrentPrice(symbol, market, retryCount + 1)
+                    return this.getCurrentPrice(symbol, market, retryCount + 1, bypassCache)
                 }
 
                 throw new Error(`KIS API Error: ${response.status} - ${errorText}`)
@@ -254,7 +255,7 @@ export class KisClient {
             if (data.rt_cd !== '0') {
                 if (String(data.msg_cd ?? '').includes('EGW00201') && retryCount < 3) {
                     await new Promise(r => setTimeout(r, 400 + retryCount * 400))
-                    return this.getCurrentPrice(symbol, market, retryCount + 1)
+                    return this.getCurrentPrice(symbol, market, retryCount + 1, bypassCache)
                 }
                 throw new Error(`KIS API Error: ${data.msg1}`)
             }

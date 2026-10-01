@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { isAuthorizedCron } from '@/lib/cron-auth'
-import { kisClient } from '@/lib/api/kis-client'
 import { getUsdExchangeRate } from '@/lib/api/exchange-rate'
 import { mergeHoldingsByStock } from '@/lib/services/snapshot-service'
+import { getSnapshotClosePrice, type SnapshotPriceSource } from '@/lib/services/snapshot-price'
+import { toPriceApiMarket } from '@/lib/utils/market-hours'
 import Decimal from 'decimal.js'
 import { format } from 'date-fns'
 
@@ -14,27 +15,15 @@ import { format } from 'date-fns'
 export const maxDuration = 60
 
 // Unified Cron Job: Daily Snapshot + User Maintenance
-// Schedule: 22:30 UTC Mon-Fri (07:30 KST Tue-Sat / 화~토)
+// Schedule: 21:35 UTC Mon-Fri (06:35 KST 화~토) — Supabase pg_cron `daily-snapshot`.
+// 종가를 잡으려면 한·미 정규장이 **계절과 무관하게** 모두 끝난 뒤여야 한다:
+// 미국 마감 20:00 UTC(서머타임) / 21:00 UTC(표준시), 한국 마감 06:30 UTC.
+// 스케줄을 21:00 UTC 이전으로 당기면 겨울에 미국 종가 대신 장중 가격이 들어간다.
 
-// Helper function to fetch price.
-// 실패/0 가격을 그대로 반환하면 snapshot_holdings.currentPrice = 0 으로 저장되어
-// totalValue 과소·profitRate ≈ -100% 가 되므로, 0 반환 대신 throw 하여
-// 상위 호출부가 skip(개별) / abort(>50%) 를 결정하게 한다.
-async function getStockPrice(symbol: string, market: string): Promise<number> {
-    // Map market for KIS Client
-    let marketType: 'KOSPI' | 'KOSDAQ' | 'US' = 'KOSPI'
-    if (market === 'US' || market === 'NAS' || market === 'NYS' || market === 'AMS') {
-        marketType = 'US'
-    } else if (market === 'KOSDAQ' || market === 'KQ') {
-        marketType = 'KOSDAQ'
-    }
-
-    const priceData = await kisClient.getCurrentPrice(symbol, marketType)
-    if (!priceData || !Number.isFinite(priceData.price) || priceData.price <= 0) {
-        throw new Error(`Invalid price (${priceData?.price}) for ${symbol} (${market})`)
-    }
-    return priceData.price
-}
+// 가격 직접 조회에 쓸 수 있는 시간. KIS 가 응답 없이 멈추면 종목마다 타임아웃(5s)이
+// 단계별로 쌓여 maxDuration 에 잘리고(스냅샷·CronLog 둘 다 유실), 넘기면 캐시로만 채운다.
+// 진행 중이던 조회 한 번 + DB 기록이 끝날 여유를 maxDuration 안에 남긴다.
+const PRICE_NETWORK_BUDGET_MS = 35_000
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
@@ -58,6 +47,10 @@ export async function GET(request: NextRequest) {
     try {
         // 2. Logic Branching based on Day of Week
         const now = new Date()
+        const priceDeadline = now.getTime() + PRICE_NETWORK_BUDGET_MS
+        const canUseNetwork = () => Date.now() < priceDeadline
+        // 21:35 UTC 실행 기준 UTC 날짜 = 방금 끝난 한국·미국 거래일
+        const tradingDate = now.toISOString().slice(0, 10)
         const dayOfWeek = now.getUTCDay() // 0=Sun, 1=Mon, ..., 6=Sat
         // Run Snapshot on Mon-Fri UTC (Tue-Sat KST)
         // This covers the full trading week.
@@ -100,19 +93,31 @@ export async function GET(request: NextRequest) {
                     const merged = mergeHoldingsByStock(user.holdings)
                     const usdRateDec = new Decimal(usdRate || 0)
 
-                    // 1) 종목별 현재가 조회 — 실패 종목은 0원 저장 대신 skip 으로 표시.
+                    // 1) 종목별 종가 조회 — 일봉 종가 → 현재가 → 캐시 순으로 폴백하고, 전부 실패한
+                    //    종목은 0원 저장 대신 skip 으로 표시한다(0원이면 totalValue 과소·profitRate ≈ -100%).
                     //    KIS 초당 호출 한도(EGW00201) 회피를 위해 청크 단위로 throttle 한다.
-                    const priced: { holding: (typeof merged)[number]; currentPrice: number; ok: boolean }[] = []
+                    const priced: {
+                        holding: (typeof merged)[number]
+                        currentPrice: number
+                        source: SnapshotPriceSource | null
+                        ok: boolean
+                    }[] = []
                     for (let c = 0; c < merged.length; c += PRICE_CHUNK_SIZE) {
                         const chunk = merged.slice(c, c + PRICE_CHUNK_SIZE)
                         const chunkResults = await Promise.all(
                             chunk.map(async (holding) => {
+                                const { stockCode, market } = holding.stock
                                 try {
-                                    const currentPrice = await getStockPrice(holding.stock.stockCode, holding.stock.market || 'Unknown')
-                                    return { holding, currentPrice, ok: true as const }
+                                    const { price, source, failures } = await getSnapshotClosePrice(
+                                        stockCode, toPriceApiMarket(market, stockCode), tradingDate, canUseNetwork,
+                                    )
+                                    if (source !== 'close') {
+                                        console.warn(`[Cron] ${stockCode} (${market}) price via ${source}: ${failures.join(' / ')}`)
+                                    }
+                                    return { holding, currentPrice: price, source, ok: true as const }
                                 } catch (priceError) {
-                                    console.warn(`[Cron] Skip ${holding.stock.stockCode} (${holding.stock.market}) for user ${user.id}: price fetch failed.`, priceError)
-                                    return { holding, currentPrice: 0, ok: false as const }
+                                    console.warn(`[Cron] Skip ${stockCode} (${market}) for user ${user.id}: price fetch failed.`, priceError)
+                                    return { holding, currentPrice: 0, source: null, ok: false as const }
                                 }
                             })
                         )
@@ -122,6 +127,10 @@ export async function GET(request: NextRequest) {
 
                     const succeeded = priced.filter((p) => p.ok)
                     const skippedCodes = priced.filter((p) => !p.ok).map((p) => p.holding.stock.stockCode)
+                    // 종가(close) 외 경로로 채운 종목 — 휴장일이면 current 가 정상, cache 가 보이면 직접 조회 장애
+                    const priceFallbacks = Object.fromEntries(
+                        succeeded.filter((p) => p.source !== 'close').map((p) => [p.holding.stock.stockCode, p.source]),
+                    )
 
                     // 2) 현재가 조회 실패 비율이 50% 초과면 스냅샷 신뢰 불가 → 전체 abort
                     //    (0원 종목이 절반 넘는 스냅샷을 저장하면 totalValue·profitRate 가 심하게 왜곡됨)
@@ -201,6 +210,7 @@ export async function GET(request: NextRequest) {
                         status: 'success' as const,
                         snapshotId: newSnapshot.id,
                         ...(skippedCodes.length > 0 ? { skippedHoldings: skippedCodes } : {}),
+                        ...(Object.keys(priceFallbacks).length > 0 ? { priceFallbacks } : {}),
                     }
                 } catch (error) {
                     console.error(`[Cron] Error processing user ${user.id}:`, error)
