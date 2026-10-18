@@ -425,6 +425,16 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
         return viewMode === 'unified' ? unifiedHoldings : holdings
     }, [holdings, unifiedHoldings, viewMode, isMultiAccount])
 
+    // 계좌별 보유 종목 수 — 필터 칩/그룹 헤더 표시용. 필터와 무관하게 원본 row(계좌×종목) 기준.
+    const accountCounts = useMemo(() => {
+        const counts = new Map<string | null, number>()
+        for (const h of holdings) {
+            const key = h.accountId ?? null
+            counts.set(key, (counts.get(key) ?? 0) + 1)
+        }
+        return counts
+    }, [holdings])
+
     const sortedHoldings = useMemo(() => {
         const arr = [...baseHoldings]
         arr.sort((a, b) => {
@@ -1018,6 +1028,7 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                             )}
                         >
                             {language === 'ko' ? '전체' : 'All'}
+                            <span className="ml-1 numeric opacity-60">{holdings.length}</span>
                         </button>
                         {accounts.map(a => (
                             <button
@@ -1034,6 +1045,7 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                                 )}
                             >
                                 {a.name}
+                                <span className="ml-1 numeric opacity-60">{accountCounts.get(a.id) ?? 0}</span>
                             </button>
                         ))}
                     </div>
@@ -1112,7 +1124,7 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
                                     {/* Sticky 계좌 헤더 — 종목명(좌) + 평가/매입/수익 3행(우) */}
                                     <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm flex items-start justify-between gap-2 py-2 px-1 border-b border-border">
                                         <div className="flex flex-col gap-0 truncate pt-0.5 min-w-0">
-                                            <span className="eyebrow truncate">{group.name}</span>
+                                            <span className="eyebrow truncate">{group.name} · {group.rows.length}</span>
                                             <PriceUpdatedFootnote iso={groupOldestPriceTime} language={language} markets={groupMarkets} />
                                         </div>
                                         <div className="flex flex-col items-end gap-0 shrink-0 leading-tight">
