@@ -8,7 +8,7 @@ import Decimal from 'decimal.js'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { TransferHoldingDialog } from '@/components/dashboard/transfer-holding-dialog'
 import { useStockTicks } from '@/lib/hooks/use-stock-ticks'
-import { normalizeMarket, type Market } from '@/lib/utils/market-hours'
+import { normalizeMarket, isMarketOpenKR, isMarketOpenUS, type Market } from '@/lib/utils/market-hours'
 import { PriceUpdatedFootnote } from '@/components/dashboard/price-updated-footnote'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { holdingsApi } from '@/lib/api/client'
@@ -600,6 +600,15 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
         const profitText = profitDisplay >= 0
             ? `+${formatCurrency(profitDisplay, baseCurrency)}`
             : formatCurrency(profitDisplay, baseCurrency)
+        // currentPrice 는 장중엔 실시간 시세, 장 마감 후엔 마지막 종가다.
+        // 장 판정 불가 시장(LSE 등)은 stooq 전일 종가라 항상 '종가'.
+        const priceMarket = normalizeMarket(h.market)
+        const isPriceLive = priceMarket === 'KR' ? isMarketOpenKR()
+            : priceMarket === 'US' ? isMarketOpenUS()
+                : false
+        const priceLabel = language === 'ko'
+            ? (isPriceLive ? '현재가' : '종가')
+            : (isPriceLive ? 'price' : 'close')
 
         return (
             <div
@@ -658,19 +667,26 @@ export function PortfolioClient({ initialHoldings, summary, userName, accounts =
 
                 {/* Row 2: 메타 (좌) + 평가금액·등락률 (우) */}
                 <div className="mt-1.5 flex items-end justify-between gap-3">
-                    <div className="text-[0.625rem] text-muted-foreground flex-1 min-w-0 space-y-0.5">
+                    <div className="text-[0.75rem] text-muted-foreground flex-1 min-w-0 space-y-0.5">
                         <div>
-                            {h.stockCode} · {formatNumber(h.quantity)}{language === 'ko' ? '주' : 'shr'}
+                            {h.stockCode} · <span className="numeric font-medium text-foreground">{formatNumber(h.quantity)}</span>{language === 'ko' ? '주' : 'shr'}
                             {' · '}
-                            {language === 'ko' ? '평단 ' : 'avg '}
-                            {formatCurrency(h.averagePrice, h.currency)}
+                            {language === 'ko' ? '비중 ' : 'wt '}
+                            <span className="numeric font-medium text-foreground">{h.weight.toFixed(1)}%</span>
                         </div>
                         <div>
-                            {language === 'ko' ? `비중 ${h.weight.toFixed(1)}%` : `${h.weight.toFixed(1)}% wt`}
+                            {language === 'ko' ? '평단 ' : 'avg '}
+                            <span className="numeric font-medium text-foreground">{formatCurrency(h.averagePrice, h.currency)}</span>
                         </div>
+                        {h.currentPrice > 0 && (
+                            <div>
+                                {priceLabel}{' '}
+                                <span className="numeric font-medium text-foreground">{formatCurrency(h.currentPrice, h.currency)}</span>
+                            </div>
+                        )}
                     </div>
                     <div className="text-right shrink-0">
-                        <div className="text-[0.625rem] text-muted-foreground numeric">
+                        <div className="text-[0.75rem] text-muted-foreground numeric">
                             {language === 'ko' ? '매입' : 'Cost'} {formatCurrency(costDisplay, baseCurrency)}
                         </div>
                         <div className="text-[0.875rem] font-bold text-foreground numeric mt-0.5">
