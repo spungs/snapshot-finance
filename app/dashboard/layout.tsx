@@ -1,4 +1,4 @@
-import { auth } from '@/lib/auth'
+import { getSession } from '@/lib/auth'
 import { getPortfolioContext, listManagedPortfolios } from '@/lib/portfolio-context'
 import { ScreenHeader } from '@/components/dashboard/screen-header'
 import { BottomTabBar } from '@/components/dashboard/bottom-tab-bar'
@@ -13,7 +13,7 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const session = await auth()
+  const session = await getSession()
 
   // 약관 동의 게이트: 로그인은 됐지만 agreedAt 이 없는 사용자는 동의 화면으로 이동.
   // - 기존 사용자(약관 동의 도입 전 가입)는 마이그레이션 이후 첫 로그인 시 이 경로를 탄다.

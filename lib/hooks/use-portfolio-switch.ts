@@ -3,14 +3,13 @@
 import { useTransition } from 'react'
 import { usePathname } from 'next/navigation'
 import { useSWRConfig } from 'swr'
-import { setActivePortfolio } from '@/app/actions/portfolio-access-actions'
 import { suspendSwrPersist } from '@/lib/swr/persist-cache'
 import { clearPortfolioScopedCache } from '@/lib/portfolio-scoped-cache'
 
 /**
  * 활성 포트폴리오 전환의 단일 진입점.
  *
- * ⚠️ 전환은 반드시 이 훅으로만 할 것. setActivePortfolio 를 직접 호출하고
+ * ⚠️ 전환은 반드시 이 훅으로만 할 것. /api/portfolio/active 를 직접 호출하고
  * router.refresh() 로 끝내면 브라우저 캐시가 남아 이전 사용자의 데이터가 그대로 보인다.
  *
  * 실제 사고: 드롭다운(PortfolioSwitcher)만 고치고 배너(ManagedBanner)의
@@ -27,10 +26,14 @@ export function usePortfolioSwitch() {
     /** target: owner userId, 또는 내 포트폴리오로 돌아가려면 'self'. */
     const switchTo = (target: string) => {
         startTransition(async () => {
-            const result = await setActivePortfolio(target)
+            const res = await fetch('/api/portfolio/active', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ target }),
+            }).catch(() => null)
             // grant 가 회수된 경우 등 서버가 전환을 거부하면 쿠키가 바뀌지 않았다.
             // 캐시를 버리거나 이동하면 안 된다 — 화면은 기존 포트폴리오 그대로 둔다.
-            if (!result?.success) return
+            if (!res?.ok) return
 
             // 아래 네 단계는 순서가 곧 정확성이다. 바꾸지 말 것.
             //

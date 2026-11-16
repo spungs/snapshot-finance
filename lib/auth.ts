@@ -1,4 +1,5 @@
 
+import { cache } from "react"
 import NextAuth from "next-auth"
 import type { Adapter, AdapterAccount } from "@auth/core/adapters"
 import { PrismaAdapter } from "@auth/prisma-adapter"
@@ -101,3 +102,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         },
     },
 })
+
+// 서버 컴포넌트 렌더 중에는 같은 요청에서 세션을 한 번만 해석한다.
+// auth() 는 호출마다 JWT 콜백을 타고(만료된 토큰이면 DB 재검증 쿼리까지) 가는데,
+// 레이아웃·페이지·getPortfolioContext 가 각자 불러 한 화면에 3번씩 반복됐다.
+// React cache 는 렌더 요청 단위로만 메모이즈하므로 요청 간 공유는 없다.
+export const getSession = cache(() => auth())

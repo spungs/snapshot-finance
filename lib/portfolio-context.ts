@@ -1,5 +1,6 @@
+import { cache } from 'react'
 import { cookies } from 'next/headers'
-import { auth } from '@/lib/auth'
+import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
 // 위임 포트폴리오 관리의 단일 진입점.
@@ -27,12 +28,13 @@ export type PortfolioContext = {
 /**
  * 현재 요청의 포트폴리오 컨텍스트를 해석한다.
  * 로그인하지 않았으면 null(호출부가 기존과 동일하게 401/redirect 처리).
+ * 렌더 요청 단위로 메모이즈된다(레이아웃과 페이지가 각자 불러도 조회는 한 번).
  *
  * 기존 코드에서 `const session = await auth(); ... session.user.id` 를 쓰던 자리를
  * `const ctx = await getPortfolioContext(); ... ctx.portfolioUserId` 로 바꾼다.
  */
-export async function getPortfolioContext(): Promise<PortfolioContext | null> {
-    const session = await auth()
+export const getPortfolioContext = cache(async (): Promise<PortfolioContext | null> => {
+    const session = await getSession()
     const actorId = session?.user?.id
     if (!actorId) return null
     const actorName = session?.user?.name ?? undefined
@@ -64,15 +66,15 @@ export async function getPortfolioContext(): Promise<PortfolioContext | null> {
         actorRole,
         ownerName: grant.owner.name ?? grant.owner.email ?? undefined,
     }
-}
+})
 
 /**
  * 현재 actor 가 관리할 수 있는(위임받은) owner 목록.
  * 프로필 스위처 노출 여부/항목 렌더링에 쓴다. grant 가 0개면 스위처를 아예 숨긴다.
  */
-export async function listManagedPortfolios(
+export const listManagedPortfolios = cache(async (
     actorId: string,
-): Promise<Array<{ ownerId: string; name: string }>> {
+): Promise<Array<{ ownerId: string; name: string }>> => {
     const grants = await prisma.portfolioAccess.findMany({
         where: { granteeId: actorId },
         select: { ownerId: true, owner: { select: { name: true, email: true } } },
@@ -82,4 +84,4 @@ export async function listManagedPortfolios(
         ownerId: g.ownerId,
         name: g.owner.name ?? g.owner.email ?? '이름 없음',
     }))
-}
+})

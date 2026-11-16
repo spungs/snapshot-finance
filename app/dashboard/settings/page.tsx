@@ -1,11 +1,11 @@
-import { auth } from '@/lib/auth'
+import { getSession } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { SettingsClient } from './settings-client'
 
 export const dynamic = 'force-dynamic'
 
 export default async function SettingsPage() {
-  const session = await auth()
+  const session = await getSession()
   if (!session?.user?.id) {
     redirect('/auth/signin')
   }
