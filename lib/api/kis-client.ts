@@ -227,7 +227,6 @@ export class KisClient {
 
             if (!response.ok) {
                 const errorText = await response.text()
-                console.error('KIS API Error Response:', errorText)
 
                 // Check if token is expired
                 if (errorText.includes('기간이 만료된 token') || errorText.includes('EGW00123')) {
@@ -248,6 +247,9 @@ export class KisClient {
                     return this.getCurrentPrice(symbol, market, retryCount + 1, bypassCache)
                 }
 
+                // 재시도로 복구되는 건(토큰 만료·EGW00201)은 로그를 남기지 않는다 —
+                // 재시도 전에 찍으면 복구된 건까지 런타임 에러 집계에 쌓여 진짜 실패를 가린다.
+                console.error('KIS API Error Response:', errorText)
                 throw new Error(`KIS API Error: ${response.status} - ${errorText}`)
             }
 
