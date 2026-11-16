@@ -16,6 +16,20 @@ export default function DashboardError({
 }) {
   useEffect(() => {
     console.error(error)
+    // 서버 로그에 기록 — 브라우저에서만 터지는 예외는 서버에 흔적이 없어 원인 추적 불가.
+    // 기록 실패는 무시한다(오류 화면 자체에 영향 X).
+    fetch('/api/client-error', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      keepalive: true,
+      body: JSON.stringify({
+        name: error.name,
+        message: error.message,
+        digest: error.digest,
+        stack: error.stack,
+        path: window.location.pathname,
+      }),
+    }).catch(() => {})
   }, [error])
 
   return (
